@@ -668,12 +668,21 @@ def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]
     base = controller.bounds.gpu_count
     start_k = min(base * controller.limits.start_workers_per_gpu, controller.bounds.max_workers_hard)
     controller.baseline_key = (start_k, base)
-    incumbent = controller.measure_trial(start_k, base, ramp="k")
-    accepted = [incumbent]
-    path: list[dict[str, Any]] = []
     limited = False
     stop_reason = ""
-    while True:
+    try:
+        incumbent = controller.measure_trial(start_k, base, ramp="k")
+    except ProbeStopped as exc:
+        # A model that runs with one worker per GPU but not with the start K keeps the
+        # configuration two-phase would have found; one worker per GPU becomes the baseline.
+        if start_k == base:
+            raise
+        controller.baseline_key = (base, base)
+        incumbent = controller.measure_trial(base, base, ramp="k")
+        stop_reason, limited = f"start K={start_k} failed, fell back to K={base}: {_stop_reason(exc)}", True
+    accepted = [incumbent]
+    path: list[dict[str, Any]] = []
+    while not limited:
         cap = controller.worker_cap(incumbent)
         if incumbent.k >= cap:
             stop_reason = f"worker cap {cap} reached"

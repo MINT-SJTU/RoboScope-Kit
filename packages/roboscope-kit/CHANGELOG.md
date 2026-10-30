@@ -7,7 +7,9 @@
   replica per GPU at a time with K scaled by the measured workers per replica, keeping a step while it
   gains at least `autotune_replica_minimum_gain` (3%). The worker cap comes from measured CPU per worker,
   and a step whose GPU memory, extrapolated from the incumbent's replica and worker footprint, would not
-  fit is skipped. `two-phase` stays the default for every benchmark.
+  fit is skipped. If the first probe at `autotune_start_workers_per_gpu` fails and budget remains, the
+  search falls back to one worker per GPU, which becomes the success-rate baseline and the selection.
+  `two-phase` stays the default for every benchmark.
 - Put autotune strategies behind one interface. `register_strategy(name)` adds a K/g search that a
   manifest selects with `autotune_strategy: <name>`; every strategy measures through the shared
   controller, which owns probe execution, resource and correctness checks, the time budget and
