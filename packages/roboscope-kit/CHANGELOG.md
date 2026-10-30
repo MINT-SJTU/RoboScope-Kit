@@ -19,7 +19,8 @@
   the default `elapsed` estimator is unchanged.
 - Add `probe_items_per_worker` for LIBERO probes (default 0, the fixed probe size), so a probe at K can
   run at least that many episodes per worker.
-- Record per-item completion times in `result.json` (`item_timeline`).
+- Record per-item completion times in `result.json` (`item_timeline`): the time the controller first sees
+  each work item completed. Partial results, which RoboTwin and RoboCasa publish per episode, do not count.
 
 ## 0.8.0b2 (Unreleased)
 

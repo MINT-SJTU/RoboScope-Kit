@@ -141,6 +141,9 @@ class WorkQueue:
         paths = sorted(self.completed_dir.glob("item-*.json"))
         return [WorkResult.from_dict(json.loads(path.read_text(encoding="utf-8"))) for path in paths]
 
+    def completed_filenames(self) -> set[str]:
+        return {path.name for path in self.completed_dir.glob("item-*.json")}
+
     def observable_results(self) -> list[WorkResult]:
         names = {path.name for path in self.partial_dir.glob("item-*.json")}
         names.update(path.name for path in self.completed_dir.glob("item-*.json"))
