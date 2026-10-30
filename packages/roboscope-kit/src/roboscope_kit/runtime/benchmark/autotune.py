@@ -38,11 +38,8 @@ RESERVED_VRAM_PER_GPU_BYTES = 2 * 1024**3
 DEFAULT_CANDIDATE_TIMEOUT_S = 15 * 60.0
 DEFAULT_TOTAL_BUDGET_S = 30 * 60.0
 DEFAULT_MAXIMUM_SUCCESS_RATE_DROP = 0.15
-# ``two-phase``: the released worker ramp followed by a replica ramp gated on GPU
-# utilization. ``diagonal``: ramp workers on one replica per GPU until doubling K
-# stops paying (the knee), then add replicas while scaling K by the measured
-# workers per replica.
-AUTOTUNE_STRATEGIES = ("two-phase", "diagonal")
+# Strategies register under the name ``autotune_strategy`` selects; see
+# :func:`register_strategy`. ``two-phase`` is the released search.
 DEFAULT_AUTOTUNE_STRATEGY = "two-phase"
 DEFAULT_WORKER_KNEE_GAIN = 0.25
 DEFAULT_REPLICA_MINIMUM_GAIN = 0.03
@@ -57,6 +54,39 @@ MeasureFn = Callable[
     "tuple[dict[str, Any], int | None]",
 ]
 ClockFn = Callable[[], float]
+# A strategy decides which K/g pairs to probe and which to select. It measures
+# through the controller, which owns probe execution, resource and correctness
+# checks, the time budget and selection.json, and returns the selection result.
+AutotuneStrategy = Callable[["BenchmarkAutotuneController"], Dict[str, Any]]  # noqa: UP006
+_STRATEGIES: dict[str, AutotuneStrategy] = {}
+
+
+def register_strategy(name: str) -> Callable[[AutotuneStrategy], AutotuneStrategy]:
+    """Register a K/g search that a manifest selects with ``autotune_strategy: <name>``."""
+
+    def register(strategy: AutotuneStrategy) -> AutotuneStrategy:
+        if name in _STRATEGIES:
+            raise ValueError(f"autotune strategy {name!r} is already registered")
+        _STRATEGIES[name] = strategy
+        return strategy
+
+    return register
+
+
+def resolve_strategy(name: str) -> AutotuneStrategy:
+    """Return the registered strategy for ``name``."""
+
+    try:
+        return _STRATEGIES[name]
+    except KeyError:
+        raise ValueError(f"autotune strategy must be one of {autotune_strategies()}") from None
+
+
+def autotune_strategies() -> tuple[str, ...]:
+    """Names of every registered strategy."""
+
+    return tuple(sorted(_STRATEGIES))
+
 
 # Estimated CPU cores one simulator worker needs. Used only to derive a sane
 # initial K ceiling before any measurement; the manifest may override it via
@@ -152,8 +182,7 @@ class AutotuneLimits:
     start_workers_per_gpu: int = 1
 
     def __post_init__(self) -> None:
-        if self.strategy not in AUTOTUNE_STRATEGIES:
-            raise ValueError(f"autotune strategy must be one of {AUTOTUNE_STRATEGIES}")
+        resolve_strategy(self.strategy)
         if self.throughput_estimator not in THROUGHPUT_ESTIMATORS:
             raise ValueError(f"autotune throughput estimator must be one of {THROUGHPUT_ESTIMATORS}")
         if self.start_workers_per_gpu < 1:
@@ -340,133 +369,11 @@ class BenchmarkAutotuneController:
         return result
 
     def _tune(self) -> dict[str, Any]:
-        if self.limits.strategy == "diagonal":
-            return self._tune_diagonal()
-        k_candidates = k_candidate_plan(self.bounds)
-        k_trials, k_stop_reason = self._run_k_ramp(k_candidates)
-        selected_k = select_k(k_trials, cpu_quota=self.bounds.cpu_cores).k
-        selected_k_trial = next(trial for trial in k_trials if trial.k == selected_k)
-        base_g = self.bounds.gpu_count
-        replica_vram = self.cache[(selected_k, base_g)][1]
-        g_candidates, g_trials, selected_g, g_ramp_reason = self._run_g_ramp(
-            selected_k=selected_k,
-            selected_k_trial=selected_k_trial,
-            k_trials=k_trials,
-            replica_vram=replica_vram,
-        )
-        return {
-            "k": selected_k,
-            "g": selected_g,
-            "mode": "dynamic-probe",
-            "bound_hint": self.bound_hint.value,
-            "k_candidates": list(k_candidates),
-            "g_candidates": list(g_candidates),
-            "g_ramp_reason": g_ramp_reason,
-            "k_stop_reason": k_stop_reason,
-            "k_trials": [_trial_dict(trial) for trial in k_trials],
-            "g_trials": [_trial_dict(trial) for trial in g_trials],
-            "concurrency_health": self.cache[(selected_k, selected_g)][2],
-            "bounds": {
-                "gpu_count": self.bounds.gpu_count,
-                "cpu_cores": self.bounds.cpu_cores,
-                "max_workers": self.bounds.max_workers,
-                "max_replicas": self.bounds.max_replicas,
-                "worker_cpu_cores": self.bounds.worker_cpu_cores,
-                "vram_per_gpu_bytes": self.bounds.vram_per_gpu_bytes,
-                "replica_vram_bytes": replica_vram,
-            },
-        }
+        result = resolve_strategy(self.limits.strategy)(self)
+        result.setdefault("strategy", self.limits.strategy)
+        return result
 
-    def _tune_diagonal(self) -> dict[str, Any]:
-        """Find workers per replica on one replica per GPU, then scale both together.
-
-        Worker phase: double K while a doubling raises throughput by at least
-        ``worker_knee_gain``; past that knee the replicas, not the simulators,
-        limit throughput. The accepted K per replica, r, is how many workers one
-        replica keeps busy. Replica phase: add one replica per GPU and set
-        K = r * g (capped by measured CPU use per worker); keep the step while it
-        gains at least ``replica_minimum_gain``. A resource limit, a failed probe,
-        or an exhausted budget ends the search with the last accepted configuration.
-        """
-
-        base = self.bounds.gpu_count
-        start_k = min(base * self.limits.start_workers_per_gpu, self.bounds.max_workers_hard)
-        self.baseline_key = (start_k, base)
-        incumbent = self._measure_trial(start_k, base, ramp="k")
-        accepted = [incumbent]
-        path: list[dict[str, Any]] = []
-        limited = False
-        stop_reason = ""
-        while True:
-            cap = self._worker_cap(incumbent)
-            if incumbent.k >= cap:
-                stop_reason = f"worker cap {cap} reached"
-                break
-            k_next = min(2 * incumbent.k, cap)
-            try:
-                trial = self._measure_trial(k_next, base, ramp="k")
-            except (ProbeStopped, AutotuneBudgetExhausted) as exc:
-                stop_reason, limited = _stop_reason(exc), True
-                break
-            gain = _gain(trial, incumbent)
-            path.append({"k": k_next, "g": base, "gain": gain})
-            limit = self._resource_limit(trial)
-            if limit is not None:
-                stop_reason, limited = f"K={k_next}, g={base} {limit}", True
-                break
-            if gain < self.limits.worker_knee_gain:
-                stop_reason = f"worker gain {gain:.1%} at K={k_next} below knee"
-                break
-            incumbent = trial
-            accepted.append(trial)
-        workers_per_replica = incumbent.k / base
-        replica_cap = self._replica_cap()
-        while not limited:
-            g_next = incumbent.servers.replicas + base
-            if replica_cap is None:
-                stop_reason += "; replica VRAM footprint or GPU capacity unknown"
-                break
-            if g_next > replica_cap:
-                stop_reason += f"; replica cap {replica_cap} reached"
-                break
-            k_next = max(incumbent.k, min(round(workers_per_replica * g_next), self._worker_cap(incumbent)))
-            memory = self._predicted_memory_limit(incumbent, k_next, g_next)
-            if memory is not None:
-                stop_reason += f"; {memory}"
-                break
-            try:
-                trial = self._measure_trial(k_next, g_next, ramp="g")
-            except (ProbeStopped, AutotuneBudgetExhausted) as exc:
-                stop_reason += f"; {_stop_reason(exc)}"
-                break
-            gain = _gain(trial, incumbent)
-            path.append({"k": k_next, "g": g_next, "gain": gain})
-            limit = self._resource_limit(trial)
-            if limit is not None:
-                stop_reason += f"; K={k_next}, g={g_next} {limit}"
-                break
-            if gain < self.limits.replica_minimum_gain:
-                stop_reason += f"; replica gain {gain:.1%} at K={k_next}, g={g_next}"
-                break
-            incumbent = trial
-            accepted.append(trial)
-        selected_k = incumbent.k
-        selected_g = incumbent.servers.replicas
-        return {
-            "k": selected_k,
-            "g": selected_g,
-            "mode": "dynamic-probe",
-            "strategy": "diagonal",
-            "bound_hint": self.bound_hint.value,
-            "workers_per_replica": workers_per_replica,
-            "stop_reason": stop_reason,
-            "path": path,
-            "k_trials": [_trial_dict(trial) for trial in accepted],
-            "concurrency_health": self.cache[(selected_k, selected_g)][2],
-            "bounds": self._bounds_dict(self.cache[(selected_k, selected_g)][1]),
-        }
-
-    def _worker_cap(self, incumbent: KTrial) -> int:
+    def worker_cap(self, incumbent: KTrial) -> int:
         """Worker ceiling refined by the incumbent's measured CPU cores per worker."""
 
         cap = self.bounds.max_workers_hard
@@ -476,7 +383,7 @@ class BenchmarkAutotuneController:
             cap = min(cap, max(incumbent.k, int(available / per_worker)))
         return max(cap, self.bounds.gpu_count)
 
-    def _predicted_memory_limit(self, incumbent: KTrial, k_next: int, g_next: int) -> str | None:
+    def predicted_memory_limit(self, incumbent: KTrial, k_next: int, g_next: int) -> str | None:
         """Skip a probe whose GPU memory, extrapolated from the incumbent, would not fit.
 
         Peak memory is modeled as replicas times the measured replica footprint plus
@@ -501,13 +408,13 @@ class BenchmarkAutotuneController:
             f"above {capacity / 1024**3:.1f} GiB"
         )
 
-    def _replica_cap(self) -> int | None:
+    def replica_cap(self) -> int | None:
         replica_vram = self.cache[self.baseline_key][1]
         if replica_vram is None or self.bounds.vram_per_gpu_bytes is None:
             return None
         return g_candidate_plan(self.bounds, replica_vram)[-1]
 
-    def _resource_limit(self, trial: KTrial) -> str | None:
+    def resource_limit(self, trial: KTrial) -> str | None:
         cpu_limit = max(self.bounds.cpu_cores - 1.0, 0.0)
         if trial.clients.cpu_cores > cpu_limit:
             return f"used {trial.clients.cpu_cores:.2f} CPU cores above {cpu_limit:.2f}"
@@ -518,7 +425,7 @@ class BenchmarkAutotuneController:
             return f"CPU throttle ratio {throttle:.2f} above 0.40"
         return None
 
-    def _bounds_dict(self, replica_vram: int | None) -> dict[str, Any]:
+    def bounds_dict(self, replica_vram: int | None) -> dict[str, Any]:
         return {
             "gpu_count": self.bounds.gpu_count,
             "cpu_cores": self.bounds.cpu_cores,
@@ -530,76 +437,7 @@ class BenchmarkAutotuneController:
             "replica_vram_bytes": replica_vram,
         }
 
-    def _run_k_ramp(self, candidates: tuple[int, ...]) -> tuple[list[KTrial], str | None]:
-        trials: list[KTrial] = []
-        stop_reason = None
-        for k in candidates:
-            try:
-                trial = self._measure_trial(k, self.bounds.gpu_count, ramp="k")
-            except (ProbeStopped, AutotuneBudgetExhausted) as exc:
-                if not trials:
-                    raise
-                stop_reason = _stop_reason(exc)
-                break
-            trials.append(trial)
-            selected = select_k(trials, cpu_quota=self.bounds.cpu_cores)
-            if selected.k != k:
-                stop_reason = f"K={k} did not improve safe throughput; keeping K={selected.k}"
-                break
-        return trials, stop_reason
-
-    def _run_g_ramp(
-        self,
-        *,
-        selected_k: int,
-        selected_k_trial: KTrial,
-        k_trials: list[KTrial],
-        replica_vram: int | None,
-    ) -> tuple[tuple[int, ...], list[KTrial], int, str]:
-        base_g = self.bounds.gpu_count
-        if replica_vram is None:
-            reason = "policy replica VRAM footprint unknown; keeping one replica per GPU"
-            return (base_g,), [], base_g, reason
-        if self.bounds.vram_per_gpu_bytes is None:
-            reason = "GPU VRAM capacity unknown; keeping one replica per GPU"
-            return (base_g,), [], base_g, reason
-        g_candidates = g_candidate_plan(self.bounds, replica_vram)
-        single_throughput = k_trials[0].clients.throughput / max(k_trials[0].k, 1)
-        if not should_ramp_g(
-            bound_hint=self.bound_hint,
-            k_trial=selected_k_trial,
-            single_client_throughput=single_throughput,
-        ):
-            reason = "replica-ramp conditions not met; keeping one replica per GPU"
-            return g_candidates, [], base_g, reason
-        return self._measure_g_candidates(selected_k, g_candidates)
-
-    def _measure_g_candidates(
-        self,
-        selected_k: int,
-        candidates: tuple[int, ...],
-    ) -> tuple[tuple[int, ...], list[KTrial], int, str]:
-        trials: list[KTrial] = []
-        selected_g = self.bounds.gpu_count
-        reason = "GPU-inference bound; ramping replicas"
-        for g in candidates:
-            if g == self.bounds.gpu_count:
-                continue
-            try:
-                trial = self._measure_trial(selected_k, g, ramp="g")
-            except (ProbeStopped, AutotuneBudgetExhausted) as exc:
-                reason = _stop_reason(exc)
-                break
-            trials.append(trial)
-            previous = self.cache[(selected_k, selected_g)][0]
-            gain = trial.clients.throughput / max(previous.clients.throughput, 1e-9) - 1
-            if gain < 0.01:
-                reason = f"replica throughput gain {gain:.1%} below 1% at g={g}"
-                break
-            selected_g = g
-        return candidates, trials, selected_g, reason
-
-    def _measure_trial(self, k: int, g: int, *, ramp: str) -> KTrial:
+    def measure_trial(self, k: int, g: int, *, ramp: str) -> KTrial:
         key = (k, g)
         if key in self.cache:
             return self.cache[key][0]
@@ -756,6 +594,7 @@ class BenchmarkAutotuneController:
             "mode": "dynamic-probe",
             "elapsed_s": max(0.0, self.clock() - self.started_s),
             "limits": {
+                "strategy": self.limits.strategy,
                 "candidate_timeout_s": self.limits.candidate_timeout_s,
                 "total_budget_s": self.limits.total_budget_s,
                 "maximum_success_rate_drop": self.limits.maximum_success_rate_drop,
@@ -767,6 +606,216 @@ class BenchmarkAutotuneController:
         if result is not None:
             snapshot.update(result)
         atomic_json(self.output_dir / "selection.json", snapshot)
+
+
+@register_strategy("two-phase")
+def two_phase_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]:
+    """Ramp K on one replica per GPU, then ramp replicas when inference is the bottleneck.
+
+    This is the released search and the default for every benchmark.
+    """
+
+    k_candidates = k_candidate_plan(controller.bounds)
+    k_trials, k_stop_reason = _run_k_ramp(controller, k_candidates)
+    selected_k = select_k(k_trials, cpu_quota=controller.bounds.cpu_cores).k
+    selected_k_trial = next(trial for trial in k_trials if trial.k == selected_k)
+    base_g = controller.bounds.gpu_count
+    replica_vram = controller.cache[(selected_k, base_g)][1]
+    g_candidates, g_trials, selected_g, g_ramp_reason = _run_g_ramp(
+        controller,
+        selected_k=selected_k,
+        selected_k_trial=selected_k_trial,
+        k_trials=k_trials,
+        replica_vram=replica_vram,
+    )
+    return {
+        "k": selected_k,
+        "g": selected_g,
+        "mode": "dynamic-probe",
+        "bound_hint": controller.bound_hint.value,
+        "k_candidates": list(k_candidates),
+        "g_candidates": list(g_candidates),
+        "g_ramp_reason": g_ramp_reason,
+        "k_stop_reason": k_stop_reason,
+        "k_trials": [_trial_dict(trial) for trial in k_trials],
+        "g_trials": [_trial_dict(trial) for trial in g_trials],
+        "concurrency_health": controller.cache[(selected_k, selected_g)][2],
+        "bounds": {
+            "gpu_count": controller.bounds.gpu_count,
+            "cpu_cores": controller.bounds.cpu_cores,
+            "max_workers": controller.bounds.max_workers,
+            "max_replicas": controller.bounds.max_replicas,
+            "worker_cpu_cores": controller.bounds.worker_cpu_cores,
+            "vram_per_gpu_bytes": controller.bounds.vram_per_gpu_bytes,
+            "replica_vram_bytes": replica_vram,
+        },
+    }
+
+
+@register_strategy("diagonal")
+def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]:
+    """Find workers per replica on one replica per GPU, then scale both together.
+
+    Worker phase: double K while a doubling raises throughput by at least
+    ``worker_knee_gain``; past that knee the replicas, not the simulators,
+    limit throughput. The accepted K per replica, r, is how many workers one
+    replica keeps busy. Replica phase: add one replica per GPU and set
+    K = r * g (capped by measured CPU use per worker); keep the step while it
+    gains at least ``replica_minimum_gain``. A resource limit, a failed probe,
+    or an exhausted budget ends the search with the last accepted configuration.
+    """
+
+    base = controller.bounds.gpu_count
+    start_k = min(base * controller.limits.start_workers_per_gpu, controller.bounds.max_workers_hard)
+    controller.baseline_key = (start_k, base)
+    incumbent = controller.measure_trial(start_k, base, ramp="k")
+    accepted = [incumbent]
+    path: list[dict[str, Any]] = []
+    limited = False
+    stop_reason = ""
+    while True:
+        cap = controller.worker_cap(incumbent)
+        if incumbent.k >= cap:
+            stop_reason = f"worker cap {cap} reached"
+            break
+        k_next = min(2 * incumbent.k, cap)
+        try:
+            trial = controller.measure_trial(k_next, base, ramp="k")
+        except (ProbeStopped, AutotuneBudgetExhausted) as exc:
+            stop_reason, limited = _stop_reason(exc), True
+            break
+        gain = _gain(trial, incumbent)
+        path.append({"k": k_next, "g": base, "gain": gain})
+        limit = controller.resource_limit(trial)
+        if limit is not None:
+            stop_reason, limited = f"K={k_next}, g={base} {limit}", True
+            break
+        if gain < controller.limits.worker_knee_gain:
+            stop_reason = f"worker gain {gain:.1%} at K={k_next} below knee"
+            break
+        incumbent = trial
+        accepted.append(trial)
+    workers_per_replica = incumbent.k / base
+    replica_cap = controller.replica_cap()
+    while not limited:
+        g_next = incumbent.servers.replicas + base
+        if replica_cap is None:
+            stop_reason += "; replica VRAM footprint or GPU capacity unknown"
+            break
+        if g_next > replica_cap:
+            stop_reason += f"; replica cap {replica_cap} reached"
+            break
+        k_next = max(incumbent.k, min(round(workers_per_replica * g_next), controller.worker_cap(incumbent)))
+        memory = controller.predicted_memory_limit(incumbent, k_next, g_next)
+        if memory is not None:
+            stop_reason += f"; {memory}"
+            break
+        try:
+            trial = controller.measure_trial(k_next, g_next, ramp="g")
+        except (ProbeStopped, AutotuneBudgetExhausted) as exc:
+            stop_reason += f"; {_stop_reason(exc)}"
+            break
+        gain = _gain(trial, incumbent)
+        path.append({"k": k_next, "g": g_next, "gain": gain})
+        limit = controller.resource_limit(trial)
+        if limit is not None:
+            stop_reason += f"; K={k_next}, g={g_next} {limit}"
+            break
+        if gain < controller.limits.replica_minimum_gain:
+            stop_reason += f"; replica gain {gain:.1%} at K={k_next}, g={g_next}"
+            break
+        incumbent = trial
+        accepted.append(trial)
+    selected_k = incumbent.k
+    selected_g = incumbent.servers.replicas
+    return {
+        "k": selected_k,
+        "g": selected_g,
+        "mode": "dynamic-probe",
+        "strategy": "diagonal",
+        "bound_hint": controller.bound_hint.value,
+        "workers_per_replica": workers_per_replica,
+        "stop_reason": stop_reason,
+        "path": path,
+        "k_trials": [_trial_dict(trial) for trial in accepted],
+        "concurrency_health": controller.cache[(selected_k, selected_g)][2],
+        "bounds": controller.bounds_dict(controller.cache[(selected_k, selected_g)][1]),
+    }
+
+
+def _run_k_ramp(
+    controller: BenchmarkAutotuneController,
+    candidates: tuple[int, ...],
+) -> tuple[list[KTrial], str | None]:
+    trials: list[KTrial] = []
+    stop_reason = None
+    for k in candidates:
+        try:
+            trial = controller.measure_trial(k, controller.bounds.gpu_count, ramp="k")
+        except (ProbeStopped, AutotuneBudgetExhausted) as exc:
+            if not trials:
+                raise
+            stop_reason = _stop_reason(exc)
+            break
+        trials.append(trial)
+        selected = select_k(trials, cpu_quota=controller.bounds.cpu_cores)
+        if selected.k != k:
+            stop_reason = f"K={k} did not improve safe throughput; keeping K={selected.k}"
+            break
+    return trials, stop_reason
+
+
+def _run_g_ramp(
+    controller: BenchmarkAutotuneController,
+    *,
+    selected_k: int,
+    selected_k_trial: KTrial,
+    k_trials: list[KTrial],
+    replica_vram: int | None,
+) -> tuple[tuple[int, ...], list[KTrial], int, str]:
+    base_g = controller.bounds.gpu_count
+    if replica_vram is None:
+        reason = "policy replica VRAM footprint unknown; keeping one replica per GPU"
+        return (base_g,), [], base_g, reason
+    if controller.bounds.vram_per_gpu_bytes is None:
+        reason = "GPU VRAM capacity unknown; keeping one replica per GPU"
+        return (base_g,), [], base_g, reason
+    g_candidates = g_candidate_plan(controller.bounds, replica_vram)
+    single_throughput = k_trials[0].clients.throughput / max(k_trials[0].k, 1)
+    if not should_ramp_g(
+        bound_hint=controller.bound_hint,
+        k_trial=selected_k_trial,
+        single_client_throughput=single_throughput,
+    ):
+        reason = "replica-ramp conditions not met; keeping one replica per GPU"
+        return g_candidates, [], base_g, reason
+    return _measure_g_candidates(controller, selected_k, g_candidates)
+
+
+def _measure_g_candidates(
+    controller: BenchmarkAutotuneController,
+    selected_k: int,
+    candidates: tuple[int, ...],
+) -> tuple[tuple[int, ...], list[KTrial], int, str]:
+    trials: list[KTrial] = []
+    selected_g = controller.bounds.gpu_count
+    reason = "GPU-inference bound; ramping replicas"
+    for g in candidates:
+        if g == controller.bounds.gpu_count:
+            continue
+        try:
+            trial = controller.measure_trial(selected_k, g, ramp="g")
+        except (ProbeStopped, AutotuneBudgetExhausted) as exc:
+            reason = _stop_reason(exc)
+            break
+        trials.append(trial)
+        previous = controller.cache[(selected_k, selected_g)][0]
+        gain = trial.clients.throughput / max(previous.clients.throughput, 1e-9) - 1
+        if gain < 0.01:
+            reason = f"replica throughput gain {gain:.1%} below 1% at g={g}"
+            break
+        selected_g = g
+    return candidates, trials, selected_g, reason
 
 
 def _stop_reason(exc: ProbeStopped | AutotuneBudgetExhausted) -> str:
@@ -887,6 +936,7 @@ __all__ = [
     "AutotuneBudgetExhausted",
     "AutotuneBounds",
     "AutotuneLimits",
+    "AutotuneStrategy",
     "BenchmarkAutotuneController",
     "ProbeCapacityReached",
     "ProbeLimits",
@@ -894,9 +944,14 @@ __all__ = [
     "ProbeStopped",
     "ProbeTimedOut",
     "autotune_phase",
+    "autotune_strategies",
+    "diagonal_strategy",
     "g_candidate_plan",
     "k_candidate_plan",
+    "register_strategy",
     "resolve_bounds",
     "resolve_limits",
+    "resolve_strategy",
     "run_autotune",
+    "two_phase_strategy",
 ]

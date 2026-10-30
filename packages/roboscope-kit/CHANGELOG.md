@@ -8,6 +8,10 @@
   gains at least `autotune_replica_minimum_gain` (3%). The worker cap comes from measured CPU per worker,
   and a step whose GPU memory, extrapolated from the incumbent's replica and worker footprint, would not
   fit is skipped. `two-phase` stays the default for every benchmark.
+- Put autotune strategies behind one interface. `register_strategy(name)` adds a K/g search that a
+  manifest selects with `autotune_strategy: <name>`; every strategy measures through the shared
+  controller, which owns probe execution, resource and correctness checks, the time budget and
+  `selection.json`. `selection.json` records the strategy in `limits` and in the result.
 - Report `worker_steps_per_s`: per-worker steps over each worker's busy span, which excludes worker
   start-up and the idle tail of short probes. Select it with `autotune_throughput_estimator: worker`;
   the default `elapsed` estimator is unchanged.
