@@ -38,6 +38,18 @@ RESERVED_VRAM_PER_GPU_BYTES = 2 * 1024**3
 DEFAULT_CANDIDATE_TIMEOUT_S = 15 * 60.0
 DEFAULT_TOTAL_BUDGET_S = 30 * 60.0
 DEFAULT_MAXIMUM_SUCCESS_RATE_DROP = 0.15
+# ``two-phase``: the released worker ramp followed by a replica ramp gated on GPU
+# utilization. ``diagonal``: ramp workers on one replica per GPU until doubling K
+# stops paying (the knee), then add replicas while scaling K by the measured
+# workers per replica.
+AUTOTUNE_STRATEGIES = ("two-phase", "diagonal")
+DEFAULT_AUTOTUNE_STRATEGY = "two-phase"
+DEFAULT_WORKER_KNEE_GAIN = 0.25
+DEFAULT_REPLICA_MINIMUM_GAIN = 0.03
+# ``elapsed``: total probe steps over probe wall time (released). ``worker``: the
+# runtime's per-worker busy-span rate, which excludes start-up and tail idling.
+THROUGHPUT_ESTIMATORS = ("elapsed", "worker")
+DEFAULT_THROUGHPUT_ESTIMATOR = "elapsed"
 
 ProbeProgressFn = Callable[[Dict[str, Any]], None]  # noqa: UP006 - evaluated by Python 3.8
 MeasureFn = Callable[
@@ -131,8 +143,21 @@ class AutotuneLimits:
     candidate_timeout_s: float = DEFAULT_CANDIDATE_TIMEOUT_S
     total_budget_s: float = DEFAULT_TOTAL_BUDGET_S
     maximum_success_rate_drop: float = DEFAULT_MAXIMUM_SUCCESS_RATE_DROP
+    strategy: str = DEFAULT_AUTOTUNE_STRATEGY
+    throughput_estimator: str = DEFAULT_THROUGHPUT_ESTIMATOR
+    worker_knee_gain: float = DEFAULT_WORKER_KNEE_GAIN
+    replica_minimum_gain: float = DEFAULT_REPLICA_MINIMUM_GAIN
+    # First worker count per GPU for the diagonal strategy; its probe is the
+    # correctness baseline.
+    start_workers_per_gpu: int = 1
 
     def __post_init__(self) -> None:
+        if self.strategy not in AUTOTUNE_STRATEGIES:
+            raise ValueError(f"autotune strategy must be one of {AUTOTUNE_STRATEGIES}")
+        if self.throughput_estimator not in THROUGHPUT_ESTIMATORS:
+            raise ValueError(f"autotune throughput estimator must be one of {THROUGHPUT_ESTIMATORS}")
+        if self.start_workers_per_gpu < 1:
+            raise ValueError("autotune start_workers_per_gpu must be positive")
         if self.candidate_timeout_s <= 0:
             raise ValueError("autotune candidate_timeout_s must be positive")
         if self.total_budget_s <= 0:
@@ -151,6 +176,9 @@ class AutotuneBounds:
     max_replicas: int
     worker_cpu_cores: float
     vram_per_gpu_bytes: int | None
+    # Worker ceiling without the per-worker CPU estimate; the diagonal strategy
+    # refines it from measured CPU use instead.
+    max_workers_hard: int = ABSOLUTE_MAX_WORKERS
 
 
 def resolve_bounds(gpu_count: int, manifest_defaults: dict[str, Any]) -> AutotuneBounds:
@@ -175,6 +203,7 @@ def resolve_bounds(gpu_count: int, manifest_defaults: dict[str, Any]) -> Autotun
     if "maximum_workers" in manifest_defaults:
         ceiling = min(ceiling, int(manifest_defaults["maximum_workers"]))
     max_workers = max(gpu_count, ceiling)
+    hard = min(ABSOLUTE_MAX_WORKERS, int(manifest_defaults.get("maximum_workers", ABSOLUTE_MAX_WORKERS)))
     max_replicas = max(
         gpu_count,
         min(int(manifest_defaults.get("maximum_replicas", ABSOLUTE_MAX_REPLICAS)), int(cpu_cores)),
@@ -187,6 +216,7 @@ def resolve_bounds(gpu_count: int, manifest_defaults: dict[str, Any]) -> Autotun
         max_replicas=max_replicas,
         worker_cpu_cores=worker_cpu_cores,
         vram_per_gpu_bytes=int(vram_raw) if vram_raw else None,
+        max_workers_hard=max(gpu_count, hard),
     )
 
 
@@ -206,6 +236,17 @@ def resolve_limits(manifest_defaults: dict[str, Any]) -> AutotuneLimits:
                 DEFAULT_MAXIMUM_SUCCESS_RATE_DROP,
             )
         ),
+        strategy=str(manifest_defaults.get("autotune_strategy", DEFAULT_AUTOTUNE_STRATEGY)),
+        throughput_estimator=str(
+            manifest_defaults.get("autotune_throughput_estimator", DEFAULT_THROUGHPUT_ESTIMATOR)
+        ),
+        worker_knee_gain=float(
+            manifest_defaults.get("autotune_worker_knee_gain", DEFAULT_WORKER_KNEE_GAIN)
+        ),
+        replica_minimum_gain=float(
+            manifest_defaults.get("autotune_replica_minimum_gain", DEFAULT_REPLICA_MINIMUM_GAIN)
+        ),
+        start_workers_per_gpu=int(manifest_defaults.get("autotune_start_workers_per_gpu", 1)),
     )
 
 
@@ -281,6 +322,7 @@ class BenchmarkAutotuneController:
         self.bound_hint = BoundHint.GPU_INFER
         self.started_s = 0.0
         self.deadline_s = 0.0
+        self.baseline_key = (bounds.gpu_count, bounds.gpu_count)
 
     def run(self) -> dict[str, Any]:
         """Tune within budget and atomically persist every candidate transition."""
@@ -298,6 +340,8 @@ class BenchmarkAutotuneController:
         return result
 
     def _tune(self) -> dict[str, Any]:
+        if self.limits.strategy == "diagonal":
+            return self._tune_diagonal()
         k_candidates = k_candidate_plan(self.bounds)
         k_trials, k_stop_reason = self._run_k_ramp(k_candidates)
         selected_k = select_k(k_trials, cpu_quota=self.bounds.cpu_cores).k
@@ -331,6 +375,159 @@ class BenchmarkAutotuneController:
                 "vram_per_gpu_bytes": self.bounds.vram_per_gpu_bytes,
                 "replica_vram_bytes": replica_vram,
             },
+        }
+
+    def _tune_diagonal(self) -> dict[str, Any]:
+        """Find workers per replica on one replica per GPU, then scale both together.
+
+        Worker phase: double K while a doubling raises throughput by at least
+        ``worker_knee_gain``; past that knee the replicas, not the simulators,
+        limit throughput. The accepted K per replica, r, is how many workers one
+        replica keeps busy. Replica phase: add one replica per GPU and set
+        K = r * g (capped by measured CPU use per worker); keep the step while it
+        gains at least ``replica_minimum_gain``. A resource limit, a failed probe,
+        or an exhausted budget ends the search with the last accepted configuration.
+        """
+
+        base = self.bounds.gpu_count
+        start_k = min(base * self.limits.start_workers_per_gpu, self.bounds.max_workers_hard)
+        self.baseline_key = (start_k, base)
+        incumbent = self._measure_trial(start_k, base, ramp="k")
+        accepted = [incumbent]
+        path: list[dict[str, Any]] = []
+        limited = False
+        stop_reason = ""
+        while True:
+            cap = self._worker_cap(incumbent)
+            if incumbent.k >= cap:
+                stop_reason = f"worker cap {cap} reached"
+                break
+            k_next = min(2 * incumbent.k, cap)
+            try:
+                trial = self._measure_trial(k_next, base, ramp="k")
+            except (ProbeStopped, AutotuneBudgetExhausted) as exc:
+                stop_reason, limited = _stop_reason(exc), True
+                break
+            gain = _gain(trial, incumbent)
+            path.append({"k": k_next, "g": base, "gain": gain})
+            limit = self._resource_limit(trial)
+            if limit is not None:
+                stop_reason, limited = f"K={k_next}, g={base} {limit}", True
+                break
+            if gain < self.limits.worker_knee_gain:
+                stop_reason = f"worker gain {gain:.1%} at K={k_next} below knee"
+                break
+            incumbent = trial
+            accepted.append(trial)
+        workers_per_replica = incumbent.k / base
+        replica_cap = self._replica_cap()
+        while not limited:
+            g_next = incumbent.servers.replicas + base
+            if replica_cap is None:
+                stop_reason += "; replica VRAM footprint or GPU capacity unknown"
+                break
+            if g_next > replica_cap:
+                stop_reason += f"; replica cap {replica_cap} reached"
+                break
+            k_next = max(incumbent.k, min(round(workers_per_replica * g_next), self._worker_cap(incumbent)))
+            memory = self._predicted_memory_limit(incumbent, k_next, g_next)
+            if memory is not None:
+                stop_reason += f"; {memory}"
+                break
+            try:
+                trial = self._measure_trial(k_next, g_next, ramp="g")
+            except (ProbeStopped, AutotuneBudgetExhausted) as exc:
+                stop_reason += f"; {_stop_reason(exc)}"
+                break
+            gain = _gain(trial, incumbent)
+            path.append({"k": k_next, "g": g_next, "gain": gain})
+            limit = self._resource_limit(trial)
+            if limit is not None:
+                stop_reason += f"; K={k_next}, g={g_next} {limit}"
+                break
+            if gain < self.limits.replica_minimum_gain:
+                stop_reason += f"; replica gain {gain:.1%} at K={k_next}, g={g_next}"
+                break
+            incumbent = trial
+            accepted.append(trial)
+        selected_k = incumbent.k
+        selected_g = incumbent.servers.replicas
+        return {
+            "k": selected_k,
+            "g": selected_g,
+            "mode": "dynamic-probe",
+            "strategy": "diagonal",
+            "bound_hint": self.bound_hint.value,
+            "workers_per_replica": workers_per_replica,
+            "stop_reason": stop_reason,
+            "path": path,
+            "k_trials": [_trial_dict(trial) for trial in accepted],
+            "concurrency_health": self.cache[(selected_k, selected_g)][2],
+            "bounds": self._bounds_dict(self.cache[(selected_k, selected_g)][1]),
+        }
+
+    def _worker_cap(self, incumbent: KTrial) -> int:
+        """Worker ceiling refined by the incumbent's measured CPU cores per worker."""
+
+        cap = self.bounds.max_workers_hard
+        per_worker = incumbent.clients.cpu_cores / max(incumbent.k, 1)
+        if per_worker > 0:
+            available = max(self.bounds.cpu_cores - 1.0, 1.0)
+            cap = min(cap, max(incumbent.k, int(available / per_worker)))
+        return max(cap, self.bounds.gpu_count)
+
+    def _predicted_memory_limit(self, incumbent: KTrial, k_next: int, g_next: int) -> str | None:
+        """Skip a probe whose GPU memory, extrapolated from the incumbent, would not fit.
+
+        Peak memory is modeled as replicas times the measured replica footprint plus
+        workers times the incumbent's remaining memory per worker (simulator
+        rendering contexts). The replica cap alone ignores the workers.
+        """
+
+        replica = self.cache[self.baseline_key][1]
+        if replica is None or self.bounds.vram_per_gpu_bytes is None:
+            return None
+        peak = incumbent.servers.vram_bytes
+        g = incumbent.servers.replicas
+        per_worker = max(0.0, (peak - g * replica) / max(incumbent.k, 1))
+        predicted = peak + (g_next - g) * replica + (k_next - incumbent.k) * per_worker
+        capacity = self.bounds.gpu_count * (
+            self.bounds.vram_per_gpu_bytes - RESERVED_VRAM_PER_GPU_BYTES
+        )
+        if predicted <= capacity:
+            return None
+        return (
+            f"K={k_next}, g={g_next} predicted GPU memory {predicted / 1024**3:.1f} GiB "
+            f"above {capacity / 1024**3:.1f} GiB"
+        )
+
+    def _replica_cap(self) -> int | None:
+        replica_vram = self.cache[self.baseline_key][1]
+        if replica_vram is None or self.bounds.vram_per_gpu_bytes is None:
+            return None
+        return g_candidate_plan(self.bounds, replica_vram)[-1]
+
+    def _resource_limit(self, trial: KTrial) -> str | None:
+        cpu_limit = max(self.bounds.cpu_cores - 1.0, 0.0)
+        if trial.clients.cpu_cores > cpu_limit:
+            return f"used {trial.clients.cpu_cores:.2f} CPU cores above {cpu_limit:.2f}"
+        if trial.servers.gpu_utilization > 0.95:
+            return f"GPU utilization {trial.servers.gpu_utilization:.2f} above 0.95"
+        throttle = trial.clients.throttle_time_ratio
+        if throttle is not None and throttle > 0.40:
+            return f"CPU throttle ratio {throttle:.2f} above 0.40"
+        return None
+
+    def _bounds_dict(self, replica_vram: int | None) -> dict[str, Any]:
+        return {
+            "gpu_count": self.bounds.gpu_count,
+            "cpu_cores": self.bounds.cpu_cores,
+            "max_workers": self.bounds.max_workers,
+            "max_workers_hard": self.bounds.max_workers_hard,
+            "max_replicas": self.bounds.max_replicas,
+            "worker_cpu_cores": self.bounds.worker_cpu_cores,
+            "vram_per_gpu_bytes": self.bounds.vram_per_gpu_bytes,
+            "replica_vram_bytes": replica_vram,
         }
 
     def _run_k_ramp(self, candidates: tuple[int, ...]) -> tuple[list[KTrial], str | None]:
@@ -437,7 +634,7 @@ class BenchmarkAutotuneController:
                     stop_reason=probe_limits.timeout_reason,
                     health=health,
                 )
-            trial = _as_trial(k, g, output, health)
+            trial = _as_trial(k, g, output, health, self.limits.throughput_estimator)
             self._check_correctness(k, g, health)
         except ProbeStopped as exc:
             self._finish_candidate(
@@ -470,7 +667,7 @@ class BenchmarkAutotuneController:
         return trial
 
     def _check_correctness(self, k: int, g: int, health: dict[str, Any]) -> None:
-        baseline_key = (self.bounds.gpu_count, self.bounds.gpu_count)
+        baseline_key = self.baseline_key
         baseline = self.cache.get(baseline_key)
         if baseline is None or (k, g) == baseline_key:
             return
@@ -603,6 +800,7 @@ def _as_trial(
     g: int,
     output: dict[str, Any],
     health: dict[str, Any],
+    estimator: str = DEFAULT_THROUGHPUT_ESTIMATOR,
 ) -> KTrial:
     result = output["result"]
     resources = output["resources"]
@@ -627,6 +825,8 @@ def _as_trial(
             health=health,
         )
     throughput = float(result["steps_per_s"])
+    if estimator == "worker" and result.get("worker_steps_per_s") is not None:
+        throughput = float(result["worker_steps_per_s"])
     return KTrial(
         k=k,
         clients=ClientMetrics(
@@ -644,6 +844,10 @@ def _as_trial(
             vram_bytes=int(gpu["peak_memory_bytes"]),
         ),
     )
+
+
+def _gain(trial: KTrial, incumbent: KTrial) -> float:
+    return trial.clients.throughput / max(incumbent.clients.throughput, 1e-9) - 1
 
 
 def _health_stop_reason(k: int, health: dict[str, Any]) -> str:

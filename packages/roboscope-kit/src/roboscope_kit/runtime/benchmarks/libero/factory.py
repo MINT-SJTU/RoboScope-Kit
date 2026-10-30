@@ -49,12 +49,16 @@ class LiberoBenchmarkFactory:
         image: BenchmarkImageManifest,
         concurrency: int,
     ) -> LiberoBenchmarkAdapter:
-        del concurrency
-        task_ids = representative_indices(
-            LIBERO_TASK_COUNTS[request.suite],
-            int(image.defaults.get("probe_task_count", 10)),
-        )
+        task_count = int(image.defaults.get("probe_task_count", 10))
         episodes = int(image.defaults.get("probe_episodes_per_task", 1))
+        # Give every probed worker at least this many episodes, so a probe at K starts K
+        # workers instead of at most task_count. 0 keeps the fixed probe size.
+        items_per_worker = int(image.defaults.get("probe_items_per_worker", 0))
+        if items_per_worker > 0:
+            items = max(task_count * episodes, items_per_worker * concurrency)
+            episodes = max(episodes, -(-items // task_count))
+            task_count = -(-items // episodes)
+        task_ids = representative_indices(LIBERO_TASK_COUNTS[request.suite], task_count)
         return self._create(
             request,
             image,

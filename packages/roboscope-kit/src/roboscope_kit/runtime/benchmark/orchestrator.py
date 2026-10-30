@@ -139,6 +139,9 @@ class ParallelBenchmarkRuntime:
         self.failure_events: list[dict[str, Any]] = []
         self.recycle_events: list[dict[str, Any]] = []
         self.initial_workers_per_gpu: dict[str, int] = {}
+        # Monotonic offset from evaluation start at which the controller first saw each work item done.
+        self.item_completion_s: dict[str, float] = {}
+        self.evaluation_started_s: float | None = None
 
     def run(
         self,
@@ -274,6 +277,8 @@ class ParallelBenchmarkRuntime:
             append_event(events_path, {"type": "phase", "phase": "evaluation"})
             self.queue.start()
             evaluation_started = time.monotonic()
+            self.evaluation_started_s = evaluation_started
+            self.item_completion_s = {}
             with benchmark_phase(phase_timing_callback, "evaluation_s"):
                 results = self._monitor(
                     total_records,
@@ -304,6 +309,9 @@ class ParallelBenchmarkRuntime:
         standard["elapsed_s"] = elapsed_s
         standard["steps_per_s"] = standard["total_steps"] / max(elapsed_s, 1e-9)
         standard["episodes_per_s"] = standard["episodes"] / max(elapsed_s, 1e-9)
+        worker_rate = worker_steps_per_s(results, self.item_completion_s)
+        if worker_rate is not None:
+            standard["worker_steps_per_s"] = worker_rate
         output = {
             "sdk_version": 1,
             "runtime": asdict(self.config),
@@ -312,6 +320,10 @@ class ParallelBenchmarkRuntime:
                 "policy_load_s": policy_load_s,
                 "runtime_prepare_s": runtime_prepare_s,
                 "evaluation_s": evaluation_s,
+            },
+            "item_timeline": {
+                "completion_s": dict(self.item_completion_s),
+                "worker_id": {result.item_id: result.worker_id for result in results},
             },
             "inference": inference_metadata,
             "policy_io": policy_io,
@@ -454,6 +466,10 @@ class ParallelBenchmarkRuntime:
         while True:
             self._check_processes(events_path, total_records)
             observable_results = self.queue.observable_results()
+            if self.evaluation_started_s is not None:
+                seen_s = time.monotonic() - self.evaluation_started_s
+                for result in observable_results:
+                    self.item_completion_s.setdefault(result.item_id, seen_s)
             record_count = sum(len(result.records) for result in observable_results)
             if record_count != reported:
                 progress = aggregate_standard_results(observable_results, total_records)
@@ -837,6 +853,34 @@ class ParallelBenchmarkRuntime:
         for state_path in self.state_dir.glob("worker-*.json"):
             state_path.unlink()
 
+
+
+def worker_steps_per_s(
+    results: Sequence[WorkResult],
+    completion_s: dict[str, float],
+) -> float | None:
+    """Sum over workers of each worker's steps over its own busy span.
+
+    A worker's span runs from evaluation start to the controller first seeing its
+    last item done, so it covers environment creation, resets, and inference
+    waits. Unlike total steps over elapsed time, workers left idle while the last
+    items finish do not dilute the rate, so a short probe still measures the
+    throughput of K busy workers.
+    """
+
+    spans: dict[int, float] = {}
+    steps: dict[int, int] = {}
+    for result in results:
+        done_s = completion_s.get(result.item_id)
+        if done_s is None:
+            return None
+        spans[result.worker_id] = max(spans.get(result.worker_id, 0.0), done_s)
+        steps[result.worker_id] = steps.get(result.worker_id, 0) + sum(
+            record.steps for record in result.records
+        )
+    if not spans:
+        return None
+    return sum(steps[worker] / max(spans[worker], 1e-9) for worker in spans)
 
 
 def append_event(path: Path, payload: dict[str, Any]) -> None:

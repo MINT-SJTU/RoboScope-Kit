@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.0b3 (Unreleased)
+
+- Add the opt-in `diagonal` autotune strategy (`autotune_strategy: diagonal`). It ramps workers on one
+  replica per GPU until doubling K gains less than `autotune_worker_knee_gain` (25%), then adds one
+  replica per GPU at a time with K scaled by the measured workers per replica, keeping a step while it
+  gains at least `autotune_replica_minimum_gain` (3%). The worker cap comes from measured CPU per worker,
+  and a step whose GPU memory, extrapolated from the incumbent's replica and worker footprint, would not
+  fit is skipped. `two-phase` stays the default for every benchmark.
+- Report `worker_steps_per_s`: per-worker steps over each worker's busy span, which excludes worker
+  start-up and the idle tail of short probes. Select it with `autotune_throughput_estimator: worker`;
+  the default `elapsed` estimator is unchanged.
+- Add `probe_items_per_worker` for LIBERO probes (default 0, the fixed probe size), so a probe at K can
+  run at least that many episodes per worker.
+- Record per-item completion times in `result.json` (`item_timeline`).
+
 ## 0.8.0b2 (Unreleased)
 
 - Remove the official StarVLA image source (`official_images/starvla/`) and its documentation. Custom

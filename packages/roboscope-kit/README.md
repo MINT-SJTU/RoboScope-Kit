@@ -84,6 +84,14 @@ Each candidate is limited to 15 minutes and the whole search to 30 minutes, afte
 pair is used. Progress is written to `/root/testresult/autotune/selection.json` as candidates start,
 advance, and stop. Tuning episodes never count toward the score.
 
+The default search, `two-phase`, ramps `K` on one replica per GPU and then ramps replicas when GPU
+utilization shows inference is the bottleneck. A benchmark manifest can select the `diagonal` search with
+`autotune_strategy: diagonal`. It doubles `K` on one replica per GPU until a doubling raises throughput by
+less than 25%; the accepted `K` per replica is how many Workers one replica keeps busy. It then adds one
+replica per GPU at a time with `K` scaled by that ratio, keeping each step that raises throughput by at
+least 3% and skipping a step whose GPU memory, extrapolated from the measured replica and Worker
+footprints, would not fit.
+
 ### Progress and errors
 
 RoboTwin and RoboCasa report each finished episode as it completes, so progress moves while a long Work
