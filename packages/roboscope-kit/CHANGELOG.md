@@ -18,7 +18,11 @@
   start-up and the idle tail of short probes. Select it with `autotune_throughput_estimator: worker`;
   the default `elapsed` estimator is unchanged.
 - Add `probe_items_per_worker` for LIBERO probes (default 0, the fixed probe size), so a probe at K can
-  run at least that many episodes per worker.
+  run at least that many episodes per worker. The probe keeps its task set and adds episodes per task, so
+  every K runs the same task mix and repeats the episodes of every smaller probe.
+- Compare a probe's success rate with the baseline on the episodes both ran (`record_success` in
+  `result.json`, `matched_episodes` in the probe health). Probes with identical workloads, the default,
+  compare exactly as before.
 - Record per-item completion times in `result.json` (`item_timeline`): the time the controller first sees
   each work item completed. Partial results, which RoboTwin and RoboCasa publish per episode, do not count.
 

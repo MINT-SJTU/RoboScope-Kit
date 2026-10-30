@@ -327,6 +327,9 @@ class ParallelBenchmarkRuntime:
                 "completion_s": dict(self.item_completion_s),
                 "worker_id": {result.item_id: result.worker_id for result in results},
             },
+            "record_success": {
+                record.record_id: record.success for result in results for record in result.records
+            },
             "inference": inference_metadata,
             "policy_io": policy_io,
             "benchmark": benchmark_metadata,

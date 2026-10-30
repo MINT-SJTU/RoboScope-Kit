@@ -347,6 +347,8 @@ class BenchmarkAutotuneController:
         self.limits = limits
         self.clock = clock or time.monotonic
         self.cache: dict[tuple[int, int], tuple[KTrial, int | None, dict[str, Any]]] = {}
+        # Per-episode success of every accepted probe, keyed by record id.
+        self.record_success: dict[tuple[int, int], dict[str, bool]] = {}
         self.candidates: list[dict[str, Any]] = []
         self.bound_hint = BoundHint.GPU_INFER
         self.started_s = 0.0
@@ -473,7 +475,8 @@ class BenchmarkAutotuneController:
                     health=health,
                 )
             trial = _as_trial(k, g, output, health, self.limits.throughput_estimator)
-            self._check_correctness(k, g, health)
+            record_success = dict(output.get("record_success", {}))
+            self._check_correctness(k, g, health, record_success)
         except ProbeStopped as exc:
             self._finish_candidate(
                 candidate,
@@ -494,6 +497,7 @@ class BenchmarkAutotuneController:
             )
             raise
         self.cache[key] = (trial, replica_vram, health)
+        self.record_success[key] = record_success
         self.bound_hint = _bound_hint(output)
         self._finish_candidate(
             candidate,
@@ -504,23 +508,49 @@ class BenchmarkAutotuneController:
         )
         return trial
 
-    def _check_correctness(self, k: int, g: int, health: dict[str, Any]) -> None:
+    def _check_correctness(
+        self,
+        k: int,
+        g: int,
+        health: dict[str, Any],
+        record_success: dict[str, bool],
+    ) -> None:
+        """Compare success with the baseline on the episodes both probes ran.
+
+        A probe whose workload grows with K still repeats the baseline's episodes, so
+        the comparison sees the same tasks and initial states. Without per-episode
+        results it falls back to the aggregate success rates.
+        """
+
         baseline_key = self.baseline_key
         baseline = self.cache.get(baseline_key)
         if baseline is None or (k, g) == baseline_key:
             return
         baseline_health = baseline[2]
-        baseline_rate = float(baseline_health["success_rate"])
+        baseline_records = self.record_success.get(baseline_key, {})
+        matched = sorted(baseline_records.keys() & record_success.keys())
+        if matched:
+            baseline_successes = sum(baseline_records[record] for record in matched)
+            baseline_episodes = len(matched)
+            baseline_rate = baseline_successes / baseline_episodes
+            success_rate = sum(record_success[record] for record in matched) / len(matched)
+        else:
+            baseline_successes = baseline_health["successes"]
+            baseline_episodes = baseline_health["completed_episodes"]
+            baseline_rate = float(baseline_health["success_rate"])
+            success_rate = float(health["success_rate"])
         minimum_rate = baseline_rate * (1.0 - self.limits.maximum_success_rate_drop)
         health["baseline_k"] = baseline_key[0]
-        health["baseline_successes"] = baseline_health["successes"]
-        health["baseline_episodes"] = baseline_health["completed_episodes"]
+        health["baseline_successes"] = baseline_successes
+        health["baseline_episodes"] = baseline_episodes
         health["baseline_success_rate"] = baseline_rate
         health["minimum_success_rate"] = minimum_rate
-        if float(health["success_rate"]) >= minimum_rate:
+        health["matched_episodes"] = len(matched)
+        health["matched_success_rate"] = success_rate
+        if success_rate >= minimum_rate:
             return
         raise ProbeCorrectnessRegression(
-            f"probe K={k}, g={g} success rate {health['success_rate']:.1%} fell below "
+            f"probe K={k}, g={g} success rate {success_rate:.1%} on the baseline episodes fell below "
             f"the K={baseline_key[0]} baseline {baseline_rate:.1%} with "
             f"{self.limits.maximum_success_rate_drop:.1%} tolerance",
             health=health,
