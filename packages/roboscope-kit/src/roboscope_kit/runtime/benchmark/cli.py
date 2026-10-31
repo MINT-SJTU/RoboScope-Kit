@@ -85,9 +85,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--evaluation-config", type=Path)
     parser.add_argument(
         "--autotune-strategy",
-        default=os.environ.get("ROBOSCOPE_AUTOTUNE_STRATEGY") or None,
         help=f"K/g autotune strategy, one of {', '.join(autotune_strategies())}; overrides the "
-        "manifest's autotune_strategy (default: $ROBOSCOPE_AUTOTUNE_STRATEGY, else the manifest)",
+        "manifest's autotune_strategy",
     )
     parser.add_argument(
         "--legacy-contract-root",
