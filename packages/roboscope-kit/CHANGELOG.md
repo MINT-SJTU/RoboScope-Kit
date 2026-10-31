@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0b3 (Unreleased)
+## 0.8.0b6 (Unreleased)
 
 - Add the opt-in `diagonal` autotune strategy (`autotune_strategy: diagonal`). It ramps workers on one
   replica per GPU until doubling K gains less than `autotune_worker_knee_gain` (25%); a step the worker
@@ -36,6 +36,27 @@
 - Record per-item completion times in `result.json` (`item_timeline`): the time the controller first sees
   each work item completed. Partial results, which RoboTwin and RoboCasa publish per episode, do not count.
   The controller reads completed items from the same queue scan it uses for progress.
+
+## 0.8.0b5 (Unreleased)
+
+- Add one StarVLA demo per benchmark under `examples/starvla/<benchmark>/`: LIBERO, LIBERO-Plus, RoboTwin,
+  RoboCasa, CALVIN, and MetaWorld. Each `demo.yaml` pins a published checkpoint, the StarVLA revision, and
+  the inference configuration; `prepare_snapshot.py` builds the run snapshot from it.
+- Add `starvla_libero_policy.py`, the LIBERO Policy behind the technical report's LIBERO-Long results. It
+  follows the StarVLA `eaa51c4` LIBERO client.
+
+## 0.8.0b4 (Unreleased)
+
+- Retire the custom-image and image-baking paths. Move the X-VLA example from
+  `examples/custom_image_validation/xvla/` to `examples/xvla/` and drop its baking script. Remove the LIBERO
+  base-image bundle scripts (`build_official_image_bundle.sh`, `install_official_image_bundle.sh`,
+  `prepare_official_image_for_bake.sh`, `verify_official_image.sh`) and the related documentation.
+
+## 0.8.0b3 (Unreleased)
+
+- Add the StarVLA Policy as an example under `examples/starvla/`, restored from the removed
+  `official_images/starvla/` source. It is the Policy behind the StarVLA measurements in the RoboScope Kit
+  technical report.
 
 ## 0.8.0b2 (Unreleased)
 

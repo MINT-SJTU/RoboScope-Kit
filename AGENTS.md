@@ -6,8 +6,7 @@ This repository owns the `roboscope-kit` Python package (import name `roboscope_
 adapters and launchers, the shared benchmark runtimes, and their documentation. Do not put robot control,
 training, dataset collection, or generic LeRobot engine code here.
 
-Image baking is out of scope. A change is complete when it is committed, carries the required version
-bump, and is merged; it never requires building, baking, or rolling out an image.
+A change is complete when it is committed, carries the required version bump, and is merged.
 
 ## Where things live
 
@@ -17,7 +16,8 @@ bump, and is merged; it never requires building, baking, or rolling out an image
 | `benchmarks/libero_official/` | The LIBERO entrypoint (`startbenchmark.sh`), runner, and hermetic self-test |
 | `benchmarks/starvla_platform_runtime/` | The Control Runtime installer, the per-benchmark `benchmark-image.json` manifests, and the thin launchers for shared benchmark environments |
 | `benchmarks/robotwin_official/` | RoboTwin launch and seed-cache tooling |
-| `examples/custom_image_validation/` | Engineering demos for the custom-image path; demo models are not part of the product support matrix |
+| `examples/starvla/` | The StarVLA `Policy` and one demo per benchmark, including the configurations behind the RoboScope Kit technical report |
+| `examples/xvla/` | The X-VLA `Policy` example: a stateful Policy serving several benchmarks |
 | `tests/async_inference/` | Autotune and LIBERO controller regressions |
 | `ci/` and `.github/workflows/` | Build, compatibility, and PyPI release automation |
 
