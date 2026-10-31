@@ -710,6 +710,7 @@ class BenchmarkAutotuneController:
             "elapsed_s": max(0.0, self.clock() - self.started_s),
             "limits": {
                 "strategy": self.limits.strategy,
+                "throughput_estimator": self.limits.throughput_estimator,
                 "candidate_timeout_s": self.limits.candidate_timeout_s,
                 "total_budget_s": self.limits.total_budget_s,
                 "maximum_success_rate_drop": self.limits.maximum_success_rate_drop,

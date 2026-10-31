@@ -18,7 +18,7 @@
 - Put autotune strategies behind one interface. `register_strategy(name)` adds a K/g search that a
   manifest selects with `autotune_strategy: <name>`; every strategy measures through the shared
   controller, which owns probe execution, resource and correctness checks, the time budget and
-  `selection.json`. `selection.json` records the strategy in `limits` and in the result, and both
+  `selection.json`. `selection.json` records the strategy and the throughput estimator in `limits`, and both
   strategies write the same `bounds`, which now include `max_workers_hard`. `select_k` and the diagonal
   strategy share one set of CPU, GPU-utilization and throttle limits.
 - Measure probes at steady state. `steady_steps_per_s` (with its `steady_window`) is the throughput of
