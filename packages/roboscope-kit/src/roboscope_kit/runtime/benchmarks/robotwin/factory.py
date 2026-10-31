@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from roboscope_kit.benchmark_specs import BenchmarkName
+from roboscope_kit.runtime.benchmark.autotune import nested_task_order, probe_items_per_worker
 from roboscope_kit.runtime.benchmark.factories import (
     BenchmarkRunRequest,
     representative_indices,
@@ -84,14 +85,28 @@ class RoboTwinBenchmarkFactory:
         image: BenchmarkImageManifest,
         concurrency: int,
     ) -> RoboTwinBenchmarkAdapter:
-        del concurrency
         tasks = self._tasks(image)
-        indices = representative_indices(
-            len(tasks),
-            int(image.defaults.get("probe_task_count", 10)),
-        )
-        selected = tuple(tasks[index] for index in indices)
+        task_count = int(image.defaults.get("probe_task_count", 10))
         episodes = int(image.defaults.get("probe_episodes_per_task", 1))
+        # Give every probed worker at least this many work items, so a probe at K starts K
+        # workers and measures them at steady state. 0 keeps the fixed probe. Tasks are
+        # added first, as a prefix of one nested order, then episodes per task in whole
+        # work items, so every probe repeats the episodes of each smaller probe.
+        items_per_worker = probe_items_per_worker(image.defaults)
+        if items_per_worker > 0:
+            needed = items_per_worker * concurrency
+            order = nested_task_order(len(tasks))
+            indices = tuple(sorted(order[: min(len(tasks), max(task_count, needed))]))
+            items_per_task = -(-needed // len(indices))
+            if items_per_task > 1:
+                shard = int(image.defaults["episode_shard_size"])
+                episodes = max(episodes, items_per_task * shard)
+        else:
+            indices = representative_indices(len(tasks), task_count)
+        protocol = image.benchmark_protocols.get(BenchmarkName.ROBOTWIN)
+        if protocol is not None:
+            episodes = min(episodes, int(protocol_suite(protocol, request.suite)["episodes_per_task"]))
+        selected = tuple(tasks[index] for index in indices)
         adapter = self._create(
             request,
             image,
@@ -100,7 +115,6 @@ class RoboTwinBenchmarkFactory:
             protocol_run=True,
             require_exact_episodes=False,
         )
-        protocol = image.benchmark_protocols.get(BenchmarkName.ROBOTWIN)
         if protocol is None:
             return adapter
         formal_episodes = int(protocol_suite(protocol, request.suite)["episodes_per_task"])

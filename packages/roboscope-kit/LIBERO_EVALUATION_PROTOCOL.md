@@ -172,9 +172,9 @@ task-<task_id:04d>-episode-<episode_index:04d>
 
 The runtime rejects missing or duplicate terminal record identifiers. Official aggregation reports episode
 and success counts per task; the standard result also reports total successes, failures, success rate,
-steps, wall time, steps/s, and episodes/s. When every work item has a completion time, it also reports
-`worker_steps_per_s`: the throughput of all `K` workers while none is idle, from the items that finished
-before the first worker ran out of work.
+steps, wall time, steps/s, and episodes/s. When every Worker completes a warm-up item and a later item
+before the first Worker runs out of work, it also reports `steady_steps_per_s` and `steady_window`: the
+throughput of all `K` Workers while every one is busy, without each Worker's first item.
 
 `result.json` also records `item_timeline` (`completion_s`, the seconds from evaluation start at which the
 controller first saw each work item completed, rounded up to its poll interval, and `worker_id` for each
@@ -199,11 +199,12 @@ growth. The platform selects the last candidate that improves episode throughput
 throttling, GPU utilization, or GPU-memory limits. Quick test remains fixed at `K=1/g=1`.
 
 Each probe runs the same representative task set, `probe_task_count` tasks (default 10, capped at the suite
-size), with `probe_episodes_per_task` episodes per task (default 1). When the manifest sets
-`probe_items_per_worker` above 0, a probe at `K` adds episodes per task until it holds at least that many
-work items per worker, counting `BENCHMARK_CHUNK_SIZE` episodes per item. Episodes per task never exceed the
-50 initial states each LIBERO task ships; a `K` that would need more is rejected as a worker shortfall.
-Because only episodes per task grow, every probe repeats the episodes of each smaller probe, and a probe's
+size), with `probe_episodes_per_task` episodes per task (default 1). With `probe_items_per_worker` above 0,
+a probe at `K` adds episodes per task until it holds at least that many work items per Worker, counting
+`BENCHMARK_CHUNK_SIZE` episodes per item. It defaults to 3 with the steady-state estimator, which the
+diagonal strategy uses, and to 0 otherwise. Episodes per task never exceed the 50 initial states each
+LIBERO task ships; a `K` that would need more is rejected as a Worker shortfall. Because only episodes per
+task grow, every probe repeats the episodes of each smaller probe, and a probe's
 success rate is compared with the baseline on the episodes both ran.
 
 ## 7. Product progress and result files

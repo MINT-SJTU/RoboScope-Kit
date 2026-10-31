@@ -21,15 +21,18 @@
   `selection.json`. `selection.json` records the strategy in `limits` and in the result, and both
   strategies write the same `bounds`, which now include `max_workers_hard`. `select_k` and the diagonal
   strategy share one set of CPU, GPU-utilization and throttle limits.
-- Report `worker_steps_per_s`: the throughput of all K workers while none is idle, from the items that
-  finished before the first worker ran out of work, so items that ran with fewer active workers do not
-  inflate it. Select it with `autotune_throughput_estimator: worker`; the default `elapsed` estimator is
-  unchanged.
-- Add `probe_items_per_worker` for LIBERO probes (default 0, the fixed probe size), so a probe at K holds at
-  least that many work items per worker, counting `chunk_size` episodes per item and dividing by the
-  tasks actually selected. Episodes per task are capped at the 50 initial states of a LIBERO task. The
-  probe keeps its task set and adds episodes per task, so every K runs the same task mix and repeats the
-  episodes of every smaller probe.
+- Measure probes at steady state. `steady_steps_per_s` (with its `steady_window`) is the throughput of
+  K concurrently busy workers: each worker's first item, which carries environment creation and Policy
+  warm-up, is dropped, and so are the items that finish after the first worker runs out of work. Select
+  it with `autotune_throughput_estimator: steady`; it is the default for the diagonal strategy, and a
+  probe without a steady-state window is rejected as `no_steady_window`. The default `elapsed`
+  estimator of `two-phase` is unchanged.
+- Size LIBERO and RoboTwin probes by K with `probe_items_per_worker`, so every probed worker gets that
+  many work items. It defaults to 3 (one warm-up and two measured items) with the steady estimator and
+  to 0, the fixed probe size, otherwise. LIBERO keeps its task set and adds episodes per task, counting
+  `chunk_size` episodes per item, capped at the 50 initial states of a task. RoboTwin first adds tasks
+  from one nested order, then whole work items per task, capped at the episodes of the formal
+  generation. Either way every probe repeats the episodes of each smaller probe.
 - Compare a probe's success rate with the baseline on the episodes both ran (`record_success` in
   `result.json`, `matched_episodes` in the probe health). Probes with identical workloads, the default,
   compare exactly as before.

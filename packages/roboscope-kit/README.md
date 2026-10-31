@@ -91,7 +91,9 @@ less than 25% (a step the CPU cap shortens needs the same share of linear scalin
 replica is how many Workers one replica keeps busy. It then adds one replica per GPU at a time with `K`
 scaled by that ratio, keeping each step that raises throughput by at least 3% and skipping a step whose
 busiest GPU, extrapolated from the measured replica footprint and the marginal memory per Worker, would
-not fit. Probes it measures but does not keep are marked `rejected` in `selection.json`.
+not fit. It compares steady-state throughput: each probe gives every Worker three work items, drops each
+Worker's first item, and stops measuring when the first Worker runs out of work. Probes it measures but
+does not keep are marked `rejected` in `selection.json`.
 
 ### Progress and errors
 

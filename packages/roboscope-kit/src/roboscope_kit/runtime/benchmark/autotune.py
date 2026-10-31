@@ -30,6 +30,7 @@ from roboscope_kit.runtime.autotune import (
     should_ramp_g,
 )
 
+from .factories import representative_indices
 from .queue import atomic_json
 from .resources import cpu_quota
 from .timing import PhaseTimingCallback, benchmark_phase
@@ -44,10 +45,14 @@ DEFAULT_MAXIMUM_SUCCESS_RATE_DROP = 0.15
 DEFAULT_AUTOTUNE_STRATEGY = "two-phase"
 DEFAULT_WORKER_KNEE_GAIN = 0.25
 DEFAULT_REPLICA_MINIMUM_GAIN = 0.03
-# ``elapsed``: total probe steps over probe wall time (released). ``worker``: the
-# runtime's per-worker busy-span rate, which excludes start-up and tail idling.
-THROUGHPUT_ESTIMATORS = ("elapsed", "worker")
+# ``elapsed``: total probe steps over probe wall time (released). ``steady``: the
+# runtime's steady-state rate of K busy workers, without each worker's warm-up item
+# and the drain tail; see ``orchestrator.steady_throughput``.
+THROUGHPUT_ESTIMATORS = ("elapsed", "steady")
 DEFAULT_THROUGHPUT_ESTIMATOR = "elapsed"
+STRATEGY_THROUGHPUT_ESTIMATORS = {"diagonal": "steady"}
+# A steady-state probe needs a warm-up item and at least two measured items per worker.
+STEADY_PROBE_ITEMS_PER_WORKER = 3
 
 ProbeProgressFn = Callable[[Dict[str, Any]], None]  # noqa: UP006 - evaluated by Python 3.8
 MeasureFn = Callable[
@@ -175,7 +180,8 @@ class AutotuneLimits:
     total_budget_s: float = DEFAULT_TOTAL_BUDGET_S
     maximum_success_rate_drop: float = DEFAULT_MAXIMUM_SUCCESS_RATE_DROP
     strategy: str = DEFAULT_AUTOTUNE_STRATEGY
-    throughput_estimator: str = DEFAULT_THROUGHPUT_ESTIMATOR
+    # ``None`` picks the strategy's estimator: ``steady`` for diagonal, else ``elapsed``.
+    throughput_estimator: str | None = None
     worker_knee_gain: float = DEFAULT_WORKER_KNEE_GAIN
     replica_minimum_gain: float = DEFAULT_REPLICA_MINIMUM_GAIN
     # First worker count per GPU for the diagonal strategy; its probe is the
@@ -184,6 +190,9 @@ class AutotuneLimits:
 
     def __post_init__(self) -> None:
         resolve_strategy(self.strategy)
+        if self.throughput_estimator is None:
+            estimator = STRATEGY_THROUGHPUT_ESTIMATORS.get(self.strategy, DEFAULT_THROUGHPUT_ESTIMATOR)
+            object.__setattr__(self, "throughput_estimator", estimator)
         if self.throughput_estimator not in THROUGHPUT_ESTIMATORS:
             raise ValueError(f"autotune throughput estimator must be one of {THROUGHPUT_ESTIMATORS}")
         if self.start_workers_per_gpu < 1:
@@ -267,8 +276,10 @@ def resolve_limits(manifest_defaults: dict[str, Any]) -> AutotuneLimits:
             )
         ),
         strategy=str(manifest_defaults.get("autotune_strategy", DEFAULT_AUTOTUNE_STRATEGY)),
-        throughput_estimator=str(
-            manifest_defaults.get("autotune_throughput_estimator", DEFAULT_THROUGHPUT_ESTIMATOR)
+        throughput_estimator=(
+            str(manifest_defaults["autotune_throughput_estimator"])
+            if "autotune_throughput_estimator" in manifest_defaults
+            else None
         ),
         worker_knee_gain=float(
             manifest_defaults.get("autotune_worker_knee_gain", DEFAULT_WORKER_KNEE_GAIN)
@@ -278,6 +289,46 @@ def resolve_limits(manifest_defaults: dict[str, Any]) -> AutotuneLimits:
         ),
         start_workers_per_gpu=int(manifest_defaults.get("autotune_start_workers_per_gpu", 1)),
     )
+
+
+def probe_items_per_worker(manifest_defaults: dict[str, Any]) -> int:
+    """Work items every probed worker must receive; 0 keeps the benchmark's fixed probe.
+
+    The manifest's ``probe_items_per_worker`` wins. Otherwise the steady-state
+    estimator gets a warm-up item and two measured items per worker, and the
+    elapsed estimator keeps the fixed probe.
+    """
+
+    limits = resolve_limits(manifest_defaults)
+    steady = limits.throughput_estimator == "steady"
+    value = int(
+        manifest_defaults.get(
+            "probe_items_per_worker",
+            STEADY_PROBE_ITEMS_PER_WORKER if steady else 0,
+        )
+    )
+    if value < 0:
+        raise ValueError("probe_items_per_worker cannot be negative")
+    if steady and value < 2:
+        raise ValueError("the steady throughput estimator needs probe_items_per_worker of at least 2")
+    return value
+
+
+def nested_task_order(total: int) -> tuple[int, ...]:
+    """Task indices whose every prefix spans the workload and contains each shorter prefix.
+
+    A probe that needs more tasks takes a longer prefix, so it repeats every
+    episode of a smaller probe and the correctness check compares the same episodes.
+    """
+
+    order: list[int] = []
+    seen: set[int] = set()
+    for count in range(1, total + 1):
+        for index in representative_indices(total, count):
+            if index not in seen:
+                seen.add(index)
+                order.append(index)
+    return tuple(order)
 
 
 def k_candidate_plan(bounds: AutotuneBounds) -> tuple[int, ...]:
@@ -948,8 +999,16 @@ def _as_trial(
             health=health,
         )
     throughput = float(result["steps_per_s"])
-    if estimator == "worker" and result.get("worker_steps_per_s") is not None:
-        throughput = float(result["worker_steps_per_s"])
+    if estimator == "steady":
+        steady = result.get("steady_steps_per_s")
+        if steady is None:
+            raise ProbeCapacityReached(
+                f"probe K={k} has no steady-state window: every worker needs a warm-up item "
+                "and a measured item before the first worker runs out of work",
+                stop_reason="no_steady_window",
+                health=health,
+            )
+        throughput = float(steady)
     return KTrial(
         k=k,
         clients=ClientMetrics(
@@ -1022,6 +1081,8 @@ __all__ = [
     "diagonal_strategy",
     "g_candidate_plan",
     "k_candidate_plan",
+    "nested_task_order",
+    "probe_items_per_worker",
     "register_strategy",
     "resolve_bounds",
     "resolve_limits",

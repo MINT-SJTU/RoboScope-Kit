@@ -311,9 +311,10 @@ class ParallelBenchmarkRuntime:
         standard["elapsed_s"] = elapsed_s
         standard["steps_per_s"] = standard["total_steps"] / max(elapsed_s, 1e-9)
         standard["episodes_per_s"] = standard["episodes"] / max(elapsed_s, 1e-9)
-        worker_rate = worker_steps_per_s(results, self.item_completion_s)
-        if worker_rate is not None:
-            standard["worker_steps_per_s"] = worker_rate
+        steady = steady_throughput(results, self.item_completion_s)
+        if steady is not None:
+            standard["steady_steps_per_s"] = steady["steps_per_s"]
+            standard["steady_window"] = steady
         output = {
             "sdk_version": 1,
             "runtime": asdict(self.config),
@@ -869,42 +870,56 @@ class ParallelBenchmarkRuntime:
 
 
 
-def worker_steps_per_s(
+def steady_throughput(
     results: Sequence[WorkResult],
     completion_s: dict[str, float],
-) -> float | None:
-    """Throughput of K workers that are all busy, from items finished while none was idle.
+) -> dict[str, Any] | None:
+    """Steady-state steps/s of K concurrently busy workers, or ``None`` without a window.
 
-    The full-concurrency window ends when the first worker finishes its last item.
-    Items completed inside that window ran while all K workers competed for CPU and
-    inference, so items that later ran with fewer active workers do not inflate the
-    rate. Each worker's rate is its counted steps over its last counted completion;
-    the estimate is K times the mean rate of the workers that finished an item in the
-    window. The window starts at evaluation start, so it includes worker start-up.
+    Workers run items back to back, so an item spans from its worker's previous
+    completion (or evaluation start) to its own completion. Each worker's first
+    item carries environment creation and Policy warm-up and is dropped. The window
+    ends when the first worker finishes its last item, after which fewer than K
+    workers compete for CPU and inference, so later items are dropped too. A
+    worker's rate is the steps of its remaining items over their spans; the
+    throughput is K times the mean rate of the workers that have such items.
     Completion times are rounded up to the controller poll interval.
     """
 
-    last_done: dict[int, float] = {}
+    by_worker: dict[int, list[tuple[float, int]]] = {}
     for result in results:
         done_s = completion_s.get(result.item_id)
         if done_s is None:
             return None
-        last_done[result.worker_id] = max(last_done.get(result.worker_id, 0.0), done_s)
-    if not last_done:
+        steps = sum(record.steps for record in result.records)
+        by_worker.setdefault(result.worker_id, []).append((done_s, steps))
+    if not by_worker:
         return None
-    window_s = min(last_done.values())
-    spans: dict[int, float] = {}
-    steps: dict[int, int] = {}
-    for result in results:
-        done_s = completion_s[result.item_id]
-        if done_s > window_s:
+    for items in by_worker.values():
+        items.sort()
+    window_end_s = min(items[-1][0] for items in by_worker.values())
+    window_start_s = max(items[0][0] for items in by_worker.values())
+    rates: list[float] = []
+    measured_items = 0
+    for items in by_worker.values():
+        warm_s = items[0][0]
+        counted = [(done_s, steps) for done_s, steps in items[1:] if done_s <= window_end_s]
+        if not counted:
             continue
-        spans[result.worker_id] = max(spans.get(result.worker_id, 0.0), done_s)
-        steps[result.worker_id] = steps.get(result.worker_id, 0) + sum(
-            record.steps for record in result.records
-        )
-    rates = [steps[worker] / max(spans[worker], 1e-9) for worker in spans]
-    return len(last_done) * sum(rates) / len(rates)
+        span_s = counted[-1][0] - warm_s
+        if span_s <= 0:
+            continue
+        rates.append(sum(steps for _, steps in counted) / span_s)
+        measured_items += len(counted)
+    if not rates:
+        return None
+    return {
+        "steps_per_s": len(by_worker) * sum(rates) / len(rates),
+        "workers": len(by_worker),
+        "measured_workers": len(rates),
+        "measured_items": measured_items,
+        "window_s": max(0.0, window_end_s - window_start_s),
+    }
 
 
 def append_event(path: Path, payload: dict[str, Any]) -> None:
