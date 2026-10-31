@@ -2,11 +2,23 @@
 
 ## 0.8.0b5 (Unreleased)
 
-- The benchmark runtime no longer assumes fixed paths. `--image-manifest` is required, also for
-  `shard_merge`; the Policy process contract comes from the new `--policy-config`, and an `oss://`
-  checkpoint downloads into the new `--checkpoint-dir`. `load_policy_runtime_config(path)` and
-  `load_benchmark_image_manifest(path)` take the path, and `POLICY_CONFIG_PATH` and
-  `BENCHMARK_IMAGE_MANIFEST_PATH` are removed. The RoboScope platform launcher passes its own paths.
+- Run the kit standalone, with no hosted platform:
+  - The CLI takes every path as an argument: `--benchmark-manifest` (required, also for `shard_merge`),
+    `--policy-config` for the Policy process contract, and `--checkpoint-dir` for an `oss://` checkpoint.
+    `load_policy_runtime_config(path)` takes the path; `POLICY_CONFIG_PATH` is removed.
+  - The benchmark manifest is `benchmark-manifest.json`, schema 3 (`BenchmarkManifest`,
+    `load_benchmark_manifest`, module `runtime.benchmark.manifest`). It drops `image_name`,
+    `evaluation_kit_commit` and `sdk_version`, and relative `runtime` paths resolve against the manifest's
+    directory. RoboTwin runs its launcher with the kit's own interpreter, so its `runtime.python` is gone.
+  - Each benchmark lives in `benchmarks/<benchmark>/` with its manifest and a `build-runtime.sh <install-dir>`
+    that builds the pinned simulator environment and copies the manifest there. LIBERO gets its first build
+    script; RoboTwin's launcher and seed tools move from `benchmarks/robotwin_official/`.
+  - A shard records its build as the kit version and the manifest's SHA-256, and the merge requires both
+    to match.
+  - Simulator workers import the kit from a directory that holds only `roboscope_kit`, so a pip-installed
+    kit no longer exposes its `site-packages` to the simulator's interpreter.
+  - Removed: the `testlog.txt` progress contract and `--legacy-contract-root`, the shared-disk Control
+    Runtime installers and launchers, and the old LIBERO entrypoint `benchmarks/libero_official/`.
 - Add one StarVLA demo per benchmark under `examples/starvla/<benchmark>/`: LIBERO, LIBERO-Plus, RoboTwin,
   RoboCasa, CALVIN, and MetaWorld. Each `demo.yaml` pins a published checkpoint, the StarVLA revision, and
   the inference configuration; `prepare_snapshot.py` builds the run snapshot from it.

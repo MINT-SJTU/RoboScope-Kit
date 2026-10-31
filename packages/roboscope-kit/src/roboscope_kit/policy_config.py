@@ -1,7 +1,7 @@
 # Copyright 2026 RoboScope Team
 # SPDX-License-Identifier: Apache-2.0
 
-"""Load the immutable user Policy process contract from an evaluation image."""
+"""Load the user Policy process contract."""
 
 from __future__ import annotations
 

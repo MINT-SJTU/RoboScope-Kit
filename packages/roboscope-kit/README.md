@@ -52,23 +52,30 @@ An evaluation takes two files:
   ```json
   {
     "schema_version": 2,
-    "command": ["/opt/user/bin/python", "/workspace/user_policy.py"],
-    "cwd": "/workspace"
+    "command": ["/opt/my-policy/bin/python", "/opt/my-policy/user_policy.py"],
+    "cwd": "/opt/my-policy"
   }
   ```
 
-- the **benchmark manifest** (`--image-manifest`, a `benchmark-image.json`), which lists the benchmark's
-  suites and protocol, points `runtime` at the benchmark's Python environment, simulator source, and assets,
-  and sets the evaluation defaults. The repository has one manifest per benchmark under
-  [`benchmarks/starvla_platform_runtime/<benchmark>/`](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/benchmarks/starvla_platform_runtime).
-  The simulators are not dependencies of this package; install them where the manifest points.
+- the **benchmark manifest** (`--benchmark-manifest`, a `benchmark-manifest.json`), which lists the
+  benchmark's suites and protocol, points `runtime` at the benchmark's Python environment, simulator source,
+  and assets, and sets the evaluation defaults. Relative runtime paths resolve against the manifest's
+  directory.
+
+The simulators are not dependencies of this package. Each benchmark directory under
+[`benchmarks/`](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/benchmarks) has a `build-runtime.sh` that builds the pinned simulator
+environment into a directory you choose and copies the benchmark manifest there:
+
+```bash
+benchmarks/libero/build-runtime.sh /sim/libero
+```
 
 Run the evaluation with the benchmark CLI:
 
 ```bash
 python -m roboscope_kit.runtime.benchmark \
     --benchmark libero --suite libero_10 --checkpoint-source /models/my-checkpoint \
-    --image-manifest /path/to/benchmark-image.json \
+    --benchmark-manifest /sim/libero/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json \
     --output-dir /runs/libero_10
 ```
@@ -76,7 +83,8 @@ python -m roboscope_kit.runtime.benchmark \
 `--checkpoint-source` is an absolute path, passed to `Policy.load()` unchanged, or an `oss://` prefix, which
 is downloaded into `--checkpoint-dir`. The runtime validates the Policy process contract before every run.
 `--quick-test` runs a short real evaluation with one Worker and one Server; without it, the run is a full
-scored evaluation. Results, progress, and logs are written under `--output-dir`.
+scored evaluation. `--self-test` only checks that the manifest's runtime paths exist. Results, progress,
+and logs are written under `--output-dir`.
 
 The runtime is built on three ideas:
 
@@ -140,8 +148,8 @@ RoboTwin accepts a positive observation stride. The default is 1, so every new a
 observation. Randomized lighting, the viewer, video logging, and point-cloud observations always render
 every step, whatever stride you declare.
 
-Concurrency (`K`) and replica count (`g`) are not capabilities; the runtime chooses them, or you fix them
-with `--concurrency` and `--replicas` (see [Automatic tuning](#automatic-tuning-kg)).
+Concurrency (`K`) and replica count (`g`) are not capabilities; the runtime chooses them (see
+[Automatic tuning](#automatic-tuning-kg)).
 
 ### Episode state
 
@@ -166,10 +174,10 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | Benchmark | Execution chain | Environment the manifest points at |
 | --- | --- | --- |
 | LIBERO | SDK-native adapter and persistent LIBERO worker | Pinned LIBERO environment, simulator source, dataset, and initial states |
-| LIBERO-Plus | SDK-native adapter reusing the LIBERO worker | Pinned LIBERO-Plus environment, simulator archive, dataset, and initial states |
+| LIBERO-Plus | SDK-native adapter reusing the LIBERO worker | Pinned LIBERO-Plus environment, simulator source, dataset, and initial states |
 | RoboTwin | SDK-native adapter and worker calling the pinned RoboTwin launcher | RoboTwin environment and source, deploy policy, checkpoint assets, and validated seed cache |
 | RoboCasa | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa environment, simulator and task source, and dataset assets |
-| CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence manifest |
+| CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
 
 LIBERO and CALVIN convert native observations to the canonical feature names and send native 7-dimensional
@@ -180,13 +188,14 @@ each benchmark are defined by its benchmark manifest.
 The exact contracts are in the protocol documents:
 
 - [LIBERO](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md):
-  checkpoint staging, observation/action mapping, episode setup and horizons, success detection, output files, error codes, and the validation sequence.
+  environment build, invocation, checkpoint staging, observation/action mapping, episode setup and horizons,
+  success detection, output files, errors, and the validation sequence; also LIBERO-Plus.
 - [CALVIN](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/CALVIN_EVALUATION_PROTOCOL.md):
   manifest, observation/action mapping, official long-horizon evaluator, aggregation, and validation.
 - [MetaWorld](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md):
   MT50 manifest, camera setup, official training-goal evaluation, four-difficulty macro aggregation, and
   validation.
-- [RoboTwin fixed inputs](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/starvla_platform_runtime/robotwin/SEED_PROTOCOL.md):
+- [RoboTwin fixed inputs](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robotwin/SEED_PROTOCOL.md):
   since 0.7.0b51, the manifest freezes RoboTwin's 50 × 100 inputs per suite under
   `robotwin2-platform-native-step-lim-v2`. The clean entries are unchanged and the randomized pool is new,
   so report randomized v1 and v2 scores separately.
@@ -226,27 +235,30 @@ single-instance run. Run one instance per shard:
 ```bash
 python -m roboscope_kit.runtime.benchmark \
     --benchmark robotwin --suite demo_clean --checkpoint-source ... \
-    --image-manifest ... --policy-config ... \
+    --benchmark-manifest ... --policy-config ... \
     --shard-index I --shard-count N --output-dir /runs/shard-I
 ```
 
 Without `--shard-count`, the count is derived from the workload (one shard per 500 episodes, adjustable with
 `--shard-episodes`), capped at the number of Work Items; an explicit count above that cap is rejected.
 Quick tests cannot be sharded. Autotune always runs the full, unsharded probe on every instance; sharding
-applies only to the scored pass. Each shard records its shard details in `manifest.json` and `result.json`.
+applies only to the scored pass. Each shard records its shard details in `manifest.json` and `result.json`,
+including its build: the kit version and the SHA-256 of its benchmark manifest. All shards of one run must
+use the same kit version and manifest.
 
 When all shards finish, merge them. The merge checks that items are disjoint and fully covered, that terminal
 record IDs are unique, and that each item has the right number of records:
 
 ```bash
 python -m roboscope_kit.runtime.benchmark.shard_merge \
-    --benchmark robotwin --suite demo_clean --image-manifest ... \
+    --benchmark robotwin --suite demo_clean --benchmark-manifest ... \
     --shard-dir /runs/shard-0 ... --shard-dir /runs/shard-N-1 \
     --output-dir /runs/merged
 ```
 
-This merge rebuilds the workload from the benchmark manifest, so it needs the same benchmark runtime assets
-(including RoboTwin's seed cache). MetaWorld runs and merges must use the same `--evaluation-config` file.
+This merge rebuilds the workload from the benchmark manifest, so it needs the same manifest and benchmark
+runtime assets (including RoboTwin's seed cache). MetaWorld runs and merges must use the same
+`--evaluation-config` file.
 
 The merged `result.json` contains only counts (successes, episodes, steps) plus each shard's provenance and
 `result.json` SHA-256. Rates such as `steps_per_s` or `elapsed_s` are never combined across instances; report
