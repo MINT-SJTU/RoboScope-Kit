@@ -1,4 +1,4 @@
-"""Config-driven StarVLA Policy for RoboScope Kit custom images."""
+"""Config-driven StarVLA Policy for RoboScope Kit."""
 
 from __future__ import annotations
 

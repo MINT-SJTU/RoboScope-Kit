@@ -5,9 +5,6 @@ the RoboScope Kit technical report; the report's StarVLA listing is a condensed 
 [`starvla_policy.py`](starvla_policy.py). One class serves LIBERO, LIBERO-Plus, RoboTwin, RoboCasa, CALVIN,
 and MetaWorld.
 
-Like the other demos in this directory, it is engineering evidence, not part of the product support
-matrix.
-
 ## Files
 
 | File | Purpose |

@@ -183,7 +183,7 @@ def _stable_mixture_aliases(registry: Mapping[str, Any]) -> dict[str, Any]:
     the pinned StarVLA runtime may only register the same mixture under a dataset-
     format-versioned key (for example ``foo_bar_v3.0``). This returns the stable
     aliases that must be added so a snapshot's ``data_mix`` resolves, without
-    baking the dataset-format version into the lookup key.
+    hardcoding the dataset-format version in the lookup key.
 
     An alias is emitted only when the stable name is not already registered and
     exactly one versioned key maps to it; a stable name reachable from two
