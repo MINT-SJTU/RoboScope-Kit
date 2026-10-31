@@ -1,8 +1,8 @@
 # RoboScope Kit
 
-`roboscope-kit` connects your model to RoboScope's official simulation benchmarks. You implement one
-`Policy` class; RoboScope provides the simulators, schedules the evaluation, tunes its concurrency, and
-scores the results. You do not install simulator packages or set scheduling parameters.
+`roboscope-kit` evaluates your model on standard robot simulation benchmarks. You implement one `Policy`
+class; the benchmark runtime starts your Policy, drives the simulators, tunes the evaluation's concurrency,
+and scores the results.
 
 ```bash
 python -m pip install roboscope-kit
@@ -39,30 +39,46 @@ class UserPolicy(Policy):
 run(UserPolicy())
 ```
 
-RoboScope starts this script once per inference replica. It passes the staged checkpoint and the
+The runtime starts this script once per inference replica. It passes the staged checkpoint and the
 benchmark contract to `Policy.load()`, then calls `act()` through a local socket. Your process never starts
 a simulator or chooses how many evaluators run.
 
 ## How evaluation works
 
-You evaluate a model by building your own image: it contains your `Policy`, its dependencies, and the
-Policy process contract `roboscope-policy.json`, which tells RoboScope how to start the Policy. The runtime
-reads it from `--policy-config`:
+An evaluation takes two files:
 
-```json
-{
-  "schema_version": 2,
-  "command": ["/opt/user/bin/python", "/workspace/user_policy.py"],
-  "cwd": "/workspace"
-}
+- the **Policy process contract** (`--policy-config`), which tells the runtime how to start your Policy:
+
+  ```json
+  {
+    "schema_version": 2,
+    "command": ["/opt/user/bin/python", "/workspace/user_policy.py"],
+    "cwd": "/workspace"
+  }
+  ```
+
+- the **benchmark manifest** (`--image-manifest`, a `benchmark-image.json`), which lists the benchmark's
+  suites and protocol, points `runtime` at the benchmark's Python environment, simulator source, and assets,
+  and sets the evaluation defaults. The repository has one manifest per benchmark under
+  [`benchmarks/starvla_platform_runtime/<benchmark>/`](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/benchmarks/starvla_platform_runtime).
+  The simulators are not dependencies of this package; install them where the manifest points.
+
+Run the evaluation with the benchmark CLI:
+
+```bash
+python -m roboscope_kit.runtime.benchmark \
+    --benchmark libero --suite libero_10 --checkpoint-source /models/my-checkpoint \
+    --image-manifest /path/to/benchmark-image.json \
+    --policy-config /path/to/roboscope-policy.json \
+    --output-dir /runs/libero_10
 ```
 
-RoboScope validates this file before every quick test and scored evaluation. The benchmark environments,
-datasets, and evaluators come from RoboScope's shared storage, not from your image. You do not configure the
-file path, the concurrency, or any benchmark runtime flags.
+`--checkpoint-source` is an absolute path, passed to `Policy.load()` unchanged, or an `oss://` prefix, which
+is downloaded into `--checkpoint-dir`. The runtime validates the Policy process contract before every run.
+`--quick-test` runs a short real evaluation with one Worker and one Server; without it, the run is a full
+scored evaluation. Results, progress, and logs are written under `--output-dir`.
 
-Every evaluation supports a real quick test (one Worker, one Server) and a full scored run. The runtime is
-built on three ideas:
+The runtime is built on three ideas:
 
 - **Server**: a process that loads one replica of your `Policy` and answers action requests over a local
   socket. Several Workers can share one Server, which can batch their requests. Autotune calls the number of
@@ -76,22 +92,22 @@ built on three ideas:
 
 ### Automatic tuning (K/g)
 
-RoboScope picks `K` and `g` for you by running real episodes with your Policy. Every candidate runs the same
+The runtime picks `K` and `g` for you by running real episodes with your Policy. Every candidate runs the same
 fixed, representative set of episodes. The smallest safe `K` sets a success-rate baseline; a faster
 candidate is accepted only if it keeps at least 85% of that baseline and stays within resource limits.
 Candidates that lose Workers, run out of memory, or leave episodes unfinished are rejected.
 
 Each candidate is limited to 15 minutes and the whole search to 30 minutes, after which the last healthy
-pair is used. Progress is written to `/root/testresult/autotune/selection.json` as candidates start,
+pair is used. Progress is written to `<output-dir>/autotune/selection.json` as candidates start,
 advance, and stop. Tuning episodes never count toward the score.
 
 ### Progress and errors
 
 RoboTwin and RoboCasa report each finished episode as it completes, so progress moves while a long Work
-Item is still running; the official score still uses only each item's final result. Progress is published
-to the status file `testlog.txt`.
+Item is still running; the official score still uses only each item's final result. Progress is written to
+`<output-dir>/progress.json` and `<output-dir>/events.jsonl`.
 
-All runtime errors are appended to `/root/testresult/errors.jsonl`: recoverable Worker failures as well as
+All runtime errors are appended to `<output-dir>/errors.jsonl`: recoverable Worker failures as well as
 checkpoint, Policy Server, simulator, and configuration errors. When a RoboTwin simulator crashes with a
 normal error exit, the episodes it finished are kept and the rest of that window count as failures, so the
 evaluation continues. Out-of-memory and signal exits restart the Worker and replay its Work Item, with one
@@ -124,15 +140,17 @@ RoboTwin accepts a positive observation stride. The default is 1, so every new a
 observation. Randomized lighting, the viewer, video logging, and point-cloud observations always render
 every step, whatever stride you declare.
 
-Concurrency (`K`) and replica count (`g`) are not capabilities; RoboScope chooses them (see
-[Automatic tuning](#automatic-tuning-kg)).
+Concurrency (`K`) and replica count (`g`) are not capabilities; the runtime chooses them, or you fix them
+with `--concurrency` and `--replicas` (see [Automatic tuning](#automatic-tuning-kg)).
 
 ### Episode state
 
 Before each episode the runtime calls `reset(EpisodeContext)`; every observation carries its `episode_id`;
 when the episode ends it calls `end_episode(episode_id)`. The SDK forwards these calls but does not store
 Policy state for you. If your Policy keeps state, key it by `episode_id` and release it in `end_episode()`.
-The RoboScope user manual has stateful and stateless examples.
+The [X-VLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/xvla) is a stateful
+Policy; the [StarVLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/starvla) is
+stateless.
 
 ### Input preprocessing
 
@@ -142,10 +160,10 @@ input sizes are not part of the benchmark or Policy API.
 
 ## Supported benchmarks
 
-Each benchmark has a platform execution chain in this package. The simulators, datasets, and assets come from
-RoboScope's benchmark images and shared storage; they are not dependencies of the PyPI package.
+Each benchmark has an execution chain in this package. The simulators, datasets, and assets are not
+dependencies of the PyPI package; the benchmark manifest points the runtime at them.
 
-| Benchmark | Execution chain | Provided by images or shared storage |
+| Benchmark | Execution chain | Environment the manifest points at |
 | --- | --- | --- |
 | LIBERO | SDK-native adapter and persistent LIBERO worker | Pinned LIBERO environment, simulator source, dataset, and initial states |
 | LIBERO-Plus | SDK-native adapter reusing the LIBERO worker | Pinned LIBERO-Plus environment, simulator archive, dataset, and initial states |
@@ -157,20 +175,19 @@ RoboScope's benchmark images and shared storage; they are not dependencies of th
 LIBERO and CALVIN convert native observations to the canonical feature names and send native 7-dimensional
 actions back to their simulators. CALVIN's task-D-to-task-D path runs the official 1,000 long-horizon
 sequences with static and gripper images, proprioception, and language. The suites and runtime paths of
-each benchmark are defined by its image manifest.
+each benchmark are defined by its benchmark manifest.
 
 The exact contracts are in the protocol documents:
 
 - [LIBERO](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md):
-  `/root/startbenchmark.sh` arguments, checkpoint staging, observation/action mapping, episode setup and
-  horizons, success detection, output files, error codes, and the validation sequence.
+  checkpoint staging, observation/action mapping, episode setup and horizons, success detection, output files, error codes, and the validation sequence.
 - [CALVIN](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/CALVIN_EVALUATION_PROTOCOL.md):
   manifest, observation/action mapping, official long-horizon evaluator, aggregation, and validation.
 - [MetaWorld](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md):
   MT50 manifest, camera setup, official training-goal evaluation, four-difficulty macro aggregation, and
   validation.
 - [RoboTwin fixed inputs](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/starvla_platform_runtime/robotwin/SEED_PROTOCOL.md):
-  since 0.7.0b51, images freeze RoboTwin's 50 × 100 inputs per suite under
+  since 0.7.0b51, the manifest freezes RoboTwin's 50 × 100 inputs per suite under
   `robotwin2-platform-native-step-lim-v2`. The clean entries are unchanged and the randomized pool is new,
   so report randomized v1 and v2 scores separately.
 
@@ -181,8 +198,7 @@ which reports LIBERO and RoboTwin separately.
 ## CUDA MPS (opt-in)
 
 `--cuda-mps` runs the Policy replicas under NVIDIA CUDA MPS, so replicas sharing a GPU run their kernels
-concurrently instead of taking turns. It is off by default; `run-benchmark.sh` accepts the same flag. With
-it, the runtime:
+concurrently instead of taking turns. It is off by default. With it, the runtime:
 
 - starts a private `nvidia-cuda-mps-control` daemon for the visible GPUs with 100% active-thread access, and
   refuses to start if another MPS daemon or server is already running;
@@ -200,10 +216,8 @@ not change `CUDA_VISIBLE_DEVICES`.
 
 ## Cross-instance sharding (Beta)
 
-Sharding splits one evaluation across several independent GPU instances. It is in Beta: enable Beta
-features in your account settings, then turn on sharding for an evaluation and choose the instance count.
-Ordinary evaluations are not sharded, and the feature also needs a released, verified image and launcher on
-the platform; publishing the package alone does not enable it.
+Sharding splits one evaluation across several independent GPU machines. It is in Beta; evaluations are not
+sharded unless you pass `--shard-index`.
 
 Every instance builds the same full list of Work Items and keeps the items whose position satisfies
 `position % N == shard_index`. No coordination is needed, and RoboTwin seeds stay identical to a
@@ -226,20 +240,20 @@ record IDs are unique, and that each item has the right number of records:
 
 ```bash
 python -m roboscope_kit.runtime.benchmark.shard_merge \
-    --benchmark robotwin --suite demo_clean \
+    --benchmark robotwin --suite demo_clean --image-manifest ... \
     --shard-dir /runs/shard-0 ... --shard-dir /runs/shard-N-1 \
     --output-dir /runs/merged
 ```
 
-This merge rebuilds the workload from the image manifest, so it needs the same benchmark runtime assets
+This merge rebuilds the workload from the benchmark manifest, so it needs the same benchmark runtime assets
 (including RoboTwin's seed cache). MetaWorld runs and merges must use the same `--evaluation-config` file.
 
 The merged `result.json` contains only counts (successes, episodes, steps) plus each shard's provenance and
 `result.json` SHA-256. Rates such as `steps_per_s` or `elapsed_s` are never combined across instances; report
 cross-instance speedup against the whole job's wall-clock time.
 
-Where neither the benchmark runtime nor the record trees are available, for example on a control plane,
-merge from the shard `result.json` files alone:
+Where neither the benchmark runtime nor the record trees are available, merge from the shard `result.json`
+files alone:
 
 ```python
 from roboscope_kit.runtime.benchmark.shard_reduce import merge_shard_results
@@ -286,14 +300,14 @@ baseline and fails when the list drifts from the official lifecycle.
 
 ## Versioning and releases
 
-The names in `roboscope_kit.__all__` are the public API. Everything under `roboscope_kit.runtime` is
-platform internals; do not depend on its classes or command-line arguments unless this document says so.
-Installing from PyPI gives you the public `Policy` API and protocol client, not the simulators, datasets,
-or image dependencies those internal modules need.
+The names in `roboscope_kit.__all__` are the public API, and so are the command-line arguments this
+document describes. Everything else under `roboscope_kit.runtime` is internal; do not depend on its classes.
+Installing from PyPI gives you the public `Policy` API, the protocol client, and the benchmark runtime, not
+the simulators, datasets, or assets the benchmarks need.
 
 The package follows Semantic Versioning. During the `0.x` Beta series, a minor release may change
-`__all__`, the `Policy` lifecycle, or the wire protocol incompatibly; patch releases only fix bugs. Every
-evaluation image pins one exact version. Pin the version you validated in your own image, and read the
+`__all__`, the `Policy` lifecycle, or the wire protocol incompatibly; patch releases only fix bugs. Pin
+the exact version you validated, and read the
 [changelog](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/CHANGELOG.md)
 before moving to a new minor version. `1.0.0` will freeze the `Policy` lifecycle and the compatibility
 policy.
