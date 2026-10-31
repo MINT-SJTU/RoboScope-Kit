@@ -11,10 +11,8 @@
   exist it uses the manifest's per-worker CPU estimate. A step whose busiest GPU would run out of memory,
   extrapolated from the replica footprint and the marginal memory per worker, is skipped. Probes the
   strategy measures but does not keep are marked `rejected` in `selection.json`, the selection reports
-  the selected probe's bound hint, and replica-phase probes are listed in `g_trials`. If the first probe
-  at `autotune_start_workers_per_gpu` fails and budget remains, the search falls back to one worker per
-  GPU, which becomes the success-rate baseline and the selection. `two-phase` stays the default for every
-  benchmark.
+  the selected probe's bound hint, and replica-phase probes are listed in `g_trials`. `two-phase` stays
+  the default for every benchmark.
 - Put autotune strategies behind one interface. `register_strategy(name)` adds a K/g search that a
   manifest selects with `autotune_strategy: <name>`; every strategy measures through the shared
   controller, which owns probe execution, resource and correctness checks, the time budget and

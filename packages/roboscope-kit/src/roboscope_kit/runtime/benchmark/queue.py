@@ -142,12 +142,20 @@ class WorkQueue:
         return [WorkResult.from_dict(json.loads(path.read_text(encoding="utf-8"))) for path in paths]
 
     def observe(self) -> tuple[list[WorkResult], set[str]]:
-        """Return the observable results and the file names of completed items, from one scan."""
+        """Return the observable results and the ids of completed items, from one scan."""
 
         completed = {path.name for path in self.completed_dir.glob("item-*.json")}
         names = completed | {path.name for path in self.partial_dir.glob("item-*.json")}
-        results = [result for name in sorted(names) if (result := self._observable_result(name))]
-        return results, completed
+        results: list[WorkResult] = []
+        completed_ids: set[str] = set()
+        for name in sorted(names):
+            result = self._observable_result(name)
+            if result is None:
+                continue
+            results.append(result)
+            if name in completed:
+                completed_ids.add(result.item_id)
+        return results, completed_ids
 
     def observable_results(self) -> list[WorkResult]:
         return self.observe()[0]

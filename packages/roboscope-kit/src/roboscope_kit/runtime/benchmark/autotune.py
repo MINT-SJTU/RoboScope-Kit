@@ -30,7 +30,6 @@ from roboscope_kit.runtime.autotune import (
     should_ramp_g,
 )
 
-from .factories import representative_indices
 from .queue import atomic_json
 from .resources import cpu_quota
 from .timing import PhaseTimingCallback, benchmark_phase
@@ -184,9 +183,6 @@ class AutotuneLimits:
     throughput_estimator: str | None = None
     worker_knee_gain: float = DEFAULT_WORKER_KNEE_GAIN
     replica_minimum_gain: float = DEFAULT_REPLICA_MINIMUM_GAIN
-    # First worker count per GPU for the diagonal strategy; its probe is the
-    # correctness baseline.
-    start_workers_per_gpu: int = 1
 
     def __post_init__(self) -> None:
         resolve_strategy(self.strategy)
@@ -195,8 +191,6 @@ class AutotuneLimits:
             object.__setattr__(self, "throughput_estimator", estimator)
         if self.throughput_estimator not in THROUGHPUT_ESTIMATORS:
             raise ValueError(f"autotune throughput estimator must be one of {THROUGHPUT_ESTIMATORS}")
-        if self.start_workers_per_gpu < 1:
-            raise ValueError("autotune start_workers_per_gpu must be positive")
         if self.candidate_timeout_s <= 0:
             raise ValueError("autotune candidate_timeout_s must be positive")
         if self.total_budget_s <= 0:
@@ -287,7 +281,6 @@ def resolve_limits(manifest_defaults: dict[str, Any]) -> AutotuneLimits:
         replica_minimum_gain=float(
             manifest_defaults.get("autotune_replica_minimum_gain", DEFAULT_REPLICA_MINIMUM_GAIN)
         ),
-        start_workers_per_gpu=int(manifest_defaults.get("autotune_start_workers_per_gpu", 1)),
     )
 
 
@@ -312,23 +305,6 @@ def probe_items_per_worker(manifest_defaults: dict[str, Any]) -> int:
     if steady and value < 2:
         raise ValueError("the steady throughput estimator needs probe_items_per_worker of at least 2")
     return value
-
-
-def nested_task_order(total: int) -> tuple[int, ...]:
-    """Task indices whose every prefix spans the workload and contains each shorter prefix.
-
-    A probe that needs more tasks takes a longer prefix, so it repeats every
-    episode of a smaller probe and the correctness check compares the same episodes.
-    """
-
-    order: list[int] = []
-    seen: set[int] = set()
-    for count in range(1, total + 1):
-        for index in representative_indices(total, count):
-            if index not in seen:
-                seen.add(index)
-                order.append(index)
-    return tuple(order)
 
 
 def k_candidate_plan(bounds: AutotuneBounds) -> tuple[int, ...]:
@@ -425,7 +401,7 @@ class BenchmarkAutotuneController:
 
     def _tune(self) -> dict[str, Any]:
         result = resolve_strategy(self.limits.strategy)(self)
-        result.setdefault("strategy", self.limits.strategy)
+        result["strategy"] = self.limits.strategy
         return result
 
     def base_slope(self, metric: Callable[[KTrial], float]) -> float | None:
@@ -775,20 +751,9 @@ def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]
     """
 
     base = controller.bounds.gpu_count
-    start_k = min(base * controller.limits.start_workers_per_gpu, controller.bounds.max_workers_hard)
-    controller.baseline_key = (start_k, base)
+    incumbent = controller.measure_trial(base, base, ramp="k")
     limited = False
     stop_reason = ""
-    try:
-        incumbent = controller.measure_trial(start_k, base, ramp="k")
-    except ProbeStopped as exc:
-        # A model that runs with one worker per GPU but not with the start K keeps the
-        # configuration two-phase would have found; one worker per GPU becomes the baseline.
-        if start_k == base:
-            raise
-        controller.baseline_key = (base, base)
-        incumbent = controller.measure_trial(base, base, ramp="k")
-        stop_reason, limited = f"start K={start_k} failed, fell back to K={base}: {_stop_reason(exc)}", True
     k_trials = [incumbent]
     g_trials: list[KTrial] = []
     path: list[dict[str, Any]] = []
@@ -857,7 +822,6 @@ def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]
         "k": selected[0],
         "g": selected[1],
         "mode": "dynamic-probe",
-        "strategy": "diagonal",
         "bound_hint": controller.bound_hints.get(selected, controller.bound_hint).value,
         "workers_per_replica": workers_per_replica,
         "stop_reason": stop_reason,
@@ -975,7 +939,7 @@ def _as_trial(
     g: int,
     output: dict[str, Any],
     health: dict[str, Any],
-    estimator: str = DEFAULT_THROUGHPUT_ESTIMATOR,
+    estimator: str,
 ) -> KTrial:
     result = output["result"]
     resources = output["resources"]
@@ -1082,7 +1046,6 @@ __all__ = [
     "diagonal_strategy",
     "g_candidate_plan",
     "k_candidate_plan",
-    "nested_task_order",
     "probe_items_per_worker",
     "register_strategy",
     "resolve_bounds",

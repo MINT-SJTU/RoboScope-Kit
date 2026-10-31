@@ -17,7 +17,7 @@ from .autotune import ProbeCapacityReached, ProbeLimits, ProbeTimedOut
 from .cuda_mps import CudaMpsSession
 from .metrics import read_jsonl_since, summarize_events
 from .processes import InferencePool, ManagedProcess, ProcessFailureKind, start_process
-from .queue import WorkQueue, atomic_json, item_filename
+from .queue import WorkQueue, atomic_json
 from .resources import GpuSampler, cpu_quota, cpu_window, gpu_window, read_cpu_stat
 from .schema import EvaluationRecord, WorkItem, WorkResult, validate_terminal_accounting
 from .sharding import (
@@ -139,10 +139,9 @@ class ParallelBenchmarkRuntime:
         self.failure_events: list[dict[str, Any]] = []
         self.recycle_events: list[dict[str, Any]] = []
         self.initial_workers_per_gpu: dict[str, int] = {}
-        # Monotonic offset from evaluation start at which the controller first saw each work item completed.
+        # Seconds from evaluation start at which the controller first saw each work item completed.
         self.item_completion_s: dict[str, float] = {}
-        self.item_ids_by_filename: dict[str, str] = {}
-        self.evaluation_started_s: float | None = None
+        self.evaluation_started_s = 0.0
 
     def run(
         self,
@@ -178,7 +177,6 @@ class ParallelBenchmarkRuntime:
         else:
             shard_metadata = None
         total_records = sum(item.expected_results for item in items)
-        self.item_ids_by_filename = {item_filename(item): item.item_id for item in items}
         benchmark_metadata = self.benchmark.metadata()
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
         self.state_dir.mkdir(parents=True, exist_ok=True)
@@ -278,9 +276,7 @@ class ParallelBenchmarkRuntime:
                 runtime_prepare_s = time.monotonic() - runtime_prepare_started
             append_event(events_path, {"type": "phase", "phase": "evaluation"})
             self.queue.start()
-            evaluation_started = time.monotonic()
-            self.evaluation_started_s = evaluation_started
-            self.item_completion_s = {}
+            self.evaluation_started_s = time.monotonic()
             with benchmark_phase(phase_timing_callback, "evaluation_s"):
                 results = self._monitor(
                     total_records,
@@ -288,7 +284,7 @@ class ParallelBenchmarkRuntime:
                     events_path,
                     probe_deadline,
                 )
-                evaluation_s = time.monotonic() - evaluation_started
+                evaluation_s = time.monotonic() - self.evaluation_started_s
             surviving_workers_per_gpu = self._workers_per_gpu()
             self.queue.request_stop()
             self._wait_workers_exit()
@@ -471,9 +467,8 @@ class ParallelBenchmarkRuntime:
         reported = -1
         while True:
             self._check_processes(events_path, total_records)
-            observable_results, completed_names = self.queue.observe()
-            ids_by_name = self.item_ids_by_filename
-            self._record_completions(ids_by_name[name] for name in completed_names if name in ids_by_name)
+            observable_results, completed_ids = self.queue.observe()
+            self._record_completions(completed_ids)
             record_count = sum(len(result.records) for result in observable_results)
             if record_count != reported:
                 progress = aggregate_standard_results(observable_results, total_records)
@@ -492,8 +487,6 @@ class ParallelBenchmarkRuntime:
     def _record_completions(self, item_ids: Iterable[str]) -> None:
         """Note when each work item first appears completed; partial results do not count."""
 
-        if self.evaluation_started_s is None:
-            return
         seen_s = time.monotonic() - self.evaluation_started_s
         for item_id in item_ids:
             self.item_completion_s.setdefault(item_id, seen_s)

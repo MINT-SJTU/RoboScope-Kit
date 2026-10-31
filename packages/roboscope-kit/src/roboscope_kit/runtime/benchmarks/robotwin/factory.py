@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from roboscope_kit.benchmark_specs import BenchmarkName
-from roboscope_kit.runtime.benchmark.autotune import nested_task_order, probe_items_per_worker
+from roboscope_kit.runtime.benchmark.autotune import probe_items_per_worker
 from roboscope_kit.runtime.benchmark.factories import (
     BenchmarkRunRequest,
+    nested_task_order,
     representative_indices,
 )
 from roboscope_kit.runtime.benchmark.image_manifest import BenchmarkImageManifest
@@ -88,15 +89,14 @@ class RoboTwinBenchmarkFactory:
         tasks = self._tasks(image)
         task_count = int(image.defaults.get("probe_task_count", 10))
         episodes = int(image.defaults.get("probe_episodes_per_task", 1))
-        # Give every probed worker at least this many work items, so a probe at K starts K
-        # workers and measures them at steady state. 0 keeps the fixed probe. Tasks are
-        # added first, as a prefix of one nested order, then episodes per task in whole
-        # work items, so every probe repeats the episodes of each smaller probe.
+        # Give every worker items_per_worker items: first add tasks as a prefix of one
+        # nested order, then whole items per task, so each probe repeats the episodes of
+        # every smaller probe.
         items_per_worker = probe_items_per_worker(image.defaults)
         if items_per_worker > 0:
             needed = items_per_worker * concurrency
             order = nested_task_order(len(tasks))
-            indices = tuple(sorted(order[: min(len(tasks), max(task_count, needed))]))
+            indices = tuple(sorted(order[: max(task_count, needed)]))
             items_per_task = -(-needed // len(indices))
             if items_per_task > 1:
                 shard = int(image.defaults["episode_shard_size"])

@@ -58,11 +58,9 @@ class LiberoBenchmarkFactory:
             int(image.defaults.get("probe_task_count", 10)),
         )
         episodes = int(image.defaults.get("probe_episodes_per_task", 1))
-        # Give every probed worker at least this many work items, so a probe at K starts K
-        # workers and measures them at steady state. 0 keeps the fixed probe size. The task set
-        # stays fixed and only episodes per task grow, so probes at every K run the same task
-        # mix and each probe's episodes include those of every smaller probe. Each item holds
-        # chunk_size episodes, and a task has only LIBERO_INITIAL_STATES initial states.
+        # Grow only episodes per task, in chunk_size items, until every worker gets
+        # items_per_worker items. The task set stays fixed, so each probe repeats the
+        # episodes of every smaller probe.
         items_per_worker = probe_items_per_worker(image.defaults)
         if items_per_worker > 0:
             chunk_size = int(image.defaults.get("chunk_size", 1))
