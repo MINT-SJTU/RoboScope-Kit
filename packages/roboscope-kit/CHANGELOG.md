@@ -13,6 +13,9 @@
   strategy measures but does not keep are marked `rejected` in `selection.json`, the selection reports
   the selected probe's bound hint, and replica-phase probes are listed in `g_trials`. `two-phase` stays
   the default for every benchmark.
+- Choose the autotune strategy per evaluation with `ROBOSCOPE_AUTOTUNE_STRATEGY` or `--autotune-strategy`,
+  which override the manifest's `autotune_strategy` without changing the manifest file. An unknown name
+  fails before the evaluation starts.
 - Put autotune strategies behind one interface. `register_strategy(name)` adds a K/g search that a
   manifest selects with `autotune_strategy: <name>`; every strategy measures through the shared
   controller, which owns probe execution, resource and correctness checks, the time budget and

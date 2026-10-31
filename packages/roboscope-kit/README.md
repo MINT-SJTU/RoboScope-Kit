@@ -85,8 +85,9 @@ pair is used. Progress is written to `/root/testresult/autotune/selection.json` 
 advance, and stop. Tuning episodes never count toward the score.
 
 The default search, `two-phase`, ramps `K` on one replica per GPU and then ramps replicas when GPU
-utilization shows inference is the bottleneck. A benchmark manifest can select the `diagonal` search with
-`autotune_strategy: diagonal`. It doubles `K` on one replica per GPU until a doubling raises throughput by
+utilization shows inference is the bottleneck. Select the `diagonal` search for one evaluation with
+`ROBOSCOPE_AUTOTUNE_STRATEGY=diagonal` (or `--autotune-strategy diagonal`), or for every evaluation of a
+benchmark with `autotune_strategy: diagonal` in its manifest; the evaluation setting wins. It doubles `K` on one replica per GPU until a doubling raises throughput by
 less than 25% (a step the CPU cap shortens needs the same share of linear scaling); the accepted `K` per
 replica is how many Workers one replica keeps busy. It then adds one replica per GPU at a time with `K`
 scaled by that ratio, keeping each step that raises throughput by at least 3% and skipping a step whose
