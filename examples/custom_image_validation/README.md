@@ -10,4 +10,5 @@ are not official RoboScope results.
 
 | Demo | What it covers |
 | --- | --- |
+| [`starvla/`](starvla/README.md) | The StarVLA Policy used in the RoboScope Kit technical report: one config-driven class for six benchmarks, with an observation stride equal to its action horizon |
 | [`xvla/`](xvla/README.md) | One X-VLA image evaluated on several benchmarks, with model-specific observation and action adapters |

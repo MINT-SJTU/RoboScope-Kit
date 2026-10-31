@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0b3 (Unreleased)
+
+- Add the StarVLA Policy as a custom-image example under `examples/custom_image_validation/starvla/`,
+  restored from the removed official image source. It is the Policy behind the StarVLA measurements in the
+  RoboScope Kit technical report.
+
 ## 0.8.0b2 (Unreleased)
 
 - Remove the official StarVLA image source (`official_images/starvla/`) and its documentation. Custom
