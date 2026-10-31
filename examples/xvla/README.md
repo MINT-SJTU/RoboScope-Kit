@@ -26,7 +26,7 @@ RoboTwin 研究对照数字来自 X-VLA 上游固定提交
 - `/opt/roboscope/xvla/X-VLA`：上游开源仓库代码
 - `/opt/roboscope/xvla/checkpoints/{calvin,libero,robotwin}`：权重（HF 下载）
 - `/opt/roboscope/xvla/xvla_demo_policy.py`：demo SDK Policy 适配器
-- `/workspace/roboscope-policy.json`：策略入口（schema_version 2）
+- `roboscope-policy.json`：策略入口（schema_version 2），评测时用 `--policy-config` 传入
 
 权重放在 `/opt/roboscope/xvla/checkpoints/` 下，策略忽略 `SessionContext.checkpoint_path`，
 平台侧 model artifact 用占位文件即可。

@@ -32,6 +32,7 @@ POLICY_CHECKPOINT_SOURCE_FILE = LOCAL_CHECKPOINT_DIR / ".roboscope-source.json"
 LOCAL_BASE_MODEL_DIR = BENCHMARK_DIR / "basemodel"
 TESTVIDEO_DIR = ROOT / "testvideo"
 TESTRESULT_DIR = ROOT / "testresult"
+POLICY_CONFIG_FILE = Path("/workspace/roboscope-policy.json")
 POLICY_CONFIG_RESULT = TESTRESULT_DIR / "policy-config.json"
 TIMING_METRICS_FILE = TESTRESULT_DIR / "metrics.json"
 TESTLOG_FILE = ROOT / "testlog.txt"
@@ -480,7 +481,7 @@ def load_user_policy_config() -> object | None:
     except ImportError as exc:
         raise BenchmarkError("missing_policy_config_runtime", str(exc)) from exc
     try:
-        config = load_policy_runtime_config()
+        config = load_policy_runtime_config(POLICY_CONFIG_FILE)
     except PolicyConfigError as exc:
         raise BenchmarkError(exc.code, exc.message) from exc
     tmp = POLICY_CONFIG_RESULT.with_name(f"{POLICY_CONFIG_RESULT.name}.{os.getpid()}.tmp")

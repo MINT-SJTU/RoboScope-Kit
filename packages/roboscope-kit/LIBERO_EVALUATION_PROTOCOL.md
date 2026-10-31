@@ -42,8 +42,8 @@ commands, sockets, ports, K, and g are platform internals and are not part of th
 
 For an SDK-native user Policy:
 
-- an `oss://...` source is copied recursively to `/root/benchmark/checkpoint`, and that directory is passed
-  to `Policy.load()` as `context.checkpoint_path`;
+- an `oss://...` source is copied recursively to `--checkpoint-dir`, and that directory is passed to
+  `Policy.load()` as `context.checkpoint_path`;
 - an absolute local file or directory is passed to `Policy.load()` unchanged;
 - relative local paths and missing paths are rejected.
 
@@ -55,8 +55,7 @@ The user entrypoint installs `roboscope-kit`, implements `Policy`, and ends with
 run(UserPolicy())
 ```
 
-The evaluation image stores the user Policy process contract at the fixed path
-`/workspace/roboscope-policy.json`:
+The runtime reads the user Policy process contract from `--policy-config`:
 
 ```json
 {

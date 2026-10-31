@@ -43,7 +43,7 @@ or [`libero/roboscope-policy.json`](libero/roboscope-policy.json) for the LIBERO
 | `starvla_base_assets.py` | Fetches the Qwen base-model metadata the framework needs to build |
 | `prepare_snapshot.py` | Builds a demo's run snapshot from its `demo.yaml` |
 | `export_starvla_eval_run.py` | Exports your own training run as a self-contained snapshot with relative resource paths |
-| `roboscope-policy.json` | Policy process contract, installed at `/workspace/roboscope-policy.json` |
+| `roboscope-policy.json` | Policy process contract, passed to the runtime with `--policy-config` |
 
 The contracts expect these files under `/opt/roboscope/starvla/`, the StarVLA source under
 `/root/starVLA`, and a `starVLA` conda environment that has `roboscope-kit` and `huggingface_hub` installed.

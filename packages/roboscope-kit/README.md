@@ -46,7 +46,8 @@ a simulator or chooses how many evaluators run.
 ## How evaluation works
 
 You evaluate a model by building your own image: it contains your `Policy`, its dependencies, and the
-file `/workspace/roboscope-policy.json`, which tells RoboScope how to start the Policy:
+Policy process contract `roboscope-policy.json`, which tells RoboScope how to start the Policy. The runtime
+reads it from `--policy-config`:
 
 ```json
 {
@@ -211,6 +212,7 @@ single-instance run. Run one instance per shard:
 ```bash
 python -m roboscope_kit.runtime.benchmark \
     --benchmark robotwin --suite demo_clean --checkpoint-source ... \
+    --image-manifest ... --policy-config ... \
     --shard-index I --shard-count N --output-dir /runs/shard-I
 ```
 

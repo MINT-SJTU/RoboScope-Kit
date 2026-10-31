@@ -12,7 +12,6 @@ from typing import Any
 
 from roboscope_kit.benchmark_specs import BenchmarkName
 
-BENCHMARK_IMAGE_MANIFEST_PATH = Path("/opt/roboscope/benchmark-image.json")
 BENCHMARK_IMAGE_SCHEMA_VERSION = 2
 
 
@@ -42,9 +41,7 @@ class BenchmarkImageManifest:
             )
 
 
-def load_benchmark_image_manifest(
-    path: str | Path = BENCHMARK_IMAGE_MANIFEST_PATH,
-) -> BenchmarkImageManifest:
+def load_benchmark_image_manifest(path: str | Path) -> BenchmarkImageManifest:
     manifest_path = Path(path)
     value = json.loads(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -116,7 +113,6 @@ def _required_text(value: dict[str, Any], name: str) -> str:
 
 
 __all__ = [
-    "BENCHMARK_IMAGE_MANIFEST_PATH",
     "BenchmarkImageManifest",
     "load_benchmark_image_manifest",
 ]

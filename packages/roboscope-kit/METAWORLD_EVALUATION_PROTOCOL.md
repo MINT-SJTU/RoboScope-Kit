@@ -183,8 +183,7 @@ score and must not shrink the denominator.
 
 ## 8. Configuration declaration and precedence
 
-The evaluation image stores the user Policy process contract at the fixed path
-`/workspace/roboscope-policy.json` with `schema_version: 2`:
+The runtime reads the user Policy process contract from `--policy-config`; it has `schema_version: 2`:
 
 ```json
 {

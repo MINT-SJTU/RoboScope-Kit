@@ -33,11 +33,7 @@ from typing import Any
 from roboscope_kit.benchmark_specs import BenchmarkName
 
 from .factories import BenchmarkRunRequest
-from .image_manifest import (
-    BENCHMARK_IMAGE_MANIFEST_PATH,
-    BenchmarkImageManifest,
-    load_benchmark_image_manifest,
-)
+from .image_manifest import BenchmarkImageManifest, load_benchmark_image_manifest
 from .orchestrator import aggregate_standard_results
 from .queue import WorkQueue, atomic_json
 from .registry import benchmark_factory
@@ -52,7 +48,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--suite", required=True)
     parser.add_argument("--episodes", type=int)
     parser.add_argument("--evaluation-config", type=Path, help="resolved MetaWorld run configuration")
-    parser.add_argument("--image-manifest", type=Path, default=BENCHMARK_IMAGE_MANIFEST_PATH)
+    parser.add_argument("--image-manifest", type=Path, required=True)
     parser.add_argument(
         "--shard-dir",
         action="append",

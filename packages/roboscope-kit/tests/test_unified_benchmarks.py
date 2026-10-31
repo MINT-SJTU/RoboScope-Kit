@@ -40,7 +40,6 @@ PUBLIC_SDK_API = [
     "FeatureSpec",
     "Observation",
     "Policy",
-    "POLICY_CONFIG_PATH",
     "POLICY_CONFIG_SCHEMA_VERSION",
     "PolicyConfigError",
     "PolicyRuntimeConfig",

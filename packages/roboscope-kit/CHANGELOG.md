@@ -2,6 +2,11 @@
 
 ## 0.8.0b5 (Unreleased)
 
+- The benchmark runtime no longer assumes fixed paths. `--image-manifest` is required, also for
+  `shard_merge`; the Policy process contract comes from the new `--policy-config`, and an `oss://`
+  checkpoint downloads into the new `--checkpoint-dir`. `load_policy_runtime_config(path)` and
+  `load_benchmark_image_manifest(path)` take the path, and `POLICY_CONFIG_PATH` and
+  `BENCHMARK_IMAGE_MANIFEST_PATH` are removed. The RoboScope platform launcher passes its own paths.
 - Add one StarVLA demo per benchmark under `examples/starvla/<benchmark>/`: LIBERO, LIBERO-Plus, RoboTwin,
   RoboCasa, CALVIN, and MetaWorld. Each `demo.yaml` pins a published checkpoint, the StarVLA revision, and
   the inference configuration; `prepare_snapshot.py` builds the run snapshot from it.

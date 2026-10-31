@@ -171,6 +171,8 @@ COMMAND=(
   --checkpoint-source "${CHECKPOINT_SOURCE}"
   --output-dir /root/testresult
   --image-manifest "${IMAGE_MANIFEST}"
+  --policy-config /workspace/roboscope-policy.json
+  --checkpoint-dir /root/benchmark/checkpoint
   --legacy-contract-root /root
 )
 if [[ "${QUICK_TEST}" == "1" ]]; then
