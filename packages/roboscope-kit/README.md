@@ -87,10 +87,11 @@ advance, and stop. Tuning episodes never count toward the score.
 The default search, `two-phase`, ramps `K` on one replica per GPU and then ramps replicas when GPU
 utilization shows inference is the bottleneck. A benchmark manifest can select the `diagonal` search with
 `autotune_strategy: diagonal`. It doubles `K` on one replica per GPU until a doubling raises throughput by
-less than 25%; the accepted `K` per replica is how many Workers one replica keeps busy. It then adds one
-replica per GPU at a time with `K` scaled by that ratio, keeping each step that raises throughput by at
-least 3% and skipping a step whose GPU memory, extrapolated from the measured replica and Worker
-footprints, would not fit.
+less than 25% (a step the CPU cap shortens needs the same share of linear scaling); the accepted `K` per
+replica is how many Workers one replica keeps busy. It then adds one replica per GPU at a time with `K`
+scaled by that ratio, keeping each step that raises throughput by at least 3% and skipping a step whose
+busiest GPU, extrapolated from the measured replica footprint and the marginal memory per Worker, would
+not fit. Probes it measures but does not keep are marked `rejected` in `selection.json`.
 
 ### Progress and errors
 

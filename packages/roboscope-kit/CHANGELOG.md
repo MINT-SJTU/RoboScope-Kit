@@ -3,28 +3,39 @@
 ## 0.8.0b3 (Unreleased)
 
 - Add the opt-in `diagonal` autotune strategy (`autotune_strategy: diagonal`). It ramps workers on one
-  replica per GPU until doubling K gains less than `autotune_worker_knee_gain` (25%), then adds one
-  replica per GPU at a time with K scaled by the measured workers per replica, keeping a step while it
-  gains at least `autotune_replica_minimum_gain` (3%). The worker cap comes from measured CPU per worker,
-  and a step whose GPU memory, extrapolated from the incumbent's replica and worker footprint, would not
-  fit is skipped. If the first probe at `autotune_start_workers_per_gpu` fails and budget remains, the
-  search falls back to one worker per GPU, which becomes the success-rate baseline and the selection.
-  `two-phase` stays the default for every benchmark.
+  replica per GPU until doubling K gains less than `autotune_worker_knee_gain` (25%); a step the worker
+  cap shortens must gain the same share of linear scaling. It then adds one replica per GPU at a time with
+  K scaled by the measured workers per replica, keeping a step while it gains at least
+  `autotune_replica_minimum_gain` (3%). The worker cap comes from the marginal CPU cost of one worker,
+  fit from two probes, so policy-server and controller CPU is not charged to workers; before two probes
+  exist it uses the manifest's per-worker CPU estimate. A step whose busiest GPU would run out of memory,
+  extrapolated from the replica footprint and the marginal memory per worker, is skipped. Probes the
+  strategy measures but does not keep are marked `rejected` in `selection.json`, the selection reports
+  the selected probe's bound hint, and replica-phase probes are listed in `g_trials`. If the first probe
+  at `autotune_start_workers_per_gpu` fails and budget remains, the search falls back to one worker per
+  GPU, which becomes the success-rate baseline and the selection. `two-phase` stays the default for every
+  benchmark.
 - Put autotune strategies behind one interface. `register_strategy(name)` adds a K/g search that a
   manifest selects with `autotune_strategy: <name>`; every strategy measures through the shared
   controller, which owns probe execution, resource and correctness checks, the time budget and
-  `selection.json`. `selection.json` records the strategy in `limits` and in the result.
-- Report `worker_steps_per_s`: per-worker steps over each worker's busy span, which excludes worker
-  start-up and the idle tail of short probes. Select it with `autotune_throughput_estimator: worker`;
-  the default `elapsed` estimator is unchanged.
-- Add `probe_items_per_worker` for LIBERO probes (default 0, the fixed probe size), so a probe at K can
-  run at least that many episodes per worker. The probe keeps its task set and adds episodes per task, so
-  every K runs the same task mix and repeats the episodes of every smaller probe.
+  `selection.json`. `selection.json` records the strategy in `limits` and in the result, and both
+  strategies write the same `bounds`, which now include `max_workers_hard`. `select_k` and the diagonal
+  strategy share one set of CPU, GPU-utilization and throttle limits.
+- Report `worker_steps_per_s`: the throughput of all K workers while none is idle, from the items that
+  finished before the first worker ran out of work, so items that ran with fewer active workers do not
+  inflate it. Select it with `autotune_throughput_estimator: worker`; the default `elapsed` estimator is
+  unchanged.
+- Add `probe_items_per_worker` for LIBERO probes (default 0, the fixed probe size), so a probe at K holds at
+  least that many work items per worker, counting `chunk_size` episodes per item and dividing by the
+  tasks actually selected. Episodes per task are capped at the 50 initial states of a LIBERO task. The
+  probe keeps its task set and adds episodes per task, so every K runs the same task mix and repeats the
+  episodes of every smaller probe.
 - Compare a probe's success rate with the baseline on the episodes both ran (`record_success` in
   `result.json`, `matched_episodes` in the probe health). Probes with identical workloads, the default,
   compare exactly as before.
 - Record per-item completion times in `result.json` (`item_timeline`): the time the controller first sees
   each work item completed. Partial results, which RoboTwin and RoboCasa publish per episode, do not count.
+  The controller reads completed items from the same queue scan it uses for progress.
 
 ## 0.8.0b2 (Unreleased)
 

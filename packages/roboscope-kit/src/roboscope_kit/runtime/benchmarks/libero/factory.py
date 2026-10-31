@@ -24,6 +24,9 @@ LIBERO_TASK_COUNTS = {
     "libero_90": 90,
 }
 
+# Every official LIBERO task ships this many initial states, one per episode.
+LIBERO_INITIAL_STATES = 50
+
 # The LIBERO Benchmark definition runs every official suite.
 LIBERO_SUITES = frozenset(LIBERO_TASK_COUNTS)
 
@@ -49,16 +52,22 @@ class LiberoBenchmarkFactory:
         image: BenchmarkImageManifest,
         concurrency: int,
     ) -> LiberoBenchmarkAdapter:
-        task_count = int(image.defaults.get("probe_task_count", 10))
+        task_ids = representative_indices(
+            LIBERO_TASK_COUNTS[request.suite],
+            int(image.defaults.get("probe_task_count", 10)),
+        )
         episodes = int(image.defaults.get("probe_episodes_per_task", 1))
-        # Give every probed worker at least this many episodes, so a probe at K starts K
-        # workers instead of at most task_count. 0 keeps the fixed probe size. The task set
+        # Give every probed worker at least this many work items, so a probe at K starts K
+        # workers instead of at most one per task. 0 keeps the fixed probe size. The task set
         # stays fixed and only episodes per task grow, so probes at every K run the same task
-        # mix and each probe's episodes include those of every smaller probe.
+        # mix and each probe's episodes include those of every smaller probe. Each item holds
+        # chunk_size episodes, and a task has only LIBERO_INITIAL_STATES initial states.
         items_per_worker = int(image.defaults.get("probe_items_per_worker", 0))
         if items_per_worker > 0:
-            episodes = max(episodes, -(-items_per_worker * concurrency // task_count))
-        task_ids = representative_indices(LIBERO_TASK_COUNTS[request.suite], task_count)
+            chunk_size = int(image.defaults.get("chunk_size", 1))
+            chunks_per_task = -(-items_per_worker * concurrency // len(task_ids))
+            episodes = max(episodes, chunks_per_task * chunk_size)
+        episodes = min(episodes, LIBERO_INITIAL_STATES)
         return self._create(
             request,
             image,

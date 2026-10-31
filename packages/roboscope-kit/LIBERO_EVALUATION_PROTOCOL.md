@@ -172,7 +172,13 @@ task-<task_id:04d>-episode-<episode_index:04d>
 
 The runtime rejects missing or duplicate terminal record identifiers. Official aggregation reports episode
 and success counts per task; the standard result also reports total successes, failures, success rate,
-steps, wall time, steps/s, and episodes/s.
+steps, wall time, steps/s, and episodes/s. When every work item has a completion time, it also reports
+`worker_steps_per_s`: the throughput of all `K` workers while none is idle, from the items that finished
+before the first worker ran out of work.
+
+`result.json` also records `item_timeline` (`completion_s`, the seconds from evaluation start at which the
+controller first saw each work item completed, rounded up to its poll interval, and `worker_id` for each
+item) and `record_success` (success of each terminal record identifier).
 
 ## 6. Scheduling contract
 
@@ -191,6 +197,14 @@ All Policies use platform-owned end-to-end K/g probing for
 scored evaluations. Candidates run real LIBERO episodes with isolated Policy replicas and paired K/g
 growth. The platform selects the last candidate that improves episode throughput without approaching CPU
 throttling, GPU utilization, or GPU-memory limits. Quick test remains fixed at `K=1/g=1`.
+
+Each probe runs the same representative task set, `probe_task_count` tasks (default 10, capped at the suite
+size), with `probe_episodes_per_task` episodes per task (default 1). When the manifest sets
+`probe_items_per_worker` above 0, a probe at `K` adds episodes per task until it holds at least that many
+work items per worker, counting `BENCHMARK_CHUNK_SIZE` episodes per item. Episodes per task never exceed the
+50 initial states each LIBERO task ships; a `K` that would need more is rejected as a worker shortfall.
+Because only episodes per task grow, every probe repeats the episodes of each smaller probe, and a probe's
+success rate is compared with the baseline on the episodes both ran.
 
 ## 7. Product progress and result files
 
@@ -221,7 +235,7 @@ Additional structured artifacts are written under `/root/testresult/autotune/`:
 | --- | --- |
 | `manifest.json` | Immutable benchmark metadata, work items, and expected record count |
 | `progress.json` | Current completed episode counts |
-| `result.json` | Runtime config, Policy capabilities, official result, standard result, resources, recovery, and K/g mode |
+| `result.json` | Runtime config, Policy capabilities, official result, standard result, resources, recovery, K/g mode, `item_timeline`, and `record_success` |
 | `events.jsonl` | Ordered phase, progress, failure, recovery, and completion events |
 | `errors.jsonl` | Append-only errors from Workers and the top-level evaluation runtime |
 | `servers/` | Policy replica logs and optional inference metrics |

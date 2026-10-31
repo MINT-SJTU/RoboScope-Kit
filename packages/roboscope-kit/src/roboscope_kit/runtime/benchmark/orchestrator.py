@@ -10,7 +10,7 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Sequence  # noqa: UP035 - this alias is evaluated by Python 3.8
+from typing import Any, Callable, Iterable, Sequence  # noqa: UP035 - this alias is evaluated by Python 3.8
 
 from .adapters import BenchmarkAdapter, InferenceAdapter, WorkerContext
 from .autotune import ProbeCapacityReached, ProbeLimits, ProbeTimedOut
@@ -470,8 +470,9 @@ class ParallelBenchmarkRuntime:
         reported = -1
         while True:
             self._check_processes(events_path, total_records)
-            observable_results = self.queue.observable_results()
-            self._record_completions()
+            observable_results, completed_names = self.queue.observe()
+            ids_by_name = self.item_ids_by_filename
+            self._record_completions(ids_by_name[name] for name in completed_names if name in ids_by_name)
             record_count = sum(len(result.records) for result in observable_results)
             if record_count != reported:
                 progress = aggregate_standard_results(observable_results, total_records)
@@ -481,21 +482,20 @@ class ParallelBenchmarkRuntime:
                     progress_callback(progress, observable_results)
                 reported = record_count
             if record_count == total_records and self.queue.is_drained():
-                self._record_completions()
-                return self.queue.completed_results()
+                results = self.queue.completed_results()
+                self._record_completions(result.item_id for result in results)
+                return results
             self._raise_probe_timeout(probe_deadline, total_records, events_path)
             time.sleep(self.config.poll_interval_s)
 
-    def _record_completions(self) -> None:
+    def _record_completions(self, item_ids: Iterable[str]) -> None:
         """Note when each work item first appears completed; partial results do not count."""
 
         if self.evaluation_started_s is None:
             return
         seen_s = time.monotonic() - self.evaluation_started_s
-        for name in self.queue.completed_filenames():
-            item_id = self.item_ids_by_filename.get(name)
-            if item_id is not None:
-                self.item_completion_s.setdefault(item_id, seen_s)
+        for item_id in item_ids:
+            self.item_completion_s.setdefault(item_id, seen_s)
 
     def _check_processes(self, events_path: Path, total_records: int) -> None:
         self.server_pool.check()
@@ -873,28 +873,38 @@ def worker_steps_per_s(
     results: Sequence[WorkResult],
     completion_s: dict[str, float],
 ) -> float | None:
-    """Sum over workers of each worker's steps over its own busy span.
+    """Throughput of K workers that are all busy, from items finished while none was idle.
 
-    A worker's span runs from evaluation start to the controller first seeing its
-    last item completed, so it covers environment creation, resets, and inference
-    waits. Unlike total steps over elapsed time, workers left idle while the last
-    items finish do not dilute the rate, so a short probe still measures the
-    throughput of K busy workers.
+    The full-concurrency window ends when the first worker finishes its last item.
+    Items completed inside that window ran while all K workers competed for CPU and
+    inference, so items that later ran with fewer active workers do not inflate the
+    rate. Each worker's rate is its counted steps over its last counted completion;
+    the estimate is K times the mean rate of the workers that finished an item in the
+    window. The window starts at evaluation start, so it includes worker start-up.
+    Completion times are rounded up to the controller poll interval.
     """
 
-    spans: dict[int, float] = {}
-    steps: dict[int, int] = {}
+    last_done: dict[int, float] = {}
     for result in results:
         done_s = completion_s.get(result.item_id)
         if done_s is None:
             return None
+        last_done[result.worker_id] = max(last_done.get(result.worker_id, 0.0), done_s)
+    if not last_done:
+        return None
+    window_s = min(last_done.values())
+    spans: dict[int, float] = {}
+    steps: dict[int, int] = {}
+    for result in results:
+        done_s = completion_s[result.item_id]
+        if done_s > window_s:
+            continue
         spans[result.worker_id] = max(spans.get(result.worker_id, 0.0), done_s)
         steps[result.worker_id] = steps.get(result.worker_id, 0) + sum(
             record.steps for record in result.records
         )
-    if not spans:
-        return None
-    return sum(steps[worker] / max(spans[worker], 1e-9) for worker in spans)
+    rates = [steps[worker] / max(spans[worker], 1e-9) for worker in spans]
+    return len(last_done) * sum(rates) / len(rates)
 
 
 def append_event(path: Path, payload: dict[str, Any]) -> None:
