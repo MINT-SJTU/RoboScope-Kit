@@ -275,6 +275,15 @@ The exact contracts are in the protocol documents:
   the manifest freezes RoboTwin's 50 × 100 inputs per suite under `robotwin2-native-step-lim-v2`.
   The clean entries are unchanged and the randomized pool is new,
   so report randomized v1 and v2 scores separately.
+- RoboCasa seeds: the manifest's `seed` (42) fixes every scene. Each task's environment is built with a seed
+  derived from the manifest seed and the task name, each episode resets with that seed plus its index, and
+  every Worker starts with `PYTHONHASHSEED` set to the manifest seed, because upstream novel-task generation
+  hashes class names. Scenes therefore do not depend on `K`, `g`, or which Worker runs a task. With videos
+  off, `defer_observations` (default `true`) renders camera images only on the native step whose
+  observation the Policy receives, the last of each action chunk; every native physics step, reward, and
+  success check still runs. Video evaluation keeps the per-step observation path. Since 0.8.0b12 the
+  runtime also uses replacement kitchen-asset archives, so compare RoboCasa scores only with runs on the
+  same version.
 
 After upgrading to 0.8.0b22 or later, build RoboTwin in a new, empty installation directory if the existing
 installation has a different runtime commit. The build script does not replace an existing mismatched

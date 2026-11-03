@@ -2,6 +2,25 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b34 - 2026-11-07
+
+- Speed up RoboCasa evaluation, ported from suica/evostudio-evaluation-kit#6. With videos off, the worker
+  no longer renders or post-processes the camera images of the native steps inside an action chunk, whose
+  observations the StarVLA multi-step wrapper discards; the Policy still receives a freshly rendered image
+  on the last step of every chunk, and physics, rewards, and success checks run on every step. The
+  manifest's `defer_observations: false` restores the per-step path; video evaluation always uses it.
+- Make RoboCasa scenes reproducible under any `K`/`g`. The manifest's `seed` (42) seeds each task's
+  environment construction from the task name and each episode's reset from its index, seeds both
+  RoboCasa RNGs, and starts Workers with `PYTHONHASHSEED` set to it. Episode records add `seed`,
+  `python_hash_seed`, `reset_s`, `policy_s`, `simulator_s`, and `deferred_native_steps`; task results add
+  `initialize_s`. An episode's `steps` counts the native steps actually executed.
+- Rebuild the RoboCasa runtime: `build-runtime.sh` patches the pinned RoboCasa Tabletop base to deep-copy
+  its distractor configuration per environment (recorded in `roboscope-runtime-patches.json`), moves the
+  environment to CPython 3.11 with the simulator lock measured for this change, downloads the four
+  kitchen-asset archives from checksum-pinned replacements because the upstream Box links return 404,
+  and names the conda channel and pip index explicitly. Scores from earlier RoboCasa runtimes are not
+  comparable.
+
 ## 0.8.0b30 - 2026-11-06
 
 - Add `examples/xpolicylab/compare_native.py`, which runs a Kit RoboDojo run's tasks and layouts through the
