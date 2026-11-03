@@ -1,8 +1,12 @@
 # RoboDojo simulation
 
 `build-runtime.sh <install-dir>` builds the pinned Linux x86-64 simulator, downloads the benchmark assets,
-and writes `benchmark-manifest.json` under the install directory. It requires `git`, `uv`, `cmake`, `ffmpeg`,
-a working CUDA build toolchain and a compatible NVIDIA GPU. Isaac Sim is licensed by NVIDIA; read its
+and writes `benchmark-manifest.json` under the install directory. It requires `git`, `curl`, `sha256sum`,
+the Debian system packages `cmake`, `build-essential`, and `ffmpeg`, a working CUDA build toolchain, and a
+compatible NVIDIA GPU. The builder installs an isolated Miniforge, runs RoboDojo's `scripts/install.sh -i`,
+then applies the Kit patches and checks the resulting environment. The upstream installer activates
+`$HOME/miniconda3` when present, so the isolated build requires an account without that path. The asset
+download is approximately 41 GB. Isaac Sim is licensed by NVIDIA; read its
 [license](https://docs.isaacsim.omniverse.nvidia.com/latest/common/NVIDIA_Omniverse_License_Agreement.html)
 and set `OMNI_KIT_ACCEPT_EULA=YES` yourself before building or running it. The build does not set
 `PRIVACY_CONSENT`.
@@ -30,7 +34,9 @@ declares step updates. Pending updates finish before the next `act()` or episode
 originate in @QLL-CCDD's RoboDojo work and should be evaluated for correctness and throughput for the
 intended workload.
 
-The simulator source, IsaacLab, CuRobo, XPolicyLab, and the asset dataset are pinned by the build script.
+The simulator source, IsaacLab, CuRobo, XPolicyLab, package constraints, and the asset dataset are pinned
+by the build script. Its submodule selections keep the upstream installer's `--remote` updates at those
+tested revisions.
 Model code and checkpoints are supplied separately through the standard Kit Policy configuration.
 The layout-sharding patch is adapted from @QLL-CCDD's RoboDojo work.
 
