@@ -69,6 +69,11 @@ Git blob SHA-1，校验失败不会接受下载文件。保留上游许可证。
 主动使用的依赖约束，不是纯留档清单；可编辑源码依赖由 Git revision 固定。
 系统 apt 包仍随 Ubuntu 安全更新，不声称整个 OS/编译产物逐位可复现。
 
+Isaac Sim 是 NVIDIA 的专有软件，受 [NVIDIA Omniverse License Agreement](https://docs.isaacsim.omniverse.nvidia.com/latest/common/NVIDIA_Omniverse_License_Agreement.html)
+约束。本 recipe 不会替你接受该 EULA：阅读后自行执行 `export OMNI_KIT_ACCEPT_EULA=YES`，
+`setup_environments.py`、`run_eval.py` 和并行入口在未设置时直接退出。是否设置
+`PRIVACY_CONSENT` 由你自己决定，recipe 不设置。
+
 以下命令在新 Linux 环境中执行。替换 `KIT`、`BASE`、`ENV_ROOT`、`CACHE_ROOT`
 为自己的绝对路径；模型权重由本 recipe 下载，与 Meta-World 容器的 checkpoint
 配置无关。保留 seed、任务、机器人和模型设置即可复现本声明范围。
@@ -127,7 +132,7 @@ CACHE_ROOT=/workspace/robodojo-cache
 
 ```bash
 env -u CUDA_VISIBLE_DEVICES \
-  OMNI_KIT_ACCEPT_EULA=YES ACCEPT_EULA=Y \
+  ACCEPT_EULA=Y \
   OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=4 \
   VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json \
   "$ENV_ROOT/simulator/bin/python" -u - --allow-root <<'PY'

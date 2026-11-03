@@ -170,7 +170,7 @@
  
 --- /dev/null
 +++ b/recipe_parallel_runtime.py
-@@ -0,0 +1,755 @@
+@@ -0,0 +1,760 @@
 +"""Bounded RoboDojo experiment using the existing pinned SDK autotune controller."""
 +
 +import argparse
@@ -275,9 +275,8 @@
 +            PYTHONUNBUFFERED="1",
 +            PYTHONNOUSERSITE="1",
 +            CUDA_VISIBLE_DEVICES="0",
-+            OMNI_KIT_ACCEPT_EULA="YES",
++            # The caller accepted the NVIDIA EULA (checked in main); PRIVACY_CONSENT stays theirs to set.
 +            ACCEPT_EULA="Y",
-+            PRIVACY_CONSENT="Y",
 +            OMNI_KIT_ALLOW_ROOT="1",
 +            OMP_NUM_THREADS="4",
 +            MKL_NUM_THREADS="4",
@@ -719,6 +718,12 @@
 +    parser.add_argument("--tune-budget-s", type=float, default=3600)
 +    parser.add_argument("--output", type=Path, help="new external directory for this off/on experiment")
 +    args = parser.parse_args()
++    if os.environ.get("OMNI_KIT_ACCEPT_EULA", "").upper() not in {"YES", "Y"}:
++        parser.error(
++            "Isaac Sim is NVIDIA software under its own EULA "
++            "(https://docs.isaacsim.omniverse.nvidia.com/latest/common/NVIDIA_Omniverse_License_Agreement.html). "
++            "Read it and export OMNI_KIT_ACCEPT_EULA=YES to accept it yourself; this recipe does not accept it for you."
++        )
 +    if args.observation_queue_limit != 1 and not args.overlap_observation:
 +        parser.error("--observation-queue-limit requires --overlap-observation")
 +    if args.maximum_replicas > args.maximum_workers:

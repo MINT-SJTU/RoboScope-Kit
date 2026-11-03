@@ -113,6 +113,12 @@ def main():
     parser.add_argument("--unpaced-render", action="store_true", help="remove wall-clock pacing during fixed-step renders")
     parser.add_argument("--physics-threads", type=int, choices=[1, 4, 8], help="fixed PhysX CPU worker limit; no automatic search")
     args = parser.parse_args()
+    if os.environ.get("OMNI_KIT_ACCEPT_EULA", "").upper() not in {"YES", "Y"}:
+        parser.error(
+            "Isaac Sim is NVIDIA software under its own EULA "
+            "(https://docs.isaacsim.omniverse.nvidia.com/latest/common/NVIDIA_Omniverse_License_Agreement.html). "
+            "Read it and export OMNI_KIT_ACCEPT_EULA=YES to accept it yourself; this recipe does not accept it for you."
+        )
     if (args.execution_profile and args.mode != "measured") or (args.python_profile and not args.execution_profile):
         parser.error("Execution profiling requires measured mode; Python profiling also requires --execution-profile")
     if args.summary_path is not None and args.summary_path.exists():
@@ -222,9 +228,8 @@ def main():
         EVAL_NUM=str(args.episodes),
         ROBODOJO_RUN_ID=run_id,
         CUDA_VISIBLE_DEVICES="0",
-        OMNI_KIT_ACCEPT_EULA="YES",
+        # The caller accepted the NVIDIA EULA (checked in main); PRIVACY_CONSENT stays theirs to set.
         ACCEPT_EULA="Y",
-        PRIVACY_CONSENT="Y",
         OMNI_KIT_ALLOW_ROOT="1",
         PYTHONNOUSERSITE="1",
         OMP_NUM_THREADS="4",

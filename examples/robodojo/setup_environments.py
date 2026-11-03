@@ -72,6 +72,12 @@ def main():
     parser.add_argument("--cache-root", type=Path, default=Path("/workspace/robodojo-cache"))
     parser.add_argument("--python311", type=Path, required=True, help="existing Python 3.11 interpreter")
     args = parser.parse_args()
+    if os.environ.get("OMNI_KIT_ACCEPT_EULA", "").upper() not in {"YES", "Y"}:
+        parser.error(
+            "Isaac Sim is NVIDIA software under its own EULA "
+            "(https://docs.isaacsim.omniverse.nvidia.com/latest/common/NVIDIA_Omniverse_License_Agreement.html). "
+            "Read it and export OMNI_KIT_ACCEPT_EULA=YES to accept it yourself; this recipe does not accept it for you."
+        )
     subprocess.run(
         [str(args.python311), "-c", "import sys; assert sys.version_info[:2] == (3, 11)"], check=True
     )
@@ -96,7 +102,8 @@ def main():
         PIP_CACHE_DIR=str(args.cache_root.resolve() / "pip"),
         UV_CACHE_DIR=str(args.cache_root.resolve() / "uv"), UV_CONCURRENT_DOWNLOADS="16",
         UV_HTTP_TIMEOUT="120",
-        OMNI_KIT_ACCEPT_EULA="YES", ACCEPT_EULA="Y", PRIVACY_CONSENT="Y",
+        # The caller accepted the NVIDIA EULA (checked above); PRIVACY_CONSENT stays theirs to set.
+        ACCEPT_EULA="Y",
         TERM="xterm-256color", CUDA_HOME="/usr/local/cuda",
         PIP_CONSTRAINT=str(HERE / f"constraints-{args.component}.txt"),
         UV_CONSTRAINT=str(HERE / f"constraints-{args.component}.txt"),
