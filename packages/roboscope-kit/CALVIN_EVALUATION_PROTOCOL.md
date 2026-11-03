@@ -87,6 +87,11 @@ through `ROBOSCOPE_INFERENCE_SOCKET`. The runtime then calls:
 The Policy process owns mutable episode state and should key it by `episode_id`. The SDK does not store or
 synchronize user state.
 
+A Policy declaring `max_batch_size > 1` may receive simultaneous observations from distinct episodes through
+`Policy.act_batch()`; each returned chunk belongs to the corresponding observation. The Server batches only
+requests that are already waiting, without a collection delay. Per-subtask resets, action-chunk lengths,
+simulator horizons, sequence membership, and official scoring are unchanged.
+
 `PolicyCapabilities` must declare CALVIN, the user-selected suite, every required feature, and supported
 action-chunk sizes. Evaluator concurrency (`K`) and Policy replica count (`g`) are selected by autotune,
 or fixed for one evaluation with `--concurrency` and `--replicas`.

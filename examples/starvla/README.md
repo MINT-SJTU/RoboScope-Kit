@@ -89,12 +89,14 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
 - `load` declares the benchmark and suite of the session, the features named in `config.yaml`, one
   action-chunk size equal to the checkpoint's `action_horizon`, and an observation stride equal to that
   horizon. On RoboTwin the stride lets the runtime render only at chunk boundaries.
-- `act` resizes each camera image to the 224x224 model input the same way the pinned StarVLA client of that
+- `act` and `act_batch` resize each camera image to the 224x224 model input the same way the pinned StarVLA client of that
   benchmark does: OpenCV `INTER_AREA` for RoboTwin, RoboCasa, LIBERO-Plus, and MetaWorld; PIL bilinear for
   LIBERO; StarVLA's resize-and-pad for CALVIN. It then unnormalizes the predicted actions with the training
   statistics and applies the configured action transforms.
 - `starvla_libero_policy.py` instead resizes LIBERO images with OpenCV `INTER_AREA`, clips the normalized
   actions to [-1, 1], binarizes the gripper, and then unnormalizes with the min/max statistics.
+- `act_batch` sends up to `inference.max_batch_size` observations to one `predict_action()` call and decodes
+  each row as `act` does; `act` is a batch of one.
 - Neither Policy keeps per-episode state, so `reset` does nothing.
 
 ## Run snapshot
@@ -117,6 +119,7 @@ action transforms it applies; the demo files show one per benchmark:
 inference:
   dtype: bfloat16                    # required: bfloat16, float16 or float32
   unnorm_key: franka                 # optional: training normalization statistics key
+  max_batch_size: 1                  # optional: native batch limit declared to the runtime; default 1
   inputs:                            # required
     images:                          # required, non-empty; order is the camera order
       - images.primary
@@ -133,9 +136,15 @@ inference:
       below: 1.0
 ```
 
-`action_transforms` supports `threshold` (`index`, `threshold`, `above`, `below`) and `affine` (`index`,
-`scale`, `offset`). The example reproduces the LIBERO gripper binarization. Camera order and transforms must
-match training; the runtime cannot detect a wrong but well-formed choice.
+`action_transforms` supports `clip` (`index`, `minimum`, `maximum`; an inclusive interval), `threshold`
+(`index`, `threshold`, `above`, `below`; `above` when the value is strictly greater than `threshold`) and
+`affine` (`index`, `scale`, `offset`). They apply in order to the unnormalized actions, in environment
+units. The example reproduces the LIBERO gripper binarization. Camera order and transforms must match
+training; the runtime cannot detect a wrong but well-formed choice.
+
+Raise `max_batch_size` above 1 only for a checkpoint whose framework predicts native batches and whose score
+you have checked at that limit. The runtime still chooses `K` and `g` independently; a batch can only be as
+large as the number of Workers waiting on one Server.
 
 A training run usually references resources by absolute paths on the training host. Export it before
 evaluation:
