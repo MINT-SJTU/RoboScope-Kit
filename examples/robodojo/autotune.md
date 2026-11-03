@@ -1,13 +1,13 @@
 # 固定六局的并行与 autotune 对照
 
 六局是历史预实验和搜索子集。当前正式范围为单任务 50 局；完整顺序及命令见
-[性能对照协议](PERFORMANCE_REPORT_2026-10-28.md)。
+性能对照协议。
 新入口可用 `--output` 指定尚不存在的证据目录。更新 patch 前用旧版本工具
 回滚旧 parallel，检查 before 后再应用新版本，不覆盖正在运行的源码。
 
 这是 [suica/evostudio-evaluation-kit#11](https://github.com/suica/evostudio-evaluation-kit/issues/11) 的可选实验入口，主 recipe 的验收仍使用单环境原生/测量对照。
 复用 roboscope-kit 的 SDK autotune（`two-phase` 策略），固定 `2792b6e160f06e24d18499b5ca5f50cca5f3fc31`，不另写搜索算法。
-下文及[性能报告](PERFORMANCE_REPORT_2026-10-28.md)中的历史结果是在 roboscope-kit 前身 EvoStudio SDK
+下文的历史结果是在 roboscope-kit 前身 EvoStudio SDK
 `3ee774ae2575255cc7077b88f8f2df388ba9d152` 上测得的；roboscope-kit 的 `two-phase` 沿用同一实现，但当前 pin 尚未重新跑 GPU 验证。
 控制器需要 Python 3.11+；仿真和模型沿用主 README 的私有环境。
 
@@ -65,9 +65,9 @@ done
 GPU 总量仍每 500 ms 采样；新增每 5 秒采样各模型/仿真 PID 的显存，并记录
 各模型加载后显存、独立加载时间。CPU/RAM 每秒读取 cgroup；RAM 包含文件缓存和
 容器其他进程，不等于模型常驻集。原始样本、进程 PID、端口及运行 JSON 均留仓库外。
-完整结束后沿用本页回滚步骤；性能结果另列于 `docs/performance/`，不混入 b94 结果。
+完整结束后沿用本页回滚步骤；性能结果另行记录，不混入 b94 结果。
 
-[本次六局诊断](PERFORMANCE_REPORT_2026-10-28.md)：K2/G2
+本次六局诊断：K2/G2
 完整运行，峰值显存 44.09 GiB。正式 steps/s 5.33→6.63，GPU 均值
 32.12%→43.45%；但两组为 3/6→5/6 成功，负载更均衡且轨迹不同，不能将
 观测的 1.2419× 全归因于副本增加。容量验证通过，默认配置继续保持 G1；
@@ -153,18 +153,18 @@ reset、执行、窗口内输出及尾部不均衡；不是各 worker 时间之�
 ```
 
 patch 不改用户模型，也不发布官方镜像。当前有界配置和门限属于实验设置；实际
-收益、失败候选和限制以 `docs/performance/` 对应阶段报告为准。
+收益、失败候选和限制以原始实验报告为准（不随仓库发布，仅作参考）。
 
 
 ## 各阶段实测结论
 
-[2026-10-24 原生 5.1 off/on 报告](PERFORMANCE_REPORT_2026-10-28.md)：
+2026-10-24 原生 5.1 off/on 报告：
 K=2 候选 2/6，低于本次 K=1 候选 3/6，控制器拒绝 K=2 并停止扩展，未测试
 K=3，最终选 K=1。off/on 正式组均 4/6，正式窗口 531.049 / 535.972 s，
 含搜索实验总耗时 597.953 / 1,863.942 s。本轮未实现加速或 2× 目标，也不能
 用六局证明统计等价；不要把此可选入口当作已经验证有效的默认加速配置。
 
-[后续固定 50 局完整对照](PERFORMANCE_REPORT_2026-10-28.md)
+后续固定 50 局完整对照
 使用 b94 patch 和同一 SDK autotune，K1/K2/K3 探测各 4/6 成功，最终选中
 K3/G1。off/on 正式组 27/50→29/50 成功，正式 episode 吞吐 2.1948×、实际
 steps/s 2.1405×，计入 27.50 分钟搜索后整体 episode 吞吐 1.3426×。完整

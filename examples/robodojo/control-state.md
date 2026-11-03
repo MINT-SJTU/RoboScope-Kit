@@ -2,7 +2,7 @@
 
 `0008-control-state.patch` 仅修改 benchmark 的 robot manager。双臂在同一次控制调用中复用关节目标展开结果；CPU 状态直接生成独立 NumPy 数组，避免先克隆整个 Tensor 再复制。每次物理步后仍重新读取状态，GPU 路径维持原逻辑，不修改模型、控制频率、动作映射或物理参数。
 
-默认关闭。[单局验证](PERFORMANCE_REPORT_2026-10-28.md) 显示控制处理减少约 37%，整局实际 steps/s 仅增加约 1.3%；两组都失败，不构成成功率验收。
+默认关闭。单局验证 显示控制处理减少约 37%，整局实际 steps/s 仅增加约 1.3%；两组都失败，不构成成功率验收。
 
 先按主 README 准备固定源码与环境，应用 isaac51-deps、episode-count 和 measurement；其他候选保持 before。所有评测进程退出后，使用已提交版本工具：
 

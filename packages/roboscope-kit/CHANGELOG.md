@@ -5,10 +5,10 @@
 - Add `examples/robodojo/`, the RoboDojo / Simate-beta native Isaac Sim 5.1 `stack_blocks` recipe ported
   from [suica/evostudio-evaluation-kit#31](https://github.com/suica/evostudio-evaluation-kit/pull/31) by
   Lei Qian: pinned sources, assets and checkpoint, preparation and evaluation tools, complete-layout checks,
-  video validation, checked and reversible RoboDojo runtime patches, and one performance report. The
-  parallel runner imports `roboscope_kit.runtime.benchmark` pinned at `2792b6e` and selects the
-  `two-phase` autotune strategy, which the reported results (measured on EvoStudio SDK `3ee774a`) used.
-  The package runtime is unchanged.
+  video validation, and checked and reversible RoboDojo runtime patches. The parallel runner imports
+  `roboscope_kit.runtime.benchmark` pinned at `2792b6e` and selects the `two-phase` autotune strategy,
+  which the original measurements (on EvoStudio SDK `3ee774a`) used. Those performance figures are
+  reference only and not yet re-verified on roboscope-kit. The package runtime is unchanged.
 
 ## 0.8.0b10 (Unreleased)
 

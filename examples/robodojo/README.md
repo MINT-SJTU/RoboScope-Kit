@@ -2,7 +2,7 @@
 
 本目录交付 [suica/evostudio-evaluation-kit#10](https://github.com/suica/evostudio-evaluation-kit/issues/10)（原始实现见 [suica/evostudio-evaluation-kit#31](https://github.com/suica/evostudio-evaluation-kit/pull/31)） 的独立 recipe 与可运行样例，直接连接上游 RoboDojo 仿真和官方 XPolicyLab 模型服务。固定 Isaac Sim 5.1.0、官方 Simate-beta checkpoint，`stack_blocks / arx_x5 / seed 1`，当前完整范围为 50 个布局各一次；不是 MT50 或 RoboDojo 全任务套件。
 
-[唯一性能报告](PERFORMANCE_REPORT_2026-10-28.md) 汇总所有阶段的指标、失败尝试和限制。并行入口复用既有 SDK autotune；观察 FIFO、控制状态复用、视频、render、线程候选均默认关闭。异步观察的 50 局成功率下降尚未完全定位，短测不能替代完整验收。这里不注册平台 benchmark、SDK Policy 或官方镜像。
+文中的性能数字来自原始实现的内部实验（roboscope-kit 前身 EvoStudio SDK `3ee774a`），仅作参考，尚未在 roboscope-kit 上重新验证；性能报告不随仓库发布。并行入口复用既有 SDK autotune；观察 FIFO、控制状态复用、视频、render、线程候选均默认关闭。异步观察的 50 局成功率下降尚未完全定位，短测不能替代完整验收。这里不注册平台 benchmark、SDK Policy 或官方镜像。
 
 ## 1. 支持范围与固定输入
 

@@ -20,7 +20,7 @@ loadUserConfig。受控线程对照的两组都显式指定线程数，保持此
 作为可用或已验收配置**。8/4 线程单局均完整完成；物理每子步减少 7.27%，execution
 每动作仅减少 0.60%，尚不能认定稳定整体收益。后续 8/4/4/8 各六局已按最新要求
 取消并回滚，当前不继续线程参数试跑；详见
-[runtime 冗余检查](PERFORMANCE_REPORT_2026-10-28.md)。
+runtime 冗余检查。
 
 ## 应用、检查和回滚
 
@@ -53,4 +53,4 @@ PY=/workspace/robodojo-envs/policy/bin/python
 patch 工具验证 pinned 源码和完整 before/after，拒绝未知修改和部分应用。
 本 patch 修改 render_sync.py 的启动/检查入口并新增 helper；与已有 measurement、
 episode-count 不重叠。所有 raw JSON、日志、视频留仓库外；性能阶段记录见
-[CPU 诊断报告](PERFORMANCE_REPORT_2026-10-28.md)。
+CPU 诊断报告。

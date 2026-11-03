@@ -56,4 +56,4 @@ PYTHON=/workspace/robodojo-envs/policy/bin/python
 
 最新 measurement 在保留原模型锁的前提下区分锁等待、executor 派发、方法体、返回 event loop 的耗时，记录放在释放锁之后，不增加 GPU 同步。计时和 cProfile 仍是诊断开关，两组须保持一致；线程池等待不能直接当作模型计算时间。
 
-可选 `ROBODOJO_CAUSAL_TRACE_DIR` 启用观察/RNG/动作等逐请求诊断材料，体积较大且影响时序，只能指向仓库外新目录。正式吞吐实验应关闭该 trace，不能根据计数一致推断未记录的数值一致。详细结果与局限见 [观察阶段报告](PERFORMANCE_REPORT_2026-10-28.md)，运行开关见 [观察 runtime](observation-runtime.md)。
+可选 `ROBODOJO_CAUSAL_TRACE_DIR` 启用观察/RNG/动作等逐请求诊断材料，体积较大且影响时序，只能指向仓库外新目录。正式吞吐实验应关闭该 trace，不能根据计数一致推断未记录的数值一致。详细结果与局限见 观察阶段报告，运行开关见 [观察 runtime](observation-runtime.md)。

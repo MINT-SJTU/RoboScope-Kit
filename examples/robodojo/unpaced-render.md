@@ -6,7 +6,7 @@
 
 2026-10-26 已完成未开 profiling 的 off/on/on/off 各六局。两次正式 steps/s
 配对为 1.1174× / 0.9639×，尚无稳定整体收益，候选保持关闭，不进入 50 局验收。
-完整指标、逐布局差异及局部 render 收益见[阶段报告](PERFORMANCE_REPORT_2026-10-28.md)。
+完整指标、逐布局差异及局部 render 收益见阶段报告。
 
 [Isaac Sim 5.1 官方示例](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_isaac_snippets.html)
 将主循环 FPS 限速与 PhysX 频率、timeline 设置分别列出。本候选只在
