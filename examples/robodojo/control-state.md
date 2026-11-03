@@ -4,13 +4,13 @@
 
 Off by default. In the original experiments, a single-episode check showed about 37% less control processing time, but whole-episode actual steps/s rose by only about 1.3%. Both groups failed the task, so this is not a success-rate acceptance result.
 
-First prepare the pinned sources and environments as described in the main [README](README.md), and apply isaac51-deps, episode-count, and measurement; keep the other candidates in the before state. After all evaluation processes exit, use the committed version of the tools:
+First prepare the pinned sources and environments as described in the main [README](README.md), and apply episode-count and measurement; keep the other candidates in the before state. After all evaluation processes exit, use the committed version of the tools:
 
 ```bash
 RECIPE=/path/to/roboscope-kit/examples/robodojo
 BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
-PYTHON=/workspace/robodojo-envs/controller/bin/python
+PYTHON="$HOME/miniconda3/envs/RoboDojo/bin/python"
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch control-state # before
 # Run the off group first; the output label must be unused.
 "$PYTHON" "$RECIPE/run_eval.py" "$ROOT" --mode measured --seed 1 --episodes 1 --label control-off-NEW

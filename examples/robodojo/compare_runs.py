@@ -68,7 +68,7 @@ def main():
         raise ValueError("Comparison requires the same simulator compatibility patch")
     if reference.get("source_revisions") != candidate.get("source_revisions"):
         raise ValueError("Comparison requires the same pinned sources")
-    for name in ("measurement", "episode-count", "isaac51-deps"):
+    for name in ("measurement", "episode-count"):
         a = reference.get("runtime_patches", {}).get(name, {}).get("sha256")
         b = candidate.get("runtime_patches", {}).get(name, {}).get("sha256")
         if a != b:

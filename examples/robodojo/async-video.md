@@ -39,7 +39,7 @@ SDK.
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch async-video # after
 
 # Run a matching small-scale check first, then the full rerun; background writing is enabled only by the explicit flag.
-"$PYTHON" "$RECIPE/run_eval.py" "$ROOT" --env-root "$ENV_ROOT" \
+"$PYTHON" "$RECIPE/run_eval.py" "$ROOT" \
   --mode measured --seed 1 --episodes 50 --label video-on --async-video
 
 # Run after the evaluation finishes, so its cost is reported outside the measured run; replace with the printed evidence directory.

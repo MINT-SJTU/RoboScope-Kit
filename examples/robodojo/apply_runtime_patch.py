@@ -1,16 +1,14 @@
-"""Apply/check/roll back a pinned RoboDojo runtime patch."""
+"""Apply/check/roll back a RoboDojo runtime patch on the installed checkout."""
 
 import argparse
 import hashlib
 import subprocess
 import tempfile
-import tomllib
 from pathlib import Path, PurePosixPath
 
 HERE = Path(__file__).resolve().parent
 PATCHES = {
     "measurement": "0001-measurement.patch",
-    "isaac51-deps": "0000-isaac51-deps.patch",
     "parallel": "0003-parallel-autotune.patch",
     "async-video": "0004-async-video.patch",
     "episode-count": "0005-episode-count.patch",
@@ -50,9 +48,12 @@ def patch_metadata(name):
 
 
 def expected_contents(root, name):
-    """Reconstruct both states from pinned Git blobs in an isolated directory."""
+    """Reconstruct both states from the checked-out Git blobs in an isolated directory.
+
+    The sources come from the upstream installer, whose submodules follow their main branches, so the
+    "before" state is each file at the checkout's HEAD; `git apply` then proves the patch still fits it.
+    """
     files = patch_metadata(name)["files"]
-    revisions = tomllib.loads((HERE / "recipe.toml").read_text(encoding="utf-8"))["sources"]
     owners = {}
     for filename in files:
         owners[filename] = max(
@@ -60,12 +61,6 @@ def expected_contents(root, name):
              if directory == "." or filename.startswith(directory + "/")),
             key=lambda source: len(SOURCE_DIRS[source]),
         )
-    for source in {"robodojo", *owners.values()}:
-        actual = subprocess.check_output(
-            ["git", "-C", str(root / SOURCE_DIRS[source]), "rev-parse", "HEAD"], text=True,
-        ).strip()
-        if actual != revisions[source]:
-            raise ValueError(f"Unexpected source revision: {source}: {actual}")
     before = {}
     with tempfile.TemporaryDirectory(prefix="robodojo-patch-") as directory:
         scratch = Path(directory)
@@ -77,7 +72,7 @@ def expected_contents(root, name):
             relative = PurePosixPath(filename).relative_to(SOURCE_DIRS[source])
             before[filename] = subprocess.check_output(
                 ["git", "-C", str(root / SOURCE_DIRS[source]), "show",
-                 f"{revisions[source]}:{relative.as_posix()}"],
+                 f"HEAD:{relative.as_posix()}"],
             )
             target = scratch / filename
             target.parent.mkdir(parents=True, exist_ok=True)

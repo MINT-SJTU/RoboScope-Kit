@@ -58,9 +58,8 @@ switch versions under running source code.
 
 ```bash
 for G in 1 2; do
-  "$CONTROLLER" "$ROOT/recipe_parallel_runtime.py" "$ROOT" \
+  "$PYTHON" "$ROOT/recipe_parallel_runtime.py" "$ROOT" \
     --recipe-dir "$RECIPE" --profile "$RECIPE/recipe.toml" --sdk-root "$SDK" \
-    --env-root "$ENV_ROOT" --simulator-env "$ENV_ROOT/simulator" \
     --mode fixed --workers 2 --replicas "$G" \
     --maximum-workers 2 --maximum-replicas 2 --episodes 6 \
     --output "$BASE/evidence/replicas-k2g${G}-NEW"
@@ -100,38 +99,34 @@ BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
 RECIPE=/path/to/roboscope-kit/examples/robodojo
 SDK="$BASE/roboscope-kit-2792b6e"
-ENV_ROOT=/workspace/robodojo-envs
-PYTHON="$ENV_ROOT/policy/bin/python"
+# The upstream simulator environment; roboscope-kit itself needs only numpy, so it is also the controller.
+PYTHON="$HOME/miniconda3/envs/RoboDojo/bin/python"
 
 git clone https://github.com/mint-sjtu/roboscope-kit.git "$SDK"
 git -C "$SDK" checkout --detach 2792b6e160f06e24d18499b5ca5f50cca5f3fc31
 # If the checkout already exists, check its revision and reuse it; do not overwrite local changes.
-env -u UV_INDEX_URL -u UV_EXTRA_INDEX_URL -u UV_DEFAULT_INDEX \
-  UV_PROJECT_ENVIRONMENT="$ENV_ROOT/controller" uv sync --locked --no-dev \
-  --project "$SDK/packages/roboscope-kit" --python 3.11
-CONTROLLER="$ENV_ROOT/controller/bin/python"
-"$CONTROLLER" -c 'import sys; from roboscope_kit.runtime.benchmark import autotune; print(sys.version, autotune.__file__)'
+export PYTHONPATH="$SDK/packages/roboscope-kit/src:$RECIPE:$ROOT"
+"$PYTHON" -c 'from roboscope_kit.runtime.benchmark import autotune; print(autotune.__file__)'
 
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch measurement
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch episode-count
 # Upstream's own single-process two-environment reference; run it before applying the parallel patch.
-"$PYTHON" "$RECIPE/run_eval.py" "$ROOT" --env-root "$ENV_ROOT" \
+"$PYTHON" "$RECIPE/run_eval.py" "$ROOT" \
   --mode measured --seed 1 --episodes 6 --num-envs 2 --label upstream-vector-two
 
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch parallel
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch parallel # after
-export PYTHONPATH="$SDK/packages/roboscope-kit/src:$RECIPE:$ROOT"
 for MODE in off on; do
-  "$CONTROLLER" "$ROOT/recipe_parallel_runtime.py" "$ROOT" \
+  "$PYTHON" "$ROOT/recipe_parallel_runtime.py" "$ROOT" \
     --recipe-dir "$RECIPE" --profile "$RECIPE/recipe.toml" --sdk-root "$SDK" \
-    --env-root "$ENV_ROOT" --simulator-env "$ENV_ROOT/simulator" \
     --mode "$MODE" --episodes 6 --probe-episodes 6 --maximum-workers 3 \
     --candidate-timeout-s 1800 --tune-budget-s 3600
 done
 ```
 
-`--vulkan-icd` and `--metrics-root` accept host paths. By default the two common NVIDIA ICD directories are
-searched. The controller rejects a wrong source revision, unknown modifications, model modifications, a
+`--simulator-env`/`--policy-env` default to the upstream conda environments `RoboDojo` and
+`simate-beta-eval`; `--vulkan-icd` and `--metrics-root` accept host paths. By default the two common NVIDIA ICD directories are
+searched. The controller records the source revisions and rejects unknown modifications, model modifications, a
 wrong patch digest, or a simulator/Python/PyTorch that does not match the profile. The generic SDK source
 needs no changes.
 

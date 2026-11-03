@@ -43,13 +43,13 @@ BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
 OLD=/path/to/previous/recipe
 RECIPE=/path/to/committed/examples/robodojo
-PYTHON=/workspace/robodojo-envs/policy/bin/python
+PYTHON="$HOME/miniconda3/envs/RoboDojo/bin/python"
 
 "$PYTHON" "$OLD/apply_runtime_patch.py" check "$ROOT" --patch parallel # before
 "$PYTHON" "$OLD/apply_runtime_patch.py" rollback "$ROOT" --patch measurement
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch measurement
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch measurement # after
-# isaac51-deps and episode-count stay applied.
+# episode-count stays applied.
 "$PYTHON" "$RECIPE/run_eval.py" "$ROOT" --mode measured --seed 1 \
   --num-envs 1 --episodes 1 --label execution-diagnostic \
   --execution-profile --python-profile

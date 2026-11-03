@@ -1,9 +1,8 @@
-"""Fetch pinned sources and hash-verified assets using Python 3.11+ and Git."""
+"""Download and verify the pinned assets and checkpoint into a RoboDojo checkout (Python 3.11+)."""
 
 import argparse
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import time
@@ -18,57 +17,11 @@ from urllib.request import Request, urlopen
 
 HERE = Path(__file__).resolve().parent
 CONFIG = tomllib.loads((HERE / "recipe.toml").read_text(encoding="utf-8"))
-SOURCES = {
-    "robodojo": (".", "RoboDojo-Benchmark/RoboDojo"),
-    "xpolicylab": ("XPolicyLab", "XPolicyLab/XPolicyLab"),
-    "isaaclab": ("third_party/IsaacLab", "yuechen0614/IsaacLab"),
-    "curobo": ("third_party/curobo", "yuechen0614/curobo"),
-}
-
-
 def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     temporary.replace(path)
-
-
-def command(*args, cwd=None):
-    env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_LFS_SKIP_SMUDGE="1")
-    return subprocess.check_output(args, cwd=cwd, env=env, text=True).strip()
-
-
-def prepare_sources(root, bundles):
-    versions = {}
-    for name, (relative, repository) in SOURCES.items():
-        if name not in CONFIG["sources"]:
-            continue
-        target = root / relative
-        revision = CONFIG["sources"][name]
-        if not (target / ".git").exists():
-            target.parent.mkdir(parents=True, exist_ok=True)
-            source = str(bundles / f"{name}.bundle") if bundles else f"https://github.com/{repository}.git"
-            command("git", "clone", "--no-checkout", source, str(target))
-            command("git", "checkout", "--detach", revision, cwd=target)
-            command(
-                "git",
-                "remote",
-                "set-url",
-                "origin",
-                f"https://github.com/{repository}.git",
-                cwd=target,
-            )
-        actual = command("git", "rev-parse", "HEAD", cwd=target)
-        if actual != revision:
-            raise ValueError(f"{name}: existing checkout is {actual}, expected {revision}")
-        command("git", "diff", "--exit-code", "--ignore-submodules=all", "HEAD", cwd=target)
-        versions[name] = actual
-        print(f"source {name} {actual}", flush=True)
-    for name in ("xpolicylab", "isaaclab", "curobo"):
-        gitlink = command("git", "ls-tree", "HEAD", SOURCES[name][0], cwd=root).split()
-        if len(gitlink) < 3 or gitlink[2] != versions[name]:
-            raise ValueError(f"{name}: version does not match RoboDojo gitlink")
-    return versions
 
 
 def request_json(url):
@@ -320,14 +273,9 @@ def download(
 def main():
     global CONFIG
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=["sources", "assets", "model", "verify"])
-    parser.add_argument("root", type=Path, help="new/private RoboDojo checkout")
+    parser.add_argument("phase", choices=["assets", "model", "verify"])
+    parser.add_argument("root", type=Path, help="RoboDojo checkout installed by upstream scripts/install.sh")
     parser.add_argument("--recipe", type=Path, default=HERE / "recipe.toml")
-    parser.add_argument(
-        "--bundles",
-        type=Path,
-        help="optional offline Git bundles named <source>.bundle",
-    )
     parser.add_argument("--endpoint", default="https://huggingface.co")
     parser.add_argument("--transport", choices=["primary", "modelscope"], default="primary")
     parser.add_argument("--downloader", choices=["urllib", "aria2"], default="urllib")
@@ -346,29 +294,26 @@ def main():
     receipts = root.parent / "evidence" / CONFIG.get("evidence_subdir", "preparation")
     receipts.mkdir(parents=True, exist_ok=True)
     start = time.perf_counter()
-    if args.phase == "sources":
-        result = prepare_sources(root, args.bundles.resolve() if args.bundles else None)
-    else:
-        if not (root / "scripts/robodojo.sh").is_file():
-            parser.error("Run the sources phase first")
-        model_kinds = ["checkpoint"]
-        kinds = ["assets"] if args.phase == "assets" else model_kinds
-        if args.phase == "verify":
-            kinds = ["assets", *model_kinds]
-        result = {
-            kind: download(
-                root,
-                receipts,
-                args.endpoint.rstrip("/"),
-                kind,
-                args.workers,
-                args.phase == "verify",
-                args.transport,
-                inventories,
-                args.downloader,
-            )
-            for kind in kinds
-        }
+    if not (root / "scripts/robodojo.sh").is_file():
+        parser.error("Clone RoboDojo and run its scripts/install.sh first")
+    model_kinds = ["checkpoint"]
+    kinds = ["assets"] if args.phase == "assets" else model_kinds
+    if args.phase == "verify":
+        kinds = ["assets", *model_kinds]
+    result = {
+        kind: download(
+            root,
+            receipts,
+            args.endpoint.rstrip("/"),
+            kind,
+            args.workers,
+            args.phase == "verify",
+            args.transport,
+            inventories,
+            args.downloader,
+        )
+        for kind in kinds
+    }
     summary = {
         "phase": args.phase,
         "elapsed_s": time.perf_counter() - start,

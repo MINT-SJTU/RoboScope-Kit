@@ -101,7 +101,8 @@ def aggregate(record, summaries, resources):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", type=Path)
-    parser.add_argument("--env-root", type=Path, default=Path("/workspace/robodojo-envs"))
+    parser.add_argument("--simulator-env", type=Path, default=Path.home() / "miniconda3/envs/RoboDojo")
+    parser.add_argument("--policy-env", type=Path, default=Path.home() / "miniconda3/envs/simate-beta-eval")
     parser.add_argument("--profile", type=Path, default=HERE / "recipe.toml")
     parser.add_argument("--rounds", type=int, required=True)
     parser.add_argument("--episodes-per-round", type=int, choices=range(1, 51), default=50)
@@ -171,7 +172,8 @@ def main():
             pointer = output / f"round-{index:03d}.json"
             command = [
                 sys.executable, str(HERE / "run_eval.py"), str(root),
-                "--env-root", str(args.env_root), "--profile", str(profile_path),
+                "--simulator-env", str(args.simulator_env), "--policy-env", str(args.policy_env),
+                "--profile", str(profile_path),
                 "--mode", "measured", "--episodes", str(args.episodes_per_round),
                 "--num-envs", str(args.num_envs), "--seed", str(args.seed),
                 "--timeout-s", str(args.timeout_per_round_s),

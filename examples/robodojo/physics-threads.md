@@ -37,7 +37,7 @@ back, and thread setting trials are not being continued for now.
 ## Apply, check, and roll back
 
 First confirm that all processes from this run have exited and the GPU is idle.
-Keep measurement, isaac51-deps, and episode-count applied; keep parallel,
+Keep measurement and episode-count applied; keep parallel,
 async-video, and unpaced-render in the before state. If the measurement version
 differs, roll back with the old tools first, then apply and check with the new
 tools.
@@ -46,7 +46,7 @@ tools.
 BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
 RECIPE=/path/to/committed/examples/robodojo
-PY=/workspace/robodojo-envs/policy/bin/python
+PY="$HOME/miniconda3/envs/RoboDojo/bin/python"
 
 "$PY" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch physics-threads # before
 "$PY" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch physics-threads

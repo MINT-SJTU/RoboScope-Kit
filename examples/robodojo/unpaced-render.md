@@ -30,7 +30,7 @@ similar success totals alone do not prove trajectory equivalence.
 ## Apply, compare, and roll back
 
 First stop the model and simulation processes owned by this run and confirm the
-GPU is idle. `measurement`, `isaac51-deps`, and `episode-count` are applied per
+GPU is idle. `measurement` and `episode-count` are applied per
 the recipe; `parallel` and `async-video` stay in the before state. The native
 entry point behaves unchanged when `ROBODOJO_UNPACED_RENDER` is not set.
 
@@ -38,7 +38,7 @@ entry point behaves unchanged when `ROBODOJO_UNPACED_RENDER` is not set.
 BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
 RECIPE=/path/to/committed/examples/robodojo
-PYTHON=/workspace/robodojo-envs/policy/bin/python
+PYTHON="$HOME/miniconda3/envs/RoboDojo/bin/python"
 
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch unpaced-render # before
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch unpaced-render

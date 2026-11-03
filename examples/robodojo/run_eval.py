@@ -91,8 +91,9 @@ def gpu_summary(samples, start, end):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", type=Path)
-    parser.add_argument("--env-root", type=Path, default=Path("/workspace/robodojo-envs"))
-    parser.add_argument("--simulator-env", type=Path, help="separate experimental simulator venv")
+    # Defaults are the conda environments created by the upstream installers.
+    parser.add_argument("--simulator-env", type=Path, default=Path.home() / "miniconda3/envs/RoboDojo")
+    parser.add_argument("--policy-env", type=Path, default=Path.home() / "miniconda3/envs/simate-beta-eval")
     parser.add_argument("--vulkan-icd", type=Path, help="NVIDIA Vulkan ICD JSON on this host")
     parser.add_argument("--profile", type=Path, default=HERE / "recipe.toml")
     parser.add_argument("--episodes", type=int, choices=range(1, 51), default=1)
@@ -136,8 +137,8 @@ def main():
     if vulkan_icd is None or not vulkan_icd.is_file():
         parser.error("Set --vulkan-icd to the host's existing NVIDIA Vulkan ICD JSON")
     vulkan_icd = vulkan_icd.resolve()
-    root, env_root = args.root.resolve(), args.env_root.resolve()
-    simulator_env = args.simulator_env.absolute() if args.simulator_env else env_root / "simulator"
+    root = args.root.resolve()
+    simulator_env, policy_env = args.simulator_env.absolute(), args.policy_env.absolute()
     profile = tomllib.loads(args.profile.read_text(encoding="utf-8"))
     cfg = profile["protocol"]
     if (cfg["policy"], cfg["task"], cfg["env_cfg"]) != ("Simate_beta", "stack_blocks", "arx_x5"):
@@ -191,10 +192,12 @@ def main():
         "isaaclab": root / "third_party/IsaacLab",
         "curobo": root / "third_party/curobo",
     }
+    source_revisions = {}
     for name, path in source_paths.items():
-        revision = subprocess.check_output(["git", "-C", str(path), "rev-parse", "HEAD"], text=True).strip()
-        if revision != profile["sources"][name]:
-            raise ValueError(f"{name} does not match the pinned recipe revision")
+        # Record what the upstream installer checked out; its submodules follow their main branches.
+        source_revisions[name] = subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "HEAD"], text=True,
+        ).strip()
         changed = subprocess.check_output(
             ["git", "-C", str(path), "diff", "--name-only", "--ignore-submodules=all", "HEAD"],
             text=True,
@@ -274,7 +277,7 @@ def main():
         cfg["action_type"],
         str(args.seed),
         "0",
-        str(env_root / "policy"),
+        str(policy_env),
         str(port),
         "127.0.0.1",
     ]
@@ -313,7 +316,7 @@ def main():
         "run_id": run_id,
         "mode": args.mode,
         "profile_sha256": hashlib.sha256(args.profile.read_bytes()).hexdigest(),
-        "source_revisions": profile["sources"],
+        "source_revisions": source_revisions,
         "requested_episodes": args.episodes,
         "episode_scope": episode_scope,
         "seed": args.seed,
@@ -325,6 +328,7 @@ def main():
         "execution_profile": args.execution_profile,
         "python_profile": args.python_profile,
         "simulator_env": str(simulator_env),
+        "policy_env": str(policy_env),
         "vulkan_icd": str(vulkan_icd),
         "runtime_versions": runtime_versions,
         "runtime_patches": runtime_patches,

@@ -2,6 +2,9 @@ schema_version = 1
 support = "standalone recipe; Simate-beta / stack_blocks / arx_x5; see validation reports"
 evidence_subdir = "simate-stack-blocks"
 
+# Revisions the original experiments ran on. prepare.py and the patch tools no longer require them:
+# upstream scripts/install.sh moves the submodules to their main branches, each run records the
+# revisions it actually used, and the patch tool checks every patch against the installed checkout.
 [sources]
 robodojo = "f57e1633ffed59761bc8e568cfe7530c4b33381c"
 xpolicylab = "5d0be1499634d3176258c8f2e31f5fe816497b0a"
@@ -45,5 +48,4 @@ checkpoint = "ef687918daea25c5a86c3604d5517b6d054467f90cb73146a5f0df6ead925152"
 isaacsim = "5.1.0.0"
 simulator_python = "3.11"
 simulator_torch = "2.7.0+cu128"
-dependency_patch = "isaac51-deps"
 episode_count_patch = "episode-count"

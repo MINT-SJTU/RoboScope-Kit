@@ -11,9 +11,9 @@ across the round; episode reset does not reseed it.
 
 ## Running
 
-First complete installation and the minimal native check from the main [README](README.md). `PYTHON` is a
-Python 3.11+ controller environment with the SDK installed, for example
-`/workspace/robodojo-envs/controller/bin/python`, which uses the resource-measurement functions of
+First complete installation and the minimal native check from the main [README](README.md). `PYTHON` is the
+upstream simulator environment (`$HOME/miniconda3/envs/RoboDojo/bin/python`) with
+`PYTHONPATH="$SDK/packages/roboscope-kit/src"`; it uses the resource-measurement functions of
 roboscope-kit pinned at `2792b6e160f06e24d18499b5ca5f50cca5f3fc31`. The reported results were measured with
 an earlier, unreleased version of the kit; they are reference results from the original experiments and
 have not been re-verified on roboscope-kit yet.
@@ -28,7 +28,7 @@ environments during a run.
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch measurement # after
 
 # OUT is a result directory outside the repository that does not exist yet; logs also go outside the repository.
-setsid nohup "$PYTHON" -u "$RECIPE/run_series.py" "$ROOT" --env-root "$ENV_ROOT" \
+setsid nohup "$PYTHON" -u "$RECIPE/run_series.py" "$ROOT" \
   --profile "$RECIPE/recipe.toml" --seed 1 --episodes-per-round 50 --rounds 1 \
   --num-envs 1 --label baseline50 --output "$OUT" \
   >"$BASE/evidence/baseline50-launch.log" 2>&1 < /dev/null &

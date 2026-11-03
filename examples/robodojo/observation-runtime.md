@@ -16,14 +16,14 @@ Ordering within one worker is protected, but this does not mean the global RNG c
 
 ## Apply and small-scale comparison
 
-First complete the preparation in the main [README](README.md) and the [autotune environment](autotune.md), keeping isaac51-deps and episode-count applied; keep the video, render, thread, and control state candidates in the before state. After evaluation and model processes exit, use the original version of the tools to roll back the old parallel patch and then the old measurement patch, and keep the old tools for restoring. The new tools only accept their pinned original or applied state; do not skip the check to overwrite an old patch.
+First complete the preparation in the main [README](README.md) and the [autotune environment](autotune.md), keeping episode-count applied; keep the video, render, thread, and control state candidates in the before state. After evaluation and model processes exit, use the original version of the tools to roll back the old parallel patch and then the old measurement patch, and keep the old tools for restoring. The new tools only accept their pinned original or applied state; do not skip the check to overwrite an old patch.
 
 ```bash
 RECIPE=/path/to/roboscope-kit/examples/robodojo
 BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
 SDK="$BASE/roboscope-kit-2792b6e"
-PYTHON=/workspace/robodojo-envs/controller/bin/python
+PYTHON="$HOME/miniconda3/envs/RoboDojo/bin/python"
 EVIDENCE="$BASE/evidence"
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch measurement # before
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch measurement

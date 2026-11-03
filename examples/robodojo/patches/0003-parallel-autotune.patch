@@ -250,7 +250,7 @@
 +            "complete": False,
 +            "mode": phase,
 +            "profile_sha256": hashlib.sha256(self.args.profile.read_bytes()).hexdigest(),
-+            "source_revisions": self.profile["sources"],
++            "source_revisions": self.args.source_revisions,
 +            "seed": self.cfg["seed"],
 +            "num_envs": k,
 +            "requested_episodes": episodes,
@@ -337,7 +337,7 @@
 +                    self.cfg["action_type"],
 +                    str(self.cfg["seed"]),
 +                    "0",
-+                    str(self.args.env_root / "policy"),
++                    str(self.args.policy_env),
 +                    str(port),
 +                    "127.0.0.1",
 +                ]
@@ -710,8 +710,9 @@
 +    parser.add_argument("--replicas", type=int, choices=[1, 2], help="fixed-mode model count")
 +    parser.add_argument("--episodes", type=int, default=6, choices=range(1, 51))
 +    parser.add_argument("--probe-episodes", type=int, default=6, choices=range(2, 51))
-+    parser.add_argument("--env-root", type=Path, default=Path("/workspace/robodojo-envs"))
-+    parser.add_argument("--simulator-env", type=Path, default=Path("/workspace/robodojo-envs/simulator"))
++    # Defaults are the conda environments created by the upstream installers.
++    parser.add_argument("--simulator-env", type=Path, default=Path.home() / "miniconda3/envs/RoboDojo")
++    parser.add_argument("--policy-env", type=Path, default=Path.home() / "miniconda3/envs/simate-beta-eval")
 +    parser.add_argument("--metrics-root", type=Path, default=Path("/workspace/robodojo-metrics"))
 +    parser.add_argument("--vulkan-icd", type=Path)
 +    parser.add_argument("--candidate-timeout-s", type=float, default=1800)
@@ -783,17 +784,16 @@
 +        raise ValueError(
 +            "This scoped-reset experiment supports the declared Simate-beta stack_blocks workload only"
 +        )
-+    for key, path in {
-+        "robodojo": args.root,
-+        "xpolicylab": args.root / "XPolicyLab",
-+        "isaaclab": args.root / "third_party/IsaacLab",
-+        "curobo": args.root / "third_party/curobo",
-+    }.items():
-+        if (
-+            subprocess.check_output(["git", "-C", str(path), "rev-parse", "HEAD"], text=True).strip()
-+            != profile["sources"][key]
-+        ):
-+            raise ValueError(f"Source revision mismatch: {key}")
++    # Record what the upstream installer checked out; its submodules follow their main branches.
++    args.source_revisions = {
++        key: subprocess.check_output(["git", "-C", str(path), "rev-parse", "HEAD"], text=True).strip()
++        for key, path in {
++            "robodojo": args.root,
++            "xpolicylab": args.root / "XPolicyLab",
++            "isaaclab": args.root / "third_party/IsaacLab",
++            "curobo": args.root / "third_party/curobo",
++        }.items()
++    }
 +    subprocess.run(
 +        [
 +            "git",
