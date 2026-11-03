@@ -1,35 +1,49 @@
-# PhysX CPU 工作线程对照
+# PhysX CPU worker thread comparison
 
-本候选只改变单个仿真进程内部 PhysX CPU dispatcher 的工作线程上限，不改变
-仿真进程数量、模型服务副本或现有 autotune。默认关闭；不能把配置的线程数
-当成实际活跃核数。物理 dt/后端/solver、相机同步、视频及模型代码均保留。
+This candidate only changes the worker thread limit of the PhysX CPU dispatcher
+inside a single simulation process. It does not change the number of simulation
+processes, model server replicas, or the existing autotune. Off by default; do
+not treat the configured thread count as the number of cores actually in use.
+Physics dt, backend, and solver, camera sync, video, and model code are all
+unchanged.
 
-归属 `0007-physics-threads.patch`，在原有 AppLauncher 前添加显式 Kit 参数，
-首次相机采集时检查生效值及 PhysX dispatcher。冲突参数或未生效时报错。
-相机等待循环和帧数逻辑不变。当前只支持 recipe 固定的 Isaac Sim 5.1 CPU
-环境；`--physics-threads` 可取 1、4、8，为手动固定值，不做搜索或自动选择。
+The change lives in `0007-physics-threads.patch`. It adds explicit Kit arguments
+before the existing AppLauncher, and on the first camera capture checks the
+effective value and the PhysX dispatcher. Conflicting arguments or a setting
+that did not take effect raise an error. The camera wait loop and frame count
+logic are unchanged. Only the Isaac Sim 5.1 CPU environment pinned by the recipe
+is supported. `--physics-threads` accepts 1, 4, or 8 as a manually fixed value;
+there is no search or automatic selection.
 
-[Kit 配置文档](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html)
-说明 `/persistent` 设置可每帧写回用户配置。因此显式启用线程参数时同时使用
-`--/app/settings/persistent=false`，禁止本轮覆盖持久化到后续运行；不改变
-loadUserConfig。受控线程对照的两组都显式指定线程数，保持此项一致，基准
-线程值必须来自先前真实诊断，不能猜测默认值。改变线程执行顺序可能改变
-浮点/非确定性轨迹，必须检查逐布局输入、动作、步数及终止条件。
+The [Kit configuration docs](https://docs.omniverse.nvidia.com/kit/docs/kit-manual/107.0.3/guide/configuring.html)
+state that `/persistent` settings can be written back to the user config every
+frame. So when thread arguments are enabled explicitly, the patch also passes
+`--/app/settings/persistent=false` so that this run's overrides do not persist
+into later runs; loadUserConfig is unchanged. In a controlled thread comparison,
+both groups specify the thread count explicitly so this setting stays the same,
+and the baseline thread value must come from a previous real diagnostic rather
+than a guessed default. Changing thread execution order can change
+floating-point or nondeterministic trajectories, so check per-layout inputs,
+actions, step counts, and termination conditions.
 
-2026-10-27 本机请求 1 线程时首次 reset 挂起，已保存失败并回滚；**不要将 1
-作为可用或已验收配置**。8/4 线程单局均完整完成；物理每子步减少 7.27%，execution
-每动作仅减少 0.60%，尚不能认定稳定整体收益。后续 8/4/4/8 各六局已按最新要求
-取消并回滚，当前不继续线程参数试跑；详见
-runtime 冗余检查。
+In the original experiments on 2026-10-27, requesting 1 thread hung on the first
+reset; the failure was saved and the patch rolled back. **Do not treat 1 as a
+usable or accepted setting.** Single episodes with 8 and 4 threads both
+completed; per-substep physics time dropped by 7.27%, but execution time per
+action dropped by only 0.60%, which is not enough to claim a stable overall
+gain. The follow-up 8/4/4/8 runs of six episodes each were cancelled and rolled
+back, and thread setting trials are not being continued for now.
 
-## 应用、检查和回滚
+## Apply, check, and roll back
 
-先确认本轮进程全部退出，GPU 空闲。保留 measurement、isaac51-deps、
-episode-count；parallel、async-video、unpaced-render 均保持 before。
-不同版本 measurement 先用旧工具 rollback，再用新工具 apply/check。
+First confirm that all processes from this run have exited and the GPU is idle.
+Keep measurement, isaac51-deps, and episode-count applied; keep parallel,
+async-video, and unpaced-render in the before state. If the measurement version
+differs, roll back with the old tools first, then apply and check with the new
+tools.
 
 ```bash
-BASE=/autodl-fs/data/robodojo
+BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
 RECIPE=/path/to/committed/examples/robodojo
 PY=/workspace/robodojo-envs/policy/bin/python
@@ -46,11 +60,15 @@ PY=/workspace/robodojo-envs/policy/bin/python
 "$PY" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch physics-threads # before
 ```
 
-所有基准、候选均验证完整视频；重复布局不视为独立新场景。用现有 compare_runs.py
-检查结果完整性及逐布局差异，报告正式与全程吞吐、资源、成功次数/率及限制。
-有稳定收益才进入 50 局验收，未完成验收前不作为默认优化。
+Verify complete videos for every baseline and candidate run; repeated layouts
+do not count as new independent scenes. Use the existing compare_runs.py to
+check result completeness and per-layout differences, and report measured and
+end-to-end throughput, resources, success counts and rates, and limitations.
+Only a stable gain moves on to 50-episode acceptance; until that acceptance
+passes, this is not a default optimization.
 
-patch 工具验证 pinned 源码和完整 before/after，拒绝未知修改和部分应用。
-本 patch 修改 render_sync.py 的启动/检查入口并新增 helper；与已有 measurement、
-episode-count 不重叠。所有 raw JSON、日志、视频留仓库外；性能阶段记录见
-CPU 诊断报告。
+The patch tool verifies the pinned sources and the complete before/after state,
+and rejects unknown changes and partial application. This patch modifies the
+startup/check entry point of render_sync.py and adds a helper; it does not
+overlap with the existing measurement or episode-count patches. Keep all raw
+JSON, logs, and videos outside the repository.

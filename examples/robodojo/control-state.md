@@ -1,17 +1,18 @@
-# 控制状态复用候选
+# Control state reuse candidate
 
-`0008-control-state.patch` 仅修改 benchmark 的 robot manager。双臂在同一次控制调用中复用关节目标展开结果；CPU 状态直接生成独立 NumPy 数组，避免先克隆整个 Tensor 再复制。每次物理步后仍重新读取状态，GPU 路径维持原逻辑，不修改模型、控制频率、动作映射或物理参数。
+`0008-control-state.patch` only modifies the benchmark's robot manager. Both arms reuse the expanded joint targets within the same control call, and CPU state is built directly as independent NumPy arrays instead of cloning the whole Tensor and then copying it. State is still re-read after every physics step, and the GPU path keeps the original logic. The model, control frequency, action mapping, and physics parameters are unchanged.
 
-默认关闭。单局验证 显示控制处理减少约 37%，整局实际 steps/s 仅增加约 1.3%；两组都失败，不构成成功率验收。
+Off by default. In the original experiments, a single-episode check showed about 37% less control processing time, but whole-episode actual steps/s rose by only about 1.3%. Both groups failed the task, so this is not a success-rate acceptance result.
 
-先按主 README 准备固定源码与环境，应用 isaac51-deps、episode-count 和 measurement；其他候选保持 before。所有评测进程退出后，使用已提交版本工具：
+First prepare the pinned sources and environments as described in the main [README](README.md), and apply isaac51-deps, episode-count, and measurement; keep the other candidates in the before state. After all evaluation processes exit, use the committed version of the tools:
 
 ```bash
 RECIPE=/path/to/roboscope-kit/examples/robodojo
-ROOT=/autodl-fs/data/robodojo/RoboDojo
+BASE=/path/to/robodojo
+ROOT="$BASE/RoboDojo"
 PYTHON=/workspace/robodojo-envs/controller/bin/python
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch control-state # before
-# 先运行关闭组，输出标签必须未使用。
+# Run the off group first; the output label must be unused.
 "$PYTHON" "$RECIPE/run_eval.py" "$ROOT" --mode measured --seed 1 --episodes 1 --label control-off-NEW
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch control-state
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch control-state # after
@@ -20,4 +21,4 @@ PYTHON=/workspace/robodojo-envs/controller/bin/python
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch control-state # before
 ```
 
-`run_series.py` 同样支持 `--control-state-reuse`。入口先清除继承的 `ROBODOJO_CONTROL_STATE_REUSE`，只由显式开关设置，并校验 patch 完整字节；不接受已经应用但没有声明的未知 runtime 修改。若需分项诊断，两组都增加 `--execution-profile`；与 profiling 关闭的性能验收分开报告。视频检查和逐局比较沿用主 recipe 工具。更新 patch 时用原版本工具回滚，不能强制覆盖现场。
+`run_series.py` also supports `--control-state-reuse`. The entry point clears any inherited `ROBODOJO_CONTROL_STATE_REUSE`, sets it only from the explicit flag, and verifies the full patch bytes; it does not accept unknown runtime changes that are applied but not declared. For a per-component breakdown, add `--execution-profile` to both groups and report it separately from the profiling-off performance acceptance. Video checks and per-episode comparison use the main recipe tools. When updating the patch, roll back with the original version of the tools; do not force-overwrite the working tree.

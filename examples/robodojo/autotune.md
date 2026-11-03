@@ -1,47 +1,60 @@
-# 固定六局的并行与 autotune 对照
+# Parallel and autotune comparison on the fixed six episodes
 
-六局是历史预实验和搜索子集。当前正式范围为单任务 50 局；完整顺序及命令见
-性能对照协议。
-新入口可用 `--output` 指定尚不存在的证据目录。更新 patch 前用旧版本工具
-回滚旧 parallel，检查 before 后再应用新版本，不覆盖正在运行的源码。
+The six episodes are the earlier pilot and search subset. The current formal scope is 50 episodes of a single
+task (see [full-series.md](full-series.md)).
+The entry point accepts `--output` for an evidence directory that must not exist yet. Before updating the
+patch, roll back the old parallel patch with the old version of the tool, check the `before` state, then
+apply the new version. Never overwrite source code that is in use by a running evaluation.
 
-这是 [suica/evostudio-evaluation-kit#11](https://github.com/suica/evostudio-evaluation-kit/issues/11) 的可选实验入口，主 recipe 的验收仍使用单环境原生/测量对照。
-复用 roboscope-kit 的 SDK autotune（`two-phase` 策略），固定 `2792b6e160f06e24d18499b5ca5f50cca5f3fc31`，不另写搜索算法。
-下文的历史结果是在 roboscope-kit 前身 EvoStudio SDK
-`3ee774ae2575255cc7077b88f8f2df388ba9d152` 上测得的；roboscope-kit 的 `two-phase` 沿用同一实现，但当前 pin 尚未重新跑 GPU 验证。
-控制器需要 Python 3.11+；仿真和模型沿用主 README 的私有环境。
+This is an optional experiment. Acceptance of the main recipe still uses the single-environment
+native/measured comparison.
+It reuses the roboscope-kit SDK autotune (`two-phase` strategy) pinned at
+`2792b6e160f06e24d18499b5ca5f50cca5f3fc31` and adds no search algorithm of its own.
+The reported results below were measured with an earlier, unreleased version of the kit's two-phase
+autotune. roboscope-kit's `two-phase` keeps the same implementation, but the current pin has not been
+re-verified on GPU yet. The figures are reference results from the original experiments.
+The controller needs Python 3.11+; the simulator and model use the dedicated environments from the main
+[README](README.md).
 
-## 范围和正确性约束
+## Scope and correctness constraints
 
-- 固定 Simate-beta / stack_blocks / arx_x5、seed 1、layouts 0–5、550 步上限；
-  每组均保留原生相机、视频、FP32 和 10 步 flow 推理。
-- `off` 使用 K=1/G=1；`on` 让已有控制器按其搜索规则测试 K=1、2、3，G 默认上限为 1。
-  K 为独立仿真进程数，每进程一个环境；G 为模型服务数。这是当前资源范围的
-  有界实验，不宣称搜索了所有并行组合。`--maximum-workers 1|2|3` 可收紧上限；
-  默认上限 3 是本次 49,140 MiB 机器的实验范围，不是 24 GB 卡的建议值。单个
-  仿真进程约 8 GiB、模型约 15 GiB，应按实际容量选择；SDK 仍可提前拒绝候选。
-- 每个候选都完整跑同一组六局。保留 SDK 的资源、OOM、失败、预算检查；
-  成功率下降容忍度为 0。六局的门限只是工程筛查，不能证明统计等价。
-- 分片按 `range(episodes)[worker_index::K]` 分配，保持原始 layout ID；结束后
-  检查每片和合集均无缺失、重复或替换。异常记录为不完整，并清理本次子进程组。
-- 共享模型时使用其已有 `reset_evaluation` 接口，只清理当前 evaluation 的
-  历史；模型侧 forward、随机数、精度、chunk 和预处理代码不改。
-- K 改变会改变共享模型 RNG 的消费顺序，并可能改变物理数值结果。因此需报告
-  每局成败、步数、终止和重复测量；不能只看两组成功总数相同。
+- Fixed Simate-beta / stack_blocks / arx_x5, seed 1, layouts 0–5, 550-step limit. Every group keeps the
+  native cameras, video, FP32, and 10-step flow inference.
+- `off` uses K=1/G=1. `on` lets the existing controller test K=1, 2, 3 under its own search rules; G has a
+  default upper bound of 1. K is the number of independent simulator processes, one environment per
+  process; G is the number of model servers. This is a bounded experiment for the available resources and
+  does not claim to search every parallel combination. `--maximum-workers 1|2|3` tightens the bound. The
+  default bound of 3 is the experimental range of the 49,140 MiB GPU used here, not a recommendation for
+  24 GB cards. One simulator process takes about 8 GiB and the model about 15 GiB; choose bounds from the
+  actual capacity. The SDK can still reject candidates early.
+- Every candidate runs the same six episodes in full. The SDK resource, OOM, failure, and budget checks
+  stay in place; the tolerated success-rate drop is 0. The six-episode threshold is an engineering screen
+  and does not prove statistical equivalence.
+- Shards are assigned as `range(episodes)[worker_index::K]` and keep the original layout IDs. After the
+  run, every shard and the union are checked for missing, duplicated, or substituted layouts. Anomalies
+  are recorded as incomplete, and the run's child process groups are cleaned up.
+- A shared model uses its existing `reset_evaluation` interface, which clears only the history of the
+  current evaluation. Model-side forward, RNG, precision, chunking, and preprocessing code are unchanged.
+- Changing K changes the order in which the shared model RNG is consumed and can change physics results.
+  Report per-episode success/failure, steps, termination, and repeated measurements; equal success totals
+  for two groups are not enough.
 
-## 可选多副本对照（2026-10-26）
+## Optional multi-replica comparison (2026-10-26)
 
-历史 b94 实验在入口和 SDK bounds 中固定了 G=1，未比较 G=2/3，不能解释为
-autotune 已证明单副本最优。b96 的同一 `0003-parallel-autotune.patch` 支持
-`--maximum-replicas 1|2`（默认 1），把副本维度交给原有 SDK 搜索，未新增调参算法。
-每个副本使用同一 checkpoint/seed，独立端口和进程；worker 固定连接到
-`worker_index % G`，每个副本至少服务一个 worker。模型实现及 scoped reset 不变。
-独立副本拥有独立 RNG 流，轨迹不保证与共享服务相同，需要逐布局对照。
+The earlier experiment fixed G=1 in the entry point and in the SDK bounds and did not compare G=2/3, so it
+does not show that autotune proved a single replica optimal. The current `0003-parallel-autotune.patch`
+supports `--maximum-replicas 1|2` (default 1) and hands the replica dimension to the existing SDK search
+without adding a tuning algorithm.
+Each replica uses the same checkpoint/seed with its own port and process. Workers connect to replica
+`worker_index % G`, and each replica serves at least one worker. The model implementation and scoped reset
+are unchanged. Independent replicas have independent RNG streams, so trajectories are not guaranteed to
+match the shared server; compare them layout by layout.
 
-为了隔离 G 的影响，可用 `fixed` 直接测指定 K/G；它调用同一测量入口、没有搜索
-开销，不是 autotune on 的结果。以下命令在既有环境空闲、上方 patch 应用完成后
-运行。更新前先用旧工具回滚旧 parallel，确认 before，再用已本地提交的新工具
-应用 parallel。不要在运行中的源码上切换版本。
+To isolate the effect of G, use `fixed` to measure a given K/G directly. It calls the same measurement entry
+point without search overhead and is not an autotune `on` result. Run the commands below with the existing
+environments idle and after the patches above are applied. Before updating, roll back the old parallel
+patch with the old tool, confirm `before`, then apply parallel with the new, locally committed tool. Do not
+switch versions under running source code.
 
 ```bash
 for G in 1 2; do
@@ -52,34 +65,38 @@ for G in 1 2; do
     --maximum-workers 2 --maximum-replicas 2 --episodes 6 \
     --output "$BASE/evidence/replicas-k2g${G}-NEW"
 done
-# 如需搜索副本维度，沿用原控制器：
+# To search the replica dimension, use the existing controller:
 # --mode on --maximum-workers 2 --maximum-replicas 2 --episodes 50 --probe-episodes 6
 ```
 
-历史加载后单模型显存 13.11 GiB；K3/G1 正式峰值 39.07 GiB，K2/G1 探测峰值
-30.75 GiB。加一个同样大小副本的粗估分别为 52.18 / 43.86 GiB，尚未计入额外
-推理峰值。这张 49,140 MiB 卡只先测 K2/G2，不启动预计超容量的 K3/G2。
-这里的 4090 有约 48 GiB 显存，不能把结果当作普通 24 GiB 4090 的容量结论。
-按目标机器收紧 bounds；启动失败或 OOM 保留完整日志，清理本次所有子进程。
+In the earlier runs one loaded model used 13.11 GiB of GPU memory; the K3/G1 formal peak was 39.07 GiB and
+the K2/G1 probe peak 30.75 GiB. Adding one replica of the same size gives rough estimates of 52.18 /
+43.86 GiB, not counting extra inference peaks. On this 49,140 MiB GPU only K2/G2 was tested; K3/G2, which
+was expected to exceed capacity, was not started. Do not read these results as capacity conclusions for a
+standard 24 GiB card. Tighten the bounds for the target machine. On a launch failure or OOM, keep the full
+logs and clean up every child process of the run.
 
-GPU 总量仍每 500 ms 采样；新增每 5 秒采样各模型/仿真 PID 的显存，并记录
-各模型加载后显存、独立加载时间。CPU/RAM 每秒读取 cgroup；RAM 包含文件缓存和
-容器其他进程，不等于模型常驻集。原始样本、进程 PID、端口及运行 JSON 均留仓库外。
-完整结束后沿用本页回滚步骤；性能结果另行记录，不混入 b94 结果。
+Total GPU usage is still sampled every 500 ms. Per-PID GPU memory of each model/simulator process is also
+sampled every 5 seconds, and each model's post-load memory and load time are recorded. CPU/RAM are read
+from the cgroup every second; RAM includes file cache and other processes in the cgroup and is not the
+model's resident set. Raw samples, process PIDs, ports, and run JSON stay outside the repository.
+After a complete run, use the rollback steps on this page. Record these performance results separately
+from the earlier G=1 results.
 
-本次六局诊断：K2/G2
-完整运行，峰值显存 44.09 GiB。正式 steps/s 5.33→6.63，GPU 均值
-32.12%→43.45%；但两组为 3/6→5/6 成功，负载更均衡且轨迹不同，不能将
-观测的 1.2419× 全归因于副本增加。容量验证通过，默认配置继续保持 G1；
-没有用该短测替代固定 50 局验收。
+Six-episode diagnostic from the original experiments: K2/G2 completed with a peak of 44.09 GiB GPU memory.
+Formal steps/s went from 5.33 to 6.63 and mean GPU utilization from 32.12% to 43.45%. However, success
+went from 3/6 to 5/6, the load was more balanced, and the trajectories differed, so the observed 1.2419×
+cannot be attributed entirely to the extra replica. The capacity check passed; the default stays at G1.
+This short test does not replace the fixed 50-episode acceptance run.
 
-## 应用顺序和运行
+## Apply order and run
 
-先完成主 README 的原生六局，再应用 measurement。所有源码修改只通过已提交
-patch 工具。下列路径按机器替换；SDK checkout 与 recipe checkout 分开保存。
+Finish the native six episodes from the main [README](README.md) first, then apply measurement. Modify
+source code only through the committed patch tool. Adjust the paths below for your machine; keep the SDK
+checkout and the recipe checkout separate.
 
 ```bash
-BASE=/autodl-fs/data/robodojo
+BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
 RECIPE=/path/to/roboscope-kit/examples/robodojo
 SDK="$BASE/roboscope-kit-2792b6e"
@@ -88,7 +105,7 @@ PYTHON="$ENV_ROOT/policy/bin/python"
 
 git clone https://github.com/mint-sjtu/roboscope-kit.git "$SDK"
 git -C "$SDK" checkout --detach 2792b6e160f06e24d18499b5ca5f50cca5f3fc31
-# 如果 checkout 已存在，检查 revision 后复用，不覆盖本地修改。
+# If the checkout already exists, check its revision and reuse it; do not overwrite local changes.
 env -u UV_INDEX_URL -u UV_EXTRA_INDEX_URL -u UV_DEFAULT_INDEX \
   UV_PROJECT_ENVIRONMENT="$ENV_ROOT/controller" uv sync --locked --no-dev \
   --project "$SDK/packages/roboscope-kit" --python 3.11
@@ -97,7 +114,7 @@ CONTROLLER="$ENV_ROOT/controller/bin/python"
 
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch measurement
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch episode-count
-# 上游自身支持的单进程双环境参考，必须在 parallel patch 应用前运行。
+# Upstream's own single-process two-environment reference; run it before applying the parallel patch.
 "$PYTHON" "$RECIPE/run_eval.py" "$ROOT" --env-root "$ENV_ROOT" \
   --mode measured --seed 1 --episodes 6 --num-envs 2 --label upstream-vector-two
 
@@ -113,37 +130,41 @@ for MODE in off on; do
 done
 ```
 
-`--vulkan-icd`、`--metrics-root` 可指定主机路径。默认搜索 NVIDIA ICD 的两个
-常见目录。控制器拒绝错误源码 revision、未知修改、模型修改、错误 patch 摘要
-或与 profile 不一致的模拟器/Python/PyTorch。无需修改通用 SDK 源码。
+`--vulkan-icd` and `--metrics-root` accept host paths. By default the two common NVIDIA ICD directories are
+searched. The controller rejects a wrong source revision, unknown modifications, model modifications, a
+wrong patch digest, or a simulator/Python/PyTorch that does not match the profile. The generic SDK source
+needs no changes.
 
-## 结果和计时
+## Results and timing
 
-运行输出位于 `ROOT/../evidence/autotune/<off|on>-<id>/`。`experiment.json`
-记录选定 K/G、搜索耗时、含搜索总耗时和正式运行路径；`selection/` 保存已有
-SDK 的候选及拒绝原因。每个候选/正式运行的 `summary.json`、`result.json`、
-worker 日志和 GPU 采样保留在仓库外。
+Run output goes to `ROOT/../evidence/autotune/<off|on>-<id>/`. `experiment.json` records the selected K/G,
+search time, total time including search, and the formal run path; `selection/` holds the existing SDK's
+candidates and rejection reasons. Each candidate's and formal run's `summary.json`, `result.json`, worker
+logs, and GPU samples stay outside the repository.
 
-正式评测窗口从最早 worker 的 evaluation_start 到最晚 evaluation_end，包含
-reset、执行、窗口内输出及尾部不均衡；不是各 worker 时间之和。总墙钟还包含
-模型加载、仿真启动和清理。`on` 的总成本须再包含本次所有搜索候选，不能只报
-选中候选的执行时间。准备/下载另列。GPU 每 500 ms 采样；CPU 使用 cgroup
-累计计数，不能据低 GPU 利用率直接断言瓶颈。
+The formal evaluation window runs from the earliest worker's evaluation_start to the latest
+evaluation_end. It includes reset, execution, output written inside the window, and tail imbalance; it is
+not the sum of per-worker times. Total wall clock also includes model loading, simulator startup, and
+cleanup. The total cost of `on` must also include every search candidate of the run, not only the selected
+candidate's execution time. Preparation/download is listed separately. GPU is sampled every 500 ms; CPU
+uses cumulative cgroup counters. Low GPU utilization alone does not identify the bottleneck.
 
-比较 serial、上游 vector-two、autotune off/on 时分别列成功次数/率、实际步数、
-两种墙钟、episodes/s、steps/s、GPU 均值、显存均值/峰值和同口径加速比。
-并发模式步数可能变化，需同时看 episode 吞吐量和 steps/s。当前入口向既有
-控制器提供的候选吞吐信号是实际 steps/s；suica/evostudio-evaluation-kit#11 的验收仍使用完整 episodes/s，
-不能把控制器选中某候选直接等同于达到 2×。`compare_runs.py`
-默认用于相同环境数的原生/测量对照；跨并发配置须显式传入
-`--allow-topology-change`，仍检查相同 profile、源码、测量版本、seed 和布局合集，
-并按 layout ID 报告输入、动作、步数与终止差异，不能绕过其他配置一致性检查。
-重复完整 off/on 才能进一步观察波动。
+When comparing serial, upstream vector-two, and autotune off/on, list for each: successes/success rate,
+actual steps, both wall clocks, episodes/s, steps/s, mean GPU utilization, mean/peak GPU memory, and
+speedups computed the same way. Step counts can change under concurrency, so look at both episode
+throughput and steps/s. The throughput signal this entry point gives the existing controller for each
+candidate is actual steps/s, while acceptance uses full episodes/s; the controller selecting a candidate
+does not by itself mean the 2× target was reached. By default `compare_runs.py` compares native/measured
+runs with the same number of environments. Across concurrency configurations pass
+`--allow-topology-change` explicitly; it still checks the same profile, source, measurement version, seed,
+and layout set, and reports input, action, step, and termination differences by layout ID. It does not
+bypass the other consistency checks. Repeat full off/on runs to observe variance.
 
-## 回滚
+## Rollback
 
-等本次全部进程退出，先回滚 parallel，再按主 patch 文档回滚 measurement。
-不要在仍运行的模型/仿真进程中切换源码。
+Wait for every process of the run to exit, roll back parallel first, then roll back measurement as in the
+main [patch documentation](patches/README.md). Do not switch source code while model/simulator processes
+are still running.
 
 ```bash
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" rollback "$ROOT" --patch parallel
@@ -152,23 +173,24 @@ reset、执行、窗口内输出及尾部不均衡；不是各 worker 时间之�
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch measurement # before
 ```
 
-patch 不改用户模型，也不发布官方镜像。当前有界配置和门限属于实验设置；实际
-收益、失败候选和限制以原始实验报告为准（不随仓库发布，仅作参考）。
+The patch does not change the user's model and does not publish an official image. The current bounded
+configuration and thresholds are experimental settings.
 
+## Measured results by stage
 
-## 各阶段实测结论
+Native 5.1 off/on run of 2026-10-24:
+the K=2 candidate reached 2/6, below this run's K=1 candidate at 3/6, so the controller rejected K=2 and
+stopped expanding; K=3 was not tested and K=1 was selected. Both off/on formal groups reached 4/6, with
+formal windows of 531.049 / 535.972 s and total experiment times including search of 597.953 /
+1,863.942 s. This run achieved no speedup and missed the 2× target, and six episodes cannot prove
+statistical equivalence. Do not treat this optional entry point as a verified default speedup
+configuration.
 
-2026-10-24 原生 5.1 off/on 报告：
-K=2 候选 2/6，低于本次 K=1 候选 3/6，控制器拒绝 K=2 并停止扩展，未测试
-K=3，最终选 K=1。off/on 正式组均 4/6，正式窗口 531.049 / 535.972 s，
-含搜索实验总耗时 597.953 / 1,863.942 s。本轮未实现加速或 2× 目标，也不能
-用六局证明统计等价；不要把此可选入口当作已经验证有效的默认加速配置。
-
-后续固定 50 局完整对照
-使用 b94 patch 和同一 SDK autotune，K1/K2/K3 探测各 4/6 成功，最终选中
-K3/G1。off/on 正式组 27/50→29/50 成功，正式 episode 吞吐 2.1948×、实际
-steps/s 2.1405×，计入 27.50 分钟搜索后整体 episode 吞吐 1.3426×。完整
-命令见该报告，正式 `--episodes 50`，探测仍为 6 局；原始证据保留在仓库外。
-开启组峰值显存 40010 MiB，不能套用到普通 24 GB 卡。两组未采样系统 RAM，
-逐布局图像/动作也不等价，不能声称成功率已被证明不受影响。实验后 parallel
-已回滚，入口保持可选。
+Later fixed 50-episode comparison, using an earlier version of the parallel patch and the same SDK
+autotune: the K1/K2/K3 probes each reached 4/6, and K3/G1 was selected. Formal off/on success went from
+27/50 to 29/50, with formal episode throughput 2.1948× and actual steps/s 2.1405×; including the
+27.50 minutes of search, overall episode throughput was 1.3426×. The formal run used `--episodes 50` and
+probes stayed at 6 episodes; raw evidence is kept outside the repository. The `on` group peaked at
+40010 MiB GPU memory, which does not carry over to standard 24 GB cards. System RAM was not sampled for
+either group, and per-layout images/actions were not equivalent, so the success rate cannot be claimed to
+be unaffected. After the experiment the parallel patch was rolled back; the entry point remains optional.

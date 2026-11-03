@@ -1,35 +1,36 @@
-# 观察 RPC 与有界 FIFO 候选
+# Observation RPC and bounded FIFO candidate
 
-本页是 `0003-parallel-autotune.patch` 的可选 runtime 路径，不更换 SDK 搜索算法。同步是默认模式；`--overlap-observation` 启用异步回执等待，队列上限默认 1，显式 `--observation-queue-limit 10` 才启用本次 FIFO10 候选。
+This page covers an optional runtime path in `0003-parallel-autotune.patch`; it does not change the SDK search algorithm. Synchronous mode is the default. `--overlap-observation` enables asynchronous waiting for acknowledgements with a default queue limit of 1; only an explicit `--observation-queue-limit 10` enables the FIFO10 candidate described here.
 
-完整 50 局单待办候选出现成功率 60%→50%，原因未完全定位；FIFO10 仅三布局诊断。均不能作为成功率无回归的已验收优化。完整指标、失败布局和限制见 阶段报告。
+In the original experiments, the full 50-episode single-pending candidate showed a success rate drop from 60% to 50%, and the cause was not fully identified; FIFO10 was only diagnosed on three layouts. Neither is an accepted optimization with no success-rate regression.
 
-## 顺序与状态约束
+## Ordering and state constraints
 
-- 提交前取得观察深拷贝，有界保存，不丢帧、合并或下采样。
-- 每条连接只有一个在途 RPC；后继请求必须等待并验证前一个响应。前序错误向后传播，失败后的队列请求不得发送。
-- 推理、reset、其他模型 RPC 和 close 前排空；中断等待仍保留未完成请求。
-- 模型方法仍经过原来的全局锁；history、随机流分配、模型代码和动作队列执行不变。
-- 仅支持该固定 recipe 已校验的 `update_observation` 返回 None 契约，不扩展为任意模型客户端语义。
+- A deep copy of the observation is taken before submission and stored in a bounded queue; frames are never dropped, merged, or downsampled.
+- Each connection has only one RPC in flight; a later request must wait for and validate the previous response. Earlier errors propagate forward, and queued requests are not sent after a failure.
+- The queue is drained before inference, reset, other model RPCs, and close; an interrupted wait still keeps the outstanding request.
+- Model methods still go through the original global lock; history, random stream allocation, model code, and action queue execution are unchanged.
+- Only the `update_observation` returns-None contract already verified for this pinned recipe is supported; it is not generalized to arbitrary model client semantics.
 
-同一 worker 的先后关系受保护，不代表跨 worker 全局 RNG 消费顺序与同步运行相同；这仍是成功率分析的限制。
+Ordering within one worker is protected, but this does not mean the global RNG consumption order across workers matches a synchronous run; this remains a limitation for success-rate analysis.
 
-## 应用与小范围对照
+## Apply and small-scale comparison
 
-先完成主 README 准备和 [autotune 环境](autotune.md)，保持 isaac51-deps / episode-count 已应用；视频、render、线程和控制状态候选保持 before。退出评测和模型进程后，用原版本工具先回滚旧 parallel，再回滚旧 measurement，保留旧工具供恢复。新工具只接受其固定的原始或已应用状态，不能跳过检查覆盖旧 patch。
+First complete the preparation in the main [README](README.md) and the [autotune environment](autotune.md), keeping isaac51-deps and episode-count applied; keep the video, render, thread, and control state candidates in the before state. After evaluation and model processes exit, use the original version of the tools to roll back the old parallel patch and then the old measurement patch, and keep the old tools for restoring. The new tools only accept their pinned original or applied state; do not skip the check to overwrite an old patch.
 
 ```bash
 RECIPE=/path/to/roboscope-kit/examples/robodojo
-ROOT=/autodl-fs/data/robodojo/RoboDojo
-SDK=/autodl-fs/data/robodojo/roboscope-kit-2792b6e
+BASE=/path/to/robodojo
+ROOT="$BASE/RoboDojo"
+SDK="$BASE/roboscope-kit-2792b6e"
 PYTHON=/workspace/robodojo-envs/controller/bin/python
-EVIDENCE=/autodl-fs/data/robodojo/evidence
+EVIDENCE="$BASE/evidence"
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch measurement # before
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch measurement
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch parallel
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch parallel # after
 export PYTHONPATH="$SDK/packages/roboscope-kit/src:$RECIPE:$ROOT"
-# 本例重现三布局诊断口径，两组开同样的 profiling；输出目录必须全新。
+# This reproduces the three-layout diagnostic setup with the same profiling in both groups; output directories must be new.
 export ROBODOJO_EXECUTION_PROFILE=1 ROBODOJO_PYTHON_PROFILE=1
 unset ROBODOJO_CAUSAL_TRACE_DIR
 "$PYTHON" "$ROOT/recipe_parallel_runtime.py" "$ROOT" \
@@ -43,16 +44,16 @@ unset ROBODOJO_CAUSAL_TRACE_DIR
   --overlap-observation --observation-queue-limit 10
 ```
 
-旧单待办对照使用 `--overlap-observation --observation-queue-limit 1`。`fixed` 搜索耗时为 0；这不是 autotune on/off 对照。50 局历史单待办实验仅开 execution profiling、关闭 cProfile，不能与本例混为一个结果。
+The earlier single-pending comparison used `--overlap-observation --observation-queue-limit 1`. With `fixed`, search time is 0; this is not an autotune on/off comparison. The earlier 50-episode single-pending experiment enabled only execution profiling with cProfile off, so do not merge it with this example into one result.
 
-结束后按 [完整验证说明](full-series.md) 对 summary/result 路径运行 `verify_videos.py` 与 `compare_runs.py`；保留失败、不完整与逐布局差异。进程退出后逆序回滚：
+Afterwards, run `verify_videos.py` and `compare_runs.py` on the summary/result paths as described in the [full validation guide](full-series.md); keep failures, incomplete runs, and per-layout differences. After processes exit, roll back in reverse order:
 
 ```bash
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" rollback "$ROOT" --patch parallel
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch parallel # before
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" rollback "$ROOT" --patch measurement
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch measurement # before
-# 如先前有旧测量版本，最后用其原工具恢复；不要对运行中的源码操作。
+# If an older measurement version was applied before, restore it last with its original tools; do not operate on sources that are in use.
 ```
 
-锁等待、executor 派发、方法体和返回 event loop 的计时属于 `0001-measurement.patch`；记录在释放原模型锁之后完成，不增加 GPU 同步。可选大体积因果 trace 只用于诊断，原始观察/RNG/动作记录留仓库外，不作为运行依赖提交。
+Timing of lock wait, executor dispatch, method body, and return to the event loop belongs to `0001-measurement.patch`; records are written after the original model lock is released and add no GPU synchronization. The optional large causal trace is for diagnostics only; raw observation, RNG, and action records stay outside the repository and are not committed as runtime dependencies.

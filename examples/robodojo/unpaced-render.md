@@ -1,32 +1,41 @@
-# 固定时间步下取消 render 墙钟限速
+# Disabling render wall-clock rate limiting with a fixed timestep
 
-这是默认关闭的 runtime 候选，归属 `0006-unpaced-render.patch`，只支持本 recipe
-固定的 Isaac Sim 5.1 环境。单局诊断发现 Kit 主循环限速开启为 25 Hz，render
-平均约 40.16 ms。不能把这个主机时间全部叫作 GPU 渲染时间。
+This is an off-by-default runtime candidate in `0006-unpaced-render.patch`,
+supported only on the Isaac Sim 5.1 environment pinned by this recipe. A
+single-episode diagnostic found the Kit main loop rate limit enabled at 25 Hz,
+with render taking about 40.16 ms on average. Do not call all of this host time
+GPU rendering time.
 
-2026-10-26 已完成未开 profiling 的 off/on/on/off 各六局。两次正式 steps/s
-配对为 1.1174× / 0.9639×，尚无稳定整体收益，候选保持关闭，不进入 50 局验收。
-完整指标、逐布局差异及局部 render 收益见阶段报告。
+In the original experiments on 2026-10-26, off/on/on/off runs of six episodes
+each were completed with profiling off. The two measured steps/s pairs were
+1.1174× and 0.9639×, so there is no stable overall gain yet; the candidate stays
+off and does not move on to 50-episode acceptance.
 
-[Isaac Sim 5.1 官方示例](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_isaac_snippets.html)
-将主循环 FPS 限速与 PhysX 频率、timeline 设置分别列出。本候选只在
-`BaseEnv.render()` 内暂时设置 `rateLimitEnabled=false`，调用原来的 render
-一次，然后在 `finally` 恢复原值。不修改频率值或渲染参数。
+The [official Isaac Sim 5.1 examples](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/replicator_tutorials/tutorial_replicator_isaac_snippets.html)
+list the main loop FPS rate limit separately from the PhysX frequency and
+timeline settings. This candidate only sets `rateLimitEnabled=false` temporarily
+inside `BaseEnv.render()`, calls the original render once, and restores the
+original value in `finally`. It does not change frequency values or render
+parameters.
 
-启用时要求 Isaac loop runner 处于 manual 模式，其 step size 等于原来的
-rendering dt；每次调用后检查物理步计数与 rendering dt 未改变。不满足就报错，
-不改时间步来兼容。原来的相机 dispatcher fence、zero-delay 设置、物理推进、
-成功判断、模型代码、history/chunk、三路 640×480 / 25 FPS 视频均保留。
-取消墙钟等待可能影响非确定性渲染，不能仅凭成功总数相近声称轨迹等价。
+When enabled, it requires the Isaac loop runner to be in manual mode with a step
+size equal to the original rendering dt, and after each call it checks that the
+physics step count and rendering dt have not changed. If these conditions do
+not hold it raises an error rather than changing the timestep to compensate.
+The original camera dispatcher fence, zero-delay setting, physics stepping,
+success checks, model code, history/chunk, and three 640×480 / 25 FPS videos are
+all kept. Removing the wall-clock wait may affect nondeterministic rendering, so
+similar success totals alone do not prove trajectory equivalence.
 
-## 应用、对照与回滚
+## Apply, compare, and roll back
 
-先结束本次拥有的模型和仿真进程，确认 GPU 空闲。`measurement`、
-`isaac51-deps`、`episode-count` 已按 recipe 应用；`parallel` 和 `async-video`
-保持 before。原生入口不设置 `ROBODOJO_UNPACED_RENDER` 时行为不变。
+First stop the model and simulation processes owned by this run and confirm the
+GPU is idle. `measurement`, `isaac51-deps`, and `episode-count` are applied per
+the recipe; `parallel` and `async-video` stay in the before state. The native
+entry point behaves unchanged when `ROBODOJO_UNPACED_RENDER` is not set.
 
 ```bash
-BASE=/autodl-fs/data/robodojo
+BASE=/path/to/robodojo
 ROOT="$BASE/RoboDojo"
 RECIPE=/path/to/committed/examples/robodojo
 PYTHON=/workspace/robodojo-envs/policy/bin/python
@@ -39,15 +48,18 @@ PYTHON=/workspace/robodojo-envs/policy/bin/python
   --unpaced-render --execution-profile --python-profile
 "$PYTHON" "$RECIPE/verify_videos.py" /path/to/completed/diagnostic
 
-# 性能对照关闭 profiling，使用同一 measurement 版本、seed 与 layouts 0–5。
+# Performance comparison with profiling off, using the same measurement version, seed, and layouts 0–5.
 export PYTHONPATH="$BASE/roboscope-kit-2792b6e/packages/roboscope-kit/src:$RECIPE"
 "$PYTHON" "$RECIPE/run_series.py" "$ROOT" --rounds 1 --episodes-per-round 6 \
   --num-envs 1 --seed 1 --label unpaced-on --unpaced-render \
   --output "$BASE/evidence/unique-unpaced-on"
-# 每组退出后解码全部视频，再切换；off 必须 rollback，并省略 --unpaced-render。
+# After each group exits, decode all videos before switching; the off group must roll back and omit --unpaced-render.
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" rollback "$ROOT" --patch unpaced-render
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch unpaced-render # before
 ```
 
-工具验证 pinned Git revision、完整 before/after 内容，拒绝未知修改和部分应用。
-本 patch 与 measurement/episode-count 修改不同文件；仅针对固定 Isaac Sim 5.1 主路径验证，不与其他候选叠加。
+The tool verifies the pinned Git revision and the complete before/after content,
+and rejects unknown changes and partial application. This patch modifies
+different files from the measurement and episode-count patches. It is validated
+only on the pinned Isaac Sim 5.1 main path and is not combined with other
+candidates.

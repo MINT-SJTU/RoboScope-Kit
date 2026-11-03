@@ -1,29 +1,33 @@
-# RoboDojo 单任务 50 局评测
+# RoboDojo single-task 50-episode evaluation
 
-用户最终确认的基线为 **`stack_blocks` 单任务 50 局**：ARX-X5、官方
-Simate-beta checkpoint、seed 1、固定 layouts 0–49，每个布局运行一次。
-不再运行 50 轮。Meta-World 的 50 任务×50 局只是此前参考对话的范围，
-不适用于本次 RoboDojo 实验。历史六局属于预实验。
+The baseline is **`stack_blocks`, single task, 50 episodes**: ARX-X5, the official Simate-beta checkpoint,
+seed 1, fixed layouts 0–49, each layout run once. 50 rounds are no longer run. The Meta-World scope of
+50 tasks × 50 episodes does not apply to this RoboDojo experiment. The earlier six-episode runs are a
+pilot.
 
-`recipe.toml` 中 `full_episodes=50`、`pilot_episodes=6`。任务、机器人、
-checkpoint、550 动作上限、FP32、输入处理、模型历史、相机和视频均不变。
-模型 RNG 在这一轮内继续消耗，episode reset 不额外重设随机种子。
+`recipe.toml` sets `full_episodes=50` and `pilot_episodes=6`. Task, robot, checkpoint, the 550-action limit,
+FP32, input processing, model history, cameras, and video are unchanged. The model RNG keeps being consumed
+across the round; episode reset does not reseed it.
 
-## 执行
+## Running
 
-先完成主 README 的安装与原生最小验证。`PYTHON` 使用已安装 SDK 的 Python
-3.11+ 控制环境；本机 `/workspace/robodojo-envs/controller/bin/python`
-使用固定 roboscope-kit `2792b6e160f06e24d18499b5ca5f50cca5f3fc31` 的资源测量函数（历史结果在其前身 EvoStudio SDK `3ee774a` 上测得）。
-源代码由已提交版本归档，运行期间不更新其目录、模拟器源码或环境。
+First complete installation and the minimal native check from the main [README](README.md). `PYTHON` is a
+Python 3.11+ controller environment with the SDK installed, for example
+`/workspace/robodojo-envs/controller/bin/python`, which uses the resource-measurement functions of
+roboscope-kit pinned at `2792b6e160f06e24d18499b5ca5f50cca5f3fc31`. The reported results were measured with
+an earlier, unreleased version of the kit; they are reference results from the original experiments and
+have not been re-verified on roboscope-kit yet.
+Source code comes from committed revisions; do not update its directory, the simulator source, or the
+environments during a run.
 
 ```bash
-# 相同版本的 apply 为幂等操作；旧版本必须用旧工具先回滚。
+# apply is idempotent for the same version; an older version must first be rolled back with the old tool.
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch episode-count
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch episode-count # after
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" apply "$ROOT" --patch measurement
 "$PYTHON" "$RECIPE/apply_runtime_patch.py" check "$ROOT" --patch measurement # after
 
-# OUT 是尚不存在的、仓库外的结果目录，日志同样放在仓库外。
+# OUT is a result directory outside the repository that does not exist yet; logs also go outside the repository.
 setsid nohup "$PYTHON" -u "$RECIPE/run_series.py" "$ROOT" --env-root "$ENV_ROOT" \
   --profile "$RECIPE/recipe.toml" --seed 1 --episodes-per-round 50 --rounds 1 \
   --num-envs 1 --label baseline50 --output "$OUT" \
@@ -31,39 +35,47 @@ setsid nohup "$PYTHON" -u "$RECIPE/run_series.py" "$ROOT" --env-root "$ENV_ROOT"
 echo $!
 ```
 
-上游 `_task.yml` 对 `stack_blocks` 单独设置 `eval_nums: 25`，即使设置
-`EVAL_NUM=50` 也只执行 25 局。`0005-episode-count.patch` 仅将这一配置
-改为 50；其他任务保持原值。两组对照都应用此 patch，结果明确标为扩展范围。
-启动器在加载 GPU 前验证实际任务上限和 layouts 0–49。首次 b92 运行因这一
-上限只完成 25 局，保留为不完整记录；不把它与新进程的 25 局拼接成基线。
+Upstream `_task.yml` sets `eval_nums: 25` for `stack_blocks` alone, so even `EVAL_NUM=50` runs only 25
+episodes. `0005-episode-count.patch` changes only this value to 50; other tasks keep their values. Both
+comparison groups apply this patch, and results are labeled as extended scope. The launcher checks the
+effective task limit and layouts 0–49 before loading the GPU. An earlier first run stopped at 25 episodes
+because of this limit and is kept as an incomplete record; it is not combined with 25 episodes from a new
+process to form the baseline.
 
-`setsid` 分离 SSH 会话的进程组，`nohup` 忽略挂断信号。执行器支持显式重复
-轮数，但本次必须 `--rounds 1`。记录 requested=50、unique_layouts=50；
-不能把历史被取消的重复任务算入此次完成数。默认 14400 秒超时是防止挂死，
-不改变每局动作上限。错误会停止并留下 `complete=false`，不跳过缺失或自动
-重试。重新启动使用新的 OUT，保留原中断记录。
+`setsid` moves the process into its own process group, detached from the SSH session, and `nohup` ignores
+hangup. The runner supports an explicit number of rounds, but this run must use `--rounds 1`. Record
+requested=50 and unique_layouts=50; previously cancelled repeat runs do not count toward completion. The
+default 14400-second timeout guards against hangs and does not change the per-episode action limit. An error
+stops the run and leaves `complete=false`; missing episodes are not skipped or retried automatically.
+Restart with a new OUT and keep the interrupted record.
 
-`series.json` 在这一轮结束后原子汇总；运行中读取 `round-000.log` 打印的
-子运行目录及其原生 `_result.json`。无需持续轮询。取消时向 **series 主 PID**
-发送 SIGTERM，执行器给 launcher 最多 120 秒清理各自拥有的模型/仿真进程组，
-避免提前杀死 launcher 遗留子进程。不要按进程名批量停止其他作业。
+`series.json` is written atomically at the end of the round. While running, read the child run directories
+printed in `round-000.log` and their native `_result.json`. No continuous polling is needed. To cancel,
+send SIGTERM to the **series main PID**; the runner gives the launcher up to 120 seconds to clean up the
+model/simulator process groups it owns, which avoids killing the launcher early and leaving child processes
+behind. Do not stop other jobs by process name.
 
-## 计时和完整性
+## Timing and completeness
 
-- 正式耗时从 evaluation_start 到 evaluation_end，包含 reset、实际执行、
-  视频写入/结束及窗口内结果输出，不含模型加载和仿真初始化。
-- 全程耗时包含模型加载、初始化、子进程 preflight、结果归档和清理。
-  开始前的布局摘要检查、下载及环境安装单列。未启用 autotune；后续开关
-  对照复用已有实现，并单列搜索耗时。
-- GPU 每 500 ms、cgroup CPU/RAM 每秒采样；RAM 包含容器文件缓存。
-- 必须有 layouts 0–49 各一次、完整输入/动作摘要和正确步数上限。失败局
-  保留在分母；不稳定、缺失、重复及中断不得默认为完整。
-- measurement 记录初始 state/vision/instruction/layout、模型输入动作及
-  映射后的控制序列摘要，reset 稳定性/settling、视频结束耗时。计时有嵌套，
-  不能相加为互斥阶段。候选与基线使用同一测量版本，不能混用旧六局计时。
-- 完成后在计时外运行 `verify_videos.py "$OUT"`，校验全部 150 个视频及
-  `executed_steps + 1` 解码帧数；上游可能记录 finalize 错误后继续，因此
-  退出 0 本身不足以验收。
+- Formal time runs from evaluation_start to evaluation_end. It includes reset, actual execution, video
+  writing/finalization, and result output inside the window; it excludes model loading and simulator
+  initialization.
+- Total time includes model loading, initialization, child-process preflight, result archiving, and
+  cleanup. The layout digest check before the start, downloads, and environment installation are listed
+  separately. Autotune is not enabled; later on/off comparisons reuse the existing implementation and list
+  search time separately.
+- GPU is sampled every 500 ms and cgroup CPU/RAM every second; RAM includes file cache.
+- Layouts 0–49 must each appear exactly once, with complete input/action digests and the correct step limit.
+  Failed episodes stay in the denominator; unstable, missing, duplicated, or interrupted runs are never
+  treated as complete by default.
+- measurement records digests of the initial state/vision/instruction/layout, the model input actions, and
+  the mapped control sequence, plus reset stability/settling and video finalization time. Timers are nested
+  and cannot be summed as exclusive phases. Candidates and the baseline use the same measurement version;
+  do not mix in old six-episode timings.
+- After completion, outside the timed window, run `verify_videos.py "$OUT"` to check all 150 videos and that
+  each decodes to `executed_steps + 1` frames. Upstream can log a finalize error and continue, so exit code 0
+  alone is not sufficient for acceptance.
 
-优化在独立 checkout 准备，不改变正在运行的基线。后续候选仍使用同一个
-50 局范围；需要重复验证时单独报告每组结果，不把多组相加成扩大套件。
+Prepare optimizations in a separate checkout so the running baseline is unaffected. Later candidates use the
+same 50-episode scope; when repeated runs are needed, report each group separately and do not add groups
+together into a larger suite.
