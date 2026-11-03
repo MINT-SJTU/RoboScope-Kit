@@ -3,7 +3,7 @@
 ## 0.8.0b11 (Unreleased)
 
 - Add `examples/robodojo/`, the RoboDojo / Simate-beta native Isaac Sim 5.1 `stack_blocks` recipe by
-  Lei Qian: pinned sources, assets and checkpoint, preparation and evaluation tools, complete-layout checks,
+  @QLL-CCDD: pinned sources, assets and checkpoint, preparation and evaluation tools, complete-layout checks,
   video validation, and checked and reversible RoboDojo runtime patches. The parallel runner imports
   `roboscope_kit.runtime.benchmark` pinned at `2792b6e` and selects the `two-phase` autotune strategy.
   The recipe's performance figures come from the original experiments on an earlier, unreleased version of

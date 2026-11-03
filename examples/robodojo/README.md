@@ -1,6 +1,6 @@
 # RoboDojo / Simate-beta simulation evaluation recipe
 
-Originally developed by Lei Qian.
+Originally developed by [@QLL-CCDD](https://github.com/QLL-CCDD).
 
 This directory contains a standalone recipe and runnable example that connect
 the upstream RoboDojo simulator directly to the official XPolicyLab model
