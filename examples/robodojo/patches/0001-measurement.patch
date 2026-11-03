@@ -1,0 +1,843 @@
+--- /dev/null
++++ b/recipe_metrics.py
+@@ -0,0 +1,49 @@
++"""Opt-in external measurements; no model or simulator behavior changes."""
++import hashlib
++import json
++import os
++import time
++from pathlib import Path
++
++
++def emit(event, **fields):
++    directory = os.environ.get("ROBODOJO_METRICS_DIR")
++    if not directory:
++        return
++    path = Path(directory)
++    path.mkdir(parents=True, exist_ok=True)
++    record = {"event": event, "time_unix_s": time.time(), "pid": os.getpid(), **fields}
++    with (path / f"{os.getpid()}.jsonl").open("a", encoding="utf-8") as output:
++        output.write(json.dumps(record, allow_nan=False) + "\n")
++
++
++def value_digest(value):
++    """Hash typed values without modifying or retaining simulator buffers."""
++    import numpy as np
++
++    digest = hashlib.sha256()
++
++    def visit(item):
++        if isinstance(item, np.ndarray):
++            if item.dtype.hasobject:
++                raise TypeError("Object arrays cannot be audited")
++            digest.update(b"array:")
++            digest.update(json.dumps([item.dtype.str, item.shape]).encode())
++            digest.update(np.ascontiguousarray(item).tobytes())
++        elif isinstance(item, dict):
++            digest.update(b"dict:")
++            for key in sorted(item):
++                visit(key)
++                visit(item[key])
++        elif isinstance(item, (list, tuple)):
++            digest.update(f"sequence:{len(item)}:".encode())
++            for child in item:
++                visit(child)
++        else:
++            if isinstance(item, np.generic):
++                item = item.item()
++            digest.update(json.dumps(item, allow_nan=False, sort_keys=True).encode())
++        digest.update(b";")
++
++    visit(value)
++    return digest.hexdigest()
+--- a/src/eval_client/main.py
++++ b/src/eval_client/main.py
+@@ -4,6 +4,9 @@
+ import json
+ import os
+ import sys
++import time
++from recipe_metrics import emit
++from recipe_execution_profile import execution_scope, install_client
+ 
+ from isaaclab.app import AppLauncher
+ 
+@@ -126,8 +129,10 @@
+ add_zero_delay_kit_args(args_cli)
+ 
+ # launch omniverse app
++_app_start = time.perf_counter()
+ app_launcher = AppLauncher(args_cli)
+ simulation_app = app_launcher.app
++emit("phase", phase="simulation_app_s", elapsed_s=time.perf_counter() - _app_start)
+ 
+ from omegaconf import OmegaConf
+ 
+@@ -343,21 +348,31 @@
+     env_cfg.sim.seed = [0 for _ in range(num_envs)]
+     run_id = os.environ["ROBODOJO_RUN_ID"]
+     resume_state = _load_resume_manifest(eval_cfg, run_id)
++    _scene_start = time.perf_counter()
+     env = create_eval_env(env_cfg, simulation_app, resume_state=resume_state)
++    emit("phase", phase="scene_initialization_s", elapsed_s=time.perf_counter() - _scene_start)
+     eval_time = env.success_nums + env.fail_nums
+     if eval_time >= eval_num:
+         # Already complete on resume - nothing left to do.
+         env.env_seeds = None
+     else:
+         env.env_seeds = env.seed_manager.get_seeds(max_count=eval_num - eval_time)
++    _evaluation_start = time.time()
++    emit("evaluation_start", requested_episodes=int(eval_num), num_envs=int(num_envs))
+     while env.env_seeds is not None:
+         retry_round = False
+         if enable_monitor:
+             get_monitor().reset()
+         bad_envs = None
+         try:
++            _reset_start = time.perf_counter()
+             env.reset(seed=env.env_seeds)
+-            env.run_eval()
++            emit("phase", phase="episode_reset_s", elapsed_s=time.perf_counter() - _reset_start)
++            install_client(env)
++            _batch_start = time.perf_counter()
++            with execution_scope():
++                env.run_eval()
++            emit("phase", phase="episode_execution_s", elapsed_s=time.perf_counter() - _batch_start)
+             env.seed_manager.eval_step()
+ 
+         except PhysXFatalError as e:
+@@ -443,6 +458,11 @@
+ 
+         env.close()
+ 
++    emit("evaluation_end", elapsed_s=time.time() - _evaluation_start,
++         requested_episodes=int(eval_num), completed_episodes=int(env.success_nums + env.fail_nums),
++         successes=int(env.success_nums), unstable=int(env.unstable_nums),
++         abandoned_layout_ids=sorted(int(x) for x in env.abandoned_seeds),
++         result_path=os.path.join(env.save_dir, "_result.json"))
+     _delete_resume_manifest(env)
+     _close_model_client(env)
+     env.close()
+--- a/src/eval_client/eval_env.py
++++ b/src/eval_client/eval_env.py
+@@ -2,7 +2,10 @@
+ from datetime import datetime
+ import importlib
+ import inspect
++import hashlib
+ import json
++import time
++from recipe_metrics import emit, value_digest
+ import os
+ 
+ from client_server.ws.model_client import WsModelClient
+@@ -114,6 +117,9 @@
+             self.success = [True] * self.num_envs
+             self.end_flag = [False] * self.num_envs
+             self.take_action_cnt = [0] * self.num_envs
++            self._recipe_initial = {}
++            self._recipe_actions = {i: hashlib.sha256() for i in range(self.num_envs)}
++            self._recipe_control = {i: hashlib.sha256() for i in range(self.num_envs)}
+             # Per-env streaming video writers: {env_idx: {camera_key: writer}}.
+             # Replaces the old full-episode frame cache; only vision frames are
+             # streamed to disk as they arrive instead of buffered in RAM.
+@@ -218,6 +224,9 @@
+             self.success = [True] * self.num_envs
+             self.end_flag = [False] * self.num_envs
+             self.take_action_cnt = [0] * self.num_envs
++            self._recipe_initial = {}
++            self._recipe_actions = {i: hashlib.sha256() for i in range(self.num_envs)}
++            self._recipe_control = {i: hashlib.sha256() for i in range(self.num_envs)}
+             # Discard any writers left open by a previous (e.g. crashed or
+             # unstable) batch before starting a fresh one.
+             self._abort_video_writers()
+@@ -247,12 +256,15 @@
+         def setup_scene(self):
+             self.scene_manager.apply_saved_poses(env_idx_list=list(range(self.num_envs)))
+             self._align_layout_success()
++            _stability_start = time.perf_counter()
+             success, unstable_envs = self.scene_manager.layout_manager.check_layout_stability(self)
++            emit("phase", phase="layout_stability_s", elapsed_s=time.perf_counter() - _stability_start)
+             unstable_envs = [idx for idx in set(unstable_envs) if idx < self.num_envs]
+             self.unstable_nums += len(unstable_envs)
+             self.episode_nums -= len(unstable_envs)
+             if not success or self.episode_nums <= 0:
+                 raise UnStableError("All scene Unstable Error!")
++            _settling_start = time.perf_counter()
+             for _ in range(10):
+                 self.render()
+             for idx in range(200):
+@@ -260,6 +272,7 @@
+                 if idx % 5 == 0:
+                     self.obs_manager.render_for_capture()
+                     self.obs_manager.get_obs()
++            emit("phase", phase="reset_settling_s", elapsed_s=time.perf_counter() - _settling_start)
+             if self.physx_monitor_enabled:
+                 self._check_physx_broken_envs()
+ 
+@@ -281,6 +294,15 @@
+                     self._stream_vision(env_idx, data[env_idx])
+                 env_data = deepcopy(data[env_idx])
+                 env_data["env_idx"] = env_idx
++                if env_idx not in self._recipe_initial:
++                    self._recipe_initial[env_idx] = {
++                        "initial_state_sha256": value_digest(env_data["state"]),
++                        "initial_vision_sha256": value_digest(env_data["vision"]),
++                        "instruction_sha256": value_digest(env_data["instruction"]),
++                        "layout_sha256": value_digest(
++                            self.seed_manager.get_seed_scene_info(self.env_seeds[env_idx])
++                        ),
++                    }
+                 data_list.append(env_data)
+             return data_list
+ 
+@@ -369,6 +391,7 @@
+                     continue
+ 
+                 self.take_action_cnt[env_idx] += 1
++                self._recipe_actions[env_idx].update(bytes.fromhex(value_digest(action)))
+                 print(
+                     f"env{env_idx} step: \033[92m{self.take_action_cnt[env_idx]} / {self.step_lim}\033[0m",
+                     end="\r",
+@@ -444,6 +467,7 @@
+                         else:
+                             pass
+                 control_seq = self.process_control_info(control_info, env_idx)
++                self._recipe_control[env_idx].update(bytes.fromhex(value_digest(control_seq)))
+                 control_info_list.append(control_seq)
+ 
+             if len(control_info_list) > 0:
+@@ -814,9 +838,19 @@
+                     "layout_id": int(self.env_seeds[env_idx]),
+                     "success": bool(self.success[env_idx]),
+                     "score": episode_score,
++                    "executed_steps": int(self.take_action_cnt[env_idx]),
++                    **self._recipe_initial[env_idx],
++                    "action_sha256": self._recipe_actions[env_idx].hexdigest(),
++                    "control_sha256": self._recipe_control[env_idx].hexdigest(),
++                    "step_limit": int(self.step_lim),
++                    "termination": "success" if self.success[env_idx] else (
++                        "step_limit" if self.take_action_cnt[env_idx] >= self.step_lim else "failure"
++                    ),
+                 }
+                 video_path = os.path.join(self.save_dir, f"episode_{index:07d}.mp4")
++                _video_start = time.perf_counter()
+                 self.save_video(env_idx, video_path, tag)
++                emit("phase", phase="video_finalize_s", elapsed_s=time.perf_counter() - _video_start)
+ 
+             # Drop streams for envs not saved this batch (e.g. unstable ones).
+             self._abort_video_writers()
+--- a/XPolicyLab/setup_policy_server.py
++++ b/XPolicyLab/setup_policy_server.py
+@@ -7,6 +7,8 @@
+ import importlib
+ import argparse
+ import traceback
++from recipe_metrics import emit
++from recipe_execution_profile import install_server
+ from client_server.tcp.model_server import ModelServer
+ 
+ 
+@@ -28,8 +30,10 @@
+     protocol = deploy_cfg.get("protocol", "ws")
+ 
+     # Instantiate model
++    _load_start = time.perf_counter()
+     model_class_func = eval_function_decorator(f"XPolicyLab.policy.{policy_name}.model", "Model")
+     model = model_class_func(deploy_cfg)
++    emit("phase", phase="model_import_and_load_s", elapsed_s=time.perf_counter() - _load_start)
+ 
+     if protocol == "ws":
+         try:
+@@ -66,6 +70,7 @@
+                 ws_ping_timeout_s=deploy_cfg.get("ws_ping_timeout_s", 20.0),
+             ),
+         )
++        install_server(server)
+         try:
+             asyncio.run(server.serve_forever())
+         except KeyboardInterrupt:
+--- a/XPolicyLab/client_server/ws/model_server.py
++++ b/XPolicyLab/client_server/ws/model_server.py
+@@ -15,6 +15,7 @@
+ from uuid import uuid4
+ 
+ import yaml
++from recipe_metrics import emit
+ from websockets.asyncio.server import Server, ServerConnection, serve
+ from websockets.exceptions import ConnectionClosed
+ 
+@@ -388,12 +389,17 @@
+         )
+ 
+     async def _invoke_method(self, method, *args: Any) -> Any:
+-        if inspect.iscoroutinefunction(method):
+-            return await method(*args)
+-        result = await asyncio.to_thread(method, *args)
+-        if inspect.isawaitable(result):
+-            return await result
+-        return result
++        started = time.perf_counter()
++        try:
++            if inspect.iscoroutinefunction(method):
++                return await method(*args)
++            result = await asyncio.to_thread(method, *args)
++            if inspect.isawaitable(result):
++                return await result
++            return result
++        finally:
++            emit("model_call", method=getattr(method, "__name__", "unknown"),
++                 elapsed_s=time.perf_counter() - started)
+ 
+     async def _call_model_method(self, method, *args: Any) -> Any:
+         async with self._model_lock:
+--- /dev/null
++++ b/recipe_execution_profile.py
+@@ -0,0 +1,331 @@
++"""Opt-in host-side execution timings; never change model inputs or GPU synchronization."""
++
++import cProfile
++import functools
++import importlib
++import inspect
++import json
++import os
++import threading
++import time
++from contextlib import contextmanager
++from pathlib import Path
++
++_ENABLED = os.environ.get("ROBODOJO_EXECUTION_PROFILE") == "1"
++_PHASE = "outside"
++_STATS = {}
++_LOCK = threading.Lock()
++_LOCAL = threading.local()
++_METADATA = {}
++_SERIAL = 0
++
++
++def _record(path, elapsed, children, failed=False, nbytes=0):
++    key = (threading.get_ident(), path)
++    with _LOCK:
++        row = _STATS.setdefault(
++            key,
++            {
++                "thread": key[0],
++                "path": path,
++                "calls": 0,
++                "inclusive_s": 0.0,
++                "self_s": 0.0,
++                "max_s": 0.0,
++                "errors": 0,
++                "bytes": 0,
++            },
++        )
++        row["calls"] += 1
++        row["inclusive_s"] += elapsed
++        row["self_s"] += max(0.0, elapsed - children)
++        row["max_s"] = max(row["max_s"], elapsed)
++        row["errors"] += int(failed)
++        row["bytes"] += nbytes
++
++
++def timed(function, label, *, method_name=False):
++    if getattr(function, "_recipe_profile", False):
++        return function
++    if inspect.iscoroutinefunction(function):
++
++        @functools.wraps(function)
++        async def asynchronous(*args, **kwargs):
++            if _PHASE not in {"execution", "server"}:
++                return await function(*args, **kwargs)
++            started = time.perf_counter()
++            failed = True
++            try:
++                result = await function(*args, **kwargs)
++                failed = False
++                return result
++            finally:
++                # Async intervals may overlap; report inclusive only, separately from sync trees.
++                _record("async/" + label, time.perf_counter() - started, 0.0, failed)
++
++        asynchronous._recipe_profile = True
++        return asynchronous
++
++    @functools.wraps(function)
++    def synchronous(*args, **kwargs):
++        if _PHASE not in {"execution", "server"}:
++            return function(*args, **kwargs)
++        name = label
++        if method_name:
++            name += "." + str(kwargs.get("func_name", args[0] if args else "unknown"))
++        stack = getattr(_LOCAL, "stack", None)
++        if stack is None:
++            stack = _LOCAL.stack = []
++        path = "/".join([frame[0] for frame in stack] + [name])
++        frame = [name, 0.0]
++        stack.append(frame)
++        started = time.perf_counter()
++        failed, size = True, 0
++        try:
++            result = function(*args, **kwargs)
++            failed = False
++            if isinstance(result, (bytes, bytearray, memoryview)):
++                size = len(result)
++            return result
++        finally:
++            elapsed = time.perf_counter() - started
++            stack.pop()
++            if stack:
++                stack[-1][1] += elapsed
++            _record(path, elapsed, frame[1], failed, size)
++
++    synchronous._recipe_profile = True
++    return synchronous
++
++
++def _wrap(owner, name, label, **kwargs):
++    setattr(owner, name, timed(getattr(owner, name), label, **kwargs))
++
++
++def _write(name, started=None):
++    directory = Path(os.environ["ROBODOJO_METRICS_DIR"]) / "execution-profile"
++    directory.mkdir(parents=True, exist_ok=True)
++    with _LOCK:
++        rows = [dict(row) for row in _STATS.values()]
++    record = {
++        "pid": os.getpid(),
++        "time_unix_s": time.time(),
++        "started_unix_s": started,
++        "rows": rows,
++        "metadata": _METADATA,
++        "clock": "host perf_counter; no added CUDA synchronize; inclusive paths nest",
++        "scope": "execution only for simulator; cumulative transport lifetime for server",
++    }
++    path = directory / f"{os.getpid()}-{name}.json"
++    temporary = path.with_suffix(".tmp")
++    temporary.write_text(json.dumps(record, indent=2), encoding="utf-8")
++    temporary.replace(path)
++
++
++@contextmanager
++def execution_scope():
++    global _PHASE, _SERIAL
++    if not _ENABLED:
++        yield
++        return
++    with _LOCK:
++        _STATS.clear()
++    _PHASE = "execution"
++    _SERIAL += 1
++    started = time.time()
++    profiler = cProfile.Profile() if os.environ.get("ROBODOJO_PYTHON_PROFILE") == "1" else None
++    if profiler:
++        profiler.enable()
++    try:
++        yield
++    finally:
++        if profiler:
++            profiler.disable()
++        _PHASE = "outside"
++        _write(f"episode-{_SERIAL:03d}", started)
++        if profiler:
++            directory = Path(os.environ["ROBODOJO_METRICS_DIR"]) / "execution-profile"
++            profiler.dump_stats(str(directory / f"{os.getpid()}-episode-{_SERIAL:03d}.prof"))
++
++
++def install_client(env):
++    from recipe_causal_trace import install_client as install_causal
++
++    install_causal(env)
++    if not _ENABLED:
++        return
++    import carb.settings
++    from env.robot_manager.control_manager import MetaControl
++    from utils.save_file import VideoStreamWriter
++
++    settings = carb.settings.get_settings()
++    keys = (
++        "/app/runLoops/main/rateLimitEnabled",
++        "/app/runLoops/main/rateLimitFrequency",
++        "/app/runLoops/main/rateLimitUseBusyLoop",
++        "/app/renderer/waitIdle",
++        "/app/hydraEngine/waitIdle",
++        "/app/updateOrder/checkForHydraRenderComplete",
++        "/persistent/physics/numThreads",
++        "/physics/physxDispatcher",
++        "/plugins/carb.tasking.plugin/threadCount",
++        "/plugins/omni.tbb.globalcontrol/maxThreadCount",
++        "/physics/updateToUsd",
++        "/physics/updateVelocitiesToUsd",
++        "/physics/outputVelocitiesLocalSpace",
++        "/physics/fabricEnabled",
++    )
++    _METADATA.update(
++        settings={key: settings.get(key) for key in keys},
++        device=str(env.device),
++        physics_dt=env.sim.physics_dt,
++        decimation=env.sim.cfg.decimation,
++        collect_interval=env.obs_manager.collect_interval,
++        render_interval=env.sim.cfg.sim.render_interval,
++        python_profile=os.environ.get("ROBODOJO_PYTHON_PROFILE") == "1",
++        logical_cpus=os.cpu_count(),
++        affinity_cpus=len(os.sched_getaffinity(0)),
++        process_threads=len(list(Path("/proc/self/task").iterdir())),
++        cpu_max=Path("/sys/fs/cgroup/cpu.max").read_text().strip(),
++    )
++    for method, label in (
++        ("get_obs_batch", "observation"),
++        ("take_action_batch", "action"),
++        ("process_control_info", "control_interpolation"),
++        ("step", "control_step"),
++        ("is_episode_end", "termination"),
++        ("_stream_vision", "video_stream"),
++        ("save_video", "video_finalize"),
++    ):
++        _wrap(env, method, label)
++    _wrap(env.model_client, "call", "rpc", method_name=True)
++    for method in (
++        "get_joint",
++        "get_end_effector_real_val",
++        "get_real_endpose",
++        "get_link_pose",
++        "control_robot",
++    ):
++        _wrap(env.robot_manager, method, "robot." + method)
++    _wrap(MetaControl, "get_action", "control_expand")
++    _wrap(env.obs_manager, "render_for_capture", "camera_fence")
++    _wrap(env.obs_manager, "get_obs", "observation_build")
++    _wrap(env.capture_manager, "step", "camera_readback")
++    for camera in env.capture_manager.tiled_cameras:
++        _wrap(camera, "get_data", "camera_annotator")
++    _wrap(env, "sim_step", "physics_substeps")
++    _wrap(env.sim.sim, "step", "physics_step")
++    _wrap(env.sim.sim, "render", "render")
++    _wrap(env.sim.scene, "write_data_to_sim", "scene_write")
++    _wrap(env.sim.scene, "update", "scene_update")
++    _wrap(env.reward_manager, "step", "reward")
++    _wrap(VideoStreamWriter, "append", "video_append")
++    _wrap(VideoStreamWriter, "close", "video_close")
++    module = importlib.import_module("src.eval_client.eval_env")
++    _wrap(module, "deepcopy", "observation_or_control_copy")
++    protocol = importlib.import_module("client_server.ws.protocol.client")
++    for name in ("encode_frame", "decode_envelope"):
++        _wrap(protocol, name, "rpc.client." + name)
++
++
++
++def _install_server_stages(server):
++    """Measure existing FIFO lock/executor boundaries without changing scheduling."""
++    if getattr(server, "_recipe_stages_installed", False):
++        return
++    server._recipe_stages_installed = True
++    invoke = server._invoke_method
++    handle = server._handle_call
++
++    @functools.wraps(server._call_model_method)
++    async def call(method, *args):
++        # Same lock, acquire point, method and release point as the pinned server.
++        # Record after release: no file I/O or metrics mutex inside the model lock.
++        name = getattr(method, "__name__", "unknown")
++        started = time.perf_counter()
++        acquired = None
++        failed = True
++        try:
++            async with server._model_lock:
++                acquired = time.perf_counter()
++                result = await server._invoke_method(method, *args)
++                failed = False
++                return result
++        finally:
++            ended = time.perf_counter()
++            waited = ended - started if acquired is None else acquired - started
++            _record("rpc.stage.lock_wait." + name, waited, 0, acquired is None)
++            if acquired is not None:
++                _record("rpc.stage.lock_held." + name, ended - acquired, 0, failed)
++
++    @functools.wraps(invoke)
++    async def invoked(method, *args):
++        name = getattr(method, "__name__", "unknown")
++        if inspect.iscoroutinefunction(method):
++            return await invoke(method, *args)
++        started = time.perf_counter()
++        marks = {}
++
++        @functools.wraps(method)
++        def body(*values):
++            marks["begin"] = time.perf_counter()
++            try:
++                result = method(*values)
++                marks["awaitable"] = inspect.isawaitable(result)
++                return result
++            finally:
++                marks["end"] = time.perf_counter()
++
++        failed = True
++        try:
++            result = await invoke(body, *args)
++            failed = False
++            return result
++        finally:
++            ended = time.perf_counter()
++            # Cancellation can leave the original executor work running. Do not
++            # report a truncated body or call that interval loop wakeup latency.
++            if "end" in marks:
++                _record("rpc.stage.executor_wait." + name, marks["begin"] - started, 0, failed)
++                _record("rpc.stage.method_body." + name, marks["end"] - marks["begin"], 0, failed)
++                suffix = "awaitable_tail." if marks.get("awaitable") else "return_to_loop."
++                _record("rpc.stage." + suffix + name, ended - marks["end"], 0, failed)
++
++    @functools.wraps(handle)
++    async def handled(frame):
++        name = str(frame.payload.get("func_name", "unknown"))
++        started = time.perf_counter()
++        failed = True
++        try:
++            result = await handle(frame)
++            failed = False
++            return result
++        finally:
++            _record("rpc.stage.handle." + name, time.perf_counter() - started, 0, failed)
++
++    server._call_model_method = call
++    server._invoke_method = invoked
++    server._handle_call = handled
++
++
++def install_server(server):
++    global _PHASE
++    from recipe_causal_trace import install_server as install_causal
++
++    install_causal(server)
++    if not _ENABLED:
++        return
++    _PHASE = "server"
++    _install_server_stages(server)
++    module = importlib.import_module("client_server.ws.model_server")
++    for name in ("encode_frame", "decode_envelope", "decode_frame", "decode_obs_images"):
++        _wrap(module, name, "rpc.server." + name)
++    for name in ("_call_model_method", "_handle_call"):
++        _wrap(server, name, "rpc.server." + name)
++
++    def flush():
++        while True:
++            time.sleep(2)
++            _write("server")
++
++    threading.Thread(target=flush, daemon=True).start()
+--- /dev/null
++++ b/recipe_causal_trace.py
+@@ -0,0 +1,213 @@
++"""Opt-in causal evidence at runtime boundaries; never alter model methods or RNG."""
++
++import functools
++import itertools
++import json
++import os
++import pickle
++import random
++import threading
++import time
++from contextvars import ContextVar
++from pathlib import Path
++
++from recipe_metrics import value_digest
++
++_REQUEST = ContextVar("recipe_causal_request", default=None)
++_RECORDER_IDS = itertools.count()
++
++
++class Recorder:
++    def __init__(self, role):
++        self.root = Path(os.environ["ROBODOJO_CAUSAL_TRACE_DIR"]) / f"{role}-{os.getpid()}-{next(_RECORDER_IDS)}"
++        self.root.mkdir(parents=True, exist_ok=False)
++        self.lock = threading.Lock()
++        self.serial = 0
++        self.payloads = (self.root / "payloads.bin").open("xb", buffering=8 * 1024**2)
++        self.events = (self.root / "events.jsonl").open("x", encoding="utf-8", buffering=1)
++
++    def emit(self, event, *, data=None, **fields):
++        # Synchronous snapshots: no retained mutable buffers or unbounded queue.
++        # This is diagnostic I/O; instrumented timings are not speedup evidence.
++        with self.lock:
++            self.serial += 1
++            row = dict(event=event, seq=self.serial, monotonic_ns=time.monotonic_ns(), **fields)
++            if data is not None:
++                offset = self.payloads.tell()
++                pickle.dump(data, self.payloads, protocol=5)
++                row["data"] = {"offset": offset, "length": self.payloads.tell() - offset}
++                self.payloads.flush()
++            self.events.write(json.dumps(row, allow_nan=False) + "\n")
++            return self.serial
++
++
++def observation_info(rows):
++    return [{
++        "scope": row.get("evaluation_id"), "env_idx": int(row.get("env_idx", 0)),
++        "state": value_digest(row["state"]), "vision": value_digest(row["vision"]),
++        "instruction": value_digest(row["instruction"]),
++        "cameras": {name: value_digest(value["color"]) for name, value in row["vision"].items()},
++    } for row in rows]
++
++
++def rng_snapshot():
++    import numpy as np
++    import torch
++
++    return {
++        "python": random.getstate(), "numpy": np.random.get_state(),
++        "torch_cpu": torch.get_rng_state().numpy().copy(),
++        "torch_cuda": [state.numpy().copy() for state in torch.cuda.get_rng_state_all()]
++        if torch.cuda.is_initialized() else [],
++    }
++
++
++def history_info(model, scope, indices):
++    # Read-only inspection of the pinned adapter, not a replacement for its logic.
++    answer = []
++    for index in indices:
++        queue = model.history._states.get((scope, index), ())
++        latest = model.observations.get((scope, index))
++        answer.append({
++            "scope": scope, "env_idx": index, "length": len(queue),
++            "newest": value_digest(queue[-1]) if queue else None,
++            "frames": [value_digest(frame) if frame is not None else None
++                    for frame in model.history.frames_for(evaluation_id=scope, env_idx=index)],
++            "latest": observation_info([latest])[0] if latest is not None else None,
++        })
++    return answer
++
++
++def install_server(server):
++    if not os.environ.get("ROBODOJO_CAUSAL_TRACE_DIR"):
++        return
++    if getattr(server, "_recipe_causal_installed", False):
++        return
++    server._recipe_causal_installed = True
++    recorder = Recorder("server")
++    original_handle = server._handle_call
++    original_invoke = server._invoke_method
++
++    @functools.wraps(original_handle)
++    async def handle(frame):
++        meta = {"request_id": frame.request_id, "scope": frame.evaluation_id,
++                    "inference_step": frame.step, "method": frame.payload.get("func_name")}
++        recorder.emit("received", **meta)
++        token = _REQUEST.set(meta)
++        try:
++            return await original_handle(frame)
++        finally:
++            _REQUEST.reset(token)
++
++    @functools.wraps(original_invoke)
++    async def invoke(method, *args):
++        # Called within the existing model lock. Preserve executor/thread behavior.
++        meta = _REQUEST.get()
++        if meta is None:
++            raise RuntimeError("Causal trace requires the pinned CALL-only recipe")
++        name = meta["method"]
++        payload = args[0] if args else None
++        scope = meta["scope"]
++        indices = []
++        if name in {"update_obs", "update_obs_batch"}:
++            rows = payload if name.endswith("batch") else [payload]
++            scope = rows[0]["evaluation_id"]
++            indices = [int(row["env_idx"]) for row in rows]
++        elif isinstance(payload, dict):
++            scope = payload.get("evaluation_id", scope)
++            indices = payload.get("env_idx_list", [0])
++        rng = rng_snapshot()
++        before = dict(meta, model_scope=scope, rng=value_digest(rng))
++        if name.startswith("update_obs"):
++            before["observations"] = observation_info(rows)
++        if name.startswith("get_action"):
++            before["history"] = history_info(server.model, scope, indices)
++        ticket = recorder.emit("model_begin", data={"args": args, "rng": rng}, **before)
++        try:
++            result = await original_invoke(method, *args)
++        except BaseException as error:
++            recorder.emit("model_error", begin=ticket, error=repr(error), **meta)
++            raise
++        rng = rng_snapshot()
++        after = dict(meta, begin=ticket, rng=value_digest(rng), result=value_digest(result))
++        if name.startswith(("update_obs", "reset")):
++            after["history_lengths"] = [
++                {"scope": key[0], "env_idx": key[1], "length": len(queue)}
++                for key, queue in server.model.history._states.items()
++            ]
++        if name.startswith("get_action"):
++            after["action_hashes"] = [[value_digest(action) for action in chunk] for chunk in result]
++        recorder.emit("model_end", data={"result": result, "rng": rng}, **after)
++        return result
++
++    server._handle_call = handle
++    server._invoke_method = invoke
++
++
++def install_client(env):
++    if not os.environ.get("ROBODOJO_CAUSAL_TRACE_DIR"):
++        return
++    if getattr(env, "_recipe_causal_installed", False):
++        return
++    env._recipe_causal_installed = True
++    recorder = Recorder("worker")
++    scope = env.deploy_cfg["evaluation_id"]
++    recorder.emit("worker", scope=scope, layouts=[int(value) for value in env.env_seeds])
++    get_obs = env.get_obs_batch
++    take_action = env.take_action_batch
++    control = env.process_control_info
++    physics_step = env.sim.sim.step
++    protocol = env.model_client._client
++    rpc = protocol.call
++    substeps = 0
++
++    @functools.wraps(get_obs)
++    def observed(env_idx_list=None, last_frame=False):
++        rows = get_obs(env_idx_list, last_frame=last_frame)
++        recorder.emit("observation", scope=scope, steps=list(env.take_action_cnt),
++                      last_frame=last_frame, observations=observation_info(rows))
++        return rows
++
++    @functools.wraps(physics_step)
++    def stepped(*args, **kwargs):
++        nonlocal substeps
++        result = physics_step(*args, **kwargs)
++        substeps += 1
++        return result
++
++    @functools.wraps(control)
++    def controlled(control_info, env_idx):
++        result = control(control_info, env_idx)
++        recorder.emit("control", scope=scope, env_idx=env_idx, steps=list(env.take_action_cnt),
++                      digest=value_digest(result), data=result)
++        return result
++
++    @functools.wraps(take_action)
++    def acted(actions_list, env_idx_list=None):
++        previous = substeps
++        recorder.emit("action_begin", scope=scope, steps=list(env.take_action_cnt),
++                      indices=env_idx_list, hashes=[value_digest(a) for a in actions_list],
++                      data=actions_list)
++        result = take_action(actions_list, env_idx_list=env_idx_list)
++        recorder.emit("action_end", scope=scope, steps=list(env.take_action_cnt),
++                      physics_substeps=substeps-previous,
++                      end=[bool(x) for x in env.end_flag], success=[bool(x) for x in env.success])
++        return result
++
++    @functools.wraps(rpc)
++    async def called(func_name, obs=None, **kwargs):
++        fields = {"scope": scope, "method": func_name, "inference_step": kwargs.get("step"),
++                      "payload": value_digest(obs)}
++        if func_name.startswith("update_obs"):
++            fields["observations"] = observation_info(obs if func_name.endswith("batch") else [obs])
++        ticket = recorder.emit("sent", **fields)
++        response = await rpc(func_name, obs, **kwargs)
++        recorder.emit("response", scope=scope, method=func_name, sent=ticket,
++                      request_id=response.request_id, result=value_digest(response.payload.get("result")))
++        return response
++
++    env.get_obs_batch = observed
++    env.take_action_batch = acted
++    env.process_control_info = controlled
++    env.sim.sim.step = stepped
++    protocol.call = called

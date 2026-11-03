@@ -1,0 +1,928 @@
+--- a/env/seed_manager/seed_manager.py
++++ b/env/seed_manager/seed_manager.py
+@@ -1,5 +1,6 @@
+ from collections.abc import Iterable, Mapping
+ from copy import deepcopy
++import json
+ import os
+ from pathlib import Path
+ import re
+@@ -43,6 +44,18 @@
+             self.seed_info[idx] = {"scene_layout": file_path}
+ 
+         all_layout_ids = list(range(len(matching_files)))
++        # Explicit fixed shards for the opt-in multi-process recipe.
++        raw_ids = os.environ.get("ROBODOJO_LAYOUT_IDS")
++        if raw_ids is not None:
++            selected = json.loads(raw_ids)
++            if (
++                not isinstance(selected, list) or not selected
++                or any(type(value) is not int for value in selected)
++                or len(selected) != len(set(selected))
++                or any(value not in all_layout_ids for value in selected)
++            ):
++                raise ValueError("ROBODOJO_LAYOUT_IDS must contain distinct valid integer layout IDs")
++            all_layout_ids = [value for value in all_layout_ids if value in selected]
+         excluded = set(int(s) for s in (completed_layout_ids or [])) | set(int(s) for s in (abandoned_layout_ids or []))
+         if excluded:
+             self.seed_list: List[int] = [s for s in all_layout_ids if s not in excluded]
+--- a/XPolicyLab/client_server/ws/model_client.py
++++ b/XPolicyLab/client_server/ws/model_client.py
+@@ -3,8 +3,12 @@
+ from __future__ import annotations
+ 
+ import asyncio
++import os
+ import threading
++from collections import deque
+ from collections.abc import Coroutine
++from concurrent.futures import Future
++from copy import deepcopy
+ from typing import Any
+ 
+ from client_server.ws.protocol.client import PolicyEvalClient, PolicyEvalClientConfig
+@@ -46,6 +50,17 @@
+         close_timeout_s: float | None = None,
+         client: Any | None = None,
+     ):
++        self._evaluation_id = evaluation_id
++        # Opt-in for acknowledgement-only observation methods. The owning
++        # benchmark entry validates the supported policy; arbitrary policies
++        # must keep the synchronous default. Only one RPC is sent at a time.
++        self._overlap_observation = os.environ.get("ROBODOJO_OVERLAP_OBSERVATION") == "1"
++        self._observation_queue_limit = int(os.environ.get("ROBODOJO_OBSERVATION_QUEUE_LIMIT", "1"))
++        if not 1 <= self._observation_queue_limit <= 10:
++            raise ValueError("Observation queue limit must be between 1 and 10")
++        if not self._overlap_observation and self._observation_queue_limit != 1:
++            raise ValueError("Observation queue requires explicit overlap opt-in")
++        self._pending_observations: deque[Future[Any]] = deque()
+         self.action_case_id = action_case_id
+         self.trial_id = trial_id
+         self.repeat_index = repeat_index
+@@ -86,12 +101,42 @@
+ 
+     def _run(self, coro: Coroutine[Any, Any, Any]) -> Any:
+         """Run a client coroutine on the background loop and wait for it."""
++        return self._submit(coro).result()
++
++    def _submit(self, coro: Coroutine[Any, Any, Any]) -> Future[Any]:
+         if self._loop.is_closed() or not self._loop_thread.is_alive():
+             # Fail loudly instead of hanging forever on a future no loop
+             # will ever complete (thread died or close() already ran).
+             coro.close()
+             raise RuntimeError("websocket client event loop is not running")
+-        return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
++        return asyncio.run_coroutine_threadsafe(coro, self._loop)
++
++    def _drain_observations(self, keep: int = 0) -> None:
++        while self._pending_observations:
++            pending = self._pending_observations[0]
++            if len(self._pending_observations) <= keep and not pending.done():
++                break
++            try:
++                pending.result()
++            finally:
++                # An interrupted wait must retain its request and later FIFO
++                # entries so inference/reset/close cannot overtake them.
++                if pending.done():
++                    self._pending_observations.popleft()
++
++    def flush_observation(self) -> None:
++        """Drain every update before inference, reset, custom RPCs and close."""
++        self._drain_observations()
++
++    async def _send_observation(self, previous, func_name, payload, metadata):
++        if previous is not None:
++            await asyncio.wrap_future(previous)
++        # Construct/send only after the previous acknowledgement was validated.
++        # Failed updates poison all queued successors without sending them.
++        response = await self._client.call(func_name, payload, **metadata)
++        if response.payload.get("result") is not None:
++            raise RuntimeError("Observation overlap requires a None-returning update method")
++        return response
+ 
+     def _shutdown_loop(self) -> None:
+         if self._loop.is_closed():
+@@ -123,6 +168,8 @@
+             self._loop.close()
+ 
+     def call(self, func_name: str | None = None, obs: Any = None, **kwargs: Any) -> Any:
++        defer = self._overlap_observation and func_name in {"update_obs", "update_obs_batch"}
++        self._drain_observations(self._observation_queue_limit - 1 if defer else 0)
+         # Payload channel is only `obs` (legacy TCP compatibility). Extra kwargs
+         # such as env_idx_list=... are not forwarded — reject them loudly.
+         if kwargs:
+@@ -151,6 +198,10 @@
+             if obs is not None:
+                 raise TypeError("reset takes no obs payload")
+             self._step = 0
++            if os.environ.get("ROBODOJO_SCOPED_RESET") == "1":
++                # Simate already implements this public per-evaluation reset.
++                # Never clear another worker's history on the shared server.
++                return self.call("reset_evaluation", {"evaluation_id": self._evaluation_id})
+             response = self._run(
+                 self._client.reset(
+                     trial_id=self.trial_id,
+@@ -179,16 +230,21 @@
+         # (obs / obs list), get_action (no obs), get_action_batch
+         # (obs=env_idx_list), and custom public methods some policies expose
+         # (e.g. Mem_0's begin_episode/step).
+-        response = self._run(
+-            self._client.call(
+-                func_name,
+-                obs,
+-                trial_id=self.trial_id,
+-                action_case_id=self.action_case_id,
+-                repeat_index=self.repeat_index,
+-                step=self._step,
+-            )
++        # The simulation may advance immediately after call() returns. Own a
++        # snapshot before allowing the background loop to encode/send it.
++        payload = deepcopy(obs) if defer else obs
++        metadata = dict(
++            trial_id=self.trial_id,
++            action_case_id=self.action_case_id,
++            repeat_index=self.repeat_index,
++            step=self._step,
+         )
++        if defer:
++            previous = self._pending_observations[-1] if self._pending_observations else None
++            request = self._send_observation(previous, func_name, payload, metadata)
++            self._pending_observations.append(self._submit(request))
++            return None
++        response = self._run(self._client.call(func_name, payload, **metadata))
+         if func_name in {"get_action", "get_action_batch"}:
+             self._step += 1
+         return response.payload.get("result")
+@@ -207,8 +263,11 @@
+         if self._loop.is_closed():
+             return
+         try:
+-            if self._loop_thread.is_alive():
+-                self._run(self._client.close())
++            try:
++                self.flush_observation()
++            finally:
++                if self._loop_thread.is_alive():
++                    self._run(self._client.close())
+         finally:
+             self._shutdown_loop()
+ 
+--- /dev/null
++++ b/recipe_parallel_runtime.py
+@@ -0,0 +1,755 @@
++"""Bounded RoboDojo experiment using the existing pinned SDK autotune controller."""
++
++import argparse
++import hashlib
++import json
++import os
++import signal
++import socket
++import subprocess
++import sys
++import threading
++import time
++import tomllib
++import uuid
++from pathlib import Path
++
++from roboscope_kit.runtime.benchmark import autotune as sdk
++from roboscope_kit.runtime.benchmark.queue import atomic_json
++from roboscope_kit.runtime.benchmark.resources import cpu_quota, cpu_window, read_cpu_stat
++
++from apply_runtime_patch import patch_metadata
++from run_eval import gpu_summary, sample_gpu, stop, validate_episode_scope
++from run_series import resource_summary, sample_resources
++
++SDK_REVISION = "2792b6e160f06e24d18499b5ca5f50cca5f3fc31"
++
++
++def read_rows(path):
++    if not path.exists():
++        return []
++    try:
++        return list(json.loads(path.read_text())["details"].values())
++    except (json.JSONDecodeError, KeyError):
++        # The upstream result writer is not atomic; retry during live polling.
++        return []
++
++
++def read_events(directory):
++    return [json.loads(line) for path in directory.glob("*.jsonl") for line in path.read_text().splitlines()]
++
++
++def process_vram():
++    query = subprocess.check_output(
++        ["nvidia-smi", "--query-compute-apps=pid,used_gpu_memory", "--format=csv,noheader,nounits"],
++        text=True,
++        timeout=10,
++    )
++    result = {}
++    for line in query.splitlines():
++        pid, value = (part.strip() for part in line.split(","))
++        if pid.isdigit() and value.isdigit():
++            result[int(pid)] = int(value)
++    return result
++
++
++class Experiment:
++    def __init__(self, args, profile, output):
++        self.args, self.profile, self.output = args, profile, output
++        self.cfg = profile["protocol"]
++
++    def measure(self, k, g, limits, progress, *, episodes=None, phase="probe"):
++        if not 1 <= g <= min(k, self.args.maximum_replicas) or not 1 <= k <= self.args.maximum_workers:
++            raise ValueError("Candidate exceeds the declared worker/replica bounds")
++        episodes = episodes or self.args.probe_episodes
++        if episodes < k:
++            raise ValueError("Every requested worker must receive a real episode")
++        run_id = f"{phase}-k{k}-g{g}-{uuid.uuid4().hex[:12]}"
++        output = self.output / run_id
++        output.mkdir()
++        metrics = self.args.metrics_root.resolve() / run_id
++        metrics.mkdir()
++        started, clock_started = time.time(), time.monotonic()
++        deadline = clock_started + limits.timeout_s
++        cpu_samples = [(started, read_cpu_stat())]
++        record = {
++            "run_id": run_id,
++            "complete": False,
++            "mode": phase,
++            "profile_sha256": hashlib.sha256(self.args.profile.read_bytes()).hexdigest(),
++            "source_revisions": self.profile["sources"],
++            "seed": self.cfg["seed"],
++            "num_envs": k,
++            "requested_episodes": episodes,
++            "k": k,
++            "g": g,
++            "overlap_observation": self.args.overlap_observation,
++            "observation_queue_limit": self.args.observation_queue_limit,
++            "sdk_revision": SDK_REVISION,
++            "runtime_versions": self.args.runtime_versions,
++            "compatibility_patch_sha256": self.args.patches.get(
++                self.profile["runtime"].get("compatibility_patch"), {}
++            ).get("sha256"),
++            "runtime_patches": self.args.patches,
++            "started_unix_s": started,
++            "layout_ids_requested": list(range(episodes)),
++        }
++        atomic_json(output / "invocation.json", record)
++        print(f"{run_id}: {output}", flush=True)
++        env = dict(os.environ)
++        env.update(
++            PYTHONPATH=f"{self.args.root}:{self.args.root / 'XPolicyLab'}",
++            PYTHONUNBUFFERED="1",
++            PYTHONNOUSERSITE="1",
++            CUDA_VISIBLE_DEVICES="0",
++            OMNI_KIT_ACCEPT_EULA="YES",
++            ACCEPT_EULA="Y",
++            PRIVACY_CONSENT="Y",
++            OMNI_KIT_ALLOW_ROOT="1",
++            OMP_NUM_THREADS="4",
++            MKL_NUM_THREADS="4",
++            OPENBLAS_NUM_THREADS="1",
++            CUDA_HOME="/usr/local/cuda",
++            VK_ICD_FILENAMES=str(self.args.vulkan_icd),
++            VK_DRIVER_FILES=str(self.args.vulkan_icd),
++            ROBODOJO_SCOPED_RESET="1",
++            ROBODOJO_OVERLAP_OBSERVATION="1" if self.args.overlap_observation else "0",
++            ROBODOJO_OBSERVATION_QUEUE_LIMIT=str(self.args.observation_queue_limit),
++        )
++        env["PATH"] = f"{self.args.simulator_env / 'bin'}:/usr/local/cuda/bin:{env['PATH']}"
++        env.pop("ROBODOJO_LAYOUT_IDS", None)
++        env.pop("ROBODOJO_FATAL_RESTART_COUNT", None)
++        env.pop("ROBODOJO_ASYNC_VIDEO", None)
++        monitor = monitor_thread = None
++        servers, workers, handles = [], [], []
++        finished = threading.Event()
++        resource_thread = threading.Thread(
++            target=sample_resources, args=(finished, output / "resources.jsonl"), daemon=True
++        )
++        resource_thread.start()
++        process_samples = []
++        replica_vram = None
++        failure = None
++        try:
++            monitor = subprocess.Popen(
++                [
++                    "nvidia-smi",
++                    "--query-gpu=index,utilization.gpu,memory.used",
++                    "--format=csv,noheader,nounits",
++                    "-i",
++                    "0",
++                    "-lms",
++                    "500",
++                ],
++                stdout=subprocess.PIPE,
++                stderr=subprocess.DEVNULL,
++                text=True,
++                start_new_session=True,
++            )
++            monitor_thread = threading.Thread(
++                target=sample_gpu, args=(monitor, output / "gpu.jsonl"), daemon=True
++            )
++            monitor_thread.start()
++            # Load sequentially so concurrent checkpoint loading does not inflate VRAM peaks.
++            for replica in range(g):
++                with socket.socket() as available:
++                    available.bind(("127.0.0.1", 0))
++                    port = available.getsockname()[1]
++                server_command = [
++                    "bash",
++                    str(self.args.root / "XPolicyLab/policy/Simate_beta/setup_eval_policy_server.sh"),
++                    "RoboDojo",
++                    self.cfg["task"],
++                    str(self.args.root / self.profile["dataset"]["checkpoint"]),
++                    self.cfg["env_cfg"],
++                    self.cfg["action_type"],
++                    str(self.cfg["seed"]),
++                    "0",
++                    str(self.args.env_root / "policy"),
++                    str(port),
++                    "127.0.0.1",
++                ]
++                name = "server" if g == 1 else f"server-{replica}"
++                server_log = (output / f"{name}.log").open("w")
++                handles.append(server_log)
++                load_started = time.monotonic()
++                server = subprocess.Popen(
++                    server_command,
++                    cwd=self.args.root,
++                    env={**env, "ROBODOJO_METRICS_DIR": str(metrics / name)},
++                    stdout=server_log,
++                    stderr=subprocess.STDOUT,
++                    start_new_session=True,
++                )
++                item = dict(process=server, port=port, log=output / f"{name}.log", replica=replica)
++                servers.append(item)
++                while True:
++                    self.check_deadline(deadline, limits)
++                    self.check_servers(servers)
++                    try:
++                        with socket.create_connection(("127.0.0.1", port), timeout=0.5):
++                            break
++                    except OSError:
++                        time.sleep(0.5)
++                item["ready_s"] = time.monotonic() - load_started
++                item["idle_vram_mib"] = process_vram().get(server.pid)
++            record["server_start_to_ready_s"] = time.time() - started
++            idle_vram = [item["idle_vram_mib"] for item in servers if item["idle_vram_mib"] is not None]
++            replica_vram = max(idle_vram) * 1024**2 if idle_vram else None
++            for index in range(k):
++                replica = index % g
++                port = servers[replica]["port"]
++                worker_id = f"{run_id}-w{index}"
++                shard = list(range(episodes))[index::k]
++                worker_dir = output / worker_id
++                worker_dir.mkdir()
++                worker_metrics = metrics / worker_id
++                command = [
++                    str(self.args.simulator_env / "bin/python"),
++                    "-u",
++                    self.profile["runtime"].get("entrypoint", "src/eval_client/main.py"),
++                    "--task_name",
++                    self.cfg["task"],
++                    "--env_cfg_type",
++                    self.cfg["env_cfg"],
++                    "--num_envs",
++                    "1",
++                    "--enable_cameras",
++                    "--kit_args",
++                    "--allow-root --enable isaacsim.replicator.behavior --enable isaacsim.sensors.camera",
++                    "--device_id",
++                    "0",
++                    "--policy_name",
++                    self.cfg["policy"],
++                    "--port",
++                    str(port),
++                    "--protocol",
++                    "ws",
++                    "--policy_server_url",
++                    f"ws://127.0.0.1:{port}",
++                    "--additional_info",
++                    run_id,
++                    "--seed",
++                    str(self.cfg["seed"]),
++                    "--host",
++                    "127.0.0.1",
++                    "--headless",
++                ]
++                log = (worker_dir / "client.log").open("w")
++                handles.append(log)
++                worker_env = {
++                    **env,
++                    "ROBODOJO_RUN_ID": worker_id,
++                    "EVAL_NUM": str(len(shard)),
++                    "ROBODOJO_LAYOUT_IDS": json.dumps(shard),
++                    "ROBODOJO_METRICS_DIR": str(worker_metrics),
++                }
++                process = subprocess.Popen(
++                    command,
++                    cwd=self.args.root,
++                    env=worker_env,
++                    stdout=log,
++                    stderr=subprocess.STDOUT,
++                    start_new_session=True,
++                )
++                result = (
++                    self.args.root
++                    / "eval_result/RoboDojo"
++                    / self.cfg["task"]
++                    / self.cfg["policy"]
++                    / self.cfg["env_cfg"]
++                    / f"{self.cfg['seed']}_{run_id}"
++                    / worker_id
++                    / "_result.json"
++                )
++                worker = dict(
++                    process=process,
++                    directory=worker_dir,
++                    result=result,
++                    metrics=worker_metrics,
++                    layout_ids=shard,
++                    command=command,
++                    replica=replica,
++                )
++                workers.append(worker)
++                atomic_json(
++                    worker_dir / "invocation.json",
++                    {
++                        "run_id": worker_id,
++                        "command": command,
++                        "layout_ids": shard,
++                        "result_path": str(result),
++                        "pid": process.pid,
++                        "replica": replica,
++                        "server_pid": servers[replica]["process"].pid,
++                    },
++                )
++            last_progress = 0.0
++            while any(worker["process"].poll() is None for worker in workers):
++                self.check_deadline(deadline, limits)
++                cpu_samples.append((time.time(), read_cpu_stat()))
++                self.check_servers(servers)
++                for worker in workers:
++                    code = worker["process"].poll()
++                    if code not in (None, 0):
++                        raise RuntimeError(f"Worker {worker['process'].pid} exited {code}")
++                if time.monotonic() - last_progress >= 5:
++                    vram = process_vram()
++                    sample = {
++                        "time_unix_s": time.time(),
++                        "servers": {str(s["replica"]): vram.get(s["process"].pid) for s in servers},
++                        "workers": {str(i): vram.get(w["process"].pid) for i, w in enumerate(workers)},
++                    }
++                    process_samples.append(sample)
++                    with (output / "process-vram.jsonl").open("a") as stream:
++                        stream.write(json.dumps(sample) + "\n")
++                    rows = [row for worker in workers for row in read_rows(worker["result"])]
++                    successes = sum(bool(row["success"]) for row in rows)
++                    value = dict(
++                        episodes=len(rows),
++                        total_episodes=episodes,
++                        successes=successes,
++                        failures=len(rows) - successes,
++                    )
++                    atomic_json(output / "progress.json", value)
++                    progress(value)
++                    last_progress = time.monotonic()
++                time.sleep(0.5)
++            cpu_samples.append((time.time(), read_cpu_stat()))
++            rows, events, worker_results = [], [], []
++            for worker in workers:
++                if worker["process"].returncode != 0:
++                    raise RuntimeError("Worker exited nonzero")
++                current = read_rows(worker["result"])
++                ids = [int(row["layout_id"]) for row in current]
++                if len(ids) != len(set(ids)) or sorted(ids) != worker["layout_ids"]:
++                    raise RuntimeError(
++                        f"Incomplete or duplicate shard: expected {worker['layout_ids']}, got {ids}"
++                    )
++                worker_events = read_events(worker["metrics"])
++                if any(
++                    sum(e["event"] == marker for e in worker_events) != 1
++                    for marker in ("evaluation_start", "evaluation_end")
++                ):
++                    raise RuntimeError("Missing evaluation markers or unexpected worker restart")
++                (end,) = [e for e in worker_events if e["event"] == "evaluation_end"]
++                if end["unstable"] or end["abandoned_layout_ids"]:
++                    raise RuntimeError("Unstable or abandoned layouts invalidate the fixed workload")
++                for row in current:
++                    if (
++                        not 0 < row["executed_steps"] <= self.cfg["step_limit"]
++                        or row["step_limit"] != self.cfg["step_limit"]
++                    ):
++                        raise RuntimeError("Unexpected executed action count or step limit")
++                    for name in (
++                        "layout_sha256",
++                        "initial_state_sha256",
++                        "initial_vision_sha256",
++                        "instruction_sha256",
++                        "action_sha256",
++                        "control_sha256",
++                    ):
++                        if len(row[name]) != 64:
++                            raise RuntimeError(f"Missing audit digest: {name}")
++                worker_results.append(
++                    {
++                        "result_path": str(worker["result"]),
++                        "layout_ids": ids,
++                        "evaluation_s": end["elapsed_s"],
++                        "replica": worker["replica"],
++                    }
++                )
++                rows.extend(current)
++                events.extend(worker_events)
++            starts = [e["time_unix_s"] for e in events if e["event"] == "evaluation_start"]
++            ends = [e["time_unix_s"] for e in events if e["event"] == "evaluation_end"]
++            if sorted(int(row["layout_id"]) for row in rows) != list(range(episodes)):
++                raise RuntimeError("Completed workload differs from the fixed layout set")
++            evaluation_start, evaluation_end = min(starts), max(ends)
++            evaluation_s = evaluation_end - evaluation_start
++            successes = sum(bool(row["success"]) for row in rows)
++            steps = sum(int(row["executed_steps"]) for row in rows)
++            record.update(
++                complete=True,
++                worker_results=worker_results,
++                unstable_episodes=0,
++                abandoned_layout_ids=[],
++                completed_episodes=len(rows),
++                successes=successes,
++                success_rate=successes / len(rows),
++                executed_steps=steps,
++                layout_ids=sorted(int(row["layout_id"]) for row in rows),
++                fixed_layouts_match=True,
++                evaluation_start_unix_s=evaluation_start,
++                evaluation_end_unix_s=evaluation_end,
++                evaluation_s=evaluation_s,
++                evaluation_steps_per_s=steps / evaluation_s,
++                evaluation_episodes_per_s=len(rows) / evaluation_s,
++            )
++            atomic_json(output / "result.json", {"details": {str(row["layout_id"]): row for row in rows}})
++            before = max(
++                (item for item in cpu_samples if item[0] <= evaluation_start), key=lambda item: item[0]
++            )
++            after = min((item for item in cpu_samples if item[0] >= evaluation_end), key=lambda item: item[0])
++            record["cpu_evaluation"] = cpu_window(before[1], after[1], after[0] - before[0], cpu_quota())
++            record["cpu_sampling_window_s"] = after[0] - before[0]
++        except BaseException as error:
++            failure = error
++            record["complete"] = False
++            record["error"] = f"{type(error).__name__}: {error}"
++        finally:
++            for worker in workers:
++                stop(worker["process"])
++            for item in servers:
++                stop(item["process"])
++            stopped = time.time()
++            finished.set()
++            resource_thread.join(timeout=5)
++            stop(monitor)
++            if monitor_thread:
++                monitor_thread.join(timeout=5)
++            for handle in handles:
++                handle.close()
++            record["ended_unix_s"] = stopped
++            record["total_wall_s"] = stopped - started
++            record["worker_exit_codes"] = [worker["process"].returncode for worker in workers]
++            record["replicas"] = [
++                {
++                    "index": item["replica"],
++                    "pid": item["process"].pid,
++                    "port": item["port"],
++                    "ready_s": item.get("ready_s"),
++                    "idle_vram_mib": item.get("idle_vram_mib"),
++                    "exit_code": item["process"].returncode,
++                }
++                for item in servers
++            ]
++            record["metrics_path"] = str(metrics)
++            gpu_path = output / "gpu.jsonl"
++            samples = (
++                [json.loads(line) for line in gpu_path.read_text().splitlines()] if gpu_path.exists() else []
++            )
++            record["gpu_total"] = gpu_summary(samples, started, stopped)
++            resources = [json.loads(line) for line in (output / "resources.jsonl").read_text().splitlines()]
++            record["resources_total"] = resource_summary(resources, [(started, stopped)])
++            if record.get("complete"):
++                record["resources_evaluation"] = resource_summary(
++                    resources, [(evaluation_start, evaluation_end)]
++                )
++                selected_samples = [
++                    s for s in process_samples if evaluation_start <= s["time_unix_s"] <= evaluation_end
++                ]
++                record["process_vram_evaluation"] = {}
++                for kind, count in (("servers", g), ("workers", k)):
++                    record["process_vram_evaluation"][kind] = {}
++                    for index in range(count):
++                        values = [
++                            s[kind][str(index)] for s in selected_samples if s[kind][str(index)] is not None
++                        ]
++                        record["process_vram_evaluation"][kind][str(index)] = {
++                            "samples": len(values),
++                            "mean_mib": sum(values) / len(values) if values else None,
++                            "peak_mib": max(values) if values else None,
++                        }
++                record["gpu_evaluation"] = gpu_summary(samples, evaluation_start, evaluation_end)
++                if record["gpu_evaluation"] is None:
++                    record["complete"] = False
++                    failure = RuntimeError("GPU evaluation samples missing")
++                    record["error"] = str(failure)
++                record["total_steps_per_s"] = steps / record["total_wall_s"]
++                record["total_episodes_per_s"] = len(rows) / record["total_wall_s"]
++            atomic_json(output / "summary.json", record)
++        if failure:
++            if isinstance(failure, (KeyboardInterrupt, SystemExit)):
++                raise failure
++            if isinstance(failure, sdk.ProbeStopped):
++                raise failure
++            logs = [worker["directory"] / "client.log" for worker in workers] + [s["log"] for s in servers]
++            oom = any("out of memory" in path.read_text(errors="replace").lower() for path in logs)
++            raise sdk.ProbeCapacityReached(
++                str(failure), stop_reason="worker_oom" if oom else "worker_failure"
++            ) from failure
++        gpu = record["gpu_evaluation"]
++        result = dict(
++            episodes=episodes,
++            total_episodes=episodes,
++            successes=successes,
++            success_rate=successes / episodes,
++            steps_per_s=steps / evaluation_s,
++        )
++        progress({**result, "failures": episodes - successes})
++        return {
++            "result": result,
++            # Use the existing SDK's candidate scoring and resource hints.
++            "benchmark": {},
++            "resources": {
++                "cpu": record["cpu_evaluation"],
++                "gpu": {
++                    "mean_utilization": gpu["mean_utilization_percent"] / 100,
++                    "peak_memory_bytes": gpu["peak_memory_mib"] * 1024**2,
++                },
++            },
++            "recovery": {
++                "initial_workers_per_gpu": {"0": k},
++                "final_workers_per_gpu": {"0": k},
++                "worker_failures": [],
++                "oom_events": 0,
++            },
++            "evidence": str(output),
++            "summary": record,
++        }, replica_vram
++
++    @staticmethod
++    def check_servers(servers):
++        for item in servers:
++            process = item["process"]
++            if process.poll() is not None:
++                raise RuntimeError(f"Policy server {item['replica']} exited {process.returncode}")
++
++    @staticmethod
++    def check_deadline(deadline, limits):
++        if time.monotonic() >= deadline:
++            raise sdk.ProbeTimedOut("Probe deadline reached", stop_reason=limits.timeout_reason)
++
++
++def main():
++    def interrupt(signum, frame):
++        raise KeyboardInterrupt(f"Received signal {signum}")
++
++    signal.signal(signal.SIGTERM, interrupt)
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("root", type=Path)
++    parser.add_argument("--recipe-dir", type=Path, required=True)
++    parser.add_argument("--profile", type=Path, required=True)
++    parser.add_argument("--sdk-root", type=Path, required=True)
++    parser.add_argument("--mode", choices=["off", "on", "fixed"], required=True)
++    parser.add_argument(
++        "--overlap-observation", action="store_true",
++        help="Overlap acknowledgement-only observation RPC with queued simulation actions; "
++             "ordered updates drained before inference/reset (default off)",
++    )
++    parser.add_argument(
++        "--observation-queue-limit", type=int, choices=range(1, 11), default=1,
++        help="Bound pending observation snapshots (default 1); RPCs remain sequential",
++    )
++    parser.add_argument("--maximum-workers", type=int, choices=[1, 2, 3], default=3)
++    parser.add_argument("--maximum-replicas", type=int, choices=[1, 2], default=1)
++    parser.add_argument("--workers", type=int, choices=[1, 2, 3], help="fixed-mode worker count")
++    parser.add_argument("--replicas", type=int, choices=[1, 2], help="fixed-mode model count")
++    parser.add_argument("--episodes", type=int, default=6, choices=range(1, 51))
++    parser.add_argument("--probe-episodes", type=int, default=6, choices=range(2, 51))
++    parser.add_argument("--env-root", type=Path, default=Path("/workspace/robodojo-envs"))
++    parser.add_argument("--simulator-env", type=Path, default=Path("/workspace/robodojo-envs/simulator"))
++    parser.add_argument("--metrics-root", type=Path, default=Path("/workspace/robodojo-metrics"))
++    parser.add_argument("--vulkan-icd", type=Path)
++    parser.add_argument("--candidate-timeout-s", type=float, default=1800)
++    parser.add_argument("--tune-budget-s", type=float, default=3600)
++    parser.add_argument("--output", type=Path, help="new external directory for this off/on experiment")
++    args = parser.parse_args()
++    if args.observation_queue_limit != 1 and not args.overlap_observation:
++        parser.error("--observation-queue-limit requires --overlap-observation")
++    if args.maximum_replicas > args.maximum_workers:
++        parser.error("Every replica must have at least one worker")
++    if args.mode == "fixed":
++        if (
++            args.workers is None
++            or args.replicas is None
++            or not 1 <= args.replicas <= min(args.workers, args.maximum_replicas)
++            or args.workers > min(args.maximum_workers, args.episodes)
++        ):
++            parser.error(
++                "Fixed mode requires --workers and --replicas within the declared bounds and workload"
++            )
++    elif args.workers is not None or args.replicas is not None:
++        parser.error("--workers/--replicas require --mode fixed")
++    args.vulkan_icd = args.vulkan_icd or next(
++        (
++            p
++            for p in (
++                Path("/etc/vulkan/icd.d/nvidia_icd.json"),
++                Path("/usr/share/vulkan/icd.d/nvidia_icd.json"),
++            )
++            if p.is_file()
++        ),
++        None,
++    )
++    if args.vulkan_icd is None or not args.vulkan_icd.is_file():
++        parser.error("Set --vulkan-icd to an existing NVIDIA Vulkan ICD")
++    if args.mode == "on" and min(args.episodes, args.probe_episodes) < args.maximum_workers:
++        parser.error("Every candidate worker must receive a real probe and evaluation episode")
++    args.root, args.sdk_root, args.recipe_dir = (
++        args.root.resolve(),
++        args.sdk_root.resolve(),
++        args.recipe_dir.resolve(),
++    )
++    revision = subprocess.check_output(
++        ["git", "-C", str(args.sdk_root), "rev-parse", "HEAD"], text=True
++    ).strip()
++    if revision != SDK_REVISION or not Path(sdk.__file__).resolve().is_relative_to(args.sdk_root):
++        raise ValueError("Import the existing SDK from its pinned 2792b6e roboscope-kit checkout")
++    subprocess.run(
++        [
++            "git",
++            "-C",
++            str(args.sdk_root),
++            "diff",
++            "--exit-code",
++            "HEAD",
++            "--",
++            "packages/roboscope-kit/src",
++        ],
++        check=True,
++    )
++    profile = tomllib.loads(args.profile.read_text(encoding="utf-8"))
++    if (profile["protocol"]["policy"], profile["protocol"]["task"]) != ("Simate_beta", "stack_blocks"):
++        raise ValueError(
++            "This scoped-reset experiment supports the declared Simate-beta stack_blocks workload only"
++        )
++    for key, path in {
++        "robodojo": args.root,
++        "xpolicylab": args.root / "XPolicyLab",
++        "isaaclab": args.root / "third_party/IsaacLab",
++        "curobo": args.root / "third_party/curobo",
++    }.items():
++        if (
++            subprocess.check_output(["git", "-C", str(path), "rev-parse", "HEAD"], text=True).strip()
++            != profile["sources"][key]
++        ):
++            raise ValueError(f"Source revision mismatch: {key}")
++    subprocess.run(
++        [
++            "git",
++            "-C",
++            str(args.root / "XPolicyLab"),
++            "diff",
++            "--exit-code",
++            "HEAD",
++            "--",
++            "policy/Simate_beta",
++        ],
++        check=True,
++    )
++    args.patches = {}
++    patch_names = ["measurement", "parallel"]
++    for key in ("compatibility_patch", "dependency_patch", "episode_count_patch"):
++        if key in profile["runtime"]:
++            patch_names.append(profile["runtime"][key])
++    allowed_changes = set()
++    for name in patch_names:
++        expected = "after"
++        result = subprocess.check_output(
++            [
++                sys.executable,
++                str(args.recipe_dir / "apply_runtime_patch.py"),
++                "check",
++                str(args.root),
++                "--patch",
++                name,
++            ],
++            text=True,
++        ).strip()
++        if result != f"{name} patch: {expected}":
++            raise ValueError(result)
++        manifest = patch_metadata(name)
++        args.patches[name] = {"state": expected, "sha256": manifest["sha256"]}
++        allowed_changes.update((args.root / path).resolve() for path in manifest["files"])
++    for relative in (".", "XPolicyLab", "third_party/IsaacLab", "third_party/curobo"):
++        source = args.root / relative
++        changed = subprocess.check_output(
++            ["git", "-C", str(source), "diff", "--name-only", "--ignore-submodules=all", "HEAD"],
++            text=True,
++        ).splitlines()
++        added = subprocess.check_output(
++            ["git", "-C", str(source), "ls-files", "--others", "--exclude-standard"],
++            text=True,
++        ).splitlines()
++        changed.extend(p for p in added if Path(p).suffix in {".py", ".sh", ".yaml", ".yml", ".kit"})
++        unknown = [p for p in changed if (source / p).resolve() not in allowed_changes]
++        if unknown:
++            raise ValueError(f"Unrecognized runtime edits in {relative}: {unknown}")
++    args.runtime_versions = json.loads(
++        subprocess.check_output(
++            [
++                str(args.simulator_env / "bin/python"),
++                "-c",
++                "import importlib.metadata as m,json,platform; "
++                "print(json.dumps(dict(python=platform.python_version(),isaacsim=m.version('isaacsim'),torch=m.version('torch'))))",
++            ],
++            text=True,
++        )
++    )
++    if (
++        args.runtime_versions["isaacsim"] != profile["runtime"]["isaacsim"]
++        or args.runtime_versions["torch"] != profile["runtime"]["simulator_torch"]
++        or not args.runtime_versions["python"].startswith(profile["runtime"]["simulator_python"] + ".")
++    ):
++        raise ValueError("Simulator version mismatch")
++    validate_episode_scope(
++        args.simulator_env / "bin/python",
++        args.root,
++        profile["protocol"],
++        profile["protocol"]["seed"],
++        max(args.episodes, args.probe_episodes) if args.mode == "on" else args.episodes,
++    )
++    output = (
++        args.output.resolve()
++        if args.output
++        else args.root.parent / "evidence/autotune" / f"{args.mode}-{uuid.uuid4().hex[:12]}"
++    )
++    output.mkdir(parents=True)
++    experiment = Experiment(args, profile, output)
++    started = time.time()
++    selected = {"k": 1, "g": 1, "mode": "off"}
++    if args.mode == "fixed":
++        selected = {"k": args.workers, "g": args.replicas, "mode": "fixed"}
++    tune_s = 0.0
++    if args.mode == "on":
++        vram_mib = int(
++            subprocess.check_output(
++                ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits", "-i", "0"],
++                text=True,
++            ).strip()
++        )
++        bounds = sdk.resolve_bounds(
++            1,
++            {
++                "maximum_workers": args.maximum_workers,
++                "maximum_replicas": args.maximum_replicas,
++                "worker_cpu_cores": 4,
++                "vram_per_gpu_bytes": vram_mib * 1024**2,
++            },
++        )
++        selected = sdk.run_autotune(
++            measure=experiment.measure,
++            output_dir=output / "selection",
++            bounds=bounds,
++            limits=sdk.AutotuneLimits(
++                candidate_timeout_s=args.candidate_timeout_s,
++                total_budget_s=args.tune_budget_s,
++                maximum_success_rate_drop=0.0, strategy="two-phase",
++            ),
++        )
++        tune_s = time.time() - started
++    result, _ = experiment.measure(
++        selected["k"],
++        selected["g"],
++        sdk.ProbeLimits(timeout_s=14400),
++        lambda value: None,
++        episodes=args.episodes,
++        phase=f"autotune-{args.mode}",
++    )
++    report = {
++        "mode": args.mode,
++        "selected": selected,
++        "autotune_s": tune_s,
++        "total_including_autotune_s": time.time() - started,
++        "evaluation": result["evidence"],
++        "result": result["result"],
++        "summary": result["summary"],
++    }
++    atomic_json(output / "experiment.json", report)
++    print(json.dumps(report, indent=2), flush=True)
++
++
++if __name__ == "__main__":
++    main()

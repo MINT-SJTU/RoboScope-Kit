@@ -34,6 +34,7 @@ observations, actions, episodes, results) is defined in the
 | `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, MetaWorld, RoboCasa, and RoboTwin: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
 | `examples/starvla/` | The StarVLA `Policy` and one demo per benchmark, including the configurations behind the RoboScope Kit technical report |
 | `examples/xvla/` | An X-VLA `Policy` example: a stateful Policy serving several benchmarks |
+| `examples/robodojo/` | A standalone RoboDojo / Simate-beta recipe (native Isaac Sim 5.1, `stack_blocks / arx_x5 / seed 1`) with pinned inputs, reversible runtime patches, and its performance report; it registers no benchmark or `Policy` |
 | `tests/async_inference/` | Autotune regressions |
 | `ci/` | Build, compatibility, and PyPI release scripts used by GitHub Actions |
 

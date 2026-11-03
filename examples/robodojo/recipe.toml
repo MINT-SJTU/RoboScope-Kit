@@ -1,0 +1,49 @@
+schema_version = 1
+support = "standalone recipe; Simate-beta / stack_blocks / arx_x5; see validation reports"
+evidence_subdir = "simate-stack-blocks"
+
+[sources]
+robodojo = "f57e1633ffed59761bc8e568cfe7530c4b33381c"
+xpolicylab = "5d0be1499634d3176258c8f2e31f5fe816497b0a"
+isaaclab = "afca7b09d60d8beb9c1cb28b43066499940b969b"
+curobo = "d17b54ce32cba095c0b000c4c58777075d11de0e"
+
+[dataset]
+repo_id = "RoboDojo-Benchmark/RoboDojo"
+revision = "35efbc7dedfdbeeb6e95fb749bd885d73d483e41"
+checkpoint = "ckpt/RoboDojo/Simate-beta/RoboDojo-sim-arx_x5-joint-0"
+
+[protocol]
+policy = "Simate_beta"
+task = "stack_blocks"
+env_cfg = "arx_x5"
+action_type = "joint"
+seed = 1
+smoke_episodes = 1
+pilot_episodes = 6
+full_episodes = 50
+step_limit = 550
+num_envs = 1
+observation_hz = 25
+physics_dt = 0.004
+architecture = "simate_beta_memory_ae_joint_v1"
+dtype = "float32"
+predicted_chunk_size = 50
+exec_chunk_size = 10
+num_inference_steps = 10
+history_frames = 25
+history_interval = 20
+history_grid_size = 4
+history_compressor_hidden_dim = 512
+max_token_len = 200
+
+[inventory_sha256]
+assets = "83f69217a59cb2a98ed0c9faca62759f9508619cfb4c03ef618b4d6b62263201"
+checkpoint = "ef687918daea25c5a86c3604d5517b6d054467f90cb73146a5f0df6ead925152"
+
+[runtime]
+isaacsim = "5.1.0.0"
+simulator_python = "3.11"
+simulator_torch = "2.7.0+cu128"
+dependency_patch = "isaac51-deps"
+episode_count_patch = "episode-count"

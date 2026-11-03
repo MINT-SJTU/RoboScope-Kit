@@ -1,0 +1,11 @@
+--- a/task/RoboDojo/config/_task.yml
++++ b/task/RoboDojo/config/_task.yml
+@@ -59,7 +59,7 @@
+     eval_nums: 25
+   
+   stack_blocks:
+-    eval_nums: 25
++    eval_nums: 50
+   
+   stack_blocks_random:
+     eval_nums: 25
