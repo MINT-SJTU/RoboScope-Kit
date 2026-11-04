@@ -36,6 +36,14 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 - ♻️ **Recoverable runs:** Work Items are claimed from a durable queue. A failed Worker's item returns to the
   queue, and a finished item is scored exactly once.
 
+## Architecture
+
+![Overview of the RoboScope Kit evaluation architecture](docs/architecture.png)
+
+*The benchmark adapters shown are examples. The runtime optimizations shown are for RoboTwin; the example
+metrics are for 500 LIBERO-Long episodes with 12 Workers and 3 replicas on one RTX 4090. See the
+[interactive overview](https://mint-sjtu.github.io/RoboScope-Kit/#design).*
+
 ## Results
 
 From the [technical report](https://arxiv.org/abs/2611.03850), each run covering 500 episodes with a StarVLA
@@ -49,14 +57,6 @@ LIBERO-Long, on one 48 GiB RTX 4090, with success rates equivalent to the offici
 
 RoboTwin Easy, on four GPUs with chunk-boundary observation, takes 14.4 minutes instead of 359.7 with one
 simulator and one model on one GPU (**25.04×**), with identical success outcomes and terminal steps.
-
-## Architecture
-
-![Overview of the RoboScope Kit evaluation architecture](docs/architecture.png)
-
-*The benchmark adapters shown are examples. The runtime optimizations shown are for RoboTwin; the example
-metrics are for 500 LIBERO-Long episodes with 12 Workers and 3 replicas on one RTX 4090. See the
-[interactive overview](https://mint-sjtu.github.io/RoboScope-Kit/#design).*
 
 ## Supported benchmarks
 
@@ -201,7 +201,7 @@ the tests but never publish. To retry a failed upload, run the `SDK compatibilit
 
 ## Citation
 
-If you use RoboScope Kit in your research, please cite:
+If you find RoboScope Kit helpful in your research, please consider citing our work:
 
 ```bibtex
 @misc{wu2026roboscopekit,
