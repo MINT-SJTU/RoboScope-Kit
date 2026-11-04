@@ -31,6 +31,7 @@ class RoboDojoRuntimeConfig:
     control_state_reuse: bool = False
     physics_threads: int | None = None
     observation_queue_size: int = 0
+    stage_timing: bool = False
 
     def __post_init__(self) -> None:
         if self.suite not in SUITES:
@@ -42,7 +43,7 @@ class RoboDojoRuntimeConfig:
         if self.episode_shard_size < 1 or self.cpu_threads < 1 or self.seed < 0:
             raise ValueError("RoboDojo shard size and CPU threads must be positive; seed must be nonnegative")
         if any(type(value) is not bool for value in (
-            self.async_video, self.unpaced_render, self.control_state_reuse,
+            self.async_video, self.unpaced_render, self.control_state_reuse, self.stage_timing,
         )):
             raise ValueError("RoboDojo runtime switches must be booleans")
         if self.physics_threads is not None and (
@@ -100,6 +101,7 @@ class RoboDojoBenchmarkAdapter:
                 *(("--async-video",) if self.config.async_video else ()),
                 *(("--unpaced-render",) if self.config.unpaced_render else ()),
                 *(("--control-state-reuse",) if self.config.control_state_reuse else ()),
+                *(("--stage-timing",) if self.config.stage_timing else ()),
                 *(("--physics-threads", str(self.config.physics_threads))
                   if self.config.physics_threads is not None else ()),
             ),
@@ -146,6 +148,7 @@ class RoboDojoBenchmarkAdapter:
                 "control_state_reuse": self.config.control_state_reuse,
                 "physics_threads": self.config.physics_threads,
                 "observation_queue_size": self.config.observation_queue_size,
+                "stage_timing": self.config.stage_timing,
             },
             "bound_hint": "gpu_infer",
         }

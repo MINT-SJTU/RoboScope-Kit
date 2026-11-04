@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0b16 - 2026-11-05
+
+- Add the opt-in RoboDojo `stage_timing` manifest switch. It applies a simulator-side timing patch,
+  adapted from @QLL-CCDD's RoboDojo measurement work, that writes per-phase and per-stage host timings for
+  each Work Item under `<output-dir>/stage-timing/`. Evaluation inputs, outputs, and call order are
+  unchanged; it is off by default.
+
 ## 0.8.0b15 - 2026-11-04
 
 - RoboDojo builds no longer refuse accounts with `$HOME/miniconda3`. `build-runtime.sh` removes the upstream

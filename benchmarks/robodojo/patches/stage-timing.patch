@@ -1,0 +1,268 @@
+--- a/src/eval_client/main.py
++++ b/src/eval_client/main.py
+@@ -4,9 +4,12 @@
+ import json
+ import os
+ import sys
++import time
+ 
+ from isaaclab.app import AppLauncher
+ 
++import roboscope_stage_timing as stage_timing
++
+ MAX_INPROC_RESTARTS = 3
+ 
+ parser = argparse.ArgumentParser()
+@@ -126,8 +129,10 @@
+ add_zero_delay_kit_args(args_cli)
+ 
+ # launch omniverse app
++_app_start = time.perf_counter()
+ app_launcher = AppLauncher(args_cli)
+ simulation_app = app_launcher.app
++stage_timing.phase("app_launch", _app_start)
+ 
+ from omegaconf import OmegaConf
+ 
+@@ -343,7 +348,9 @@
+     env_cfg.sim.seed = [0 for _ in range(num_envs)]
+     run_id = os.environ["ROBODOJO_RUN_ID"]
+     resume_state = _load_resume_manifest(eval_cfg, run_id)
++    _scene_start = time.perf_counter()
+     env = create_eval_env(env_cfg, simulation_app, resume_state=resume_state)
++    stage_timing.phase("scene_initialization", _scene_start)
+     eval_time = env.success_nums + env.fail_nums
+     if eval_time >= eval_num:
+         # Already complete on resume - nothing left to do.
+@@ -356,8 +363,14 @@
+             get_monitor().reset()
+         bad_envs = None
+         try:
++            _reset_start = time.perf_counter()
+             env.reset(seed=env.env_seeds)
+-            env.run_eval()
++            stage_timing.phase("reset", _reset_start)
++            stage_timing.install(env)
++            _execution_start = time.perf_counter()
++            with stage_timing.execution():
++                env.run_eval()
++            stage_timing.phase("execution", _execution_start)
+             env.seed_manager.eval_step()
+ 
+         except PhysXFatalError as e:
+--- a/src/eval_client/eval_env.py
++++ b/src/eval_client/eval_env.py
+@@ -4,7 +4,9 @@
+ import inspect
+ import json
+ import os
++import time
+ 
++import roboscope_stage_timing as stage_timing
+ from XPolicyLab.policy.RoboScopeKit.client import WsModelClient
+ import numpy as np
+ import transforms3d as t3d
+@@ -247,12 +249,15 @@
+         def setup_scene(self):
+             self.scene_manager.apply_saved_poses(env_idx_list=list(range(self.num_envs)))
+             self._align_layout_success()
++            _stability_start = time.perf_counter()
+             success, unstable_envs = self.scene_manager.layout_manager.check_layout_stability(self)
++            stage_timing.phase("layout_check", _stability_start)
+             unstable_envs = [idx for idx in set(unstable_envs) if idx < self.num_envs]
+             self.unstable_nums += len(unstable_envs)
+             self.episode_nums -= len(unstable_envs)
+             if not success or self.episode_nums <= 0:
+                 raise UnStableError("All scene Unstable Error!")
++            _settling_start = time.perf_counter()
+             for _ in range(10):
+                 self.render()
+             for idx in range(200):
+@@ -260,6 +265,7 @@
+                 if idx % 5 == 0:
+                     self.obs_manager.render_for_capture()
+                     self.obs_manager.get_obs()
++            stage_timing.phase("settling", _settling_start)
+             if self.physx_monitor_enabled:
+                 self._check_physx_broken_envs()
+ 
+--- /dev/null
++++ b/roboscope_stage_timing.py
+@@ -0,0 +1,177 @@
++"""Opt-in host-side stage timings for RoboDojo evaluation.
++
++Enabled only when ROBODOJO_STAGE_TIMING_DIR is set. Wraps existing simulator and
++Policy-client methods with perf_counter timers; it adds no CUDA synchronization
++and changes no inputs, outputs, or call order. Writes under that directory:
++
++- ``<pid>-phases.jsonl``: one line per lifecycle phase (app launch, scene
++  initialization, reset, layout check, settling, execution).
++- ``<pid>-episode-<n>.json``: per execution batch, one row per nested call path
++  with calls, inclusive and self seconds, and the maximum single call.
++"""
++
++import functools
++import json
++import os
++import threading
++import time
++from contextlib import contextmanager
++from pathlib import Path
++
++_DIRECTORY = os.environ.get("ROBODOJO_STAGE_TIMING_DIR")
++_ACTIVE = False
++_STATS = {}
++_LOCK = threading.Lock()
++_LOCAL = threading.local()
++_METADATA = {}
++_SERIAL = 0
++
++
++def enabled():
++    return bool(_DIRECTORY)
++
++
++def _output(name):
++    path = Path(_DIRECTORY)
++    path.mkdir(parents=True, exist_ok=True)
++    return path / name
++
++
++def phase(name, started):
++    """Record a lifecycle phase that began at ``started`` (perf_counter)."""
++    if not _DIRECTORY:
++        return
++    record = {"phase": name, "elapsed_s": time.perf_counter() - started, "time_unix_s": time.time()}
++    with _output(f"{os.getpid()}-phases.jsonl").open("a", encoding="utf-8") as stream:
++        stream.write(json.dumps(record) + "\n")
++
++
++def _record(path, elapsed, children, failed):
++    key = (threading.get_ident(), path)
++    with _LOCK:
++        row = _STATS.setdefault(key, {
++            "thread": key[0], "path": path, "calls": 0, "inclusive_s": 0.0, "self_s": 0.0,
++            "max_s": 0.0, "errors": 0,
++        })
++        row["calls"] += 1
++        row["inclusive_s"] += elapsed
++        row["self_s"] += max(0.0, elapsed - children)
++        row["max_s"] = max(row["max_s"], elapsed)
++        row["errors"] += int(failed)
++
++
++def _timed(function, label):
++    if getattr(function, "_roboscope_stage_timing", False):
++        return function
++
++    @functools.wraps(function)
++    def timed(*args, **kwargs):
++        if not _ACTIVE:
++            return function(*args, **kwargs)
++        stack = getattr(_LOCAL, "stack", None)
++        if stack is None:
++            stack = _LOCAL.stack = []
++        path = "/".join([frame[0] for frame in stack] + [label])
++        frame = [label, 0.0]
++        stack.append(frame)
++        started = time.perf_counter()
++        failed = True
++        try:
++            result = function(*args, **kwargs)
++            failed = False
++            return result
++        finally:
++            elapsed = time.perf_counter() - started
++            stack.pop()
++            if stack:
++                stack[-1][1] += elapsed
++            _record(path, elapsed, frame[1], failed)
++
++    timed._roboscope_stage_timing = True
++    return timed
++
++
++def _wrap(owner, name, label):
++    if hasattr(owner, name):
++        setattr(owner, name, _timed(getattr(owner, name), label))
++
++
++def install(env):
++    """Wrap the stages of one evaluation environment; idempotent."""
++    if not _DIRECTORY:
++        return
++    from env.robot_manager.control_manager import MetaControl
++    from utils.save_file import VideoStreamWriter
++
++    _METADATA.update(
++        physics_dt=env.sim.physics_dt,
++        decimation=env.sim.cfg.decimation,
++        render_interval=env.sim.cfg.sim.render_interval,
++        logical_cpus=os.cpu_count(),
++        affinity_cpus=len(os.sched_getaffinity(0)),
++    )
++    for method, label in (
++        ("get_obs", "observation"),
++        ("get_obs_batch", "observation_batch"),
++        ("take_action", "action"),
++        ("take_action_batch", "action_batch"),
++        ("process_control_info", "control_interpolation"),
++        ("step", "control_step"),
++        ("is_episode_end", "termination"),
++        ("_stream_vision", "video_stream"),
++        ("save_video", "video_finalize"),
++        ("sim_step", "physics_substeps"),
++    ):
++        _wrap(env, method, label)
++    for method in ("act", "observe"):
++        _wrap(env.model_client, method, "policy." + method)
++    for method in ("get_joint", "get_end_effector_real_val", "get_real_endpose", "get_link_pose", "control_robot"):
++        _wrap(env.robot_manager, method, "robot." + method)
++    _wrap(MetaControl, "get_action", "control_expand")
++    _wrap(env.obs_manager, "render_for_capture", "camera_fence")
++    _wrap(env.obs_manager, "get_obs", "observation_build")
++    _wrap(env.capture_manager, "step", "camera_readback")
++    for camera in env.capture_manager.tiled_cameras:
++        _wrap(camera, "get_data", "camera_annotator")
++    _wrap(env.sim.sim, "step", "physics_step")
++    _wrap(env.sim.sim, "render", "render")
++    _wrap(env.sim.scene, "write_data_to_sim", "scene_write")
++    _wrap(env.sim.scene, "update", "scene_update")
++    _wrap(env.reward_manager, "step", "reward")
++    _wrap(VideoStreamWriter, "append", "video_append")
++    _wrap(VideoStreamWriter, "close", "video_close")
++
++
++@contextmanager
++def execution():
++    """Collect stage timings for one ``run_eval()`` batch."""
++    global _ACTIVE, _SERIAL
++    if not _DIRECTORY:
++        yield
++        return
++    with _LOCK:
++        _STATS.clear()
++    _SERIAL += 1
++    started_unix = time.time()
++    started = time.perf_counter()
++    _ACTIVE = True
++    try:
++        yield
++    finally:
++        _ACTIVE = False
++        elapsed = time.perf_counter() - started
++        with _LOCK:
++            rows = sorted((dict(row) for row in _STATS.values()), key=lambda row: row["path"])
++        record = {
++            "pid": os.getpid(),
++            "batch": _SERIAL,
++            "started_unix_s": started_unix,
++            "elapsed_s": elapsed,
++            "clock": "host perf_counter; no added CUDA synchronization; inclusive paths nest",
++            "metadata": _METADATA,
++            "rows": rows,
++        }
++        path = _output(f"{os.getpid()}-episode-{_SERIAL:03d}.json")
++        temporary = path.with_suffix(".tmp")
++        temporary.write_text(json.dumps(record, indent=2), encoding="utf-8")
++        temporary.replace(path)

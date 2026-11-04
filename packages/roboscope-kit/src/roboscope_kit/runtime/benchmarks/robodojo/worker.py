@@ -33,6 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--async-video", action="store_true")
     parser.add_argument("--unpaced-render", action="store_true")
     parser.add_argument("--control-state-reuse", action="store_true")
+    parser.add_argument("--stage-timing", action="store_true")
     parser.add_argument("--physics-threads", type=int, choices=(1, 4, 8))
     parser.add_argument("--step-observation-updates", action="store_true")
     parser.add_argument("--observation-queue-size", type=int, choices=range(0, 11), default=0)
@@ -80,7 +81,7 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     }
     for name in (
         "ROBODOJO_ASYNC_VIDEO", "ROBODOJO_UNPACED_RENDER", "ROBODOJO_CONTROL_STATE_REUSE",
-        "ROBODOJO_PHYSICS_THREADS",
+        "ROBODOJO_PHYSICS_THREADS", "ROBODOJO_STAGE_TIMING_DIR",
     ):
         env.pop(name, None)
     if args.async_video:
@@ -91,6 +92,9 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         env["ROBODOJO_CONTROL_STATE_REUSE"] = "1"
     if args.physics_threads is not None:
         env["ROBODOJO_PHYSICS_THREADS"] = str(args.physics_threads)
+    timing_dir = args.output_dir / "stage-timing" / f"worker-{args.worker_id:03d}-{item.item_id}"
+    if args.stage_timing:
+        env["ROBODOJO_STAGE_TIMING_DIR"] = str(timing_dir.resolve())
     command = [
         str(args.benchmark_python), "-u", str(root / "src/eval_client/main.py"),
         "--task_name", task, "--env_cfg_type", "arx_x5", "--num_envs", "1",
@@ -149,7 +153,10 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         group_id=item.group_id,
         worker_id=args.worker_id,
         records=tuple(records),
-        metadata={"task": task, "result_path": str(result_path), "log_path": str(log_path)},
+        metadata={
+            "task": task, "result_path": str(result_path), "log_path": str(log_path),
+            **({"stage_timing_dir": str(timing_dir)} if args.stage_timing else {}),
+        },
     )
 
 

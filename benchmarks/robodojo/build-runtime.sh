@@ -129,7 +129,7 @@ apply_once() {
 }
 apply_once "${SOURCE_ROOT}" "${BUILDER_DIR}/patches/layout-shards.patch"
 apply_once "${SOURCE_ROOT}" "${BUILDER_DIR}/patches/policy-bridge.patch"
-for name in async-video unpaced-render physics-threads control-state; do
+for name in async-video unpaced-render physics-threads control-state stage-timing; do
   apply_once "${SOURCE_ROOT}" "${BUILDER_DIR}/patches/${name}.patch"
 done
 apply_once "${SOURCE_ROOT}/third_party/IsaacLab" "${BUILDER_DIR}/patches/isaaclab-deps.patch" 3

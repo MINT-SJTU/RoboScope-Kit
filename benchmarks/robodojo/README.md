@@ -35,6 +35,15 @@ declares step updates. Pending updates finish before the next `act()` or episode
 originate in @QLL-CCDD's RoboDojo work and should be evaluated for correctness and throughput for the
 intended workload.
 
+`stage_timing` (off by default) records where simulator time goes without changing evaluation. Each Work
+Item writes `<output-dir>/stage-timing/worker-<id>-<item>/`: `<pid>-phases.jsonl` holds one line per
+lifecycle phase (app launch, scene initialization, reset, layout check, settling, execution), and
+`<pid>-episode-<n>.json` holds, for each execution batch, the calls, inclusive and self seconds, and
+longest call of every nested stage (observation, action, control, physics substeps and steps, render,
+camera readback, Policy `act` and `observe` round trips, video). Timers use the host clock and add no
+CUDA synchronization, so GPU work is attributed to the stage that waits for it. The timing patch is
+adapted from @QLL-CCDD's RoboDojo measurement work.
+
 The simulator source, IsaacLab, CuRobo, XPolicyLab, package constraints, and the asset dataset are pinned
 by the build script. Its submodule selections keep the upstream installer's `--remote` updates at those
 tested revisions.
