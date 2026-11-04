@@ -52,10 +52,11 @@ simulator and one model on one GPU (**25.04×**), with identical success outcome
 
 ## Architecture
 
-![Animated overview of the RoboScope Kit evaluation architecture](docs/architecture.gif)
+![Overview of the RoboScope Kit evaluation architecture](docs/architecture.png)
 
-*The runtime optimizations shown are for RoboTwin. The example metrics are for 500 LIBERO-Long episodes
-with 12 Workers and 3 replicas on one RTX 4090; see the [interactive overview](https://mint-sjtu.github.io/RoboScope-Kit/#design).*
+*The benchmark adapters shown are examples. The runtime optimizations shown are for RoboTwin; the example
+metrics are for 500 LIBERO-Long episodes with 12 Workers and 3 replicas on one RTX 4090. See the
+[interactive overview](https://mint-sjtu.github.io/RoboScope-Kit/#design).*
 
 ## Supported benchmarks
 
