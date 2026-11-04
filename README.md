@@ -50,6 +50,13 @@ LIBERO-Long, on one 48 GiB RTX 4090, with success rates equivalent to the offici
 RoboTwin Easy, on four GPUs with chunk-boundary observation, takes 14.4 minutes instead of 359.7 with one
 simulator and one model on one GPU (**25.04×**), with identical success outcomes and terminal steps.
 
+## Architecture
+
+![Animated overview of the RoboScope Kit evaluation architecture](docs/architecture.gif)
+
+*The runtime optimizations shown are for RoboTwin. The example metrics are for 500 LIBERO-Long episodes
+with 12 Workers and 3 replicas on one RTX 4090; see the [interactive overview](https://mint-sjtu.github.io/RoboScope-Kit/#design).*
+
 ## Supported benchmarks
 
 | Benchmark | Suites | Contract |
