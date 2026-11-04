@@ -56,6 +56,9 @@ every 20 steps. The paths below are placeholders.
    /sim/robodojo/miniforge/envs/simate-beta-eval/bin/python -m pip install /path/to/RoboScope-Kit/packages/roboscope-kit
    ```
 
+   The build's Conda uses `conda-forge`. Where that is slow or unreachable, set `CONDA_CHANNELS` to a reachable
+   channel for this command; a `CONDARC` file alone does not replace it.
+
 3. Download the checkpoint with the policy's own script, which checks the SHA-256 of every file:
 
    ```bash
@@ -75,8 +78,12 @@ every 20 steps. The paths below are placeholders.
        --output-dir /runs/simate-arx_x5 --quick-test
    ```
 
-   `--quick-test` runs one episode of the suite's first task. Without it, the run is the full `arx_x5`
-   suite.
+   `--quick-test` runs one episode of the suite's first task, `align_blocks`. It shows that the Policy and
+   simulator work together; the episode itself may fail, because outcomes depend on the task and vary between
+   runs. Without it, the run is the full `arx_x5` suite.
+
+   Loading the Policy shares the manifest's `ready_timeout_s`. If a first load from slow storage ends in
+   `TimeoutError`, raise that value in `benchmark-manifest.json`, or run again once the checkpoint is cached.
 
 Another XPolicyLab policy runs the same way with `--policy <name>` in `roboscope-policy.json`, its own
 environment and checkpoint, and, unless it has `reset_evaluation`, `--concurrency K --replicas K`.
