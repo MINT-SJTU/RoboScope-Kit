@@ -372,6 +372,16 @@ LIBERO-Pro registry and checks it has 10 tasks, a BDDL file per task, and 50 ini
 manifest layout matches section 1 with `benchmark_root` set to `LIBERO-PRO`. `--self-test` additionally
 checks that each suite has its 10 BDDL and 10 initial-state files.
 
+Evaluate one suite per run, for example with the StarVLA demo snapshot:
+
+```bash
+python -m roboscope_kit.runtime.benchmark \
+    --benchmark libero_pro --suite libero_goal_task --checkpoint-source /models/starvla-libero \
+    --benchmark-manifest <install-dir>/benchmark-manifest.json \
+    --policy-config /path/to/RoboScope-Kit/examples/starvla/roboscope-policy.json \
+    --output-dir /runs/libero_pro/libero_goal_task
+```
+
 ### Supported suites
 
 Each suite is one base LIBERO suite under one perturbation dimension. Suite names are upstream's.
@@ -440,6 +450,71 @@ KITCHEN_SCENE8 left/right naming) and
 [LIBERO-PRO#25](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/25) (`libero_object_swap` swaps the target
 with a distractor, not with the basket). The unbalanced goals of
 [LIBERO-PRO#28](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/28) are not in the released files.
+
+### Correctness baseline
+
+Recorded on 2026-11-05 with kit 0.8.0b26, the runtime built by this section's script, the
+[StarVLA demo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/starvla/libero_pro/demo.yaml)
+(`StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1` at `a60fff4`, StarVLA `7e4a473`, bf16, `starvla_policy.py`), and one
+RTX 3080 10 GB.
+
+The native reference is StarVLA `7e4a473`'s own evaluator: `deployment/model_server/server_policy.py
+--use_bf16` serving the same checkpoint, and its LIBERO client `examples/LIBERO/eval_files/eval_libero.py`,
+run in the LIBERO-Pro interpreter with only the two changes LIBERO-Pro prescribes for such a client:
+perturbed suites take their base suite's horizon (upstream README `TASK_MAX_STEPS`) and the instruction is
+`env.language_instruction` (LIBERO-PRO#14). The harness also writes one line per episode and skips videos.
+The Kit ran the same Policy, wrapped only to log every request, at fixed K=2/g=1. Both sides used seed 7
+and initial states 0–4 of every task of `libero_goal_task`, `libero_spatial_lan`, `libero_object_swap`, and
+`libero_10_object` (one suite per dimension, 200 paired episodes):
+
+| Paired check | Equal |
+| --- | ---: |
+| success | 200 / 200 |
+| policy steps executed | 197 / 200 |
+| instruction | 200 / 200 |
+| first agent-view image (SHA-256 of the flipped 256 × 256 frame) | 194 / 200 |
+| first action chunk, bit for bit, where the first image is equal | 194 / 194 |
+| whole executed action sequence, bit for bit | 186 / 200 |
+
+Per suite, the Kit and native success counts are 4/4, 48/48, 0/0, and 23/23 of 50. Observation
+construction, image resizing, instruction, action unnormalization and gripper mapping, chunk execution,
+settle steps, horizons, and success detection therefore match the native evaluator. Two effects keep the
+rest from pairing exactly:
+
+- LIBERO seeds a task environment once and reuses it, and the state after `reset()`, `set_init_state()`, and
+  the settle steps still depends on the random draws of that environment's earlier resets (a fresh
+  environment and one that already ran episode 0 give different states for episode 1; re-seeding restores
+  the fresh one). The native client always runs a task's episodes in order on one environment; with K=2 the
+  Kit can split a task between two Workers, and all 6 first-image mismatches are such episodes. This is
+  upstream LIBERO behavior that plain LIBERO shares; the Kit keeps upstream's seed-once semantics rather
+  than re-seeding per episode, which would change outcomes.
+- In 8 episodes with identical starts, the action sequences diverge later, consistent with GPU inference
+  that is not bitwise reproducible; success and steps still match in all 8, and the 3 step differences are
+  successes 1–3 steps apart.
+
+This is one run per side, so it shows identical mappings, not statistical equivalence of scores.
+
+### Hardware and performance baseline
+
+On a 10 GB GPU, one bf16 replica of the 3B checkpoint holds 8.3–8.8 GB and each EGL Worker about 0.46 GB of
+the same GPU, so K=2/g=1 is the largest pair that fits (peak 9.81 GB, with
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` in the Policy's environment); at K=4 the Policy runs out
+of memory and the run aborts. The runs above and the full evaluation below therefore use fixed
+`--concurrency 2 --replicas 1`. A 24 GB GPU or a separate rendering GPU removes the limit.
+
+| `libero_goal_object`, 500 episodes, K=2/g=1 | Value |
+| --- | ---: |
+| Policy load | 16.8 s |
+| Runtime preparation | 1.6 s |
+| Evaluation | 2,380 s |
+| Episodes/s | 0.210 |
+| Steps/s (steady) | 33.9 (34.0) |
+| Inference wait / episode time | 35% |
+| GPU utilization mean / max | 31% / 75% |
+| Peak GPU memory | 9.81 GB |
+
+A Quick Test (`libero_goal_task`) takes 40.7 s end to end, of which Policy load 18.8 s and the 300-step
+episode 18.3 s. A clean build takes about 21 minutes on a slow shared link, almost all of it downloads.
 
 ## 12. Other benchmarks
 
