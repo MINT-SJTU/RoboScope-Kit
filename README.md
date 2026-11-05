@@ -210,8 +210,12 @@ performance work all help, and questions are contributions too. If you are unsur
 
 - **Report a bug** with the command you ran, the `roboscope-kit` version, the benchmark and suite, what you
   expected, and the relevant logs from `--output-dir`.
-- **Propose larger work first.** For a new benchmark, a new feature, or a design change, open an Issue so we
-  can agree on the approach before you invest the time.
+- **Contribute a new benchmark.** New benchmarks are very welcome! Add its adapter under
+  `packages/roboscope-kit/`, and its `benchmark-manifest.json` and `build-runtime.sh` under
+  `benchmarks/<benchmark>/`, following the existing benchmarks. Keep its official rules and scoring unchanged,
+  and show that results match its official evaluator.
+- **Propose larger design changes first.** For a change to the runtime's design or the public API, open an
+  Issue so we can agree on the approach before you invest the time.
 - **Open a pull request** from a branch of your fork. Keep it to one problem, describe what changed, why, and
   how you checked it, and run the checks in [Development](#development) before you push.
 
