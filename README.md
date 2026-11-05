@@ -237,7 +237,7 @@ performance work all help, and questions are contributions too. If you are unsur
 
 ### Coding agents are welcome
 
-You may use coding agents and AI assistants (Claude Code, Codex, Cursor, Copilot, and others) to write code,
+You may use coding agents and AI assistants (Claude Code, Codex) to write code,
 tests, or documentation; point them to [`AGENTS.md`](AGENTS.md) for the repository rules. You remain the
 author of what you submit: read and understand the whole change, run the checks yourself, be ready to explain
 it in review, and make sure every number and test result in the description comes from a run that actually
