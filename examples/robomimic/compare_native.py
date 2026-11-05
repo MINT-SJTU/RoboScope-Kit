@@ -116,20 +116,17 @@ def main() -> int:
 
     started = time.perf_counter()
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        native = list(
-            pool.map(
-                lambda key: run_native(args.runtime, args.checkpoint_dir, log_dir, key[0], key[1], 1),
-                pairs,
-            )
-        )
-        batch = list(
-            pool.map(
-                lambda task: run_native(
-                    args.runtime, args.checkpoint_dir, log_dir, task, 0, args.batch_rollouts
-                ),
-                tasks if args.batch_rollouts > 0 else [],
-            )
-        )
+        # Submit the long sequential batch runs first so they overlap the per-seed runs.
+        batch_futures = [
+            pool.submit(run_native, args.runtime, args.checkpoint_dir, log_dir, task, 0, args.batch_rollouts)
+            for task in (tasks if args.batch_rollouts > 0 else [])
+        ]
+        native_futures = [
+            pool.submit(run_native, args.runtime, args.checkpoint_dir, log_dir, task, seed, 1)
+            for task, seed in pairs
+        ]
+        native = [future.result() for future in native_futures]
+        batch = [future.result() for future in batch_futures]
     native_elapsed_s = time.perf_counter() - started
 
     with (args.output / "native-episodes.jsonl").open("w", encoding="utf-8") as handle:

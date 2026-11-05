@@ -213,4 +213,116 @@ not formal. Sharded runs sum the per-task rows.
 
 ## 9. Correctness baseline
 
-BASELINE_PLACEHOLDER
+Measured on 2026-11-05 with `roboscope-kit` 0.8.0b26 (this change), on a shared Linux host: 2 x Intel Xeon
+Silver 4214R (48 logical CPUs, other jobs keeping the load average at 10–50), 188 GB RAM, one NVIDIA RTX 3080
+10 GB (driver 560.35.03, CUDA 12.6; about 3.3 GB of it used by other processes). Checkpoints: the five
+model-zoo files of section 2 with their pinned SHA-256. Policy: `examples/robomimic` run with the runtime's
+Python. Workers do not use the GPU.
+
+### Build, self-test, and Quick Test
+
+- `build-runtime.sh` into two fresh directories: both builds verified the versions, commits, and all five
+  initial-state digests, ran `--self-test`, and produced identical `pip-freeze.txt` files. The second build
+  (uv cache warm, so package downloads excluded) took 266 s: 32 s to install CPython, 3 s to install the
+  73 locked packages, about 3 minutes to regenerate the 250 initial states.
+- `--quick-test`: Lift seed 0 succeeded in 59 steps; upstream `run_trained_agent.py --seed 0 --n_rollouts 1`
+  also succeeded in 59 steps. Policy load 4.1 s, runtime preparation 1.8 s, evaluation 16.8 s, 24 s end to
+  end.
+
+### Full evaluation
+
+`--concurrency 16 --replicas 1` (fixed K/g, so no autotune phase), all 250 records present exactly once,
+no worker failures, restarts, or OOM events, and `initial_states_verified: true`:
+
+| Task | Success | Executed steps | Mean steps | Mean episode time (s) | Model-zoo name (training-time rollout) |
+| --- | --- | --- | --- | --- | --- |
+| `lift` | 50/50 (100%) | 2,122 | 42.4 | 1.5 | `succ_100` |
+| `can` | 50/50 (100%) | 5,553 | 111.1 | 4.4 | `succ_100` |
+| `square` | 39/50 (78%) | 10,454 | 209.1 | 8.9 | `succ_84` |
+| `transport` | 27/50 (54%) | 29,014 | 580.3 | 56.0 | `succ_78` |
+| `tool_hang` | 7/50 (14%) | 33,624 | 672.5 | 33.7 | `succ_14` |
+| Total | 173/250 | 80,767 | | | |
+
+Episode time includes the reset: every reset compiles the MuJoCo model three times (the hard reset, and
+`reset_to`'s reset and XML reload), 1.3–2.3 s each on this host, as upstream does.
+
+| Phase | Time |
+| --- | --- |
+| Checkpoint preparation | < 0.01 s |
+| Policy load (five checkpoints, SHA-256 checks) | 4.5 s |
+| Runtime preparation (workers ready) | 2.6 s |
+| Evaluation | 449.2 s |
+| End to end (process wall clock, including writing results) | 458.0 s |
+| Throughput | 0.55 episodes/s, 178 executed steps/s (185 in the steady window) |
+| Resources | 13.1 CPU cores on average (`time -v`), 1.3 GB maximum RSS (`time -v`), Policy replica 341 MiB VRAM, 3.6% mean GPU utilization; workers spend 20% of their item time waiting for the Policy |
+
+A second full pass with `--concurrency 8 --replicas 1` on the second build produced the same success and
+the same executed steps for all 250 episodes, so the outcome does not depend on concurrency, worker
+assignment, or which build ran it. That pass took 718.9 s (0.35 episodes/s, 112 steps/s).
+
+### Native comparison
+
+`examples/robomimic/compare_native.py` ran the pinned, unmodified upstream entry point
+`python -m robomimic.scripts.run_trained_agent --agent <checkpoint> --n_rollouts 1 --seed <seed>` for each
+of the 250 task and seed pairs, with the same checkpoints and the checkpoints' own horizons:
+
+| Task | Kit success | Native success | Kit steps | Native steps | Identical episodes (success and steps) |
+| --- | --- | --- | --- | --- | --- |
+| `lift` | 50/50 | 50/50 | 2,122 | 2,122 | 50/50 |
+| `can` | 50/50 | 50/50 | 5,553 | 5,553 | 50/50 |
+| `square` | 39/50 | 39/50 | 10,454 | 10,454 | 50/50 |
+| `transport` | 27/50 | 27/50 | 29,014 | 29,014 | 50/50 |
+| `tool_hang` | 7/50 | 7/50 | 33,624 | 33,624 | 50/50 |
+
+All 250 episodes match one to one in success and in executed steps. That checks the observation mapping
+(keys, order, `float32` conversion), the action path, recurrent-state handling, success detection, and
+horizon, episode by episode, rather than by total. It is a pairing under one controlled source of
+randomness: the seed determines both the initial state (NumPy) and the GMM samples (torch), and the
+example Policy gives each episode its own seeded torch RNG state, so episodes that share one replica do
+not consume each other's random numbers.
+
+What is not controlled, and why the result is not a claim of statistical equivalence with other setups:
+
+- The upstream default is one RNG stream across many consecutive episodes (`--n_rollouts 50 --seed 0`),
+  where each episode's initial state and samples depend on every earlier episode's length. Those episodes
+  cannot be paired with independently seeded ones. Run once per task, that protocol gave Lift 48/50, Can
+  50/50, Square 33/50, Transport 21/50, Tool Hang 7/50: a different sample of initial states and GMM draws,
+  not a discrepancy. The Square and Transport gaps (6 of 50 each) show how much a 50-episode success rate
+  moves between two samples of the same policy.
+- The identity holds for the same CPU and GPU types and the same torch, cuDNN, and MuJoCo builds. Other
+  hardware can change floating-point results in the LSTM or the physics and break the one-to-one match;
+  per-task rates would then agree only statistically.
+- The model-zoo file names carry the success rate robomimic measured during training, on the
+  `offline_study` stack, at the epoch it selected as best. That value comes from other physics, other
+  initial states, and a best-of-many selection, so it is a reference, not an expected value. Transport (54%
+  here, 42% with the upstream default stream, 78% in the file name) is the clearest difference; Square
+  (78% and 66% against 84%) is smaller. The comparison above shows these gaps come from the robosuite
+  1.4.1 and MuJoCo 2.3.7 stack itself, not from the kit.
+
+### Raw results and reproduction
+
+Each run directory keeps `result.json`, `manifest.json` (expected work items and record count),
+`metrics.json`, `events.jsonl`, the per-episode records under `queue/completed/`, worker and Policy logs,
+and, for the comparison, `comparison.json`, `native-episodes.jsonl`, and one upstream log per episode. The
+commands, with `CUDA_VISIBLE_DEVICES=0`:
+
+```bash
+benchmarks/robomimic/build-runtime.sh /sim/robomimic
+python examples/robomimic/download_model_zoo.py /models/robomimic-zoo
+python -m roboscope_kit.runtime.benchmark --benchmark robomimic --self-test \
+    --benchmark-manifest /sim/robomimic/benchmark-manifest.json --output-dir /runs/robomimic-self-test
+python -m roboscope_kit.runtime.benchmark --benchmark robomimic --suite ph_low_dim --quick-test \
+    --checkpoint-source /models/robomimic-zoo --benchmark-manifest /sim/robomimic/benchmark-manifest.json \
+    --policy-config roboscope-policy.json --output-dir /runs/robomimic-quick
+python -m roboscope_kit.runtime.benchmark --benchmark robomimic --suite ph_low_dim \
+    --concurrency 16 --replicas 1 \
+    --checkpoint-source /models/robomimic-zoo --benchmark-manifest /sim/robomimic/benchmark-manifest.json \
+    --policy-config roboscope-policy.json --output-dir /runs/robomimic-full
+python examples/robomimic/compare_native.py --runtime /sim/robomimic --checkpoint-dir /models/robomimic-zoo \
+    --kit-run /runs/robomimic-full --output /runs/robomimic-native --jobs 6 --batch-rollouts 50
+```
+
+Autotune was not measured: on this shared host its worker search would take most of the CPUs other jobs
+were using, so the baseline uses a fixed K/g. Throughput work (for example, avoiding the extra model
+compilations of `reset_to`, or batching `act` across workers) is left to a separate change, measured
+against this baseline.
