@@ -153,7 +153,10 @@ class PerActPolicy(Policy):
         torch = self._torch
         # RolloutGenerator: torch.tensor([history]) with a one-step history -> (1, 1, ...).
         prepped = {key: torch.tensor(np.asarray([[value]]), device=self.device) for key, value in obs.items()}
-        result = self.agent.act(0, prepped, deterministic=True)
+        # eval.py runs act with autograd enabled; no_grad gives the same values without keeping
+        # activations, which roughly halves the replica's GPU memory.
+        with torch.no_grad():
+            result = self.agent.act(0, prepped, deterministic=True)
         # float64, exactly the array PerAct's eval.py passes to RLBench.
         return ActionChunk(actions=np.asarray(result.action, dtype=np.float64).reshape(1, -1))
 

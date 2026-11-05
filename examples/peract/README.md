@@ -32,8 +32,9 @@ The model-specific parts of PerAct's `eval.py` stay in this Policy, not in the k
 
 The Policy returns PerAct's 9-value action as `float64`, exactly the array `eval.py` passes to RLBench: the
 key-frame gripper position and unit quaternion `(x, y, z, qx, qy, qz, qw)`, gripper open, and ignore
-collisions. PerAct's agent keeps no state between steps, so one replica serves concurrent episodes. It needs
-about 1.2 GB of GPU memory.
+collisions. PerAct's agent keeps no state between steps, so one replica serves concurrent episodes. `act` runs
+under `torch.no_grad()`, which `eval.py` does not use; it changes no value, only the memory autograd would
+keep.
 
 ## Run
 

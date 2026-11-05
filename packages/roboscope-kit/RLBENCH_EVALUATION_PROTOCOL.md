@@ -201,7 +201,8 @@ Test episode `i` of a task is directory `episode<i>` of `<task>/all_variations/e
 1. read `variation_number.pkl` and the `random_seed` stored in `low_dim_obs.pkl` (the NumPy `MT19937`
    state captured just before that episode's scene was sampled during data generation);
 2. `set_variation(variation)`, `np.random.set_state(random_seed)`, and `TaskEnvironment.reset()`, which
-   samples the scene, places it, and lets objects settle;
+   samples the scene, places it, and lets objects settle; then the same three calls once more
+   (see below);
 3. take the first observation, then the instruction `get_task_descriptions()[0]`.
 
 The worker reads the two pickles with an unpickler that only resolves the RLBench `Demo` and
@@ -214,6 +215,20 @@ recomputes each task's digest from its records.
 Each record also carries `initial_scene_max_abs_diff`: the largest difference between the task's
 low-dimensional state (object poses and joint positions) after the reset and the same state in the
 episode's recorded first frame. It shows that the pinned simulator samples the recorded scene (section 9).
+
+**Deviation from `eval.py`: two seeded resets instead of one.** PerAct resets once. A reset that starts
+from the end of a played episode can place objects differently from the recorded scene: RLBench's
+placement rejects samples that collide with objects the previous episode left behind, so the number of
+random draws, and with it the scene, depends on how the previous episode ended (for example, after a
+`close_jar` episode that screwed the lid on, the next test episode's jars land elsewhere). In PerAct's
+`eval.py`, which plays the 25 episodes of a task in order, episode `i`'s scene therefore depends on the
+planner's random outcome in episode `i - 1`. The Kit runs episodes on whichever worker is free, so it
+cannot reproduce that history, and a single reset would make the scene depend on scheduling. The worker
+therefore resets twice with the same variation and random state: the first reset clears the previous
+episode, and the second samples the recorded scene, whatever ran before. Records carry
+`clearing_reset_max_abs_diff`, the first reset's distance from the recorded scene, which is what a
+single reset would have given. Section 9 measures both, and the same distance for every episode of
+PerAct's own `eval.py`.
 
 **Upstream behaviour kept as is: the instruction re-runs the task's `init_episode`.**
 `get_task_descriptions()` calls the task's `init_episode` again after the first observation was taken. In

@@ -7,8 +7,9 @@ The worker reproduces one test episode of the pinned PerAct ``eval.py`` (YARR's
 ``RolloutGenerator`` driving PerAct's ``CustomMultiTaskRLBenchEnv``):
 
 1. ``set_variation`` to the test episode's variation, restore its stored NumPy random state, and
-   ``reset()`` the task, which samples the same scene as ``reset_to_demo``; the instruction is
-   ``get_task_descriptions()[0]``, read after the reset as PerAct does;
+   ``reset()`` the task, twice (see ``reset_to_test_episode``), which samples the recorded scene of
+   the test episode; the instruction is ``get_task_descriptions()[0]``, read after the reset as
+   PerAct does;
 2. up to 25 key-frame actions. Each action is executed by RLBench's ``MoveArmThenGripper``
    (``EndEffectorPoseViaPlanning`` then ``Discrete``). An ``IKError``,
    ``ConfigurationPathError`` or ``InvalidActionError`` ends the episode as a failure, as
@@ -177,14 +178,34 @@ def task_class(name: str):
 
 @dataclass(frozen=True)
 class ResetDiagnostics:
-    # Largest difference between the sampled scene's task state and the recorded first frame.
+    # Largest difference between the task state after the clearing reset and the recorded first frame.
+    clearing_reset_max_abs_diff: float
+    # The same after the episode's reset: how far the observed scene is from the recorded one.
     scene_max_abs_diff: float
     # Largest change of the task state made by get_task_descriptions() after the observation.
     descriptions_moved_max_abs: float
 
 
+def _max_abs_diff(actual: np.ndarray, expected: np.ndarray) -> float:
+    return float(np.max(np.abs(actual - expected))) if actual.shape == expected.shape else -1.0
+
+
+def _seeded_reset(task_env, episode: TestEpisode):
+    task_env.set_variation(episode.variation)
+    np.random.set_state(episode.random_state)
+    _, observation = task_env.reset()
+    return observation, np.asarray(task_env._task.get_low_dim_state(), dtype=np.float64)
+
+
 def reset_to_test_episode(task_env, episode: TestEpisode):
     """PerAct ``CustomMultiTaskRLBenchEnv.reset_to_demo`` without loading the recorded images.
+
+    PerAct restores the episode's variation and random state and resets once. A reset that starts
+    from the end of a played episode can place the objects differently (RLBench's placement
+    rejects samples against objects the previous episode left behind), so the scene would depend on
+    which episode a worker ran before. The worker therefore resets twice with the same variation
+    and random state: the first reset clears the previous episode, and the second samples the
+    recorded scene of the test episode, whatever ran before it.
 
     Like PerAct, the instruction comes from ``get_task_descriptions()``, called after the reset
     has produced the first observation. That call runs the task's ``init_episode`` once more, and
@@ -192,18 +213,15 @@ def reset_to_test_episode(task_env, episode: TestEpisode):
     observation. The protocol keeps this upstream behaviour and records how far it moved them.
     """
 
-    task_env.set_variation(episode.variation)
-    np.random.set_state(episode.random_state)
-    _, observation = task_env.reset()
-    sampled = np.asarray(task_env._task.get_low_dim_state(), dtype=np.float64)
+    recorded = np.asarray(episode.recorded_task_state, dtype=np.float64)
+    _, cleared = _seeded_reset(task_env, episode)
+    observation, sampled = _seeded_reset(task_env, episode)
     instruction = task_env.get_task_descriptions()[0]
     described = np.asarray(task_env._task.get_low_dim_state(), dtype=np.float64)
-    recorded = np.asarray(episode.recorded_task_state, dtype=np.float64)
     diagnostics = ResetDiagnostics(
-        scene_max_abs_diff=float(np.max(np.abs(sampled - recorded)))
-        if sampled.shape == recorded.shape
-        else -1.0,
-        descriptions_moved_max_abs=float(np.max(np.abs(described - sampled))) if described.size else 0.0,
+        clearing_reset_max_abs_diff=_max_abs_diff(cleared, recorded),
+        scene_max_abs_diff=_max_abs_diff(sampled, recorded),
+        descriptions_moved_max_abs=_max_abs_diff(described, sampled) if described.size else 0.0,
     )
     return observation, instruction, diagnostics
 
@@ -329,6 +347,7 @@ def run_episode(
             "termination": termination,
             "error": error,
             "simulation_steps": counter.steps,
+            "clearing_reset_max_abs_diff": diagnostics.clearing_reset_max_abs_diff,
             "initial_scene_max_abs_diff": diagnostics.scene_max_abs_diff,
             "descriptions_moved_objects_max_abs": diagnostics.descriptions_moved_max_abs,
             "actions": actions,

@@ -12,8 +12,9 @@ For every requested task it recomputes the test-episode digest and compares it w
 frozen one, then launches CoppeliaSim on a private Xvfb display, loads every requested task and
 checks its variation count against the frozen one, resets the first requested task to its test
 episode 0 with the worker's own reset path, and checks that every camera
-rendered a non-empty image and a finite point cloud. Prints a JSON report; exits non-zero on
-any mismatch.
+rendered a non-empty image and a finite point cloud. Prints a JSON report (CoppeliaSim also
+writes its own messages to stdout; ``--report`` writes the report alone to a file) and exits
+non-zero on any mismatch.
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ def main() -> int:
     parser.add_argument("--test-set", type=Path, required=True)
     parser.add_argument("--xvfb", type=Path, required=True)
     parser.add_argument("--task", action="append", choices=TASK_NAMES)
+    parser.add_argument("--report", type=Path, help="also write the JSON report here")
     args = parser.parse_args()
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     tasks = args.task or list(TASK_NAMES)
@@ -93,7 +95,10 @@ def main() -> int:
         }
     finally:
         environment.shutdown()
-    print(json.dumps(report, indent=2, sort_keys=True))
+    text = json.dumps(report, indent=2, sort_keys=True)
+    print(text)
+    if args.report is not None:
+        args.report.write_text(text + "\n", encoding="utf-8")
     return 0
 
 

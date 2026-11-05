@@ -54,7 +54,9 @@ class RLBenchBenchmarkFactory:
         # Checks the quick-test task's test episodes against the frozen digest, then launches
         # CoppeliaSim headless and renders that task's first test episode; the build checks
         # every task's episodes.
-        completed = subprocess.run(
+        output_dir.mkdir(parents=True, exist_ok=True)
+        report = output_dir / "rlbench-check.json"
+        subprocess.run(
             (
                 str(paths["python"]),
                 "-m",
@@ -65,6 +67,8 @@ class RLBenchBenchmarkFactory:
                 str(paths["xvfb"]),
                 "--task",
                 QUICK_TEST_TASK,
+                "--report",
+                str(report),
             ),
             check=True,
             env={
@@ -77,16 +81,14 @@ class RLBenchBenchmarkFactory:
                 "LP_NUM_THREADS": "2",
                 "PYTHONDONTWRITEBYTECODE": "1",
             },
-            stdout=subprocess.PIPE,
-            text=True,
+            stdout=subprocess.DEVNULL,
         )
-        output_dir.mkdir(parents=True, exist_ok=True)
         return {
             "benchmark": "rlbench",
             "python": str(paths["python"]),
             "suites": list(SUITES),
             "tasks": list(TASK_NAMES),
-            "check": json.loads(completed.stdout),
+            "check": json.loads(report.read_text(encoding="utf-8")),
         }
 
     @staticmethod

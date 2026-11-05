@@ -27,6 +27,8 @@ import json
 from pathlib import Path
 
 ACTION_TOLERANCE = 1e-6
+# Above this, an episode did not start from its recorded test scene (settling noise is below 1e-2).
+SCENE_TOLERANCE = 1e-2
 
 
 def kit_records(run_dir: Path) -> dict[tuple[str, int], dict]:
@@ -91,6 +93,7 @@ def main() -> int:
             "first_action_max_abs_diff": max_difference(km["actions"][0], n["actions"][0]),
             "identical_action_prefix": common_prefix(km["actions"], n["actions"]),
             "kit_initial_scene_max_abs_diff": km["initial_scene_max_abs_diff"],
+            "kit_clearing_reset_max_abs_diff": km["clearing_reset_max_abs_diff"],
             "native_initial_scene_max_abs_diff": n["initial_scene_max_abs_diff"],
             "kit": {"success": k["success"], "steps": k["steps"], "termination": km["termination"]},
             "native": {"success": n["success"], "steps": n["steps"], "termination": n["termination"]},
@@ -110,6 +113,7 @@ def main() -> int:
                 "native_simulation_steps": 0,
                 "kit_initial_scene_max_abs_diff": 0.0,
                 "native_initial_scene_max_abs_diff": 0.0,
+                "native_scene_differs": 0,
             },
         )
         summary["episodes"] += 1
@@ -121,6 +125,7 @@ def main() -> int:
         summary["native_actions"] += n["steps"]
         summary["kit_simulation_steps"] += int(km["simulation_steps"])
         summary["native_simulation_steps"] += int(n["simulation_steps"])
+        summary["native_scene_differs"] += int(row["native_initial_scene_max_abs_diff"] > SCENE_TOLERANCE)
         for side in ("kit", "native"):
             name = f"{side}_initial_scene_max_abs_diff"
             summary[name] = max(summary[name], row[name])
@@ -129,6 +134,7 @@ def main() -> int:
         "kit_run": str(args.kit_run),
         "native_run": str(args.native),
         "action_tolerance": ACTION_TOLERANCE,
+        "scene_tolerance": SCENE_TOLERANCE,
         "variations_equal": all(row["variation_equal"] for row in episodes),
         "instructions_equal": all(row["instruction_equal"] for row in episodes),
         "tasks": tasks,
