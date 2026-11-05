@@ -11,6 +11,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from roboscope_kit import profiling
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -74,6 +75,7 @@ class PolicyClient:
         return PolicyCapabilities.from_dict(result["capabilities"])
 
     def reset(self, context: EpisodeContext) -> dict[str, Any]:
+        profiling.episode_start()
         return self._request("reset", {"context": context.to_dict()})
 
     def act(self, observation: Observation) -> ActionChunk:
@@ -93,7 +95,9 @@ class PolicyClient:
     def end_episode(self, episode_id: str) -> dict[str, Any]:
         if not episode_id:
             raise ValueError("episode_id cannot be empty")
-        return self._request("end_episode", {"episode_id": episode_id})
+        result = self._request("end_episode", {"episode_id": episode_id})
+        profiling.episode_end()
+        return result
 
     def unload(self) -> dict[str, Any]:
         return self._request("unload", {})
@@ -111,6 +115,10 @@ class PolicyClient:
         self.close()
 
     def _request(self, operation: str, payload: dict[str, Any]) -> Any:
+        with profiling.request(operation):
+            return self._exchange(operation, payload)
+
+    def _exchange(self, operation: str, payload: dict[str, Any]) -> Any:
         if self._connection is None:
             self.connect()
         if self._connection is None:
