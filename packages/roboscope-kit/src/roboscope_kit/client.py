@@ -43,6 +43,9 @@ class PolicyClient:
         self.socket_path = str(socket_path)
         self.timeout_s = timeout_s
         self._connection: socket.socket | None = None
+        if profiling.ENABLED:
+            # Only a --profile Worker pays for the NVTX ranges; otherwise requests run unwrapped.
+            self._request = self._profiled_request  # type: ignore[method-assign]
 
     def connect(self) -> None:
         if self._connection is not None:
@@ -75,7 +78,8 @@ class PolicyClient:
         return PolicyCapabilities.from_dict(result["capabilities"])
 
     def reset(self, context: EpisodeContext) -> dict[str, Any]:
-        profiling.episode_start()
+        if profiling.ENABLED:
+            profiling.episode_start()
         return self._request("reset", {"context": context.to_dict()})
 
     def act(self, observation: Observation) -> ActionChunk:
@@ -96,7 +100,8 @@ class PolicyClient:
         if not episode_id:
             raise ValueError("episode_id cannot be empty")
         result = self._request("end_episode", {"episode_id": episode_id})
-        profiling.episode_end()
+        if profiling.ENABLED:
+            profiling.episode_end()
         return result
 
     def unload(self) -> dict[str, Any]:
@@ -114,11 +119,11 @@ class PolicyClient:
     def __exit__(self, *_: object) -> None:
         self.close()
 
-    def _request(self, operation: str, payload: dict[str, Any]) -> Any:
+    def _profiled_request(self, operation: str, payload: dict[str, Any]) -> Any:
         with profiling.request(operation):
-            return self._exchange(operation, payload)
+            return PolicyClient._request(self, operation, payload)
 
-    def _exchange(self, operation: str, payload: dict[str, Any]) -> Any:
+    def _request(self, operation: str, payload: dict[str, Any]) -> Any:
         if self._connection is None:
             self.connect()
         if self._connection is None:

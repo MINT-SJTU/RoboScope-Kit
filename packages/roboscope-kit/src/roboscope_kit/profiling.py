@@ -139,6 +139,8 @@ def _load() -> _Nvtx | None:
 
 
 _nvtx = _load()
+# True only in a --profile Worker under nsys; callers on the hot path check it first.
+ENABLED = _nvtx is not None
 _episode: int | None = None
 
 

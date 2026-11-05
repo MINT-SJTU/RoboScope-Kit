@@ -6,7 +6,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 - `PolicyClient` marks each episode and each Policy request with NVTX ranges when the process runs under
   Nsight Systems with `ROBOSCOPE_PROFILE` set. The ranges go through Nsight Systems' own injection library,
-  so no package is added to any environment; otherwise nothing is loaded.
+  so no package is added to any environment; without profiling, requests run unwrapped.
 
 ## 0.8.0b23 - 2026-11-05
 
