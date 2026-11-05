@@ -23,7 +23,6 @@ import os
 import time
 from pathlib import Path
 
-import numpy as np
 from helpers import custom_rlbench_env
 from helpers.clip.core import clip as peract_clip
 from rlbench.task_environment import TaskEnvironment
@@ -31,6 +30,7 @@ from yarr.runners.independent_env_runner import IndependentEnvRunner
 from yarr.utils.process_str import change_case
 
 from roboscope_kit.runtime.benchmarks.rlbench.test_set import load_test_episode
+from roboscope_kit.runtime.benchmarks.rlbench.worker import max_displacement
 
 EPISODE_LENGTH = 25
 
@@ -44,15 +44,12 @@ class EpisodeLog:
         self.sampled_state = None
         self.recorded_state = None
 
-    def start(self, described_state, **episode) -> None:
-        sampled = np.asarray(self.sampled_state, dtype=np.float64)
-        recorded = np.asarray(self.recorded_state, dtype=np.float64)
-        described = np.asarray(described_state, dtype=np.float64)
-        episode["initial_scene_max_abs_diff"] = (
-            float(np.max(np.abs(sampled - recorded))) if sampled.shape == recorded.shape else -1.0
+    def start(self, rlbench_task, described_state, **episode) -> None:
+        episode["initial_scene_position_error_m"] = max_displacement(
+            rlbench_task, self.sampled_state, self.recorded_state
         )
-        episode["descriptions_moved_objects_max_abs"] = (
-            float(np.max(np.abs(described - sampled))) if described.size else 0.0
+        episode["descriptions_moved_objects_m"] = max_displacement(
+            rlbench_task, described_state, self.sampled_state
         )
         self.current = {**episode, "actions": [], "started": time.time()}
         self.simulation_steps = 0
@@ -76,8 +73,8 @@ class EpisodeLog:
             "episode": current["episode"],
             "variation": current["variation"],
             "instruction": current["instruction"],
-            "initial_scene_max_abs_diff": current["initial_scene_max_abs_diff"],
-            "descriptions_moved_objects_max_abs": current["descriptions_moved_objects_max_abs"],
+            "initial_scene_position_error_m": current["initial_scene_position_error_m"],
+            "descriptions_moved_objects_m": current["descriptions_moved_objects_m"],
             "success": success,
             "steps": executed,
             "termination": termination,
@@ -114,6 +111,7 @@ def _install(log: EpisodeLog) -> None:
                 Path(self._task._dataset_root), task, int(i)
             ).recorded_task_state
             log.start(
+                self._task._task,
                 self._task._task.get_low_dim_state(),
                 task=task,
                 episode=int(i),

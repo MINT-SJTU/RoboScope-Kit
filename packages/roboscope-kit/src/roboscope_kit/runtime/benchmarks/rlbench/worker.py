@@ -178,16 +178,42 @@ def task_class(name: str):
 
 @dataclass(frozen=True)
 class ResetDiagnostics:
-    # Largest difference between the task state after the clearing reset and the recorded first frame.
-    clearing_reset_max_abs_diff: float
+    # Largest object displacement (m) after the clearing reset, from the recorded first frame.
+    clearing_reset_position_error_m: float
     # The same after the episode's reset: how far the observed scene is from the recorded one.
-    scene_max_abs_diff: float
-    # Largest change of the task state made by get_task_descriptions() after the observation.
-    descriptions_moved_max_abs: float
+    initial_scene_position_error_m: float
+    # Largest object displacement (m) made by get_task_descriptions() after the observation.
+    descriptions_moved_objects_m: float
 
 
-def _max_abs_diff(actual: np.ndarray, expected: np.ndarray) -> float:
-    return float(np.max(np.abs(actual - expected))) if actual.shape == expected.shape else -1.0
+def object_positions(task, state: np.ndarray) -> np.ndarray | None:
+    """The positions of the task's objects in an RLBench task low-dimensional state vector.
+
+    ``Task.get_low_dim_state`` concatenates, per object, its pose (x, y, z, qx, qy, qz, qw),
+    then a joint's position or a force sensor's six readings. Positions compare scenes without
+    quaternion sign ambiguity or contact-force noise.
+    """
+
+    from pyrep.const import ObjectType
+
+    positions = []
+    index = 0
+    for _object, object_type in task._initial_objs_in_scene:
+        positions.append(state[index : index + 3])
+        index += 7 + {ObjectType.JOINT: 1, ObjectType.FORCE_SENSOR: 6}.get(object_type, 0)
+    if index != state.size:
+        return None
+    return np.asarray(positions, dtype=np.float64)
+
+
+def max_displacement(task, actual: np.ndarray, expected: np.ndarray) -> float:
+    """Largest per-object position difference (m) between two task states; -1 if incomparable."""
+
+    left = object_positions(task, np.asarray(actual, dtype=np.float64))
+    right = object_positions(task, np.asarray(expected, dtype=np.float64))
+    if left is None or right is None or left.shape != right.shape:
+        return -1.0
+    return float(np.max(np.abs(left - right))) if left.size else 0.0
 
 
 def _seeded_reset(task_env, episode: TestEpisode):
@@ -218,10 +244,11 @@ def reset_to_test_episode(task_env, episode: TestEpisode):
     observation, sampled = _seeded_reset(task_env, episode)
     instruction = task_env.get_task_descriptions()[0]
     described = np.asarray(task_env._task.get_low_dim_state(), dtype=np.float64)
+    task = task_env._task
     diagnostics = ResetDiagnostics(
-        clearing_reset_max_abs_diff=_max_abs_diff(cleared, recorded),
-        scene_max_abs_diff=_max_abs_diff(sampled, recorded),
-        descriptions_moved_max_abs=_max_abs_diff(described, sampled) if described.size else 0.0,
+        clearing_reset_position_error_m=max_displacement(task, cleared, recorded),
+        initial_scene_position_error_m=max_displacement(task, sampled, recorded),
+        descriptions_moved_objects_m=max_displacement(task, described, sampled),
     )
     return observation, instruction, diagnostics
 
@@ -347,9 +374,9 @@ def run_episode(
             "termination": termination,
             "error": error,
             "simulation_steps": counter.steps,
-            "clearing_reset_max_abs_diff": diagnostics.clearing_reset_max_abs_diff,
-            "initial_scene_max_abs_diff": diagnostics.scene_max_abs_diff,
-            "descriptions_moved_objects_max_abs": diagnostics.descriptions_moved_max_abs,
+            "clearing_reset_position_error_m": diagnostics.clearing_reset_position_error_m,
+            "initial_scene_position_error_m": diagnostics.initial_scene_position_error_m,
+            "descriptions_moved_objects_m": diagnostics.descriptions_moved_objects_m,
             "actions": actions,
             "protocol": PROTOCOL_VERSION,
             "success_criterion": SUCCESS_CRITERION,

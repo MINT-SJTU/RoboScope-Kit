@@ -88,7 +88,7 @@ def main() -> int:
             "task": tasks[0],
             "episode": 0,
             "instruction": instruction,
-            "initial_scene_max_abs_diff": diagnostics.scene_max_abs_diff,
+            "initial_scene_position_error_m": diagnostics.initial_scene_position_error_m,
             "launch_s": round(launched - started, 3),
             "load_tasks_s": round(loaded - launched, 3),
             "reset_s": round(time.perf_counter() - loaded, 3),
