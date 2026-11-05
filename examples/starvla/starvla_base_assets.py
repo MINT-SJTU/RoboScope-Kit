@@ -25,8 +25,10 @@ BASE_MODELS = {
     ),
     "Qwen3-VL-4B-Instruct": ("Qwen/Qwen3-VL-4B-Instruct", "ebb281ec70b05090aa6165b016eac8ec08e71b17"),
 }
-# What StarVLA reads to build the model and its processor; all three repositories have them.
+# What StarVLA reads to build the model and its processor, which all three repositories have, and
+# the processor's chat template, which they store as either file; without it apply_chat_template fails.
 REQUIRED_FILES = ("config.json", "tokenizer.json", "tokenizer_config.json", "preprocessor_config.json")
+CHAT_TEMPLATE_FILES = ("chat_template.json", "chat_template.jinja")
 MODEL_WEIGHT_PATTERNS = (
     "*.safetensors",
     "*.safetensors.index.json",
@@ -57,7 +59,7 @@ def download_starvla_base_model(run_dir: str | Path) -> Path:
         ignore_patterns=list(MODEL_WEIGHT_PATTERNS),
     )
     if not _base_model_ready(staging):
-        raise RuntimeError(f"{repo} at {revision} lacks one of {', '.join(REQUIRED_FILES)}")
+        raise RuntimeError(f"{repo} at {revision} lacks {_required_description()}")
     if target.is_symlink() and not target.exists():
         target.unlink()
     if not target.exists():
@@ -72,7 +74,7 @@ def download_starvla_base_model(run_dir: str | Path) -> Path:
             shutil.move(str(source), target / source.name)
     shutil.rmtree(staging)
     if not _base_model_ready(target):
-        raise RuntimeError(f"{target} still lacks one of {', '.join(REQUIRED_FILES)}")
+        raise RuntimeError(f"{target} still lacks {_required_description()}")
     return target
 
 
@@ -126,7 +128,15 @@ def _resolve_snapshot_target(run_dir: Path, configured_path: str) -> Path:
 
 
 def _base_model_ready(path: Path) -> bool:
-    return path.is_dir() and all((path / name).is_file() for name in REQUIRED_FILES)
+    return (
+        path.is_dir()
+        and all((path / name).is_file() for name in REQUIRED_FILES)
+        and any((path / name).is_file() for name in CHAT_TEMPLATE_FILES)
+    )
+
+
+def _required_description() -> str:
+    return f"one of {', '.join(REQUIRED_FILES)} or a chat template ({' or '.join(CHAT_TEMPLATE_FILES)})"
 
 
 def main() -> None:
