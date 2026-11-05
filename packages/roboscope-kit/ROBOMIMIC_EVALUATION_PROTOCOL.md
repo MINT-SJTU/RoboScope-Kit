@@ -287,8 +287,8 @@ What is not controlled, and why the result is not a claim of statistical equival
   where each episode's initial state and samples depend on every earlier episode's length. Those episodes
   cannot be paired with independently seeded ones. Run once per task, that protocol gave Lift 48/50, Can
   50/50, Square 33/50, Transport 21/50, Tool Hang 7/50: a different sample of initial states and GMM draws,
-  not a discrepancy. The Square and Transport gaps (6 of 50 each) show how much a 50-episode success rate
-  moves between two samples of the same policy.
+  not a discrepancy. The Square and Transport gaps (6 of 50 each) come from one run of each protocol; they
+  are consistent with sampling variance, but no repeated runs measured that variance.
 - The identity holds for the same CPU and GPU types and the same torch, cuDNN, and MuJoCo builds. Other
   hardware can change floating-point results in the LSTM or the physics and break the one-to-one match;
   per-task rates would then agree only statistically.
@@ -296,8 +296,10 @@ What is not controlled, and why the result is not a claim of statistical equival
   `offline_study` stack, at the epoch it selected as best. That value comes from other physics, other
   initial states, and a best-of-many selection, so it is a reference, not an expected value. Transport (54%
   here, 42% with the upstream default stream, 78% in the file name) is the clearest difference; Square
-  (78% and 66% against 84%) is smaller. The comparison above shows these gaps come from the robosuite
-  1.4.1 and MuJoCo 2.3.7 stack itself, not from the kit.
+  (78% and 66% against 84%) is smaller. The comparison above rules out a difference between the kit and
+  the native entry point on this stack and these seeds. It does not identify the cause of the gap to the
+  file-name rates: the robosuite 1.4.1 and MuJoCo 2.3.7 stack, best-epoch selection, and different
+  evaluation seeds and protocol may each contribute, and no run on the `offline_study` stack separated them.
 
 ### Raw results and reproduction
 
