@@ -206,6 +206,13 @@ RoboTwin accepts a positive observation stride. The default is 1, so every new a
 observation. Randomized lighting, the viewer, video logging, and point-cloud observations always render
 every step, whatever stride you declare.
 
+When `max_batch_size` exceeds 1, a Server coalesces `act` requests that are already waiting, from distinct
+episodes, into one `Policy.act_batch()` call of at most that many observations. It never waits to fill a
+batch, never batches two observations of the same episode, and returns each request its own validated action
+chunk. Policy calls, including `reset` and `end_episode`, stay serialized. The default of 1 keeps one `act`
+call per request. Opt in only if your `act_batch()` runs a native model batch and keeps no mutable state
+shared between the observations of a batch.
+
 Concurrency (`K`) and replica count (`g`) are not capabilities; the runtime chooses them, or you fix them
 with `--concurrency` and `--replicas` (see [Automatic tuning](#automatic-tuning-kg)).
 

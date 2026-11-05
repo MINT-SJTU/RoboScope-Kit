@@ -2,6 +2,20 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b26 - 2026-11-05
+
+- Batch `act` requests natively. When a Policy declares `max_batch_size > 1`, its Server coalesces `act`
+  requests that are already waiting, from distinct episodes, into one `Policy.act_batch()` call, with no
+  collection delay, and returns each request its own validated action chunk. Policy calls stay serialized,
+  a Policy failure answers every waiting request, and the default of 1 keeps one `act` call per request.
+  Ported from the CALVIN throughput work in evostudio-evaluation-kit PR #7, which kept native batching and
+  dropped its lower-yield scheduling, connection, CPU-pipeline, and lifecycle optimizations.
+- The StarVLA example Policy runs a native batch: optional `inference.max_batch_size` (default 1) sets the
+  declared limit, and `act_batch()` sends the batch to one `predict_action()` call and decodes every row
+  as `act()` does. A new `clip` action transform (`index`, `minimum`, `maximum`) bounds a dimension of the
+  unnormalized actions. The StarVLA LIBERO Policy now overrides only its row decoding, so batching keeps
+  its LIBERO-specific unnormalization.
+
 ## 0.8.0b25 - 2026-11-05
 
 - Add `--profile`, which runs each Worker under Nsight Systems and captures its first episode, starting from

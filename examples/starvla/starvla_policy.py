@@ -57,6 +57,10 @@ class ActionTransform:
     parameters: tuple[float, ...]
 
     def apply(self, actions: np.ndarray) -> None:
+        if self.operation == "clip":
+            minimum, maximum = self.parameters
+            np.clip(actions[:, self.index], minimum, maximum, out=actions[:, self.index])
+            return
         if self.operation == "threshold":
             threshold, below, above = self.parameters
             actions[:, self.index] = np.where(actions[:, self.index] > threshold, above, below)
@@ -74,6 +78,7 @@ class InferenceConfig:
     transforms: tuple[ActionTransform, ...]
     action_dim: int
     action_horizon: int
+    max_batch_size: int = 1
 
 
 class StarVLAPolicy(Policy):
@@ -102,7 +107,7 @@ class StarVLAPolicy(Policy):
             supported_benchmarks=(context.benchmark.name,),
             supported_suites={context.benchmark.name: (context.benchmark.suite,)},
             required_features=config.inputs.required_features,
-            max_batch_size=1,
+            max_batch_size=config.max_batch_size,
             supported_action_chunk_sizes=(config.action_horizon,),
             action_representations={
                 context.benchmark.name: context.benchmark.default_action_representation
@@ -138,6 +143,9 @@ class StarVLAPolicy(Policy):
         return None
 
     def act(self, observation: Observation) -> ActionChunk:
+        return self.act_batch((observation,))[0]
+
+    def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
         if (
             self.framework is None
             or self.norm_processor is None
@@ -145,28 +153,38 @@ class StarVLAPolicy(Policy):
             or self.image_preprocessor is None
         ):
             raise RuntimeError("StarVLA Policy is not loaded")
+        if not observations or len(observations) > self.config.max_batch_size:
+            raise ValueError("StarVLA observation batch is empty or exceeds inference.max_batch_size")
         import torch
 
-        example = _build_example(
-            observation.features,
-            self.config.inputs,
-            self.norm_processor,
-            self.image_preprocessor,
-        )
+        examples = [
+            _build_example(
+                observation.features,
+                self.config.inputs,
+                self.norm_processor,
+                self.image_preprocessor,
+            )
+            for observation in observations
+        ]
         with torch.inference_mode():
-            output = self.framework.predict_action(examples=[example], **self.config.kwargs)
+            output = self.framework.predict_action(examples=examples, **self.config.kwargs)
         if not isinstance(output, Mapping) or "normalized_actions" not in output:
             raise TypeError("StarVLA predict_action() must return normalized_actions")
         normalized = np.asarray(output["normalized_actions"])
-        expected = (1, self.config.action_horizon, self.config.action_dim)
+        expected = (len(observations), self.config.action_horizon, self.config.action_dim)
         if normalized.shape != expected:
             raise ValueError(
                 f"StarVLA returned normalized action shape {normalized.shape}; expected {expected}"
             )
-        actions = np.asarray(self.norm_processor.unapply_actions(normalized[0]), dtype=np.float32)
-        if actions.shape != expected[1:]:
+        return tuple(self._action_chunk(row) for row in normalized)
+
+    def _action_chunk(self, normalized: np.ndarray) -> ActionChunk:
+        """Unnormalize and transform one observation's (action_horizon, action_dim) prediction."""
+        expected = (self.config.action_horizon, self.config.action_dim)
+        actions = np.asarray(self.norm_processor.unapply_actions(normalized), dtype=np.float32)
+        if actions.shape != expected:
             raise ValueError(
-                f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected[1:]}"
+                f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected}"
             )
         actions = np.array(actions, dtype=np.float32, copy=True, order="C")
         for transform in self.config.transforms:
@@ -239,7 +257,7 @@ def parse_inference_config(config: Mapping[str, Any]) -> InferenceConfig:
     _require_keys(
         inference,
         required={"dtype", "inputs"},
-        optional={"unnorm_key", "kwargs", "action_transforms"},
+        optional={"unnorm_key", "kwargs", "action_transforms", "max_batch_size"},
         field="inference",
     )
     dtype = _required_string(inference, "dtype")
@@ -263,6 +281,7 @@ def parse_inference_config(config: Mapping[str, Any]) -> InferenceConfig:
         transforms=transforms,
         action_dim=action_dim,
         action_horizon=action_horizon,
+        max_batch_size=_positive_integer(inference, "max_batch_size") if "max_batch_size" in inference else 1,
     )
 
 
@@ -300,6 +319,7 @@ def _parse_action_transform(value: Any, action_dim: int) -> ActionTransform:
     if index < 0 or index >= action_dim:
         raise ValueError(f"StarVLA action transform index is out of range: {index}")
     parameter_names = {
+        "clip": ("minimum", "maximum"),
         "threshold": ("threshold", "below", "above"),
         "affine": ("scale", "offset"),
     }.get(operation)
@@ -314,6 +334,8 @@ def _parse_action_transform(value: Any, action_dim: int) -> ActionTransform:
             f"missing={sorted(missing)}, unknown={sorted(unknown)}"
         )
     parameters = tuple(_finite_number(value, name) for name in parameter_names)
+    if operation == "clip" and parameters[0] > parameters[1]:
+        raise ValueError("clip action transform minimum must not exceed maximum")
     return ActionTransform(operation=operation, index=index, parameters=parameters)
 
 
