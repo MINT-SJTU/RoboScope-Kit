@@ -1,13 +1,13 @@
 # LIBERO Evaluation Protocol
 
-This document defines the SDK-native RoboScope LIBERO and LIBERO+ evaluation contract. The kit's benchmark
+This document defines the SDK-native RoboScope LIBERO, LIBERO+, and LIBERO-Pro evaluation contract. The kit's benchmark
 runtime owns benchmark enumeration, simulator processes, concurrency, recovery, and result aggregation.
 User inference code owns only the public `Policy` lifecycle and model-specific preprocessing and
 postprocessing.
 
 The current protocol identifiers are:
 
-- benchmark specification: `libero-v1` (LIBERO+: `libero-plus-v1`);
+- benchmark specification: `libero-v1` (LIBERO+: `libero-plus-v1`; LIBERO-Pro: `libero-pro-v1`);
 - action representation: `libero.delta-eef-v1`;
 - SDK-native evaluator transport: `roboscope-policy-v1`.
 
@@ -16,7 +16,7 @@ LIBERO+ simulator environments are CPython 3.10.20, the interpreter of their pin
 their evaluator workers import the kit in that interpreter. Python 3.10 is outside the kit's
 [supported range](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/README.md#python-support);
 the modules a LIBERO worker imports are kept importable on it, and the build scripts check that import,
-but CI does not test it.
+but CI does not test it. The LIBERO-Pro environment is CPython 3.11.18 (section 11).
 
 ## 1. Environment and invocation
 
@@ -340,7 +340,7 @@ and
 [`runtime-requirements.txt`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_plus/runtime-requirements.txt).
 The remaining steps and the manifest layout match section 1, with `benchmark_root` set to `LIBERO-plus`.
 
-## 11. Other benchmarks
+## 12. Other benchmarks
 
 CALVIN, MetaWorld, and robomimic have their own protocol documents. RoboTwin, RoboCasa, CALVIN, MetaWorld,
 and robomimic use the
