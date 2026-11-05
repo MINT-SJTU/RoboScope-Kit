@@ -10,6 +10,7 @@ downloaded, from Hugging Face at a pinned revision. Run this file on a snapshot 
 from __future__ import annotations
 
 import argparse
+import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -24,6 +25,8 @@ BASE_MODELS = {
     ),
     "Qwen3-VL-4B-Instruct": ("Qwen/Qwen3-VL-4B-Instruct", "ebb281ec70b05090aa6165b016eac8ec08e71b17"),
 }
+# What StarVLA reads to build the model and its processor; all three repositories have them.
+REQUIRED_FILES = ("config.json", "tokenizer.json", "tokenizer_config.json", "preprocessor_config.json")
 MODEL_WEIGHT_PATTERNS = (
     "*.safetensors",
     "*.safetensors.index.json",
@@ -43,15 +46,23 @@ def download_starvla_base_model(run_dir: str | Path) -> Path:
         return target
     from huggingface_hub import snapshot_download
 
+    # Download beside the target and move it into place only when complete, so an interrupted
+    # download never looks finished; rerunning resumes the staging directory.
     repo, revision = BASE_MODELS[name]
+    staging = target.parent / f".{target.name}.download"
     snapshot_download(
         repo_id=repo,
         revision=revision,
-        local_dir=target,
+        local_dir=staging,
         ignore_patterns=list(MODEL_WEIGHT_PATTERNS),
     )
-    if not _base_model_ready(target):
-        raise RuntimeError(f"{repo} at {revision} has no config.json")
+    if not _base_model_ready(staging):
+        raise RuntimeError(f"{repo} at {revision} lacks one of {', '.join(REQUIRED_FILES)}")
+    if target.is_symlink() or target.is_file():
+        target.unlink()
+    elif target.exists():
+        shutil.rmtree(target)
+    staging.rename(target)
     return target
 
 
@@ -105,7 +116,7 @@ def _resolve_snapshot_target(run_dir: Path, configured_path: str) -> Path:
 
 
 def _base_model_ready(path: Path) -> bool:
-    return path.is_dir() and (path / "config.json").is_file()
+    return path.is_dir() and all((path / name).is_file() for name in REQUIRED_FILES)
 
 
 def main() -> None:
