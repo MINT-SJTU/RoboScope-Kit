@@ -1,94 +1,6 @@
---- a/src/eval_client/main.py
-+++ b/src/eval_client/main.py
-@@ -4,9 +4,12 @@
- import json
- import os
- import sys
-+import time
- 
- from isaaclab.app import AppLauncher
- 
-+import roboscope_stage_timing as stage_timing
-+
- MAX_INPROC_RESTARTS = 3
- 
- parser = argparse.ArgumentParser()
-@@ -126,8 +129,10 @@
- add_zero_delay_kit_args(args_cli)
- 
- # launch omniverse app
-+_app_start = time.perf_counter()
- app_launcher = AppLauncher(args_cli)
- simulation_app = app_launcher.app
-+stage_timing.phase("app_launch", _app_start)
- 
- from omegaconf import OmegaConf
- 
-@@ -343,7 +348,9 @@
-     env_cfg.sim.seed = [0 for _ in range(num_envs)]
-     run_id = os.environ["ROBODOJO_RUN_ID"]
-     resume_state = _load_resume_manifest(eval_cfg, run_id)
-+    _scene_start = time.perf_counter()
-     env = create_eval_env(env_cfg, simulation_app, resume_state=resume_state)
-+    stage_timing.phase("scene_initialization", _scene_start)
-     eval_time = env.success_nums + env.fail_nums
-     if eval_time >= eval_num:
-         # Already complete on resume - nothing left to do.
-@@ -356,8 +363,14 @@
-             get_monitor().reset()
-         bad_envs = None
-         try:
-+            _reset_start = time.perf_counter()
-             env.reset(seed=env.env_seeds)
--            env.run_eval()
-+            stage_timing.phase("reset", _reset_start)
-+            stage_timing.install(env)
-+            _execution_start = time.perf_counter()
-+            with stage_timing.execution():
-+                env.run_eval()
-+            stage_timing.phase("execution", _execution_start)
-             env.seed_manager.eval_step()
- 
-         except PhysXFatalError as e:
---- a/src/eval_client/eval_env.py
-+++ b/src/eval_client/eval_env.py
-@@ -4,7 +4,9 @@
- import inspect
- import json
- import os
-+import time
- 
-+import roboscope_stage_timing as stage_timing
- from XPolicyLab.policy.RoboScopeKit.client import WsModelClient
- import numpy as np
- import transforms3d as t3d
-@@ -247,12 +249,15 @@
-         def setup_scene(self):
-             self.scene_manager.apply_saved_poses(env_idx_list=list(range(self.num_envs)))
-             self._align_layout_success()
-+            _stability_start = time.perf_counter()
-             success, unstable_envs = self.scene_manager.layout_manager.check_layout_stability(self)
-+            stage_timing.phase("layout_check", _stability_start)
-             unstable_envs = [idx for idx in set(unstable_envs) if idx < self.num_envs]
-             self.unstable_nums += len(unstable_envs)
-             self.episode_nums -= len(unstable_envs)
-             if not success or self.episode_nums <= 0:
-                 raise UnStableError("All scene Unstable Error!")
-+            _settling_start = time.perf_counter()
-             for _ in range(10):
-                 self.render()
-             for idx in range(200):
-@@ -260,6 +265,7 @@
-                 if idx % 5 == 0:
-                     self.obs_manager.render_for_capture()
-                     self.obs_manager.get_obs()
-+            stage_timing.phase("settling", _settling_start)
-             if self.physx_monitor_enabled:
-                 self._check_physx_broken_envs()
- 
 --- /dev/null
 +++ b/roboscope_stage_timing.py
-@@ -0,0 +1,177 @@
+@@ -0,0 +1,182 @@
 +"""Opt-in host-side stage timings for RoboDojo evaluation.
 +
 +Enabled only when ROBODOJO_STAGE_TIMING_DIR is set. Wraps existing simulator and
@@ -96,7 +8,8 @@
 +and changes no inputs, outputs, or call order. Writes under that directory:
 +
 +- ``<pid>-phases.jsonl``: one line per lifecycle phase (app launch, scene
-+  initialization, reset, layout check, settling, execution).
++  initialization, reset, layout check, settling, execution); layout check and
++  settling run inside reset, so their time also counts toward it.
 +- ``<pid>-episode-<n>.json``: per execution batch, one row per nested call path
 +  with calls, inclusive and self seconds, and the maximum single call.
 +"""
@@ -116,6 +29,7 @@
 +_LOCAL = threading.local()
 +_METADATA = {}
 +_SERIAL = 0
++now = time.perf_counter
 +
 +
 +def enabled():
@@ -129,7 +43,7 @@
 +
 +
 +def phase(name, started):
-+    """Record a lifecycle phase that began at ``started`` (perf_counter)."""
++    """Record a lifecycle phase that began at ``started`` (``now()``)."""
 +    if not _DIRECTORY:
 +        return
 +    record = {"phase": name, "elapsed_s": time.perf_counter() - started, "time_unix_s": time.time()}
@@ -242,7 +156,10 @@
 +        return
 +    with _LOCK:
 +        _STATS.clear()
++    # A PhysX restart re-executes in place: same pid, serial back at zero.
 +    _SERIAL += 1
++    while _output(f"{os.getpid()}-episode-{_SERIAL:03d}.json").exists():
++        _SERIAL += 1
 +    started_unix = time.time()
 +    started = time.perf_counter()
 +    _ACTIVE = True
@@ -266,3 +183,85 @@
 +        temporary = path.with_suffix(".tmp")
 +        temporary.write_text(json.dumps(record, indent=2), encoding="utf-8")
 +        temporary.replace(path)
+--- a/src/eval_client/eval_env.py
++++ b/src/eval_client/eval_env.py
+@@ -17,6 +17,7 @@ from env.seed_manager.seed_manager import SeedManager
+ from utils.cluttered_generator import UnStableError
+ from utils.pipeline_utils import get_robot_action_dim_info
+ from utils.save_file import VideoStreamWriter, format_video_saved_message, save_json
++import roboscope_stage_timing as stage_timing
+ 
+ 
+ def _patch_websockets_proxy_compat():
+@@ -247,12 +248,15 @@ def create_eval_env(config, app, resume_state=None, **kwargs):
+         def setup_scene(self):
+             self.scene_manager.apply_saved_poses(env_idx_list=list(range(self.num_envs)))
+             self._align_layout_success()
++            _stability_start = stage_timing.now()
+             success, unstable_envs = self.scene_manager.layout_manager.check_layout_stability(self)
++            stage_timing.phase("layout_check", _stability_start)
+             unstable_envs = [idx for idx in set(unstable_envs) if idx < self.num_envs]
+             self.unstable_nums += len(unstable_envs)
+             self.episode_nums -= len(unstable_envs)
+             if not success or self.episode_nums <= 0:
+                 raise UnStableError("All scene Unstable Error!")
++            _settling_start = stage_timing.now()
+             for _ in range(10):
+                 self.render()
+             for idx in range(200):
+@@ -260,6 +264,7 @@ def create_eval_env(config, app, resume_state=None, **kwargs):
+                 if idx % 5 == 0:
+                     self.obs_manager.render_for_capture()
+                     self.obs_manager.get_obs()
++            stage_timing.phase("settling", _settling_start)
+             if self.physx_monitor_enabled:
+                 self._check_physx_broken_envs()
+ 
+--- a/src/eval_client/main.py
++++ b/src/eval_client/main.py
+@@ -7,6 +7,8 @@ import sys
+ 
+ from isaaclab.app import AppLauncher
+ 
++import roboscope_stage_timing as stage_timing
++
+ MAX_INPROC_RESTARTS = 3
+ 
+ parser = argparse.ArgumentParser()
+@@ -126,8 +128,10 @@ from env.camera_manager.capture.render_sync import add_zero_delay_kit_args
+ add_zero_delay_kit_args(args_cli)
+ 
+ # launch omniverse app
++_app_start = stage_timing.now()
+ app_launcher = AppLauncher(args_cli)
+ simulation_app = app_launcher.app
++stage_timing.phase("app_launch", _app_start)
+ 
+ from omegaconf import OmegaConf
+ 
+@@ -343,7 +347,9 @@ def main():
+     env_cfg.sim.seed = [0 for _ in range(num_envs)]
+     run_id = os.environ["ROBODOJO_RUN_ID"]
+     resume_state = _load_resume_manifest(eval_cfg, run_id)
++    _scene_start = stage_timing.now()
+     env = create_eval_env(env_cfg, simulation_app, resume_state=resume_state)
++    stage_timing.phase("scene_initialization", _scene_start)
+     eval_time = env.success_nums + env.fail_nums
+     if eval_time >= eval_num:
+         # Already complete on resume - nothing left to do.
+@@ -356,8 +362,14 @@ def main():
+             get_monitor().reset()
+         bad_envs = None
+         try:
++            _reset_start = stage_timing.now()
+             env.reset(seed=env.env_seeds)
+-            env.run_eval()
++            stage_timing.phase("reset", _reset_start)
++            stage_timing.install(env)
++            _execution_start = stage_timing.now()
++            with stage_timing.execution():
++                env.run_eval()
++            stage_timing.phase("execution", _execution_start)
+             env.seed_manager.eval_step()
+ 
+         except PhysXFatalError as e:
