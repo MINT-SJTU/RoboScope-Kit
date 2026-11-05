@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b20 - 2026-11-05
+
+- Rebuild RoboTwin's seed-generation identities without the former platform's protocol name or scanner
+  commit. The pinned seed archive and evaluation inputs are unchanged, but generation digests and result
+  identities change. Build a new RoboTwin runtime before running the updated manifest.
+- Correct the pinned RoboTwin runtime commit to the deterministic result of the documented build patch.
+
 ## 0.8.0b19 - 2026-11-05
 
 - Remove unused CLI progress-callback plumbing left after the old progress contract was removed.
