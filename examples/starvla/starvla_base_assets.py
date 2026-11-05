@@ -58,11 +58,21 @@ def download_starvla_base_model(run_dir: str | Path) -> Path:
     )
     if not _base_model_ready(staging):
         raise RuntimeError(f"{repo} at {revision} lacks one of {', '.join(REQUIRED_FILES)}")
-    if target.is_symlink() or target.is_file():
+    if target.is_symlink() and not target.exists():
         target.unlink()
-    elif target.exists():
-        shutil.rmtree(target)
-    staging.rename(target)
+    if not target.exists():
+        staging.rename(target)
+        return target
+    if not target.is_dir():
+        raise FileExistsError(f"{target} exists and is not a directory")
+    # An incomplete directory may hold the user's own files (an exporter copies whole base-model
+    # directories), so only add what it lacks and keep everything already there.
+    for source in staging.iterdir():
+        if source.name != ".cache" and not (target / source.name).exists():
+            shutil.move(str(source), target / source.name)
+    shutil.rmtree(staging)
+    if not _base_model_ready(target):
+        raise RuntimeError(f"{target} still lacks one of {', '.join(REQUIRED_FILES)}")
     return target
 
 
