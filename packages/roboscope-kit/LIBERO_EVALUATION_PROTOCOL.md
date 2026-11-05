@@ -340,6 +340,107 @@ and
 [`runtime-requirements.txt`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_plus/runtime-requirements.txt).
 The remaining steps and the manifest layout match section 1, with `benchmark_root` set to `LIBERO-plus`.
 
+## 11. LIBERO-Pro
+
+LIBERO-Pro (`--benchmark libero_pro`, protocol `libero-pro-v1`) runs the LIBERO worker above against the
+released single-perturbation suites of [LIBERO-Pro](https://github.com/Zxy-MLlab/LIBERO-PRO). Sections 2–9
+apply, with the differences below.
+
+### Pinned inputs
+
+| Input | Pin |
+| --- | --- |
+| Source, assets, base suites | `Zxy-MLlab/LIBERO-PRO` at `eafdb809426b13153aa1e4c42d6601844217dfec` (2026-03-23, head of master); its tree carries `libero/libero/assets` and the base LIBERO BDDL and initial-state files |
+| Perturbed task files | Hugging Face dataset `zhouxueyang/LIBERO-Pro` at revision `c86fc3b8293185a6f373677018ff3e37f8391602` (CC-BY-4.0): 160 BDDL and 160 `.pruned_init` files, each checked against [`task-files.sha256`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/task-files.sha256) |
+| Task registry | the source revision's `libero/libero/benchmark/__init__.py` and `libero_suite_task_map.py` (the parallel-evaluation registry upstream added on 2025-11-05) |
+| Interpreter | CPython 3.11.18 from conda-forge, [`conda-specs.txt`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/conda-specs.txt) |
+| Packages | [`runtime-requirements.txt`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/runtime-requirements.txt): the LIBERO lock (`robosuite==1.4.0`, `bddl==1.0.1`, `mujoco==3.2.3`, `numpy==1.24.4`, `torch==2.5.1+cpu`) with `matplotlib` 3.5.3 → 3.7.5 (+ `contourpy` 1.3.2), the only change CPython 3.11 needs, and the `exceptiongroup`/`tomli` backports dropped |
+
+Upstream documents Python 3.8.13 with torch 1.11; this runtime is the kit's minimum supported interpreter
+instead, verified by the build's import checks, the suite check below, and the evaluations in this section.
+`evaluation_config.yaml` and `perturbation.py` are not used: the released files are already the
+single-perturbation configurations they would generate.
+
+Build it with
+[`benchmarks/libero_pro/build-runtime.sh`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/build-runtime.sh) `<install-dir>`
+(Linux x86_64, `conda` or `micromamba`, `git`, `curl`, network access, about 2 GB of disk). It fetches the
+pinned commit only, downloads the 320 task files from the pinned dataset revision into
+`LIBERO-PRO/libero/libero/{bddl_files,init_files}/<suite>/`, verifies every checksum, creates the
+environment, and then, besides the import checks of section 1, loads every supported suite from the
+LIBERO-Pro registry and checks it has 10 tasks, a BDDL file per task, and 50 initial states per task.
+`LIBERO_PRO_URL` and `LIBERO_PRO_FILES_URL` select mirrors; the commit and checksums still apply. The
+manifest layout matches section 1 with `benchmark_root` set to `LIBERO-PRO`. `--self-test` additionally
+checks that each suite has its 10 BDDL and 10 initial-state files.
+
+### Supported suites
+
+Each suite is one base LIBERO suite under one perturbation dimension. Suite names are upstream's.
+
+| Dimension (upstream flag) | Suffix | What changes | Suites |
+| --- | --- | --- | --- |
+| Object (`use_object`) | `_object` | object appearance, color, and scale | `libero_goal_object`, `libero_spatial_object`, `libero_10_object`, `libero_object_object` |
+| Position (`use_swap`) | `_swap` | initial object positions (swapped regions) | `libero_goal_swap`, `libero_spatial_swap`, `libero_10_swap`, `libero_object_swap` |
+| Semantic (`use_language`) | `_lan` | paraphrased instruction | `libero_goal_lan`, `libero_spatial_lan`, `libero_10_lan`, `libero_object_lan` |
+| Task (`use_task`) | `_task` | new instruction and goal in the same scene | `libero_goal_task`, `libero_spatial_task`, `libero_10_task`, `libero_object_task` |
+
+Every suite has the 10 tasks of its base suite, in the registry's order (the base suite's task order), and
+every task ships 50 initial states, so a scored suite is 10 tasks × 50 episodes = 500 episodes, episode `e`
+using initial state `e`. The standard single-perturbation profile is all 16 suites, 8,000 episodes. Each
+suite runs at its base suite's horizon, as upstream's `TASK_MAX_STEPS` does: `libero_goal_*` 300,
+`libero_spatial_*` 220, `libero_10_*` 520, `libero_object_*` 280 policy steps. Seed (7), settle steps
+(10), observations, actions, success, and termination are those of sections 3–5.
+
+One run evaluates one suite, and its official result is that suite's per-task table. Report every suite,
+that is every (base suite, dimension) cell, on its own. A per-dimension or overall figure is a mean of
+suite success rates and must be labeled as such; never pool LIBERO-Pro suites with each other or with
+plain LIBERO into one success count, and never combine different dimensions into one score.
+`result.json` metadata records `base_suite`, `perturbation`, `dimension`, `max_steps`, and
+`instruction_source` for every run.
+
+Not supported, and rejected as suites:
+
+- **Environment** (`*_env`): no files were released. The maintainers withheld them for simulation
+  stability issues ([LIBERO-PRO#9](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/9)); upstream's README
+  notes that replacing the environment can make objects on the table move, and
+  [LIBERO-PRO#24](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/24) shows a misplaced initial layout.
+  Generating them locally is not frozen either (next item), so no result here covers Environment.
+- **Combined perturbations** (`*_temp`): upstream generates them at evaluation time with `perturbation.py`
+  into shared `*_temp` directories keyed by a `log.txt` of the flags, so concurrent runs overwrite each
+  other's files, and the generation seed falls back to `configs.get("seed", int)` (the `int` type), which
+  is not a reproducible seed. Upstream's rule that the Task perturbation cannot be combined with others
+  would apply to any future combined profile, which must be frozen and reported separately from this one.
+- **The 2026-07 seven-case extension** of the dataset (`bddl_files/0*_*`, 40 tasks × 7 cases): its
+  `:perturbation_config` fields need a LIBERO-Pro-aware parser and evaluation integration that the pinned
+  source revision does not contain, so the build does not download it.
+
+### Instruction source
+
+`language.instruction` is the `(:language ...)` of the task's perturbed BDDL file as the environment parsed
+it (`env.language_instruction`, lowercased and whitespace-normalized by the BDDL tokenizer), not
+`Task.language`. The released files keep the original BDDL file names, and upstream's registry derives
+`Task.language` from the file name, so `Task.language` is the unperturbed LIBERO instruction: feeding it
+would silently undo the Semantic and Task perturbations (for example, `libero_goal_task`'s
+`put_the_bowl_on_the_plate` asks for "put the wine bottle on the plate"). The maintainers prescribe
+`env.language_instruction` ([LIBERO-PRO#14](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/14));
+[LIBERO-PRO#27](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/27) measures how much the choice moves Task
+scores. The worker selects this source with `--instruction-source bddl`; plain LIBERO and LIBERO+ keep
+`Task.language`.
+
+This also differs from plain LIBERO where the dimension does not perturb language. The BDDL wording of
+the unperturbed base tasks is not their file-name instruction for `libero_spatial` ("pick the akita black
+bowl ..." for "pick up the black bowl ..."), `libero_object` ("pick the ..." for "pick up the ..."), and 5
+of 10 `libero_goal` tasks, so the Object and Position suites of those bases also see that wording; for
+`libero_10` the two are identical. Upstream runners that feed `Task.language` (the openvla-oft, openpi,
+lerobot, and StarVLA LIBERO clients) score something else, and leaderboard numbers produced that way are not
+comparable to these for the Semantic and Task dimensions.
+
+Known upstream content issues that this protocol does not correct, because the released files are scored
+as released: [LIBERO-PRO#38](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/38) (`libero_10_task`
+KITCHEN_SCENE8 left/right naming) and
+[LIBERO-PRO#25](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/25) (`libero_object_swap` swaps the target
+with a distractor, not with the basket). The unbalanced goals of
+[LIBERO-PRO#28](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/28) are not in the released files.
+
 ## 12. Other benchmarks
 
 CALVIN, MetaWorld, and robomimic have their own protocol documents. RoboTwin, RoboCasa, CALVIN, MetaWorld,
