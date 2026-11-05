@@ -69,8 +69,13 @@ def download_starvla_base_model(run_dir: str | Path) -> Path:
         raise FileExistsError(f"{target} exists and is not a directory")
     # An incomplete directory may hold the user's own files (an exporter copies whole base-model
     # directories), so only add what it lacks and keep everything already there.
+    # A chat template already there is kept as the one in use: Transformers prefers
+    # chat_template.json, so adding the repository's would silently replace a user's .jinja.
+    has_template = any((target / name).is_file() for name in CHAT_TEMPLATE_FILES)
     for source in staging.iterdir():
-        if source.name != ".cache" and not (target / source.name).exists():
+        if source.name == ".cache" or (has_template and source.name in CHAT_TEMPLATE_FILES):
+            continue
+        if not (target / source.name).exists():
             shutil.move(str(source), target / source.name)
     shutil.rmtree(staging)
     if not _base_model_ready(target):
