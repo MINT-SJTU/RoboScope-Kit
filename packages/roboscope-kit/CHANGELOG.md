@@ -2,6 +2,19 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b27 - 2026-11-05
+
+- Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v1`): the PerAct 18-task
+  reproduction profile, not all of RLBench. Each task replays PerAct's 25 released test episodes from their
+  stored variation and random state, with PerAct's four 128x128 cameras (RGB, depth, point cloud, and
+  calibration), low-dimensional state, the instruction, and key-frame end-effector actions executed by
+  RLBench's motion planner (`rlbench.ee-pose-planning-v1`, 9 `float64` values), for at most 25 actions.
+  `benchmarks/rlbench/build-runtime.sh` builds CoppeliaSim Edu 4.1, PyRep, the PerAct RLBench and YARR
+  forks, PerAct, and the test split on CPython 3.11 after the user accepts the CoppeliaSim Edu and RLBench
+  licences, and checks every task's test episodes against frozen digests.
+- Add `examples/peract/`: a Policy for the released PerAct 600k checkpoint, a runner for PerAct's own
+  `eval.py`, and an episode-by-episode comparison.
+
 ## 0.8.0b25 - 2026-11-05
 
 - Add `--profile`, which runs each Worker under Nsight Systems and captures its first episode, starting from

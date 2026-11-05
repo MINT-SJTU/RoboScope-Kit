@@ -21,6 +21,7 @@ body:
         - RoboCasa
         - CALVIN
         - MetaWorld
+        - RLBench
     validations:
       required: true
   - type: input

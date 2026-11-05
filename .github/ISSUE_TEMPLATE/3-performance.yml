@@ -23,6 +23,7 @@ body:
         - RoboCasa
         - CALVIN
         - MetaWorld
+        - RLBench
         - Not benchmark-specific
     validations:
       required: true

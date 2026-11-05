@@ -1,0 +1,173 @@
+# Copyright 2026 RoboScope Team
+# SPDX-License-Identifier: Apache-2.0
+
+"""Run PerAct's own ``eval.py`` on the RLBench runtime and log every episode it executes.
+
+    <runtime>/env/bin/python examples/peract/run_native.py --runtime /sim/rlbench \\
+        --checkpoint-source /models/peract --output /runs/peract-native [--task close_jar ...]
+
+This is the native entry point the Kit is compared with: the pinned PerAct ``eval.py`` with the
+README's test command (all requested tasks in one process, ``eval_envs=1``, episodes 0..24 of
+the released test split, ``eval_type=last``, the 600k weights, headless). It is imported and run
+unmodified, with three additions that do not change what it computes:
+
+- CLIP RN50 is read from the pinned local file in ``--checkpoint-source``, as the Kit Policy does,
+  instead of being downloaded to ``~/.cache/clip``;
+- read-only wrappers around PerAct's ``CustomRLBenchEnv``/``CustomMultiTaskRLBenchEnv``
+  ``reset_to_demo`` and ``step`` (and the scene step callback) record, per episode, the test
+  episode, variation, instruction, every action passed to RLBench, the planning error if any,
+  reward, executed actions and simulation steps;
+- CoppeliaSim runs on a private Xvfb display, like the Kit workers.
+
+Writes ``<output>/native-episodes.jsonl`` (one line per episode), ``<output>/run.json`` (command,
+timings), PerAct's own ``eval_data.csv`` under ``<output>/logdir``, and its log.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import runpy
+import shutil
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from assets import CHECKPOINT_SEED_DIR, CHECKPOINT_WEIGHT, CLIP_RN50, verify  # noqa: E402
+
+TASKS = (
+    "close_jar",
+    "insert_onto_square_peg",
+    "light_bulb_in",
+    "meat_off_grill",
+    "open_drawer",
+    "place_cups",
+    "place_shape_in_shape_sorter",
+    "push_buttons",
+    "put_groceries_in_cupboard",
+    "put_item_in_drawer",
+    "put_money_in_safe",
+    "reach_and_drag",
+    "stack_blocks",
+    "stack_cups",
+    "turn_tap",
+    "place_wine_at_rack_location",
+    "slide_block_to_color_target",
+    "sweep_to_dustpan_of_size",
+)  # PerAct README order
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--runtime", type=Path, required=True)
+    parser.add_argument("--checkpoint-source", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--task", action="append", choices=TASKS, help="default: all 18, in README order")
+    parser.add_argument("--episodes", type=int, default=25)
+    return parser.parse_args()
+
+
+def reexec_with_runtime_environment(runtime: Path) -> None:
+    """The dynamic loader reads LD_LIBRARY_PATH at start-up, so set it and restart once."""
+
+    coppeliasim = str(runtime / "coppeliasim")
+    if os.environ.get("ROBOSCOPE_NATIVE_REEXEC") == "1":
+        return
+    environment = {
+        **os.environ,
+        "ROBOSCOPE_NATIVE_REEXEC": "1",
+        "COPPELIASIM_ROOT": coppeliasim,
+        "LD_LIBRARY_PATH": ":".join((coppeliasim, os.environ.get("LD_LIBRARY_PATH", ""))),
+        "QT_QPA_PLATFORM_PLUGIN_PATH": coppeliasim,
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
+    os.execve(sys.executable, [sys.executable, *sys.argv], environment)
+
+
+def prepare_logdir(checkpoint_source: Path, output: Path) -> Path:
+    """eval.py writes eval_data.csv next to the weights; give it a copy of the checkpoint layout."""
+
+    logdir = output / "logdir"
+    seed_dir = logdir / "multi" / "PERACT_BC" / "seed0"
+    weights = seed_dir / "weights" / str(CHECKPOINT_WEIGHT)
+    weights.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(checkpoint_source / CHECKPOINT_SEED_DIR / "config.yaml", seed_dir / "config.yaml")
+    source = (
+        checkpoint_source
+        / CHECKPOINT_SEED_DIR
+        / "weights"
+        / str(CHECKPOINT_WEIGHT)
+        / "QAttentionAgent_layer0.pt"
+    )
+    link = weights / source.name
+    if not link.exists():
+        link.symlink_to(source.resolve())
+    return logdir
+
+
+def main() -> int:
+    args = parse_args()
+    runtime = args.runtime.resolve()
+    reexec_with_runtime_environment(runtime)
+    started = time.time()
+    checkpoint_source = args.checkpoint_source.resolve()
+    verify(checkpoint_source)
+    output = args.output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    episodes_path = output / "native-episodes.jsonl"
+    if episodes_path.exists():
+        raise SystemExit(f"{episodes_path} exists; choose a new --output")
+    tasks = args.task or list(TASKS)
+    logdir = prepare_logdir(checkpoint_source, output)
+
+    from roboscope_kit.runtime.benchmarks.rlbench.worker import start_xvfb
+
+    start_xvfb(runtime / "bin" / "Xvfb")
+    peract_root = runtime / "src" / "peract"
+    sys.path.insert(0, str(peract_root))
+    os.chdir(peract_root)
+    os.environ["ROBOSCOPE_NATIVE_EPISODES"] = str(episodes_path)
+    os.environ["ROBOSCOPE_PERACT_CLIP"] = str(checkpoint_source / CLIP_RN50.relative_path)
+    import native_hooks
+    import yarr.runners.independent_env_runner as runner_module
+
+    runner_module.IndependentEnvRunner = native_hooks.HookedIndependentEnvRunner
+
+    overrides = [
+        f"rlbench.tasks=[{','.join(tasks)}]",
+        "rlbench.task_name=multi",
+        f"rlbench.demo_path={runtime / 'peract-test' / 'test'}",
+        "framework.gpu=0",
+        f"framework.logdir={logdir}",
+        "framework.start_seed=0",
+        "framework.eval_envs=1",
+        "framework.eval_from_eps_number=0",
+        f"framework.eval_episodes={args.episodes}",
+        "framework.csv_logging=True",
+        "framework.tensorboard_logging=True",
+        "framework.eval_type=last",
+        "rlbench.headless=True",
+        f"hydra.run.dir={output / 'hydra'}",
+    ]
+    (output / "run.json").write_text(
+        json.dumps(
+            {"eval.py": str(peract_root / "eval.py"), "overrides": overrides, "started": started}, indent=2
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    sys.argv = [str(peract_root / "eval.py"), *overrides]
+    # As `python eval.py ...`: hydra resolves conf/ next to the __main__ script.
+    runpy.run_path(str(peract_root / "eval.py"), run_name="__main__")
+    run = json.loads((output / "run.json").read_text(encoding="utf-8"))
+    run["finished"] = time.time()
+    run["elapsed_s"] = run["finished"] - started
+    (output / "run.json").write_text(json.dumps(run, indent=2) + "\n", encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
