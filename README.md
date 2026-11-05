@@ -260,8 +260,7 @@ experimental evidence; a claim without measurements cannot be merged. Please pro
 4. **Evidence that the evaluation is unchanged:** success outcomes that match the baseline (per-episode
    outcomes and terminal steps where the benchmark is deterministic, otherwise equivalent success rates),
    with every episode finished exactly once and no missing or duplicate records.
-5. **The raw data:** run summaries and logs, attached or linked, or a short report like the
-   [RoboTwin performance report](benchmarks/robotwin/PERFORMANCE_REPORT_2026-07-22.md).
+5. **The raw data:** the run summaries and logs of both sides, attached or linked.
 
 Without the hardware for a full run, open a draft pull request with what you could measure (a `--quick-test`
 run or a profile, say) and tell us; we are glad to help. Negative results are useful too: an attempt that did
