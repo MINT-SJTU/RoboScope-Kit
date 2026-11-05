@@ -40,7 +40,7 @@ body:
       description: |
         The baseline with its configuration: hardware, checkpoint, suite, episode count, K/g (fixed with
         `--concurrency K --replicas G`, or the autotune strategy), and the time breakdown. Include
-        episodes/s and actual steps/s, and CPU/GPU/memory use. `--profile` timelines are welcome.
+        episodes/s and actual steps/s, and CPU/GPU/memory use.
       value: |
         Configuration: <GPU>, <benchmark/suite>, <Policy/checkpoint>, K<k>/g<g>, <n> episodes, roboscope-kit <version or commit>
 
