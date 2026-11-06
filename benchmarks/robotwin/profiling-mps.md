@@ -2,7 +2,7 @@
 
 Measured 2026-11-06; [Issue #79](https://github.com/MINT-SJTU/RoboScope-Kit/issues/79), related performance work [#33](https://github.com/MINT-SJTU/RoboScope-Kit/issues/33).
 
-**Use MPS off for the measured single-GPU K8/G1 setup.** Two 500-episode runs per arm change pooled throughput by **−0.0293%** with identical saved terminal results. Profiling is repaired so the same CLI can expose Worker, Policy and queue activity. Hardware RT/SM/Tensor/DRAM counters remain permission-blocked.
+**Use MPS off for the measured single-GPU K8/G1 setup.** Two 500-episode runs per arm change pooled throughput by **−0.0293%** with identical saved terminal results. Profiling is repaired so the same CLI can expose Worker, Policy and queue activity. Hardware counters were permission-blocked in this container; the [native RTX 4090 follow-up](profiling-native-mps.md) measures RT/SM/Tensor/VRAM throughput separately.
 
 ## Change and experiment boundaries
 
@@ -176,7 +176,7 @@ The extra ten short cells cost 1765.509 s E2E, K6 confirmation871.090 s and K7 c
 | Four-GPU lifecycle and500-episode repeats | Open: only one GPU allocated; published K16/G4 was not reproduced |
 | Timing boundary | Measured Kit phase includes Worker/scene startup; a fully initialization-excluded window is not separately measured |
 | Recommendation and profiling | Findings recorded here; retain MPS off for this host/configuration |
-| RT/SM/Tensor/DRAM throughput | Unavailable: Nsight 2026.6.1 physical device 0 and cuda-visible probes denied, no report or SQLite; GPM reports unsupported |
+| RT/SM/Tensor/DRAM throughput | Container probes unavailable; the [native follow-up](profiling-native-mps.md) obtains valid hardware samples and matched fixed-K controls on a 24-GB RTX 4090 |
 
 Main K8/G1 has one Policy MPS client; its server serializes requests. The private MPS session does not attach the simulator's Vulkan renderer or CUDA OIDN denoiser. Rendering is material inside an observation, but control/chunk cadence, initialization and queueing also contribute. Hardware unit saturation has not been established. The four clean traces have complete observed act/kernel and CPU/GPU Vulkan correlations; earlier tail-truncated traces remain separate diagnostics.
 

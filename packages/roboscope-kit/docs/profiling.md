@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-06
+Updated: 2026-11-07
 
 This document explains how to use `--profile` and optional device-wide GPU metrics to see where an
 evaluation's time goes, and records what profiling has found so far. After every profiling run, add its
@@ -12,7 +12,8 @@ findings to the benchmark's own documentation and link them from
 - **Nsight Systems CLI.** The machine that runs the evaluation needs
   [Nsight Systems](https://developer.nvidia.com/nsight-systems/get-started) with `nsys` on `PATH`. The Kit
   does not install it. Version 2026.5.1 is verified (installed under `/opt/nvidia/nsight-systems-cli/2026.5.1`
-  in the AutoDL container). Without `nsys`, `--profile` stops before any Worker starts.
+  in the AutoDL container); 2026.6.1 is verified for native RTX 4090 device counters.
+  Without `nsys`, `--profile` stops before any Worker starts.
 - **No extra Python package.** SDK ranges use Nsight Systems' injection library through `ctypes`.
   RoboTwin's standalone simulator bridge uses the Torch NVTX API already supplied by its pinned
   simulator environment; it does not import the Kit. No environment needs the separate `nvtx` package.
@@ -69,8 +70,10 @@ normal evaluation continues. The collector does not change host/container counte
 
 On the 2026-11-06 RoboTwin host, a newer Nsight Systems 2026.6.1 still encounters counter permission
 denial under the current container capabilities, including absent `CAP_SYS_ADMIN` / `CAP_PERFMON`.
-Container root alone does not grant those permissions. RT throughput remains unmeasured; CUDA traces,
-host observation durations and GPU busy percentage are not replacement RT/SM/Tensor metrics.
+Container root alone does not grant those permissions. A subsequent native RTX 4090 run obtains real
+RT/SM/Tensor/VRAM counters with administrator permissions and the same optional collector; see the
+[native follow-up](../../../benchmarks/robotwin/profiling-native-mps.md). CUDA traces, host observation
+durations and GPU busy percentage are not replacement hardware-throughput metrics.
 
 ## Output
 
@@ -142,7 +145,7 @@ different: do not infer that an untested simulator or graphics backend was valid
 | robomimic | SDK `PolicyClient`, first episode | Code path checked; not yet hardware-verified |
 | RoboCasa | SDK `PolicyClient`, first episode | Code path checked; not yet hardware-verified |
 | CALVIN | SDK `PolicyClient`, first subtask | Code path checked; not yet hardware-verified; capture is not the complete five-task sequence |
-| RoboTwin | Independent client, first episode | Real StarVLA, K4/g2, paired 20 episodes plus CLI QuickTest, MPS off/on (2026-11-06); Worker and Policy reports verified |
+| RoboTwin | Independent client, first episode | Real StarVLA, K4/g2, paired 20 episodes plus CLI QuickTest, MPS off/on (2026-11-06); Worker/Policy reports verified. Native RTX 4090 counter QuickTest and renderer hardware/CPU profiles verified (2026-11-07) |
 
 The original RoboTwin MPS measurements used external instrumentation. The subsequent built-in integration
 adds Worker and Policy coverage; see its [findings](../../../benchmarks/robotwin/README.md#profiling).
@@ -187,11 +190,18 @@ adds Worker and Policy coverage; see its [findings](../../../benchmarks/robotwin
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
+- [RoboTwin native counters](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robotwin/profiling-native-mps.md):
+  Nsight 2026.6.1 on a 24-GB RTX 4090 obtains RT/SM/Tensor/VRAM samples. One/two-scene static controls
+  show RT throughput means of 10.44%/8.10%, despite GPU busy means of 83.35%/94.55%; CPU stacks resolve
+  rendering-path CUDA synchronization. Repeated b31 K2/G1 ten-episode throughput changes by −0.602%;
+  valid fixed-K2 RT throughput is 1.389%/1.396% off/on. Serial active rollout spends 62.26% in action-side
+  simulation/control/wait, 30.09% in observations and 7.53% in Policy RPC. Four broader counter runs
+  recover K2→1 after camera OOM and are reported separately (2026-11-07).
 - [RoboTwin](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robotwin/profiling-mps.md):
   Worker/Policy capture and MPS client lifecycle repaired; repeated 500-episode K8/G1 throughput changes
   by −0.0293% on one 48-GiB RTX 4090. Fixed-K 100-episode checks do not justify extra default autotune probes.
   CUDA/Vulkan diagnostics identify material observation rendering and request queueing; hardware
-  RT/SM/Tensor/DRAM counters remain permission-blocked (2026-11-06).
+  RT/SM/Tensor/DRAM counters were permission-blocked in that container (2026-11-06).
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   captured CUDA kernels cover about 11% of an `arx_x5` episode; the capture does not account for graphics
   GPU work (2026-11-05).
