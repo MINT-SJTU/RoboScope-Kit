@@ -80,6 +80,7 @@ is not in the report, only the round-trip time of each request.
 | LIBERO, LIBERO-Plus | Yes | Not yet |
 | MetaWorld | Yes | Not yet |
 | robomimic | Yes | Not yet |
+| SimplerEnv | Yes | Not yet |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |

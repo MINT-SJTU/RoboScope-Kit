@@ -84,6 +84,7 @@ equal hardware.
 | [CALVIN](https://github.com/mees/calvin) | `task_D_D`, `task_ABC_D`, `task_ABCD_D` | [CALVIN protocol](packages/roboscope-kit/CALVIN_EVALUATION_PROTOCOL.md) |
 | [MetaWorld](https://github.com/Farama-Foundation/Metaworld) | `mt50` | [MetaWorld protocol](packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md) |
 | [robomimic](https://github.com/ARISE-Initiative/robomimic) | `ph_low_dim` | [robomimic protocol](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) |
+| [SimplerEnv](https://github.com/simpler-env/SimplerEnv) | `google_robot_visual_matching`, `google_robot_variant_aggregation`, `widowx_visual_matching` | [SimplerEnv protocol](packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md) |
 
 The simulators, datasets, and assets are not dependencies of the PyPI package; `build-runtime.sh` builds them
 separately. Simulator builds, real episodes, and model loading need Linux x86_64, a GPU, and network access.
@@ -98,6 +99,7 @@ Start from an existing `Policy` if you use one of these model families:
 | [X-VLA](https://github.com/2toINF/X-VLA) | LIBERO, LIBERO-Plus, RoboTwin, CALVIN | [`examples/xvla/`](examples/xvla/README.md) |
 | [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) | RoboDojo | [`examples/xpolicylab/`](examples/xpolicylab/README.md) |
 | [robomimic model zoo](https://robomimic.github.io/docs/model_zoo/robomimic_v0.1.html) | robomimic (the v0.1 PH low-dim BC-RNN checkpoints) | [`examples/robomimic/`](examples/robomimic/README.md) |
+| [RT-1-X](https://github.com/google-deepmind/open_x_embodiment) | SimplerEnv (Google Robot and WidowX, through SimplerEnv's own RT-1 inference code) | [`examples/rt1/`](examples/rt1/README.md) |
 
 ## Quick start
 
@@ -177,11 +179,12 @@ tuning, writing a Policy, CUDA MPS, and cross-instance sharding.
 | Path | Contents |
 | --- | --- |
 | `packages/roboscope-kit/` | The `roboscope-kit` package: public `Policy` API, protocol client and server, benchmark runtime, and the evaluation protocol documents |
-| `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, MetaWorld, RoboCasa GR-1 Tabletop, RoboDojo, RoboTwin, and robomimic: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
+| `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, MetaWorld, RoboCasa GR-1 Tabletop, RoboDojo, RoboTwin, robomimic, and SimplerEnv: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
 | `examples/starvla/` | The StarVLA `Policy` and one demo per benchmark, including the configurations behind the RoboScope Kit technical report |
 | `examples/xvla/` | An X-VLA `Policy` example: a stateful Policy serving several benchmarks |
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
+| `examples/rt1/` | An RT-1-X `Policy` example for SimplerEnv, with a runner for SimplerEnv's official scripts and an episode-by-episode comparison |
 | `ci/` | Build, compatibility, and PyPI release scripts used by GitHub Actions |
 
 ## Contributing

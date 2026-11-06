@@ -23,6 +23,7 @@ body:
         - CALVIN
         - MetaWorld
         - robomimic
+        - SimplerEnv
     validations:
       required: true
   - type: input
