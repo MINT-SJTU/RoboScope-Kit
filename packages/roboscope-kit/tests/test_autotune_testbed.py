@@ -30,6 +30,7 @@ from roboscope_kit.runtime.benchmark.autotune_testbed import (
     main,
     record_runs,
     regression_failures,
+    repeat_tolerance,
     replay_strategy,
     search_mismatches,
     validate_record,
@@ -52,7 +53,9 @@ UNKNOWN_ON_REAL = (
 
 # The regression rule, on the default strategy: workload -> (expected relative throughput, tolerance).
 # Lowering an expected value is allowed only in a PR that says why, and it needs maintainer review.
-JUDGED = {FULL_AUTO: (0.7214, NOISE_TOLERANCE)}
+# A tolerance comes from repeated fixed runs (repeat_tolerance) once the selection and the best
+# configuration have three each; until then it is NOISE_TOLERANCE.
+JUDGED = {FULL_AUTO: (0.6484, 0.1995)}
 # Judged workload -> the recorded real search that ran the autotune code of this branch. Its
 # replay must probe the same K/g in the same order, stop for the same reason, select the same K/g,
 # and take the same time. A change to the search names here the searches it still reproduces; a
@@ -112,11 +115,11 @@ EXPECTED = {
     (FULL_AUTO, "diagonal", None): {
         "selected": (8, 1),
         "best_recorded": (12, 2),
-        "relative_throughput": pytest.approx(0.7214, abs=0.0001),
+        "relative_throughput": pytest.approx(0.6484, abs=0.0001),
         "probes": 5,
         "tuning_s": pytest.approx(851.97, abs=0.01),
-        "end_to_end_s": pytest.approx(5973.1, abs=0.1),
-        "end_to_end_vs_best": pytest.approx(1.617, abs=0.001),
+        "end_to_end_s": pytest.approx(6648.8, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.769, abs=0.001),
         "safe": True,
         "gaps": (),
         "unknown_signals": ("queue_wait_p95_ms",),
@@ -124,35 +127,38 @@ EXPECTED = {
     (FULL_AUTO, "diagonal", "steady"): {
         "selected": (8, 1),
         "best_recorded": (12, 2),
-        "relative_throughput": pytest.approx(0.7214, abs=0.0001),
+        "relative_throughput": pytest.approx(0.6484, abs=0.0001),
         "probes": 5,
         "tuning_s": pytest.approx(851.97, abs=0.01),
-        "end_to_end_s": pytest.approx(5973.1, abs=0.1),
-        "end_to_end_vs_best": pytest.approx(1.617, abs=0.001),
+        "end_to_end_s": pytest.approx(6648.8, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.769, abs=0.001),
         "safe": True,
         "gaps": (),
         "unknown_signals": ("queue_wait_p95_ms",),
     },
-    # two-phase's next K candidate is 9, which no search probed.
+    # two-phase's next K candidate is 9, which no search probed. The fixed run at K=9/g=1 stands in
+    # for that probe, so the search completes, but it ran the full workload and has no probe time.
     (FULL_AUTO, "two-phase", None): {
-        "selected": (8, 1),
+        "selected": (9, 1),
         "best_recorded": (12, 2),
-        "relative_throughput": pytest.approx(0.7214, abs=0.0001),
-        "probes": 4,
-        "tuning_s": pytest.approx(731.66, abs=0.01),
+        "relative_throughput": pytest.approx(0.6199, abs=0.0001),
+        "probes": 5,
+        "tuning_s": None,
         "safe": True,
-        "gaps": (Gap(9, 1, "configuration"),),
-        "unknown_signals": ("queue_wait_p95_ms",),
+        "gaps": (),
+        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "stand_ins": ((9, 1),),
     },
     (FULL_AUTO, "two-phase", "steady"): {
-        "selected": (8, 1),
+        "selected": (9, 1),
         "best_recorded": (12, 2),
-        "relative_throughput": pytest.approx(0.7214, abs=0.0001),
-        "probes": 4,
-        "tuning_s": pytest.approx(731.66, abs=0.01),
+        "relative_throughput": pytest.approx(0.6199, abs=0.0001),
+        "probes": 5,
+        "tuning_s": None,
         "safe": True,
-        "gaps": (Gap(9, 1, "configuration"),),
-        "unknown_signals": ("queue_wait_p95_ms",),
+        "gaps": (),
+        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "stand_ins": ((9, 1),),
     },
     (SYNTHETIC, "diagonal", None): {
         "selected": (4, 1),
@@ -228,6 +234,24 @@ def test_judged_workloads_pass_the_regression_rule(workload: str) -> None:
     assert regression_failures(score, expected, tolerance=tolerance) == ()
 
 
+@pytest.mark.parametrize("workload", sorted(JUDGED))
+def test_a_judged_tolerance_comes_from_the_repeated_fixed_runs(workload: str) -> None:
+    record = _load(workload)
+    score = replay_strategy(record, DEFAULT_AUTOTUNE_STRATEGY)
+    measured = repeat_tolerance(record, score.selected, score.best_recorded)
+    _, tolerance = JUDGED[workload]
+    assert tolerance == pytest.approx(NOISE_TOLERANCE if measured is None else measured, abs=0.0001)
+
+
+def test_repeat_tolerance_needs_three_fixed_runs_of_each_configuration() -> None:
+    record = _load(FULL_AUTO)
+    assert repeat_tolerance(record, (8, 1), (12, 2)) == pytest.approx(0.1995, abs=0.0001)
+    assert repeat_tolerance(record, (16, 2), (12, 2)) == pytest.approx(0.1367, abs=0.0001)
+    assert repeat_tolerance(record, (9, 1), (12, 2)) is None
+    # The best configuration selected is compared with itself across repeats.
+    assert repeat_tolerance(record, (12, 2), (12, 2)) == pytest.approx(0.0603, abs=0.0001)
+
+
 def test_every_real_workload_is_judged_or_says_why_not() -> None:
     names = [path.stem for path in WORKLOADS.glob("*.json")]
     real = {name for name in names if _load(name)["provenance"]["kind"] == "real"}
@@ -258,14 +282,14 @@ def test_end_to_end_needs_the_evaluation_size_and_a_fixed_run_of_the_selection()
 
 
 def test_fixed_default_scores_the_worker_cap_with_one_replica_per_gpu() -> None:
-    record = _load(FULL_AUTO)
-    assert fixed_default(record) == FixedDefault(9, 1, None, None, None)
+    # On RoboCasa the fixed default, K=9/g=1, is slower than any search selection.
+    default = fixed_default(_load(FULL_AUTO))
+    assert (default.k, default.g, default.safe) == (9, 1, True)
+    assert default.relative_throughput == pytest.approx(0.6199, abs=0.0001)
+    assert default.evaluation_s == pytest.approx(6062.6, abs=0.1)
 
-    measured = {"k": 9, "g": 1, "source": "fixed-run", "outcome": "no_steady_window", "steps_per_s": 180.0}
-    default = fixed_default(_with_measurements(record, measured))
-    assert default.relative_throughput == pytest.approx(180.0 / 233.8686, abs=0.0001)
-    assert default.evaluation_s == 4800.0
-    assert default.safe is True
+    record = _load(REAL)
+    assert fixed_default(record) == FixedDefault(64, 1, None, None, None)
 
 
 def test_real_workload_exists_and_synthetic_ones_are_labeled() -> None:

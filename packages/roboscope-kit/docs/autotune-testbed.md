@@ -128,8 +128,15 @@ tolerance, on the default strategy. `regression_failures` applies the rule:
   in the recorded rates. On RoboCasa, repeated probes differ by at most 1.98%. Taken as a standard deviation of
   `1.98 / sqrt(2)` per rate, and `sqrt(2)` more for a ratio of two rates, that gives about 5% at 1% false alerts
   (2.576 standard deviations). Probes are not fixed runs, so this is a starting point.
-- **Each workload gets its own tolerance** from three fixed runs each of the best and the selected configuration:
-  the same calculation, on the standard deviation of those repeats.
+- **Each workload gets its own tolerance** once the selection and the best configuration have three fixed runs
+  each: `repeat_tolerance` takes each one's spread, the sample standard deviation of its fixed-run elapsed rates
+  over their mean, and gives `2.576 * sqrt(cv_selected**2 + cv_best**2)`. `JUDGED` writes the number out for
+  review, and a test checks it against the calculation.
+- **RoboCasa's tolerance is 19.95%.** Its fixed runs are spread wider than its probes: `K=8/g=1` ran at 168.7,
+  149.1, and 147.8 steps/s (7.5%), `K=12/g=2` at 233.9, 226.3, and 229.9 (1.7%). The first run of each is from
+  2026-11-05, the other two from 2026-11-06 back to back, and the runs of one night agree closely, so most of the
+  spread is drift between days rather than noise within a run. That drift is what a user sees, so it stays in.
+  With #81, the selection is `K=16/g=2` (223.6, 202.2, 215.4; 5.0%), and the tolerance is 13.67%.
 - **Lowering an expected value** is allowed only in a PR that says why, and it needs maintainer review. Raise the
   value when a change improves it, so later changes cannot give the gain back.
 - **An incomplete search cannot be judged.** Measure the missing point on a GPU and add it to the record.
@@ -207,18 +214,20 @@ is for edge cases only, and must say so in `provenance.kind` and in its file nam
 | File | Kind | Covers | Missing |
 | --- | --- | --- | --- |
 | `robocasa-tabletop-rtx4090-issue80.json` | real | `K=1, 2, 4, 8` at `g=1`: steady rate and GPU utilization. `K=16` at `g=1`: no steady window. | Every `g > 1` point; elapsed rates, per-probe wall times, CPU, throttle, peak memory, queue wait, health, per-episode success, and probe sizes for every point. |
-| `robocasa-tabletop-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host: probes at `K=1, 2, 4, 8, 16` with `g=1` and `K=16/g=2`; fixed runs at 8/1, 12/2, 16/1, 16/2, 16/3, 20/2, and three that failed (16/4, 20/3, 24/2). | Queue wait; fixed-run wall times; fixed runs with CUDA MPS, listed in its notes; `K=32/g=2`, stopped by hand. |
+| `robocasa-tabletop-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host: probes at `K=1, 2, 4, 8, 16` with `g=1` and `K=16/g=2`; fixed runs at 8/1, 12/2, and 16/2 three times each, 9/1, 16/1, 16/3, 20/2, and three that failed (16/4, 20/3, 24/2). | Queue wait; fixed-run wall times; fixed runs with CUDA MPS, listed in its notes; `K=32/g=2`, stopped by hand. |
 | `synthetic-replica-limits.json` | synthetic | Replica probes, probes without a window, a failing configuration, wall times, repeats, a fixed-run point. | Everything: no number in it was measured. |
 
 Scores on `robocasa-tabletop-rtx4090-full-auto.json`:
 
 | Strategy | Estimator | Selected | Relative to best recorded | Probes | Tuning time | End to end | Safe | Search |
 | --- | --- | --- | ---: | ---: | --- | --- | --- | --- |
-| `diagonal` | steady (default) | `K=8/g=1` | 0.721 of `K=12/g=2` | 5 | 852 s | 5973 s, 1.62x | yes | Complete: stops at `K=16` without a steady window, a known problem (#80) |
-| `two-phase` | elapsed (default) | `K=8/g=1` | 0.721 of `K=12/g=2` | 4 | 732 s | 5853 s, 1.58x | yes | Incomplete: asks for `K=9/g=1`, which is not recorded |
-| `two-phase` | steady | `K=8/g=1` | 0.721 of `K=12/g=2` | 4 | 732 s | 5853 s, 1.58x | yes | Incomplete: asks for `K=9/g=1`, which is not recorded |
+| `diagonal` | steady (default) | `K=8/g=1` | 0.648 of `K=12/g=2` | 5 | 852 s | 6649 s, 1.77x | yes | Complete: stops at `K=16` without a steady window, a known problem (#80) |
+| `two-phase` | elapsed (default) | `K=9/g=1` | 0.620 of `K=12/g=2` | 5 | unknown | unknown | yes | Complete, but the `K=9/g=1` probe is answered by a fixed run, which has no probe time |
+| `two-phase` | steady | `K=9/g=1` | 0.620 of `K=12/g=2` | 5 | unknown | unknown | yes | As above |
 
-The fixed default on this host is `K=9/g=1`, which has no fixed run yet, so it has no score.
+Relative throughput uses the median of each configuration's fixed runs. The fixed default on this host is
+`K=9/g=1`, with no tuning: 0.620 of the best, about 6063 s for the full evaluation, slower than any search's
+selection.
 
 The record holds two real searches. `main 5f79ce2` stopped at `K=8/g=1` after `K=16/g=1` had no steady window, in
 818 s, and the code here reproduces it probe by probe. `#81 81e3824`, a candidate fix for #80, went on to `K=16/g=2`;
