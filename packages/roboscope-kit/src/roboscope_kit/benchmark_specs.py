@@ -21,6 +21,7 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     METAWORLD = "metaworld"
     ROBODOJO = "robodojo"
     ROBOMIMIC = "robomimic"
+    SIMPLER_ENV = "simpler_env"
 
 
 class BenchmarkDefinition(ABC):
@@ -324,6 +325,61 @@ class RobomimicBenchmarkDefinition(BenchmarkDefinition):
         )
 
 
+# Policy camera resolution per SimplerEnv suite: Google Robot ``overhead_camera`` and WidowX
+# ``3rd_view_camera``, as ``get_image_from_maniskill2_obs_dict`` returns them.
+SIMPLER_ENV_IMAGE_SHAPES = {
+    "google_robot_visual_matching": (512, 640, 3),
+    "google_robot_variant_aggregation": (512, 640, 3),
+    "widowx_visual_matching": (480, 640, 3),
+}
+
+
+class SimplerEnvBenchmarkDefinition(BenchmarkDefinition):
+    """SimplerEnv (SAPIEN / ManiSkill2_real2sim) with its policy camera and current instruction."""
+
+    name = BenchmarkName.SIMPLER_ENV
+    protocol_version = "simpler-env-v1"
+    supported_action_representations = ("simpler_env.ee-delta-axangle-v1",)
+    default_action_representation = "simpler_env.ee-delta-axangle-v1"
+
+    def features(self, suite: str) -> tuple[FeatureSpec, ...]:
+        shape = SIMPLER_ENV_IMAGE_SHAPES.get(suite)
+        if shape is None:
+            raise ValueError(f"unsupported simpler_env suite: {suite}")
+        camera = "WidowX 3rd_view_camera" if suite.startswith("widowx") else "Google Robot overhead_camera"
+        overlay = (
+            "with the real-image background overlay"
+            if suite.endswith("visual_matching")
+            else "rendered without overlay"
+        )
+        return (
+            _feature(
+                "images.primary",
+                FeatureKind.IMAGE,
+                f"SimplerEnv policy camera RGB ({camera}), {overlay}.",
+                shape=shape,
+            ),
+            _feature(
+                "language.instruction",
+                FeatureKind.LANGUAGE,
+                "The environment's current language instruction; it changes when a long-horizon "
+                "task advances to its next subtask.",
+            ),
+        )
+
+    def action(self, suite: str) -> ActionSpec:
+        robot = "WidowX" if suite.startswith("widowx") else "Google Robot"
+        return ActionSpec(
+            "action.robot",
+            f"The {robot} action SimplerEnv's evaluator passes to env.step: end-effector delta "
+            "translation (3), delta rotation as an axis-angle vector (3), and the gripper command "
+            "(1) in the robot's controller convention, followed by a terminate signal (> 0 ends the "
+            "episode, or advances a long-horizon task that is not on its final subtask). float64.",
+            8,
+            dtype="float64",
+        )
+
+
 _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
     definition.name: definition
     for definition in (
@@ -336,6 +392,7 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         CalvinBenchmarkDefinition(),
         MetaworldBenchmarkDefinition(),
         RobomimicBenchmarkDefinition(),
+        SimplerEnvBenchmarkDefinition(),
     )
 }
 

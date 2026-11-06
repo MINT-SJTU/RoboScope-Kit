@@ -1,0 +1,124 @@
+# Verified SimplerEnv runtime lock (Linux x86_64, CPython 3.11.15).
+# build-runtime.sh installs exactly these packages, then SimplerEnv and its ManiSkill2_real2sim
+# submodule from their pinned commits (see the script). This holds ManiSkill2_real2sim's own
+# requirements (SAPIEN 2.2.2, gymnasium < 1.0) with numpy 1.24.4 as SimplerEnv's README
+# requires, plus what SimplerEnv's main_inference.py and its RT-1 policy import
+# (tensorflow[and-cuda] 2.15.1, tensorflow-hub 0.16.0, tf-agents 0.19.0, mediapy 1.2.0,
+# scipy 1.12.0, as in requirements_full_install.txt), so the native evaluator and the example
+# RT-1 Policy run in this environment. The Octo/JAX, dataset (TFDS, RLDS, Reverb, Beam), and
+# system-identification extras of requirements_full_install.txt are not installed.
+# setuptools < 81 keeps pkg_resources, which SAPIEN 2.2.2 imports. IPython 8.22.2 is SimplerEnv's own
+# pin; IPython 8.23 (which mediapy would otherwise pull in) does not import with the
+# typing-extensions 4.5.0 that tf-agents 0.19.0 pins.
+absl-py==2.5.1
+asttokens==3.0.2
+astunparse==1.6.3
+attrs==26.1.0
+beautifulsoup4==4.15.0
+certifi==2026.10.23
+cffi==2.1.1
+charset-normalizer==3.5.2
+cloudpickle==3.1.2
+contourpy==1.3.2
+cryptography==50.0.2
+cycler==0.12.1
+decorator==5.3.1
+dm-tree==0.1.10
+executing==2.3.0
+farama-notifications==0.0.6
+filelock==4.2.9
+flatbuffers==25.12.19
+fonttools==4.68.0
+gast==0.7.0
+gdown==6.5.1
+gin-config==0.5.0
+gitdb==4.0.12
+gitpython==3.2.1
+google-auth==2.62.1
+google-auth-oauthlib==1.5.0
+google-pasta==0.2.0
+grpcio==1.74.0
+gym==0.23.0
+gym-notices==0.1.0
+gymnasium==0.29.1
+h5py==3.16.0
+idna==3.20
+imageio==2.38.1
+imageio-ffmpeg==0.8.1
+ipython==8.22.2
+jedi==0.20.1
+keras==2.15.0
+kiwisolver==1.5.1
+libclang==18.1.1
+markdown==3.11.3
+markupsafe==3.0.4
+matplotlib==3.10.9
+matplotlib-inline==0.2.2
+mediapy==1.2.0
+ml-dtypes==0.3.2
+numpy==1.24.4
+nvidia-cublas-cu12==12.2.5.6
+nvidia-cuda-cupti-cu12==12.2.142
+nvidia-cuda-nvcc-cu12==12.2.140
+nvidia-cuda-nvrtc-cu12==12.2.140
+nvidia-cuda-runtime-cu12==12.2.140
+nvidia-cudnn-cu12==8.9.4.25
+nvidia-cufft-cu12==11.0.8.103
+nvidia-curand-cu12==10.3.3.141
+nvidia-cusolver-cu12==11.5.2.141
+nvidia-cusparse-cu12==12.1.2.141
+nvidia-nccl-cu12==2.16.5
+nvidia-nvjitlink-cu12==12.2.140
+oauthlib==4.0.1
+opencv-python==4.11.0.86
+opt-einsum==3.4.0
+packaging==26.3
+parso==0.8.7
+pexpect==4.9.0
+pillow==13.0.0
+prompt-toolkit==3.0.53
+protobuf==4.25.9
+psutil==7.2.2
+ptyprocess==0.7.0
+pure-eval==0.2.4
+pyasn1==0.6.5
+pyasn1-modules==0.4.2
+pycparser==3.12
+pygame==2.1.3
+pygments==2.21.0
+pyparsing==3.3.3
+pysocks==1.7.1
+python-dateutil==4.0.0
+pyyaml==6.0.3
+requests==2.34.2
+requests-oauthlib==2.0.0
+rtree==1.4.1
+ruckig==0.19.4
+sapien==2.2.2
+scipy==1.12.0
+setuptools==80.10.2
+six==1.17.0
+smmap==5.0.3
+soupsieve==2.10
+stack-data==0.6.3
+tabulate==0.10.0
+tensorboard==2.15.2
+tensorboard-data-server==0.7.2
+tensorflow==2.15.1
+tensorflow-estimator==2.15.0
+tensorflow-hub==0.16.0
+tensorflow-io-gcs-filesystem==0.37.1
+tensorflow-probability==0.23.0
+termcolor==3.3.0
+tf-agents==0.19.0
+tqdm==4.70.1
+traitlets==5.16.1
+transforms3d==0.4.2
+trimesh==5.2.0
+typing-extensions==4.5.0
+tzdata==2026.6
+urllib3==2.8.0
+wcwidth==0.9.4
+werkzeug==3.1.9
+wheel==0.48.0
+wrapt==1.14.2

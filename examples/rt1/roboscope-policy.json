@@ -1,0 +1,12 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/usr/bin/env",
+    "PYTHONPATH=/path/to/RoboScope-Kit/packages/roboscope-kit/src",
+    "ROBOSCOPE_RT1_TF_MEMORY_MB=3072",
+    "TF_CPP_MIN_LOG_LEVEL=2",
+    "/sim/simpler-env/env/bin/python",
+    "/path/to/RoboScope-Kit/examples/rt1/rt1_policy.py"
+  ],
+  "cwd": "/path/to/RoboScope-Kit/examples/rt1"
+}

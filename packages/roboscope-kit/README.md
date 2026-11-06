@@ -246,6 +246,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
+| SimplerEnv | SDK-native adapter and persistent SAPIEN/ManiSkill2_real2sim worker, one fresh environment per episode as upstream | Pinned SimplerEnv and ManiSkill2_real2sim (with their scene and overlay assets), SAPIEN 2.2.2, and the frozen matrix of the official RT-1 scripts |
 
 LIBERO and CALVIN convert native observations to the canonical feature names and send native 7-dimensional
 actions back to their simulators. CALVIN's task-D-to-task-D path runs the official 1,000 long-horizon
@@ -268,6 +269,12 @@ The exact contracts are in the protocol documents:
   license gates, seeded initial states, upstream rollout semantics, the native comparison, and the baseline.
   Status: code candidate, build-verified with a real-model full evaluation and native comparison; ships in
   `0.8.0b26`, released when that version is merged.
+- [SimplerEnv](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md):
+  the Google Robot visual-matching and variant-aggregation suites and the WidowX visual-matching suite, kept
+  separate; the frozen pose sweeps, episode loop, termination, aggregation, and the native comparison.
+  Status: code candidate; build-verified, with real-model full evaluations of the two visual-matching suites
+  (native comparison complete for WidowX, partial for Google Robot) and no evaluation of variant aggregation
+  yet; ships in `0.8.0b28`, released when that version is merged.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md):
   environment build, suites, observation and action layouts, step observation updates, and experimental
   runtime switches.
