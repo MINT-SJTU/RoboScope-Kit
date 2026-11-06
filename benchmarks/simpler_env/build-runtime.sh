@@ -17,11 +17,13 @@ set -Eeuo pipefail
 #          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
 #
 # Host prerequisites: git, uv 0.11.14, and an NVIDIA GPU with a working Vulkan driver
-# (SAPIEN 2.2 renders through Vulkan; the build renders one reset per check). When the
-# driver also installs its Vulkan SC ICD (nvidia_icd_vksc.json), the Vulkan loader loads it
-# too and every SAPIEN renderer teardown segfaults while unloading it; export
-# VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json (the regular NVIDIA ICD) for the
-# build and every evaluation. The build refuses to start without it on such a host.
+# (SAPIEN 2.2 renders through Vulkan; the build renders one reset per check). When any Vulkan
+# ICD besides the NVIDIA one is installed, the loader loads it too, and SAPIEN 2.2 breaks:
+# with NVIDIA's Vulkan SC ICD (nvidia_icd_vksc.json) every renderer teardown segfaults, and
+# with Mesa's ICDs (lvp, intel, radeon, ...) creating the renderer can fail with
+# ErrorExtensionNotPresent. Export VK_ICD_FILENAMES=<dir>/nvidia_icd.json (the regular NVIDIA
+# ICD, in /usr/share/vulkan/icd.d or /etc/vulkan/icd.d) for the build and every evaluation;
+# the build refuses to start without it on such a host.
 #
 # SimplerEnv and ManiSkill2_real2sim are installed editable from the pinned checkout, as
 # SimplerEnv's README installs them: ManiSkill2_real2sim finds its assets in the checkout's
@@ -81,13 +83,21 @@ if [[ "$("${UV_BIN}" --version)" != "uv 0.11.14 "* ]]; then
 fi
 
 if [[ -z "${VK_ICD_FILENAMES:-}${VK_DRIVER_FILES:-}" ]]; then
-  for icd_dir in /usr/share/vulkan/icd.d /etc/vulkan/icd.d; do
-    if [[ -f "${icd_dir}/nvidia_icd_vksc.json" ]]; then
-      echo "${icd_dir}/nvidia_icd_vksc.json (NVIDIA Vulkan SC) crashes SAPIEN's renderer teardown;" >&2
-      echo "export VK_ICD_FILENAMES=${icd_dir}/nvidia_icd.json and re-run" >&2
-      exit 3
+  nvidia_icd=""
+  other_icds=()
+  for icd in /usr/share/vulkan/icd.d/*.json /etc/vulkan/icd.d/*.json; do
+    [[ -f "${icd}" ]] || continue
+    if [[ "$(basename -- "${icd}")" == "nvidia_icd.json" ]]; then
+      nvidia_icd="${nvidia_icd:-${icd}}"
+    else
+      other_icds+=("${icd}")
     fi
   done
+  if (( ${#other_icds[@]} )); then
+    echo "Vulkan ICDs besides the NVIDIA one are installed (${other_icds[*]}); SAPIEN 2.2 breaks with them" >&2
+    echo "export VK_ICD_FILENAMES=${nvidia_icd:-<dir>/nvidia_icd.json} and re-run" >&2
+    exit 3
+  fi
 fi
 
 # SimplerEnv and its submodule at the pinned commits. A clean re-run checks the existing

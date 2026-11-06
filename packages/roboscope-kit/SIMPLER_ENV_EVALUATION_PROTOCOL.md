@@ -101,14 +101,16 @@ TensorFlow. The build checks both commits and that the checkouts are unmodified,
 every suite plus one ray-traced drawer variant through the kit worker's own code. `--self-test` repeats that
 check.
 
-SAPIEN renders through Vulkan. If the NVIDIA driver also installed its Vulkan SC ICD (`nvidia_icd_vksc.json`),
-the Vulkan loader loads it and every SAPIEN renderer teardown segfaults inside `libnvidia-vksc-core.so` (also in
-upstream's own evaluator, which drops one environment per episode). Export
-`VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json` for the build and every run; the build, `--self-test`,
-and every run refuse to start on such a host without it.
+SAPIEN renders through Vulkan, and SAPIEN 2.2 breaks when the Vulkan loader loads any ICD besides the regular
+NVIDIA one. Two hosts showed two failures: with NVIDIA's Vulkan SC ICD (`nvidia_icd_vksc.json`) installed, every
+renderer teardown segfaulted inside `libnvidia-vksc-core.so` (also in upstream's own evaluator, which drops one
+environment per episode); with Mesa's ICDs installed next to the NVIDIA one, creating the renderer failed with
+`ErrorExtensionNotPresent`. Export `VK_ICD_FILENAMES=<dir>/nvidia_icd.json` (`/usr/share/vulkan/icd.d` or
+`/etc/vulkan/icd.d`) for the build and every run; the build, `--self-test`, and every run refuse to start without
+it while another ICD is installed.
 
 ```bash
-export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json   # only on hosts with nvidia_icd_vksc.json
+export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json   # or /etc/vulkan/icd.d/; see above
 benchmarks/simpler_env/build-runtime.sh /sim/simpler-env
 python -m roboscope_kit.runtime.benchmark \
     --benchmark simpler_env --suite google_robot_visual_matching \

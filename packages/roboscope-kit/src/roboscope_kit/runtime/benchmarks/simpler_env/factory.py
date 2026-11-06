@@ -20,28 +20,29 @@ from .adapter import SimplerEnvBenchmarkAdapter, SimplerEnvRuntimeConfig
 from .tasks import QUICK_TEST_VARIANTS, SUITE_EPISODES, SUITE_TASKS, SUITES
 
 VULKAN_ICD_DIRS = ("/usr/share/vulkan/icd.d", "/etc/vulkan/icd.d")
-VULKAN_SC_ICD = "nvidia_icd_vksc.json"
+NVIDIA_ICD = "nvidia_icd.json"
 
 
 def vulkan_preflight(environ: dict[str, str] | None = None) -> None:
-    """Reject a host whose Vulkan loader would also load NVIDIA's Vulkan SC ICD.
+    """Reject a host whose Vulkan loader would load an ICD besides the regular NVIDIA one.
 
-    With ``nvidia_icd_vksc.json`` installed and no explicit ICD list, every SAPIEN renderer
-    teardown (each episode drops its environment) segfaults inside
-    ``libnvidia-vksc-core.so`` as the loader unloads it. Naming the regular NVIDIA ICD in
-    ``VK_ICD_FILENAMES`` avoids it.
+    SAPIEN 2.2 breaks when it does: with NVIDIA's Vulkan SC ICD (``nvidia_icd_vksc.json``)
+    every renderer teardown (each episode drops its environment) segfaults inside
+    ``libnvidia-vksc-core.so``, and with Mesa's ICDs (lvp, intel, radeon, ...) creating the
+    renderer can fail with ``ErrorExtensionNotPresent``. Naming the NVIDIA ICD in
+    ``VK_ICD_FILENAMES`` avoids both.
     """
 
     environ = os.environ if environ is None else environ
     if environ.get("VK_ICD_FILENAMES") or environ.get("VK_DRIVER_FILES"):
         return
-    found = [str(Path(directory) / VULKAN_SC_ICD) for directory in VULKAN_ICD_DIRS]
-    found = [path for path in found if Path(path).is_file()]
-    if found:
-        regular = Path(found[0]).with_name("nvidia_icd.json")
+    icds = sorted(path for directory in VULKAN_ICD_DIRS for path in Path(directory).glob("*.json"))
+    others = [str(path) for path in icds if path.name != NVIDIA_ICD]
+    if others:
+        nvidia = next((str(path) for path in icds if path.name == NVIDIA_ICD), f"<dir>/{NVIDIA_ICD}")
         raise RuntimeError(
-            f"{found[0]} (NVIDIA Vulkan SC) is installed and crashes SAPIEN's renderer teardown; "
-            f"export VK_ICD_FILENAMES={regular} (the regular NVIDIA ICD) before running simpler_env"
+            f"Vulkan ICDs besides the NVIDIA one are installed ({', '.join(others)}); SAPIEN 2.2 breaks "
+            f"with them. Export VK_ICD_FILENAMES={nvidia} before running simpler_env"
         )
 
 

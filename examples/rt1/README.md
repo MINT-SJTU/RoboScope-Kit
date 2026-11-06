@@ -42,8 +42,8 @@ too, but reuses the SavedModel and encoder the first instance loaded. The return
 ## Run
 
 1. Build the SimplerEnv runtime; it also holds the pinned TensorFlow, TF-Agents, and SimplerEnv this Policy
-   uses. On a host whose NVIDIA driver also installed `nvidia_icd_vksc.json`, export
-   `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json` first, for the build and every run below:
+   uses. On a host with any Vulkan ICD besides `nvidia_icd.json` (the protocol explains why), export
+   `VK_ICD_FILENAMES=<dir>/nvidia_icd.json` first, for the build and every run below:
 
    ```bash
    benchmarks/simpler_env/build-runtime.sh /sim/simpler-env
