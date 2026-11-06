@@ -29,12 +29,13 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## News
 
-- **2026-11-06:** [robomimic](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) is supported (`ph_low_dim`,
-  v0.8.0b26). With the robomimic model-zoo checkpoints, all 250 episodes match the upstream evaluator one to one.
-- **2026-11-04:** [RoboDojo](benchmarks/robodojo/README.md) is supported, with an
+- 🧪 **2026-11-06:** [robomimic](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) is supported
+  (`ph_low_dim`, v0.8.0b26). With the robomimic model-zoo checkpoints, all 250 episodes match the upstream
+  evaluator one to one.
+- 🤖 **2026-11-04:** [RoboDojo](benchmarks/robodojo/README.md) is supported, with an
   [XPolicyLab Policy example](examples/xpolicylab/).
-- **2026-11-02:** The [technical report](https://arxiv.org/abs/2611.03850) is on arXiv.
-- **2026-10-30:** RoboScope Kit is on PyPI: `pip install roboscope-kit`.
+- 🎉 **2026-11-04:** RoboScope Kit is released! Read the [technical report](https://arxiv.org/abs/2611.03850)
+  and install it with `pip install roboscope-kit`.
 
 ## Highlights
 
