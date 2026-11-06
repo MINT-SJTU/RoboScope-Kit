@@ -80,15 +80,16 @@ their digest.
 
 **Why not the original stack.** The robomimic v0.1 model zoo was trained with robomimic v0.1 on the
 `offline_study` branch of robosuite (1.2), which depends on `mujoco-py==2.0.2.x` and the MuJoCo 2.0 binary
-with an activation key. mujoco-py 2.0 is a Cython extension built against MuJoCo 2.0 headers and system
-OpenGL/OSMesa development headers, robomimic v0.1 and v0.3 import `mujoco_py` unconditionally, and none of
-it is maintained for Python 3.11. This protocol therefore uses robomimic v0.4.0, the first release whose
-robosuite wrapper runs without mujoco-py, with the robosuite v1.4.1 branch that robomimic documents for its
-regenerated datasets. robomimic v0.4.0 loads v0.1 checkpoints through its own backward-compatibility path
-(`FileUtils.update_config`). The physics (MuJoCo 2.0 to 2.3.7, robosuite 1.2 to 1.4.1) is not the
-`offline_study` physics, so success rates are not assumed equal to the published ones: section 9 reports
-what this stack reproduces. robosuite v1.5 is not used, because it replaces the controller stack the
-checkpoints were trained with.
+with an activation key. That stack can still be built in user space (section 9 used one, with Python 3.8
+and conda-forge Mesa for the OSMesa headers), but robomimic v0.1 and v0.3 import `mujoco_py`
+unconditionally, mujoco-py 2.0 is a Cython extension compiled against MuJoCo 2.0 and system OpenGL
+headers, and none of it supports Python 3.11, the Kit's minimum. This protocol therefore uses robomimic
+v0.4.0, the first release whose robosuite wrapper runs without mujoco-py, with the robosuite v1.4.1 branch
+that robomimic documents for its regenerated datasets. robomimic v0.4.0 loads v0.1 checkpoints through its
+own backward-compatibility path (`FileUtils.update_config`). The physics (MuJoCo 2.0 to 2.3.7, robosuite
+1.2 to 1.4.1) is not the `offline_study` physics; section 9 compares the two stacks on the same
+checkpoints and seeds and finds the same success rates within sampling error. robosuite v1.5 is not used,
+because it replaces the controller stack the checkpoints were trained with.
 
 **Licenses.** robomimic and robosuite are MIT-licensed, MuJoCo is Apache-2.0, torch is BSD-3-Clause. The
 build accepts no license on anyone's behalf and downloads no model or dataset. The model-zoo checkpoints are
@@ -287,19 +288,84 @@ What is not controlled, and why the result is not a claim of statistical equival
   where each episode's initial state and samples depend on every earlier episode's length. Those episodes
   cannot be paired with independently seeded ones. Run once per task, that protocol gave Lift 48/50, Can
   50/50, Square 33/50, Transport 21/50, Tool Hang 7/50: a different sample of initial states and GMM draws,
-  not a discrepancy. The Square and Transport gaps (6 of 50 each) come from one run of each protocol; they
-  are consistent with sampling variance, but no repeated runs measured that variance.
+  not a discrepancy. Repeated runs of it are in the training-time protocol table below.
 - The identity holds for the same CPU and GPU types and the same torch, cuDNN, and MuJoCo builds. Other
   hardware can change floating-point results in the LSTM or the physics and break the one-to-one match;
-  per-task rates would then agree only statistically.
-- The model-zoo file names carry the success rate robomimic measured during training, on the
-  `offline_study` stack, at the epoch it selected as best. That value comes from other physics, other
-  initial states, and a best-of-many selection, so it is a reference, not an expected value. Transport (54%
-  here, 42% with the upstream default stream, 78% in the file name) is the clearest difference; Square
-  (78% and 66% against 84%) is smaller. The comparison above rules out a difference between the kit and
-  the native entry point on this stack and these seeds. It does not identify the cause of the gap to the
-  file-name rates: the robosuite 1.4.1 and MuJoCo 2.3.7 stack, best-epoch selection, and different
-  evaluation seeds and protocol may each contribute, and no run on the `offline_study` stack separated them.
+  per-task rates would then agree only statistically. Running the Policy on CPU instead of the GPU, for
+  example, gives the same rates but only 6 to 13 of 50 identical Square and Transport episodes.
+- With 50 episodes per task, the 95% binomial (Clopper-Pearson) interval of a success rate is about
+  ±14 percentage points near 50% and ±12 near 80%. Differences of a few episodes between runs are sampling
+  noise.
+
+### Comparison with the original stack and the model-zoo file names
+
+The model-zoo file names (`succ_84` for Square, `succ_78` for Transport) are higher than this stack's
+Square and Transport rates. To find out whether the stack causes the difference, the same five checkpoints
+were evaluated on the original stack: robomimic v0.1.0 (`2804dd9`), robosuite `offline_study` (`d9baa17`,
+reports 1.2.0), mujoco-py 2.0.2.9 with the MuJoCo 2.0 binary, Python 3.8, torch 2.4.1. That environment
+was built only for this check and is not part of the Kit. Both stacks ran unmodified upstream
+`run_trained_agent.py --n_rollouts 1 --seed <seed>` per seed, with the Policy on CPU, on 2026-11-06 on
+the host of this section.
+
+What the comparison controls: the checkpoint files, the seeds, the upstream entry point and rollout
+semantics, the CPU, and the torch version. What differs: robomimic (v0.1.0 or v0.4.0), robosuite
+(`offline_study` or v1.4.1), MuJoCo (2.0 through mujoco-py or 2.3.7 through the DeepMind bindings), and
+Python. The initial states of a seed are identical on the two stacks (largest difference of the flattened
+MuJoCo state 1e-16), and so is the first action, so each pair of episodes starts from the same state and
+diverges only through the dynamics. Replaying one stack's actions open loop on the other keeps the arm and
+object states within about 1e-5 to 6e-4 over 100 steps. The instantiated controller (OSC_POSE, `kp` 150,
+damping ratio 1, output limits, no interpolation), joint damping, armature and friction loss, timestep,
+solver settings, observations (to `float32` rounding), and success checks match.
+
+| Task | Original stack (seeds) | This stack, CPU (seeds) | Paired seeds: both succeed, original only, this stack only | Model-zoo name |
+| --- | --- | --- | --- | --- |
+| `lift` | 49/50 (0–49) | 50/50 (0–49, section 9 baseline) | | `succ_100` |
+| `can` | 50/50 (0–49) | 50/50 (0–49, section 9 baseline) | | `succ_100` |
+| `square` | 162/200, 81.0% [74.9, 86.2] (0–199) | 156/200, 78.0% [71.6, 83.5] (0–199); 155/200 (1000–1199) | 155, 7, 1 (McNemar p = 0.07) | `succ_84` |
+| `transport` | 107/200, 53.5% [46.3, 60.6] (0–199) | 107/200, 53.5% [46.3, 60.6] (0–199); 100/200 (1000–1199) | 97, 10, 10 (McNemar p = 1) | `succ_78` |
+| `tool_hang` | 7/50 (0–49) | 7/50 (0–49, section 9 baseline) | | `succ_14` |
+
+Brackets are 95% Clopper-Pearson intervals. The Lift, Can, and Tool Hang rows on this stack are the GPU
+results of the baseline above.
+
+The file names are robomimic's training-time evaluations, so the training-time protocol was also run:
+robomimic's `TrainUtils.rollout_with_stats` with the checkpoint's horizon, `terminate_on_success`, and
+one RNG stream over 50 episodes per run (`env.reset()` without `reset_to`). It controls the checkpoint,
+the stream seeds (100–103 on both stacks, 104–107 on this stack only), and the rollout code path; the
+stacks differ as above. Each cell lists the successes per run of 50 episodes:
+
+| Task | Original stack | This stack |
+| --- | --- | --- |
+| `square` | 35, 36, 39, 34: 144/200 (72%) | 35, 34, 38, 35, 33, 36, 33, 37: 281/400 (70%) |
+| `transport` | 32, 30, 28, 28: 118/200 (59%) | 29, 26, 27, 30: 112/200 (56%) |
+
+No stack and no protocol reaches the file-name rates, and the two stacks agree within sampling error:
+Transport is identical over 200 paired seeds, and Square is at most about 3 points lower on this stack,
+which is not significant. Whether `env.reset_to` follows the reset makes no difference either (Square,
+this stack, seeds 0–199: 156/200 with it, 153/200 without). The training-time protocol gives Square about
+8 points less than per-seed episodes and Transport a few points more; that difference was not explained,
+and neither direction approaches the file names.
+
+The file-name rate is the maximum of robomimic's training-time evaluations. Training evaluated 50
+episodes every 50 of 2000 epochs and saved a checkpoint whenever the success rate reached a new best
+(`experiment.save.on_best_rollout_success_rate` in the checkpoints' configs). The robomimic study reports
+the "maximum success rate over time" as its metric
+([robomimic: viewing results](https://robomimic.github.io/docs/tutorials/viewing_results.html)); its paper
+reports "the maximum success rate over the course of training, and average over 3 seeds": 84.0 ± 0.0 for
+Square and 71.3 ± 6.6 for Transport, PH low-dim BC-RNN
+([Mandlekar et al. 2021](https://arxiv.org/abs/2108.03298), Table 1). The
+[model zoo](https://robomimic.github.io/docs/model_zoo/robomimic_v0.1.html) states that its rates "are
+approximate - they may vary". Independent retraining shows the size of this selection: Diffusion Policy
+reports its reproduction of BC-RNN (LSTM-GMM) as best checkpoint / average of the last 10 checkpoints,
+Square PH 0.95/0.73 and Transport PH 0.76/0.47 ([Chi et al. 2023](https://arxiv.org/abs/2303.04137),
+Table 1), and robomimic's maintainers expect the training-time rates and `run_trained_agent.py` to differ
+([robomimic#278](https://github.com/ARISE-Initiative/robomimic/issues/278)). The checkpoints measured here
+fall in the same range as those last-checkpoint averages.
+
+Best-epoch selection is therefore the likely cause of the remaining difference, but it is not quantified
+here: robomimic publishes no other epochs' checkpoints and no training logs for the v0.1 model zoo, so the
+evaluations the selection chose from cannot be rerun. The measured rates are the checkpoints' rates; a
+higher rate needs a different checkpoint, not a different evaluation of these.
 
 ### Raw results and reproduction
 
