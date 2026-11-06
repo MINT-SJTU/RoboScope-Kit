@@ -31,6 +31,7 @@ from roboscope_kit.runtime.benchmark.autotune_testbed import (
     record_runs,
     regression_failures,
     replay_strategy,
+    search_mismatches,
     validate_record,
 )
 
@@ -52,6 +53,11 @@ UNKNOWN_ON_REAL = (
 # The regression rule, on the default strategy: workload -> (expected relative throughput, tolerance).
 # Lowering an expected value is allowed only in a PR that says why, and it needs maintainer review.
 JUDGED = {FULL_AUTO: (0.7214, NOISE_TOLERANCE)}
+# Judged workload -> the recorded real search that ran the autotune code of this branch. Its
+# replay must probe the same K/g in the same order, stop for the same reason, select the same K/g,
+# and take the same time. A change to the search names here the searches it still reproduces; a
+# new workload needs a real search of the current code.
+REPRODUCED = {FULL_AUTO: "main 5f79ce2"}
 # Real workloads the rule does not judge, and why.
 NOT_JUDGED = {REAL: "the same workload as FULL_AUTO, without fixed runs or replica probes"}
 
@@ -291,12 +297,24 @@ def test_issue80_record_holds_only_what_the_issue_reports() -> None:
     assert all(item.keys() <= allowed for item in rows.values())
 
 
-def test_replay_reproduces_the_selection_of_the_recorded_search() -> None:
-    record = _load(REAL)
-    observed = record["observed_search"]
-    score = replay_strategy(record, observed["strategy"])
-    assert score.throughput_estimator == observed["throughput_estimator"]
-    assert score.selected == (observed["selected"]["k"], observed["selected"]["g"])
+def _search_index(record: dict, autotune: str) -> int:
+    return [search["autotune"] for search in record["observed_searches"]].index(autotune)
+
+
+def test_replay_reproduces_the_real_search_of_this_autotune_code() -> None:
+    assert REPRODUCED.keys() == JUDGED.keys()
+    for name, code in REPRODUCED.items():
+        record = _load(name)
+        assert search_mismatches(record, _search_index(record, code)) == (), name
+
+
+def test_replay_shows_where_another_autotune_code_searched_differently() -> None:
+    """The #81 search went on to K=16/g=2; the code here stops after K=16/g=1, as #80 reports."""
+
+    record = _load(FULL_AUTO)
+    mismatches = search_mismatches(record, _search_index(record, "#81 81e3824"))
+    assert any(item.startswith("probes [(1, 1), (2, 1), (4, 1), (8, 1), (16, 1)]") for item in mismatches)
+    assert "selected (8, 1), the search selected (16, 2)" in mismatches
 
 
 def test_issue80_ends_the_search_before_the_replica_phase_on_real_data() -> None:
@@ -545,6 +563,7 @@ def _record(tmp_path: Path, bounds: AutotuneBounds) -> dict:
         gpu_model="fake",
         kit_version="0",
         date="2026-11-05",
+        autotune=["first", "second"],
     )
 
 
@@ -563,7 +582,9 @@ def test_record_from_run_outputs_replays_the_same_search(tmp_path: Path) -> None
     assert record["workload"]["benchmark"] == "fake"
     assert record["bound_hint"] == "cpu"
     assert record["replica_vram_bytes"] == 3 * 1024**3
-    assert record["observed_search"]["selected"] == {"k": 2, "g": 1}
+    assert [search["autotune"] for search in record["observed_searches"]] == ["first", "second"]
+    assert record["observed_searches"][0]["selected"] == {"k": 2, "g": 1}
+    assert [search_mismatches(record, index) for index in (0, 1)] == [(), ()]
     score = replay_strategy(record, "diagonal")
     assert score.selected == (2, 1)
     assert score.tuning_s == 40.0
@@ -613,6 +634,7 @@ def test_record_refuses_a_search_that_did_not_complete(tmp_path: Path) -> None:
             gpu_model="fake",
             kit_version="0",
             date="2026-11-05",
+            autotune=["main"],
         )
 
 
@@ -632,5 +654,37 @@ def test_record_command_writes_a_record_that_loads(tmp_path: Path) -> None:
     output = tmp_path / "workload.json"
     arguments = ["--source", "a test run", "--policy", "fake", "--gpu-model", "fake"]
     arguments += ["--kit-version", "0", "--date", "2026-11-05", "--output", str(output)]
-    assert main(["record", "--run", str(tmp_path / "run"), *arguments]) == 0
-    assert load_record(output)["measurements"]
+    assert main(["record", "--run", str(tmp_path / "run"), "--autotune", "main", *arguments]) == 0
+    record = load_record(output)
+    assert {item["search"] for item in record["measurements"] if item["source"] == "probe"} == {0}
+    assert search_mismatches(record, 0) == ()
+
+
+def test_record_needs_the_autotune_code_of_each_run(tmp_path: Path) -> None:
+    _write_run(tmp_path / "run", _resolved_bounds())
+    with pytest.raises(ValueError, match="autotune code of each run"):
+        record_runs(
+            [tmp_path / "run"],
+            source="a test run",
+            policy="fake",
+            gpu_model="fake",
+            kit_version="0",
+            date="2026-11-05",
+            autotune=[],
+        )
+
+
+def test_validate_refuses_a_probe_of_an_unknown_search() -> None:
+    record = copy.deepcopy(_load(FULL_AUTO))
+    record["measurements"][0]["search"] = 2
+    with pytest.raises(ValueError, match="no observed search"):
+        validate_record(record)
+
+
+def test_score_command_says_which_recorded_searches_this_code_reproduces(
+    capsys: pytest.CaptureFixture,
+) -> None:
+    assert main(["score", str(WORKLOADS / f"{FULL_AUTO}.json"), "--strategy", "diagonal"]) == 0
+    printed = capsys.readouterr().out
+    assert "observed search 1 (main 5f79ce2): reproduced by this code" in printed
+    assert "observed search 0 (#81 81e3824): NOT reproduced" in printed

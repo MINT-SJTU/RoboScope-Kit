@@ -40,6 +40,16 @@ from .autotune import (
 )
 
 SCHEMA_VERSION = 1
+# What a record says about each search it was built from, so a replay can be checked against it.
+OBSERVED_SEARCH_FIELDS = (
+    "autotune",
+    "strategy",
+    "throughput_estimator",
+    "path",
+    "selected",
+    "stop_reason",
+    "elapsed_s",
+)
 KINDS = ("real", "synthetic")
 # ``probe`` came from a search. ``fixed-run`` came from ``--concurrency K --replicas G``, which runs
 # the full workload, so a search at the same K/g would not have measured the same thing.
@@ -60,6 +70,9 @@ FAILED_OUTCOMES = (
 )
 # The starting tolerance of a workload, until repeated fixed runs give it its own.
 NOISE_TOLERANCE = 0.05
+# How far a replay's search time may be from the recorded search's. The replay adds only probe
+# wall times, so the rest is what the real search spent between probes.
+SEARCH_TIME_TOLERANCE = 0.02
 # A finished measurement should hold all of these; the record must list the ones it does not.
 TRACKED_FIELDS = (
     "cpu_cores",
@@ -124,6 +137,8 @@ class Score:
     best_recorded: tuple[int, int] | None
     relative_throughput: float | None
     probes: int
+    # Every K/g the strategy asked for, in order, including one the record could not answer.
+    path: tuple[tuple[int, int], ...]
     # ``None`` when a probe had no recorded wall time.
     tuning_s: float | None
     budget_s: float
@@ -185,9 +200,20 @@ def validate_record(record: dict[str, Any]) -> None:
     measurements = record.get("measurements")
     if not measurements:
         raise ValueError("record has no measurements")
+    searches = record.get("observed_searches", [])
+    for index, search in enumerate(searches):
+        missing = [field for field in OBSERVED_SEARCH_FIELDS if field not in search]
+        if missing:
+            raise ValueError(f"observed_searches[{index}] lacks {missing}")
     absent = set()
     for measurement in measurements:
         absent |= _validate_measurement(measurement)
+        search = measurement.get("search")
+        if search is not None and (measurement["source"] != "probe" or search not in range(len(searches))):
+            raise ValueError(
+                f"measurement K={measurement['k']}, g={measurement['g']} names search {search!r}, "
+                "which is no observed search, or the measurement is no probe"
+            )
     listed = set(record.get("unknown_fields", ()))
     if listed != absent:
         raise ValueError(f"record unknown_fields must be {sorted(absent)}, not {sorted(listed)}")
@@ -246,25 +272,30 @@ def record_runs(
     gpu_model: str,
     kit_version: str,
     date: str,
+    autotune: Sequence[str],
     evaluation_steps: int | None = None,
 ) -> dict[str, Any]:
     """Build a real workload record from existing evaluation outputs.
 
     ``runs`` are ``--output-dir`` directories of completed searches; each one adds a measurement
-    per probe, so running a search twice records repeats. ``sweeps`` are ``--output-dir``
-    directories of ``--concurrency K --replicas G`` evaluations. Only the named fields below are
-    copied, so paths, commands, and error messages of the recording host stay out of the record.
+    per probe, so running a search twice records repeats. ``autotune`` names, per run, the
+    autotune code it ran, such as ``main 5f79ce2``, so a replay of that code can be checked against
+    the run. ``sweeps`` are ``--output-dir`` directories of ``--concurrency K --replicas G``
+    evaluations. Only the named fields below are copied, so paths, commands, and error messages
+    of the recording host stay out of the record.
     """
 
     if not runs:
         raise ValueError("a record needs at least one autotune run")
+    if len(autotune) != len(runs):
+        raise ValueError(f"name the autotune code of each run: {len(runs)} runs, {len(autotune)} names")
     selections = [_read_json(run / "autotune" / "selection.json") for run in runs]
     for run, selection in zip(runs, selections, strict=True):
         if selection.get("status") != "complete":
             raise ValueError(f"{run} holds no complete search: status {selection.get('status')!r}")
     measurements = [
-        measurement
-        for run, selection in zip(runs, selections, strict=True)
+        {**measurement, "search": index}
+        for index, (run, selection) in enumerate(zip(runs, selections, strict=True))
         for measurement in _probe_measurements(run, selection)
     ]
     outputs = [_read_json(sweep / "result.json") for sweep in sweeps]
@@ -300,12 +331,9 @@ def record_runs(
             "autotune_total_budget_s": limits["total_budget_s"],
             "autotune_maximum_success_rate_drop": limits["maximum_success_rate_drop"],
         },
-        "observed_search": {
-            "strategy": limits["strategy"],
-            "throughput_estimator": limits["throughput_estimator"],
-            "selected": {"k": selection["k"], "g": selection["g"]},
-            "elapsed_s": selection["elapsed_s"],
-        },
+        "observed_searches": [
+            _observed_search(name, observed) for name, observed in zip(autotune, selections, strict=True)
+        ],
         "measurements": measurements,
     }
     measured["unknown_fields"] = sorted(
@@ -314,6 +342,36 @@ def record_runs(
     measured["unmeasured"] = "Every K/g that no search probed and no fixed run covered."
     validate_record(measured)
     return measured
+
+
+def _observed_search(autotune: str, selection: dict[str, Any]) -> dict[str, Any]:
+    limits = selection["limits"]
+    return {
+        "autotune": autotune,
+        "strategy": limits["strategy"],
+        "throughput_estimator": limits["throughput_estimator"],
+        "path": [[candidate["k"], candidate["g"]] for candidate in selection["candidates"]],
+        "selected": {"k": selection["k"], "g": selection["g"]},
+        "stop_reason": stop_summary(selection["stop_reason"]),
+        "elapsed_s": selection["elapsed_s"],
+    }
+
+
+_STOP_CODE = re.compile(r"^([a-z_]+): ")
+
+
+def stop_summary(stop_reason: str) -> str:
+    """A stop reason without the messages a probe raised, which can hold host paths.
+
+    Each ``; ``-separated part that starts with a code, as ``worker_oom: ...`` does, is cut to the
+    code. A part without one, such as a predicted GPU memory limit, is computed from the bounds and
+    the probe results, so a replay gives the same text.
+    """
+
+    parts = [part for part in stop_reason.split("; ") if part]
+    return "; ".join(
+        match.group(1) if (match := _STOP_CODE.match(part)) else part for part in parts
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -418,14 +476,24 @@ class WorkloadReplay:
     """A ``measure`` and ``clock`` that answer probes from a record.
 
     Search probes take precedence over fixed runs at a K/g: a fixed run can have a steady window at a K
-    where a probe has none, which is the very thing a search must see. ``repeat`` selects among
+    where a probe has none, which is the very thing a search must see. ``search`` answers each K/g
+    with the probe of that observed search where it has one. Otherwise ``repeat`` selects among
     repeated measurements of a K/g, wrapping around, so a replay is deterministic.
     """
 
-    def __init__(self, record: dict[str, Any], *, throughput_estimator: str, repeat: int = 0) -> None:
+    def __init__(
+        self,
+        record: dict[str, Any],
+        *,
+        throughput_estimator: str,
+        repeat: int = 0,
+        search: int | None = None,
+    ) -> None:
         self.record = record
         self.throughput_estimator = throughput_estimator
         self.repeat = repeat
+        self.search = search
+        self.path: list[tuple[int, int]] = []
         self.now = 0.0
         self.gaps: list[Gap] = []
         self.used: list[dict[str, Any]] = []
@@ -441,6 +509,7 @@ class WorkloadReplay:
         limits: ProbeLimits,
         _progress: ProbeProgressFn,
     ) -> tuple[dict[str, Any], int | None]:
+        self.path.append((k, g))
         measurement = self._find(k, g)
         wall_s = measurement.get("wall_time_s", 0.0)
         if wall_s >= limits.timeout_s:
@@ -470,8 +539,9 @@ class WorkloadReplay:
         probes = [item for item in recorded if item["source"] == "probe"]
         if not probes:
             self.stand_ins.append((k, g))
-        options = probes or recorded
-        measurement = options[self.repeat % len(options)]
+        own = [item for item in probes if self.search is not None and item.get("search") == self.search]
+        options = own or probes or recorded
+        measurement = options[0] if own else options[self.repeat % len(options)]
         finished = measurement["outcome"] in FINISHED_OUTCOMES
         if finished and self.throughput_estimator == "elapsed" and "steps_per_s" not in measurement:
             self.gaps.append(Gap(k, g, "steps_per_s"))
@@ -529,12 +599,14 @@ def replay_strategy(
     *,
     throughput_estimator: str | None = None,
     repeat: int = 0,
+    search: int | None = None,
 ) -> Score:
     """Run ``strategy`` on a record through the real controller and score its search.
 
     ``throughput_estimator`` overrides the strategy's own, as the manifest's
-    ``autotune_throughput_estimator`` does. A search the record cannot start returns a score
-    without a selection.
+    ``autotune_throughput_estimator`` does. ``search`` replays on the probes of that observed
+    search where it has them. A search the record cannot start returns a score without a
+    selection.
     """
 
     defaults = {**_manifest_defaults(record), "autotune_strategy": strategy}
@@ -542,7 +614,9 @@ def replay_strategy(
         defaults["autotune_throughput_estimator"] = throughput_estimator
     bounds = _bounds(record, defaults)
     limits = resolve_limits(defaults)
-    replay = WorkloadReplay(record, throughput_estimator=limits.throughput_estimator, repeat=repeat)
+    replay = WorkloadReplay(
+        record, throughput_estimator=limits.throughput_estimator, repeat=repeat, search=search
+    )
     with tempfile.TemporaryDirectory(prefix="autotune-replay-") as output_dir:
         controller = BenchmarkAutotuneController(
             measure=replay.measure,
@@ -556,6 +630,41 @@ def replay_strategy(
         except RuntimeError as exc:
             result = {"stop_reason": str(exc)}
     return _score(record, strategy, limits.throughput_estimator, limits.total_budget_s, result, replay)
+
+
+def search_mismatches(record: dict[str, Any], index: int) -> tuple[str, ...]:
+    """How a replay of observed search ``index`` differs from what the real search did.
+
+    Empty when the replay asks for the same K/g in the same order, stops for the same reason,
+    selects the same K/g, and takes the same time within ``SEARCH_TIME_TOLERANCE``. Only the
+    autotune code the search ran, named by its ``autotune`` field, can be expected to match.
+    """
+
+    observed = record["observed_searches"][index]
+    score = replay_strategy(
+        record,
+        observed["strategy"],
+        throughput_estimator=observed["throughput_estimator"],
+        search=index,
+    )
+    expected_path = tuple((k, g) for k, g in observed["path"])
+    expected_selected = (observed["selected"]["k"], observed["selected"]["g"])
+    mismatches = []
+    if score.path != expected_path:
+        mismatches.append(f"probes {list(score.path)}, the search probed {list(expected_path)}")
+    if score.selected != expected_selected:
+        mismatches.append(f"selected {score.selected}, the search selected {expected_selected}")
+    if stop_summary(score.stop_reason) != observed["stop_reason"]:
+        mismatches.append(
+            f"stopped for {stop_summary(score.stop_reason)!r}, the search for {observed['stop_reason']!r}"
+        )
+    if score.gaps:
+        mismatches.append(f"ran off the record at {list(score.gaps)}")
+    elapsed = observed["elapsed_s"]
+    if score.tuning_s is None or abs(score.tuning_s - elapsed) > SEARCH_TIME_TOLERANCE * elapsed:
+        took = "an unknown time" if score.tuning_s is None else f"{score.tuning_s:.1f} s"
+        mismatches.append(f"took {took}, the search {elapsed:.1f} s")
+    return tuple(mismatches)
 
 
 def fixed_default(record: dict[str, Any]) -> FixedDefault:
@@ -633,6 +742,7 @@ def _score(
         best_recorded=best,
         relative_throughput=relative,
         probes=len(used),
+        path=tuple(replay.path),
         tuning_s=tuning_s,
         budget_s=budget_s,
         end_to_end_s=end_to_end_s,
@@ -764,6 +874,12 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     commands = parser.add_subparsers(dest="command", required=True)
     record = commands.add_parser("record", help="build a workload record from evaluation outputs")
     record.add_argument("--run", type=Path, action="append", required=True, help="an autotune --output-dir")
+    record.add_argument(
+        "--autotune",
+        action="append",
+        required=True,
+        help="per --run, in the same order: the autotune code it ran, such as 'main 5f79ce2'",
+    )
     record.add_argument("--sweep", type=Path, action="append", default=[], help="a fixed K/g --output-dir")
     record.add_argument("--source", required=True, help="where the numbers come from, such as an issue")
     record.add_argument("--policy", required=True)
@@ -791,6 +907,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             gpu_model=args.gpu_model,
             kit_version=args.kit_version,
             date=args.date,
+            autotune=args.autotune,
             evaluation_steps=args.evaluation_steps,
         )
         args.output.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
@@ -800,6 +917,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         record = load_record(path)
         print(f"{path.name}: not measured: {record['unmeasured']}")
         print(format_fixed_default(fixed_default(record)))
+        for index, observed in enumerate(record.get("observed_searches", [])):
+            mismatches = search_mismatches(record, index)
+            verdict = "reproduced" if not mismatches else "NOT reproduced: " + "; ".join(mismatches)
+            print(f"observed search {index} ({observed['autotune']}): {verdict} by this code")
         for strategy in args.strategy or autotune_strategies():
             print(
                 format_score(

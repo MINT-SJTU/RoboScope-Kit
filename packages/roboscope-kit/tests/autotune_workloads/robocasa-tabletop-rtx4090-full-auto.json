@@ -4,7 +4,7 @@
     "kind": "real",
     "source": "Two diagonal searches and a fixed-K/g sweep of RoboCasa tabletop on one AutoDL host, built with the record command from their outputs. See issue #80 of MINT-SJTU/RoboScope-Kit.",
     "notes": [
-      "The first repeat of each probe is the search run on #81 (81e3824) merged into PR #39's branch (d26a908), the one recorded in observed_search. The second is the search on d26a908 without #81, which stopped after K=16.",
+      "observed_searches[0] is the search run on #81 (81e3824) merged into PR #39's branch (d26a908); observed_searches[1] is the search on d26a908 without #81, which stopped after K=16. The autotune code of d26a908 is the same as on main 5f79ce2. Each probe names its search, and is the first repeat of its K/g in search 0 and the second in search 1.",
       "Fixed runs are --concurrency K --replicas G --episodes 4 on d26a908: the same 24 work items as a probe, with 96 episodes. Each reached 55/96 successes.",
       "Policy snapshot 30ec4b5c, StarVLA code 985c223, runtime StarVLA 2e5f239. CUDA MPS was off in every measurement here.",
       "Fixed runs with CUDA MPS are left out, because a measurement has no MPS field: 16/2 306.7 s, 16/3 317.9 s, 20/2 345.7 s, each 55/96.",
@@ -40,15 +40,78 @@
     "autotune_total_budget_s": 1800.0,
     "autotune_maximum_success_rate_drop": 0.15
   },
-  "observed_search": {
-    "strategy": "diagonal",
-    "throughput_estimator": "steady",
-    "selected": {
-      "k": 16,
-      "g": 2
+  "observed_searches": [
+    {
+      "autotune": "#81 81e3824",
+      "strategy": "diagonal",
+      "throughput_estimator": "steady",
+      "path": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          8,
+          1
+        ],
+        [
+          16,
+          1
+        ],
+        [
+          16,
+          2
+        ]
+      ],
+      "selected": {
+        "k": 16,
+        "g": 2
+      },
+      "stop_reason": "no_steady_window; K=24, g=3 predicted GPU memory 49.2 GiB on the busiest GPU above 46.0 GiB",
+      "elapsed_s": 955.4382961690426
     },
-    "elapsed_s": 955.4382961690426
-  },
+    {
+      "autotune": "main 5f79ce2",
+      "strategy": "diagonal",
+      "throughput_estimator": "steady",
+      "path": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          8,
+          1
+        ],
+        [
+          16,
+          1
+        ]
+      ],
+      "selected": {
+        "k": 8,
+        "g": 1
+      },
+      "stop_reason": "no_steady_window",
+      "elapsed_s": 817.8627052679658
+    }
+  ],
   "measurements": [
     {
       "k": 1,
@@ -92,7 +155,8 @@
         "PosttrainPlateToCardboardbox-episode-0000": false,
         "PosttrainPlateToPlate-episode-0000": true,
         "PosttrainTrayToCardboardbox-episode-0000": false
-      }
+      },
+      "search": 0
     },
     {
       "k": 2,
@@ -143,7 +207,8 @@
         "PosttrainPlateToCardboardbox-episode-0000": false,
         "PosttrainPlateToPlate-episode-0000": true,
         "PosttrainTrayToCardboardbox-episode-0000": false
-      }
+      },
+      "search": 0
     },
     {
       "k": 4,
@@ -196,7 +261,8 @@
         "PosttrainPlateToPlate-episode-0000": true,
         "PosttrainTrayToCardboardbox-episode-0000": false,
         "PosttrainTrayToPlate-episode-0000": false
-      }
+      },
+      "search": 0
     },
     {
       "k": 8,
@@ -261,7 +327,8 @@
         "PosttrainTrayToPot-episode-0000": false,
         "PosttrainTrayToTieredbasket-episode-0000": false,
         "PosttrainTrayToTieredshelf-episode-0000": false
-      }
+      },
+      "search": 0
     },
     {
       "k": 16,
@@ -311,7 +378,8 @@
         "PosttrainTrayToPot-episode-0000": false,
         "PosttrainTrayToTieredbasket-episode-0000": false,
         "PosttrainTrayToTieredshelf-episode-0000": false
-      }
+      },
+      "search": 0
     },
     {
       "k": 16,
@@ -368,7 +436,8 @@
         "PosttrainTrayToPot-episode-0000": false,
         "PosttrainTrayToTieredbasket-episode-0000": false,
         "PosttrainTrayToTieredshelf-episode-0000": false
-      }
+      },
+      "search": 0
     },
     {
       "k": 1,
@@ -412,7 +481,8 @@
         "PosttrainPlateToCardboardbox-episode-0000": false,
         "PosttrainPlateToPlate-episode-0000": true,
         "PosttrainTrayToCardboardbox-episode-0000": false
-      }
+      },
+      "search": 1
     },
     {
       "k": 2,
@@ -463,7 +533,8 @@
         "PosttrainPlateToCardboardbox-episode-0000": false,
         "PosttrainPlateToPlate-episode-0000": true,
         "PosttrainTrayToCardboardbox-episode-0000": false
-      }
+      },
+      "search": 1
     },
     {
       "k": 4,
@@ -516,7 +587,8 @@
         "PosttrainPlateToPlate-episode-0000": true,
         "PosttrainTrayToCardboardbox-episode-0000": false,
         "PosttrainTrayToPlate-episode-0000": false
-      }
+      },
+      "search": 1
     },
     {
       "k": 8,
@@ -581,7 +653,8 @@
         "PosttrainTrayToPot-episode-0000": false,
         "PosttrainTrayToTieredbasket-episode-0000": false,
         "PosttrainTrayToTieredshelf-episode-0000": false
-      }
+      },
+      "search": 1
     },
     {
       "k": 16,
@@ -631,7 +704,8 @@
         "PosttrainTrayToPot-episode-0000": false,
         "PosttrainTrayToTieredbasket-episode-0000": false,
         "PosttrainTrayToTieredshelf-episode-0000": false
-      }
+      },
+      "search": 1
     },
     {
       "k": 8,

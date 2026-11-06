@@ -56,7 +56,7 @@ a record that fails it. A test checks the file name of synthetic workloads.
 | `bound_hint` | The adapter's bottleneck class. Absent means the controller's default, `gpu_infer`. |
 | `replica_vram_bytes` | The replica VRAM footprint `measure` returns. Absent means unknown. |
 | `manifest_defaults` | The bounds and limits inputs, with the names of the manifest's `defaults`. With `host`, they go through the real `resolve_bounds` and `resolve_limits`, never through this machine's CPU quota. |
-| `observed_search` | Optional: the strategy, estimator, selection, and elapsed seconds of the search that was recorded. |
+| `observed_searches` | Optional: one entry per recorded search, in `--run` order: `autotune`, the autotune code it ran (such as `main 5f79ce2`); `strategy`; `throughput_estimator`; `path`, every K/g it probed, in order; `selected`; `stop_reason`, with each probe message cut to its code; and `elapsed_s`. |
 | `unknown_fields` | Every field below that a finished measurement lacks. A field that is left out must be listed here. |
 | `unmeasured` | In words, which K/g nobody measured. |
 | `measurements` | One entry per probe. Several entries at one K/g are repeats. |
@@ -73,6 +73,7 @@ A measurement holds:
 | `cpu_cores`, `throttle_time_ratio`, `gpu_utilization`, `peak_memory_bytes`, `queue_wait_p95_ms` | The resource signals the controller reads. |
 | `health`, `record_success` | Probe health and per-episode success. |
 | `wall_time_s` | The probe's wall time. |
+| `search` | For a probe: the index in `observed_searches` of the search that ran it. |
 | `probe_items` | Work items in the probe. |
 
 A record must not hold secrets or paths from the recording host. `record` copies named fields only, so
@@ -138,6 +139,19 @@ tolerance, on the default strategy. `regression_failures` applies the rule:
 `EXPECTED` pins what every strategy does on every workload, so any change of a search shows in the PR's diff.
 Update it with the change; it is for review, and the rule above decides.
 
+## Reproducing real searches
+
+A record is only useful if the replay behaves as the real search did. So each judged workload holds a real search
+of the current autotune code, named in `REPRODUCED` in `tests/test_autotune_testbed.py`, and the test replays that
+code on that search's own probes. It must probe the same K/g in the same order, stop for the same reason, select
+the same K/g, and take the same time within 2%. `score` prints, for every recorded search, whether the code being
+scored reproduces it.
+
+A change to the search will no longer reproduce searches of the old code; that is expected, and the replay says
+where they part. Name in `REPRODUCED` the searches the change does reproduce. Real searches of the new code are
+not required to merge it, but a workload whose `REPRODUCED` entry is gone has lost its check, so record one when
+the GPU is next free.
+
 Before merging an algorithm change, also run it once for real on a workload or host outside the testbed, and add
 that run as a new record, so the algorithm is not fitted to the records alone.
 
@@ -159,13 +173,14 @@ that run as a new record, so the algorithm is not fitted to the records alone.
      --concurrency 16 --replicas 2 --output-dir <sweep-k16-g2>
    ```
 
-3. Build the record. `--run` and `--sweep` repeat. Existing outputs carry everything else; the run outputs do
+3. Build the record. `--run` and `--sweep` repeat; give one `--autotune` per `--run`, in the same order, naming
+   the autotune code it ran, such as `main 5f79ce2`. Existing outputs carry everything else; the run outputs do
    not name the Policy, the GPU model, or the Kit version, so pass those. `--evaluation-steps` is `total_steps`
    of a full evaluation's `result.json`, or the steps per episode times its episodes.
 
    ```bash
    python -m roboscope_kit.runtime.benchmark.autotune_testbed record \
-     --run <run> --sweep <sweep-k16-g2> \
+     --run <run> --autotune "main 5f79ce2" --sweep <sweep-k16-g2> \
      --source "RoboCasa sweep, issue #80" --policy "StarVLA Qwen3-VL-OFT-Robocasa" \
      --gpu-model "RTX 4090" --kit-version 0.8.0b29 --date 2026-11-05 --evaluation-steps 864000 \
      --output tests/autotune_workloads/<benchmark>-<suite>-<gpu>.json
@@ -179,7 +194,8 @@ that run as a new record, so the algorithm is not fitted to the records alone.
 
 5. Check the file for anything that should not be public. Then score it, and add the expected search of every
    strategy to `EXPECTED` in `tests/test_autotune_testbed.py`; a workload or a strategy without an entry there
-   fails the test. Add a real workload to `JUDGED` with its tolerance, or say why not in `NOT_JUDGED`.
+   fails the test. Add a real workload to `JUDGED` with its tolerance, or say why not in `NOT_JUDGED`. A judged
+   workload also goes in `REPRODUCED`, with the `autotune` name of its search of the current code.
 
 A new strategy needs only step 5. To record numbers from somewhere other than run outputs, such as a table in an
 issue, write the JSON by hand with only the fields the source gives, and list the rest in `unknown_fields`, as
@@ -204,7 +220,8 @@ Scores on `robocasa-tabletop-rtx4090-full-auto.json`:
 
 The fixed default on this host is `K=9/g=1`, which has no fixed run yet, so it has no score.
 
-`--repeat 1` of `diagonal` replays the real search that stopped at `K=8/g=1`, and repeats the 818 s it took. The
-first repeat, scored above, comes from a search with a candidate fix for #80, which went on to `K=16/g=2`; that is
-what `observed_search` records. Relative throughput compares fixed runs, which ran the same 96 episodes. Default `two-phase` runs a fixed-size probe that this record
+The record holds two real searches. `main 5f79ce2` stopped at `K=8/g=1` after `K=16/g=1` had no steady window, in
+818 s, and the code here reproduces it probe by probe. `#81 81e3824`, a candidate fix for #80, went on to `K=16/g=2`;
+the code here does not reproduce it, and the replay shows it stopping after `K=16/g=1`. The scores above use the
+first repeat of each K/g, which comes from the `#81` search. Relative throughput compares fixed runs, which ran the same 96 episodes. Default `two-phase` runs a fixed-size probe that this record
 does not cover, so its rows only show how it would decide on these rates.

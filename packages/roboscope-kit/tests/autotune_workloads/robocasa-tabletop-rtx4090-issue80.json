@@ -31,15 +31,6 @@
   "manifest_defaults": {
     "autotune_total_budget_s": 1800.0
   },
-  "observed_search": {
-    "strategy": "diagonal",
-    "throughput_estimator": "steady",
-    "selected": {
-      "k": 8,
-      "g": 1
-    },
-    "elapsed_s": 818.0
-  },
   "unknown_fields": [
     "cpu_cores",
     "gpu_utilization",
