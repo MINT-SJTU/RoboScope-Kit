@@ -109,6 +109,8 @@ class RoboCasaRuntimeConfig:
     save_videos: bool = False
     cpu_threads: int = 1
     render_backend: str = "egl"
+    seed: int = 42
+    defer_observations: bool = True
 
     def __post_init__(self) -> None:
         if self.suite != ROBOCASA_TABLETOP_SUITE:
@@ -119,6 +121,8 @@ class RoboCasaRuntimeConfig:
             raise ValueError("RoboCasa action steps, episode steps, and CPU threads must be positive")
         if self.render_backend != "egl":
             raise ValueError("RoboCasa SDK evaluation currently requires EGL rendering")
+        if not 0 <= self.seed < 2**32:
+            raise ValueError("RoboCasa seed must be an unsigned 32-bit integer")
         names = [name for name, _ in self.tasks]
         if len(names) != len(set(names)):
             raise ValueError("RoboCasa task names must be unique")
@@ -166,6 +170,9 @@ class RoboCasaBenchmarkAdapter:
             str(self.config.action_steps),
             "--max-episode-steps",
             str(self.config.max_episode_steps),
+            "--seed",
+            str(self.config.seed),
+            *(("--no-defer-observations",) if not self.config.defer_observations else ()),
             *(("--disable-video",) if not self.config.save_videos else ()),
         )
         return ProcessSpec(
@@ -188,6 +195,8 @@ class RoboCasaBenchmarkAdapter:
                 "OPENBLAS_NUM_THREADS": threads,
                 "NUMEXPR_NUM_THREADS": threads,
                 "TOKENIZERS_PARALLELISM": "false",
+                # Upstream novel-task generation hashes class names at import.
+                "PYTHONHASHSEED": str(self.config.seed),
                 "PYTHONDONTWRITEBYTECODE": "1",
             },
         )
@@ -218,6 +227,8 @@ class RoboCasaBenchmarkAdapter:
             "action_steps": self.config.action_steps,
             "max_episode_steps": self.config.max_episode_steps,
             "video_logging": self.config.save_videos,
+            "seed": self.config.seed,
+            "defer_observations": self.config.defer_observations and not self.config.save_videos,
         }
 
 

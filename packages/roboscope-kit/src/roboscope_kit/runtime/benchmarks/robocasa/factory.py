@@ -106,6 +106,8 @@ class RoboCasaBenchmarkFactory:
                 save_videos=bool(manifest.defaults.get("save_videos", False)) and not request.quick_test,
                 cpu_threads=int(manifest.defaults.get("client_cpu_threads", 1)),
                 render_backend=str(manifest.defaults.get("render_backend", "egl")),
+                seed=int(manifest.defaults.get("seed", 42)),
+                defer_observations=bool(manifest.defaults.get("defer_observations", True)),
             )
         )
 

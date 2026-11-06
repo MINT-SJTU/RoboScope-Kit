@@ -6,8 +6,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import os
 import time
-from functools import partial
+from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +42,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--action-steps", type=int, default=12)
     parser.add_argument("--max-episode-steps", type=int, default=720)
     parser.add_argument("--disable-video", action="store_true")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--defer-observations", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--poll-interval", type=float, default=0.05)
     return parser.parse_args()
 
@@ -106,14 +111,30 @@ def native_action(chunk: np.ndarray, action_steps: int) -> dict[str, np.ndarray]
     }
 
 
+def create_seeded_environment(config: Any, seed: int):
+    """Seed native construction while preserving the pinned upstream wrapper stack."""
+    import gymnasium as gym
+    from examples.simBenchmarks.Robocasa_tabletop.eval_files.simulation_env import (
+        _create_single_env,
+    )
+
+    # Gym accepts an EnvSpec as well as an id. Copy it so this task's seed never
+    # mutates the process-wide registry used by subsequent work items.
+    spec = deepcopy(gym.spec(config.env_name))
+    spec.kwargs["seed"] = seed
+    np.random.seed(seed)
+    return _create_single_env(config=replace(config, env_name=spec), idx=0)
+
+
 def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     import gymnasium as gym
     from examples.simBenchmarks.Robocasa_tabletop.eval_files.simulation_env import (
         MultiStepConfig,
         SimulationConfig,
         VideoConfig,
-        _create_single_env,
     )
+
+    from .rendering import enable_chunk_observations
 
     task_name = str(item.payload["task_name"])
     env_name = str(item.payload["env_name"])
@@ -131,18 +152,38 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
             max_episode_steps=args.max_episode_steps,
         ),
     )
-    environment = gym.vector.SyncVectorEnv([partial(_create_single_env, config=config, idx=0)])
+    # Seeds depend only on the manifest seed, task and episode, never on which
+    # Worker claims the task or in which order, so any K/g reproduces the scenes.
+    task_seed = int.from_bytes(hashlib.sha256(task_name.encode()).digest()[:4], "big")
+    construction_seed = (args.seed + task_seed) % 2**32
+    initialize_started = time.perf_counter()
+    single_environment = create_seeded_environment(config, construction_seed)
+    rendering = None
+    if args.defer_observations and args.disable_video:
+        rendering = enable_chunk_observations(single_environment)
+    environment = gym.vector.SyncVectorEnv([lambda: single_environment])
+    initialize_s = time.perf_counter() - initialize_started
     records: list[EvaluationRecord] = []
     queue = WorkQueue(args.queue_dir)
     started = time.perf_counter()
     try:
         for episode_index in range(episodes):
-            native_observation, _ = environment.reset()
+            # Seed both upstream RNGs: the Gym wrapper seeds numpy, while robosuite
+            # owns a separate Generator used for scene and object placement on reset.
+            episode_seed = (construction_seed + episode_index) % 2**32
+            native = single_environment.unwrapped.env
+            native.seed = episode_seed
+            native.rng = np.random.default_rng(episode_seed)
+            reset_started = time.perf_counter()
+            native_observation, _ = environment.reset(seed=episode_seed)
+            reset_s = time.perf_counter() - reset_started
             episode_id = f"{task_name}-episode-{episode_index:04d}"
             episode_started = time.perf_counter()
             native_steps = 0
             success = False
             done = False
+            policy_s = 0.0
+            simulator_s = 0.0
             with PolicyClient(args.policy_socket) as client:
                 client.reset(
                     EpisodeContext(
@@ -153,13 +194,18 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
                 )
                 try:
                     while not done:
+                        policy_started = time.perf_counter()
                         action_chunk = client.act(
                             build_observation(episode_id, native_steps, native_observation)
                         ).actions
+                        policy_s += time.perf_counter() - policy_started
+                        simulator_started = time.perf_counter()
                         native_observation, _, terminations, truncations, infos = environment.step(
                             native_action(action_chunk, args.action_steps)
                         )
-                        native_steps += args.action_steps
+                        simulator_s += time.perf_counter() - simulator_started
+                        # The final chunk is shorter when the step limit truncates it.
+                        native_steps += np.asarray(infos["rewards"])[0].size
                         success |= bool(np.asarray(infos["success"])[0, 0])
                         done = bool(terminations[0] or truncations[0])
                 finally:
@@ -174,6 +220,12 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
                         "task_name": task_name,
                         "env_name": env_name,
                         "episode_index": episode_index,
+                        "seed": episode_seed,
+                        "python_hash_seed": os.environ.get("PYTHONHASHSEED"),
+                        "reset_s": reset_s,
+                        "policy_s": policy_s,
+                        "simulator_s": simulator_s,
+                        "deferred_native_steps": rendering.deferred_steps if rendering else 0,
                     },
                 )
             )
@@ -198,6 +250,7 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
             "task_name": task_name,
             "env_name": env_name,
             "elapsed_s": time.perf_counter() - started,
+            "initialize_s": initialize_s,
         },
     )
 
@@ -206,6 +259,8 @@ def main() -> None:
     args = parse_args()
     if args.action_steps < 1 or args.max_episode_steps < 1 or args.poll_interval <= 0:
         raise ValueError("RoboCasa worker numeric arguments must be positive")
+    if not 0 <= args.seed < 2**32:
+        raise ValueError("RoboCasa seed must be an unsigned 32-bit integer")
     WorkerLoop(
         worker_id=args.worker_id,
         queue_dir=args.queue_dir,
