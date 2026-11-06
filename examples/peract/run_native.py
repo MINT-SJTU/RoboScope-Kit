@@ -8,15 +8,18 @@
 
 This is the native entry point the Kit is compared with: the pinned PerAct ``eval.py`` with the
 README's test command (all requested tasks in one process, ``eval_envs=1``, episodes 0..24 of
-the released test split, ``eval_type=last``, the 600k weights, headless). It is imported and run
-unmodified, with three additions that do not change what it computes:
+the released test split, ``eval_type=last``, the 600k weights, headless). ``eval.py`` runs as
+``__main__``, unmodified, with three additions that do not change what it computes:
 
 - CLIP RN50 is read from the pinned local file in ``--checkpoint-source``, as the Kit Policy does,
   instead of being downloaded to ``~/.cache/clip``;
-- read-only wrappers around PerAct's ``CustomRLBenchEnv``/``CustomMultiTaskRLBenchEnv``
-  ``reset_to_demo`` and ``step`` (and the scene step callback) record, per episode, the test
-  episode, variation, instruction, every action passed to RLBench, the planning error if any,
-  reward, executed actions and simulation steps;
+- ``native_hooks.py`` wraps PerAct's ``CustomRLBenchEnv``/``CustomMultiTaskRLBenchEnv``
+  ``reset_to_demo`` and ``step`` (and the scene step callback) read-only and records, per episode,
+  the test episode, variation, instruction, initial-state distance from the recorded episode,
+  every action passed to RLBench, the planning error if any, the outcome, executed actions, and
+  simulation steps. YARR evaluates in a ``spawn``-ed child process, so ``eval.py`` is given
+  ``native_hooks.HookedIndependentEnvRunner``, an unchanged subclass of YARR's runner whose module
+  installs the hooks when the child unpickles it;
 - CoppeliaSim runs on a private Xvfb display, like the Kit workers.
 
 Writes ``<output>/native-episodes.jsonl`` (one line per episode), ``<output>/run.json`` (command,

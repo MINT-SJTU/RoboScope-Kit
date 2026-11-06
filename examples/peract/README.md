@@ -25,8 +25,11 @@ The model-specific parts of PerAct's `eval.py` stay in this Policy, not in the k
 - the observation becomes the dict YARR's `RolloutGenerator` feeds the agent: per camera the channel-first
   RGB (`uint8`) and point cloud (`float32`) with the camera's extrinsics and intrinsics, the 4-value
   `low_dim_state` of PerAct's environment wrapper (gripper open, the two finger positions clipped to
-  `[0, 0.04]`, and the time feature `(1 - t / 24) * 2 - 1`), and the OpenAI CLIP tokens of the instruction,
-  each with batch and time dimensions of one;
+  `[0, 0.04]`, and the time feature `(1 - i / 24) * 2 - 1`), and the OpenAI CLIP tokens of the instruction,
+  each with batch and time dimensions of one. The time feature uses `i = max(t - 1, 0)` before action `t`
+  (counting from 0), as `eval.py` computes it: PerAct's wrapper extracts the observation after a step
+  before incrementing its step counter, so the agent sees `i = 0` at both its first and second action.
+  Using `t` instead shifts every later key frame by one (section 9 of the protocol);
 - voxelization, the Perceiver, and the arg-max over translation, rotation, gripper, and collision classes
   are PerAct's own `act(..., deterministic=True)`.
 

@@ -181,7 +181,11 @@ anyway, so rendering and point clouds are unchanged. Every observation carries, 
 `<camera>` is each of the four cameras. `step` counts the actions executed so far, from 0. PerAct's
 `float32` conversions happen in YARR's rollout loop; doing them in the worker gives the Policy the same
 values. PerAct's own preprocessing (clipping the finger positions to `[0, 0.04]`, its time feature, and CLIP
-tokens) stays in the Policy.
+tokens) stays in the Policy. PerAct's time feature lags one action behind `step`: its environment wrapper
+extracts the observation after an action before incrementing its step counter, so in `eval.py` the agent sees
+the counter value `max(step - 1, 0)`, the same value at its first and second action. The example Policy
+reproduces this; a Policy computing PerAct's feature from `step` itself gets a different input from the
+second action on, and in section 9 that alone shifted most episodes' key frames by one.
 
 An action is one key frame for RLBench's `MoveArmThenGripper(EndEffectorPoseViaPlanning(), Discrete())`, 9
 `float64` values (`rlbench.ee-pose-planning-v1`): the gripper position and orientation in the world frame

@@ -15,7 +15,8 @@ Everything model-specific stays here, as PerAct's ``eval.py`` does it:
 - each observation becomes the dict YARR's ``RolloutGenerator`` feeds the agent: per camera the
   channel-first RGB and point cloud with the camera's extrinsics and intrinsics, the
   ``low_dim_state`` of PerAct's environment wrapper (gripper open, finger positions clipped to
-  [0, 0.04], and the time feature ``(1 - t / (episode_length - 1)) * 2 - 1``), and the CLIP
+  [0, 0.04], and the time feature ``(1 - i / (episode_length - 1)) * 2 - 1`` with ``i`` the
+  wrapper's step counter as ``eval.py`` reads it, ``max(t - 1, 0)`` before action ``t``), and the CLIP
   tokens of the instruction, each with batch and time dimensions of one;
 - the voxelization, the Perceiver, and the arg-max over translation, rotation, gripper, and
   collision classes are PerAct's own ``act``, called with ``deterministic=True``.
@@ -141,7 +142,11 @@ class PerActPolicy(Policy):
             obs[f"{camera}_camera_intrinsics"] = features[f"state.{camera}_camera_intrinsics"].astype(
                 np.float32
             )
-        time_feature = (1.0 - (observation.step / float(episode_length - 1))) * 2.0 - 1.0
+        # PerAct's wrapper computes the time feature from its step counter before incrementing it
+        # (CustomMultiTaskRLBenchEnv.step calls extract_obs, then self._i += 1), so the observation
+        # after action t carries t - 1: the agent sees 1.0 at both its first and second action.
+        time_index = max(observation.step - 1, 0)
+        time_feature = (1.0 - (time_index / float(episode_length - 1))) * 2.0 - 1.0
         obs["low_dim_state"] = np.concatenate(
             [
                 features["state.gripper_open"],
