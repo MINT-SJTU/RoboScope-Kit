@@ -22,6 +22,7 @@ from roboscope_kit.runtime.benchmark.autotune import (
     resolve_bounds,
 )
 from roboscope_kit.runtime.benchmark.autotune_testbed import (
+    NOISE_TOLERANCE,
     FixedDefault,
     Gap,
     fixed_default,
@@ -48,9 +49,9 @@ UNKNOWN_ON_REAL = (
     "wall_time_s",
 )
 
-# The regression rule, on the default strategy: workload -> expected relative throughput. Lowering a
-# value is allowed only in a PR that says why, and it needs maintainer review.
-JUDGED = {FULL_AUTO: 0.7214}
+# The regression rule, on the default strategy: workload -> (expected relative throughput, tolerance).
+# Lowering an expected value is allowed only in a PR that says why, and it needs maintainer review.
+JUDGED = {FULL_AUTO: (0.7214, NOISE_TOLERANCE)}
 # Real workloads the rule does not judge, and why.
 NOT_JUDGED = {REAL: "the same workload as FULL_AUTO, without fixed runs or replica probes"}
 
@@ -217,7 +218,8 @@ def test_strategy_on_workload(workload: str, strategy: str, estimator: str | Non
 @pytest.mark.parametrize("workload", sorted(JUDGED))
 def test_judged_workloads_pass_the_regression_rule(workload: str) -> None:
     score = replay_strategy(_load(workload), DEFAULT_AUTOTUNE_STRATEGY)
-    assert regression_failures(score, JUDGED[workload]) == ()
+    expected, tolerance = JUDGED[workload]
+    assert regression_failures(score, expected, tolerance=tolerance) == ()
 
 
 def test_every_real_workload_is_judged_or_says_why_not() -> None:
@@ -231,6 +233,7 @@ def test_the_regression_rule_allows_noise_and_fails_a_larger_drop() -> None:
     score = replace(replay_strategy(_load(FULL_AUTO), "diagonal"), relative_throughput=0.76)
     assert regression_failures(score, 0.8) == ()
     assert "below" in regression_failures(score, 0.81)[0]
+    assert regression_failures(score, 0.81, tolerance=0.1) == ()
 
 
 def test_the_regression_rule_fails_an_unsafe_or_incomplete_search() -> None:

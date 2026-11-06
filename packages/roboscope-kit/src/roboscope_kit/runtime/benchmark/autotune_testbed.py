@@ -58,7 +58,7 @@ FAILED_OUTCOMES = (
     "worker_oom",
     "worker_shortfall",
 )
-# Repeats of one LIBERO search differed by under 2%. Revisit once each workload has repeats.
+# The starting tolerance of a workload, until repeated fixed runs give it its own.
 NOISE_TOLERANCE = 0.05
 # A finished measurement should hold all of these; the record must list the ones it does not.
 TRACKED_FIELDS = (

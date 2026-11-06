@@ -116,14 +116,19 @@ The rule answers one narrow question: is a change worse than today on the worklo
 say whether an algorithm is good in general; only more real records can widen that. How far a selection is from
 the recorded best is shown for people to read and is not a gate by itself.
 
-`JUDGED` in `tests/test_autotune_testbed.py` holds each judged workload with its expected relative throughput, on
-the default strategy. `regression_failures` applies the rule:
+`JUDGED` in `tests/test_autotune_testbed.py` holds each judged workload with its expected relative throughput and
+tolerance, on the default strategy. `regression_failures` applies the rule:
 
 - **Each workload is judged by itself.** A gain on one does not offset a loss on another.
-- **A change fails** if, on any judged workload, relative throughput falls more than 5% below the expected value,
-  the selection is unsafe, or the search is incomplete.
-- **The 5% tolerance** comes from repeats of one LIBERO search, which differed by under 2%. Revisit it once each
-  workload has repeats.
+- **A change fails** if, on any judged workload, relative throughput falls below the expected value by more than
+  that workload's tolerance, the selection is unsafe, or the search is incomplete. A failure stops the change for
+  a person to look at; it does not prove the algorithm worse.
+- **The tolerance starts at 5%.** Replay adds no noise, since a record and the code give one score, so the noise is
+  in the recorded rates. On RoboCasa, repeated probes differ by at most 1.98%. Taken as a standard deviation of
+  `1.98 / sqrt(2)` per rate, and `sqrt(2)` more for a ratio of two rates, that gives about 5% at 1% false alerts
+  (2.576 standard deviations). Probes are not fixed runs, so this is a starting point.
+- **Each workload gets its own tolerance** from three fixed runs each of the best and the selected configuration:
+  the same calculation, on the standard deviation of those repeats.
 - **Lowering an expected value** is allowed only in a PR that says why, and it needs maintainer review. Raise the
   value when a change improves it, so later changes cannot give the gain back.
 - **An incomplete search cannot be judged.** Measure the missing point on a GPU and add it to the record.
@@ -146,7 +151,8 @@ that run as a new record, so the algorithm is not fitted to the records alone.
 
 2. For configurations no search visits, run them fixed, one output directory each, as many as the budget allows.
    Cover what a search may select, the best configuration you can find, and `K` at the worker cap with `g` at the
-   GPU count, for the fixed default.
+   GPU count, for the fixed default. Run the best and the selected configuration three times; the score uses the
+   median of repeats.
 
    ```bash
    python -m roboscope_kit.runtime.benchmark --benchmark <benchmark> --suite <suite> ... \
@@ -173,7 +179,7 @@ that run as a new record, so the algorithm is not fitted to the records alone.
 
 5. Check the file for anything that should not be public. Then score it, and add the expected search of every
    strategy to `EXPECTED` in `tests/test_autotune_testbed.py`; a workload or a strategy without an entry there
-   fails the test. Add a real workload to `JUDGED`, or say why not in `NOT_JUDGED`.
+   fails the test. Add a real workload to `JUDGED` with its tolerance, or say why not in `NOT_JUDGED`.
 
 A new strategy needs only step 5. To record numbers from somewhere other than run outputs, such as a table in an
 issue, write the JSON by hand with only the fields the source gives, and list the rest in `unknown_fields`, as
