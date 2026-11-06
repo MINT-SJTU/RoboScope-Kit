@@ -87,7 +87,9 @@ commands, paths, and error messages stay out, and validation rejects anything th
   failed probe would, so the search keeps its last accepted configuration. The score lists it under gaps and
   marks the search incomplete. What follows the gap is unknown: the search might have gone further.
 - **A needed rate the record does not hold** is treated the same way, with `unrecorded_steps_per_s`. A strategy
-  on the elapsed estimator cannot run where the record has no elapsed rates.
+  on the elapsed estimator cannot run where the record has no elapsed rates. On the steady estimator, the
+  elapsed rate is NaN until a step falls back to elapsed rates; a score that used such a comparison lists the
+  probe under gaps.
 - **Other signals the record does not hold** read as "no limit reached": 0 CPU cores, throttle, GPU utilization,
   and peak memory. The controller needs numbers here, so these values exist only inside the replay, never in
   the record, and the score names them under unknown signals. A search with unknown signals has not been
@@ -132,11 +134,11 @@ tolerance, on the default strategy. `regression_failures` applies the rule:
   each: `repeat_tolerance` takes each one's spread, the sample standard deviation of its fixed-run elapsed rates
   over their mean, and gives `2.576 * sqrt(cv_selected**2 + cv_best**2)`, at least the 5% floor. `JUDGED` writes the
   number out for review, and a test checks it against the calculation.
-- **RoboCasa's tolerance is 19.95%.** Its fixed runs are spread wider than its probes: `K=8/g=1` ran at 168.7,
+- **RoboCasa's tolerance is 13.67%,** for the selection `K=16/g=2` against `K=12/g=2`; before #81 it was 19.95%, for `K=8/g=1`. Its fixed runs are spread wider than its probes: `K=8/g=1` ran at 168.7,
   149.1, and 147.8 steps/s (7.5%), `K=12/g=2` at 233.9, 226.3, and 229.9 (1.7%). The first run of each is from
   2026-11-05, the other two from 2026-11-06 back to back, and the runs of one night agree closely, so most of the
   spread is drift between days rather than noise within a run. That drift is what a user sees, so it stays in.
-  With #81, the selection is `K=16/g=2` (223.6, 202.2, 215.4; 5.0%), and the tolerance is 13.67%.
+  `K=16/g=2` ran at 223.6, 202.2, and 215.4 (5.0%).
 - **LIBERO's tolerance is the 5% floor.** Its repeats give 0.69%: `K=16/g=4` ran at 209.0, 209.0, and 208.4 steps/s
   (0.17%), `K=12/g=4` at 209.1, 209.7, and 208.9 (0.21%). All six ran within about 2.5 hours of one night, so they hold
   no drift between days, which reached 13% on RoboCasa.
@@ -225,7 +227,7 @@ Scores on `robocasa-tabletop-rtx4090-full-auto.json`:
 
 | Strategy | Estimator | Selected | Relative to best recorded | Probes | Tuning time | End to end | Safe | Search |
 | --- | --- | --- | ---: | ---: | --- | --- | --- | --- |
-| `diagonal` | steady (default) | `K=8/g=1` | 0.648 of `K=12/g=2` | 5 | 852 s | 6649 s, 1.77x | yes | Complete: stops at `K=16` without a steady window, a known problem (#80) |
+| `diagonal` | steady (default) | `K=16/g=2` | 0.937 of `K=12/g=2` | 6 | 955 s | 4967 s, 1.32x | yes | Complete: stops on predicted GPU memory at `K=24/g=3` |
 | `two-phase` | elapsed (default) | `K=9/g=1` | 0.620 of `K=12/g=2` | 5 | unknown | unknown | yes | Complete, but the `K=9/g=1` probe is answered by a fixed run, which has no probe time |
 | `two-phase` | steady | `K=9/g=1` | 0.620 of `K=12/g=2` | 5 | unknown | unknown | yes | As above |
 
@@ -233,10 +235,10 @@ Relative throughput uses the median of each configuration's fixed runs. The fixe
 `K=9/g=1`, with no tuning: 0.620 of the best, about 6063 s for the full evaluation, slower than any search's
 selection.
 
-The record holds two real searches. `main 5f79ce2` stopped at `K=8/g=1` after `K=16/g=1` had no steady window, in
-818 s, and the code here reproduces it probe by probe. `#81 81e3824`, a candidate fix for #80, went on to `K=16/g=2`;
-the code here does not reproduce it, and the replay shows it stopping after `K=16/g=1`. The scores above use the
-first repeat of each K/g, which comes from the `#81` search. Relative throughput compares fixed runs, which ran the same 96 episodes. Default `two-phase` runs a fixed-size probe that this record
+The record holds two real searches. `#81 81e3824` went on to `K=16/g=2` in 955 s, and the code here reproduces it
+probe by probe. `main 5f79ce2`, from before the fix for #80, stopped at `K=8/g=1` after `K=16/g=1` had no steady
+window; the code here does not reproduce it, and the replay shows it going on to `K=16/g=2`. Relative throughput
+compares fixed runs, which ran the same 96 episodes. Default `two-phase` runs a fixed-size probe that this record
 does not cover, so its rows only show how it would decide on these rates.
 
 Scores on `libero-10-rtx4090-full-auto.json`:
