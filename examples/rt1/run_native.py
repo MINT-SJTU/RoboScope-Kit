@@ -207,6 +207,9 @@ def main() -> int:
     parser.add_argument(
         "--invocation", type=int, action="append", help="run only these plan indexes (repeatable)"
     )
+    parser.add_argument(
+        "--script", action="append", help="run only this official script's invocations (repeatable)"
+    )
     args = parser.parse_args()
     args.runtime = args.runtime.resolve()
     output = args.output.resolve()
@@ -220,6 +223,8 @@ def main() -> int:
         return 0
     if args.invocation:
         kept = [entry for entry in kept if entry["index"] in set(args.invocation)]
+    if args.script:
+        kept = [entry for entry in kept if entry.get("script") in set(args.script)]
     started = time.time()
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         summaries = list(pool.map(lambda entry: run_invocation(entry, args, root, output), kept))
