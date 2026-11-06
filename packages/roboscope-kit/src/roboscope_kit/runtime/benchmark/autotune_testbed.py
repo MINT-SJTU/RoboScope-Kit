@@ -694,7 +694,8 @@ def repeat_tolerance(
 
     Each configuration's spread is the sample standard deviation of its fixed-run elapsed rates
     over their mean. A ratio of the two rates spreads by both, so the tolerance is
-    ``TOLERANCE_Z * sqrt(cv_selected**2 + cv_best**2)``. ``None`` unless each has at least
+    ``TOLERANCE_Z * sqrt(cv_selected**2 + cv_best**2)``, and never less than ``NOISE_TOLERANCE``:
+    repeats from one night hold no drift between days. ``None`` unless each has at least
     ``TOLERANCE_REPEATS`` fixed runs; the workload then keeps ``NOISE_TOLERANCE``.
     """
 
@@ -710,7 +711,7 @@ def repeat_tolerance(
         spreads.append(statistics.stdev(rates) / statistics.fmean(rates))
     if len(spreads) == 1:
         spreads *= 2
-    return TOLERANCE_Z * math.sqrt(sum(spread**2 for spread in spreads))
+    return max(NOISE_TOLERANCE, TOLERANCE_Z * math.sqrt(sum(spread**2 for spread in spreads)))
 
 
 def regression_failures(

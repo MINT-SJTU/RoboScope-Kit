@@ -39,6 +39,7 @@ from roboscope_kit.runtime.benchmark.autotune_testbed import (
 WORKLOADS = Path(__file__).parent / "autotune_workloads"
 REAL = "robocasa-tabletop-rtx4090-issue80"
 FULL_AUTO = "robocasa-tabletop-rtx4090-full-auto"
+LIBERO = "libero-10-rtx4090-full-auto"
 SYNTHETIC = "synthetic-replica-limits"
 UNKNOWN_ON_REAL = (
     "cpu_cores",
@@ -55,12 +56,12 @@ UNKNOWN_ON_REAL = (
 # Lowering an expected value is allowed only in a PR that says why, and it needs maintainer review.
 # A tolerance comes from repeated fixed runs (repeat_tolerance) once the selection and the best
 # configuration have three each; until then it is NOISE_TOLERANCE.
-JUDGED = {FULL_AUTO: (0.6484, 0.1995)}
+JUDGED = {FULL_AUTO: (0.6484, 0.1995), LIBERO: (0.9994, NOISE_TOLERANCE)}
 # Judged workload -> the recorded real search that ran the autotune code of this branch. Its
 # replay must probe the same K/g in the same order, stop for the same reason, select the same K/g,
 # and take the same time. A change to the search names here the searches it still reproduces; a
 # new workload needs a real search of the current code.
-REPRODUCED = {FULL_AUTO: "main 5f79ce2"}
+REPRODUCED = {FULL_AUTO: "main 5f79ce2", LIBERO: "main d26a908"}
 # Real workloads the rule does not judge, and why.
 NOT_JUDGED = {REAL: "the same workload as FULL_AUTO, without fixed runs or replica probes"}
 
@@ -160,6 +161,54 @@ EXPECTED = {
         "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
         "stand_ins": ((9, 1),),
     },
+    # Built by the record command from real runs. The search reaches K=16/g=4, tied with K=12/g=4.
+    (LIBERO, "diagonal", None): {
+        "selected": (16, 4),
+        "best_recorded": (12, 4),
+        "relative_throughput": pytest.approx(0.9994, abs=0.0001),
+        "probes": 7,
+        "tuning_s": pytest.approx(501.35, abs=0.01),
+        "end_to_end_s": pytest.approx(1156.0, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.767, abs=0.001),
+        "safe": True,
+        "gaps": (),
+        "unknown_signals": ("queue_wait_p95_ms",),
+    },
+    (LIBERO, "diagonal", "steady"): {
+        "selected": (16, 4),
+        "best_recorded": (12, 4),
+        "relative_throughput": pytest.approx(0.9994, abs=0.0001),
+        "probes": 7,
+        "tuning_s": pytest.approx(501.35, abs=0.01),
+        "end_to_end_s": pytest.approx(1156.0, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.767, abs=0.001),
+        "safe": True,
+        "gaps": (),
+        "unknown_signals": ("queue_wait_p95_ms",),
+    },
+    # two-phase asks for points no search probed: fixed runs stand in until it runs off the record.
+    (LIBERO, "two-phase", None): {
+        "selected": (9, 1),
+        "best_recorded": (12, 4),
+        "relative_throughput": pytest.approx(0.5495, abs=0.0001),
+        "probes": 5,
+        "tuning_s": None,
+        "safe": True,
+        "gaps": (Gap(9, 2, "configuration"),),
+        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "stand_ins": ((9, 1),),
+    },
+    (LIBERO, "two-phase", "steady"): {
+        "selected": (8, 4),
+        "best_recorded": (12, 4),
+        "relative_throughput": pytest.approx(0.9745, abs=0.0001),
+        "probes": 7,
+        "tuning_s": None,
+        "safe": True,
+        "gaps": (Gap(8, 5, "configuration"),),
+        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "stand_ins": ((9, 1), (8, 4)),
+    },
     (SYNTHETIC, "diagonal", None): {
         "selected": (4, 1),
         "best_recorded": (4, 1),
@@ -241,6 +290,10 @@ def test_a_judged_tolerance_comes_from_the_repeated_fixed_runs(workload: str) ->
     measured = repeat_tolerance(record, score.selected, score.best_recorded)
     _, tolerance = JUDGED[workload]
     assert tolerance == pytest.approx(NOISE_TOLERANCE if measured is None else measured, abs=0.0001)
+
+
+def test_repeats_of_one_night_do_not_tighten_the_tolerance_below_the_floor() -> None:
+    assert repeat_tolerance(_load(LIBERO), (16, 4), (12, 4)) == NOISE_TOLERANCE
 
 
 def test_repeat_tolerance_needs_three_fixed_runs_of_each_configuration() -> None:
