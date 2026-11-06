@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b32 - 2026-11-08
+
+- The `diagonal` autotune no longer ends the whole search when a `K` probe has no steady-state window, which
+  means only that the probe was too small for `K` Workers. Only the doubling of `K` ends; the replica steps
+  still run, and a replica step without a window is compared with the previous step on elapsed rates. On
+  RoboCasa, whose 24 tasks give `K=16` no window, the search used to stop at `g=1`.
+
 ## 0.8.0b31 - 2026-11-08
 
 - Add an offline testbed for autotune strategies. `python -m roboscope_kit.runtime.benchmark.autotune_testbed`
