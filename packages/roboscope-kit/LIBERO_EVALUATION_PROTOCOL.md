@@ -548,8 +548,8 @@ row is a mean of suite success rates):
 
 On this 10 GB GPU, one bf16 replica of the 3B checkpoint held 8.3–8.8 GB and one EGL Worker about 0.46 GB
 of the same GPU (measured with a single Worker). At K=2/g=1, with
-`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` in the Policy's environment, the peak over the runs so far
-was 9,811 MiB of the card's 10,240 MiB. In the one K=4/g=1 run, the Policy ran out of memory and the run
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` in the Policy's environment, the peak over the 13 suites run
+on it was 9,832 MiB of the card's 10,240 MiB. In the one K=4/g=1 run, the Policy ran out of memory and the run
 aborted. K=3 was not tried: another Worker's 0.46 GB is not expected to fit. Autotune was not used, because
 its probes would try larger K. The RTX 3080 runs use fixed `--concurrency 2 --replicas 1`. A larger GPU
 raises this limit (the RTX 4090 runs below use K=8/g=2); rendering on another GPU was not tested.
