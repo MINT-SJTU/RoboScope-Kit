@@ -131,11 +131,12 @@ if [[ ! -x "${PYTHON}" ]]; then
     --relocatable \
     "${VENV}"
 fi
-# Every package, including the TensorFlow CUDA wheels, comes from PyPI.
+# Every package, including the TensorFlow CUDA wheels, comes from PyPI. On a host where PyPI is slow,
+# ROBOSCOPE_PYPI_INDEX_URL may name a full PyPI mirror; the lock pins every version either way.
 "${UV_BIN}" pip install \
   --python "${PYTHON}" \
   --no-progress \
-  --index-url https://pypi.org/simple \
+  --index-url "${ROBOSCOPE_PYPI_INDEX_URL:-https://pypi.org/simple}" \
   --requirements "${LOCK}"
 "${UV_BIN}" pip install \
   --python "${PYTHON}" \
