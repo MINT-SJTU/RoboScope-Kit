@@ -34,11 +34,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--unpaced-render", action="store_true")
     parser.add_argument("--control-state-reuse", action="store_true")
     parser.add_argument("--physics-threads", type=int, choices=(1, 4, 8))
+    parser.add_argument("--envs-per-worker", type=int, default=1)
     parser.add_argument("--step-observation-updates", action="store_true")
     parser.add_argument("--observation-queue-size", type=int, choices=range(0, 11), default=0)
     args = parser.parse_args()
     if args.observation_queue_size and not args.step_observation_updates:
         parser.error("observation overlap requires step observation updates")
+    if args.envs_per_worker < 1:
+        parser.error("envs per worker must be positive")
     return args
 
 
@@ -56,6 +59,11 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         )
 
     root = args.benchmark_root.resolve()
+    if args.envs_per_worker > 1:
+        deploy = root / "XPolicyLab/policy/RoboScopeKit/deploy.yml"
+        if "eval_batch: true" not in deploy.read_text(encoding="utf-8").splitlines():
+            # RoboDojo silently forces one environment without it; rebuild with build-runtime.sh.
+            raise RuntimeError(f"envs_per_worker > 1 requires eval_batch: true in {deploy}")
     run_id = f"roboscope-{uuid.uuid4().hex}"
     output = root / "eval_result/RoboDojo" / task / "RoboScopeKit/arx_x5" / f"{seed}_roboscope" / run_id
     result_path = output / "_result.json"
@@ -95,7 +103,8 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         env["ROBODOJO_PHYSICS_THREADS"] = str(args.physics_threads)
     command = [
         str(args.benchmark_python), "-u", str(root / "src/eval_client/main.py"),
-        "--task_name", task, "--env_cfg_type", "arx_x5", "--num_envs", "1",
+        "--task_name", task, "--env_cfg_type", "arx_x5",
+        "--num_envs", str(min(args.envs_per_worker, count)),
         "--enable_cameras", "--kit_args",
         "--enable isaacsim.replicator.behavior --enable isaacsim.sensors.camera",
         "--device_id", "0", "--policy_name", "RoboScopeKit", "--port", "1",

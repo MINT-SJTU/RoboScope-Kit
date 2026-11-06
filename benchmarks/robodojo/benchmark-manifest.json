@@ -27,7 +27,8 @@
     "unpaced_render": false,
     "control_state_reuse": false,
     "physics_threads": null,
-    "observation_queue_size": 0
+    "observation_queue_size": 0,
+    "envs_per_worker": 1
   },
   "benchmark_protocols": {
     "robodojo": {
