@@ -3,8 +3,8 @@
 # PerAct YARR fork from their pinned commits (see the script). The lock also holds what PerAct's
 # own eval.py imports, so the native comparison and the example Policy run in this environment:
 # torch 2.4.1 (CUDA 12.1 wheels), OpenAI CLIP at a pinned commit, hydra-core 1.3 (PerAct pins
-# 1.0.5, which does not run on Python 3.11), and transformers 4.46.3, the last release that
-# supports torch 2.4 (PerAct imports it for its training-time scheduler only).
+# 1.0.5, which does not import on Python 3.11), and transformers 4.46.3, which still supports
+# torch 2.4 (PerAct imports it for its training-time scheduler only).
 absl-py==2.5.1
 annotated-doc==0.0.5
 antlr4-python3-runtime==4.9.3

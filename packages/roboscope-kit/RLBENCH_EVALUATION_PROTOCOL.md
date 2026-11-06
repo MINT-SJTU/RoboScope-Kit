@@ -82,10 +82,11 @@ commit samples the same scenes (section 5).
 bindings and the RLBench fork build and run unchanged on Python 3.11 with NumPy 1.26. PerAct needs one
 source patch: it imports `pytorch3d`, which has no Python 3.11 build, at module level; the patch moves the
 import into the training-time augmentation function that uses it and removes two unused imports. Nothing in
-evaluation changes. PerAct pins `hydra-core==1.0.5`, whose OmegaConf 2.0 does not import on Python 3.11, so
-the lock uses hydra-core 1.3.2; `eval.py` runs under it unchanged (it warns that `version_base` is unset).
-`transformers` is pinned to 4.46.3, the last release that supports torch 2.4, because PerAct imports it at
-module level for a training-only scheduler.
+evaluation changes. PerAct pins `hydra-core==1.0.5`, which does not import on Python 3.11 (its config
+dataclasses use mutable defaults, which Python 3.11 rejects), so the lock uses hydra-core 1.3.2; `eval.py`
+runs under it unchanged (it warns that `version_base` is unset). `transformers` is pinned to 4.46.3, which
+still supports torch 2.4 (current releases need torch 2.6), because PerAct imports it at module level for a
+training-only scheduler.
 
 **Headless rendering.** CoppeliaSim 4.1 renders its vision sensors through Qt's OpenGL context and needs
 an X display even in headless mode (`-h`); Qt's `offscreen` and `minimalegl` platforms crash in
@@ -212,23 +213,29 @@ the SHA-256 of its variation and its full random state; a task's digest is the S
 build rejects a test split whose task digests differ from the frozen table, and a formal aggregate
 recomputes each task's digest from its records.
 
-Each record also carries `initial_scene_max_abs_diff`: the largest difference between the task's
-low-dimensional state (object poses and joint positions) after the reset and the same state in the
-episode's recorded first frame. It shows that the pinned simulator samples the recorded scene (section 9).
+Each record also carries `initial_scene_position_error_m`: the largest distance, in metres and per
+coordinate, between the position of any task object after the reset and its position in the episode's
+recorded first frame (positions, not full poses, so quaternion signs and contact-force readings in RLBench's
+task state do not count). It shows whether the episode starts from its recorded test scene (section 9).
 
 **Deviation from `eval.py`: two seeded resets instead of one.** PerAct resets once. A reset that starts
-from the end of a played episode can place objects differently from the recorded scene: RLBench's
-placement rejects samples that collide with objects the previous episode left behind, so the number of
-random draws, and with it the scene, depends on how the previous episode ended (for example, after a
-`close_jar` episode that screwed the lid on, the next test episode's jars land elsewhere). In PerAct's
-`eval.py`, which plays the 25 episodes of a task in order, episode `i`'s scene therefore depends on the
-planner's random outcome in episode `i - 1`. The Kit runs episodes on whichever worker is free, so it
-cannot reproduce that history, and a single reset would make the scene depend on scheduling. The worker
-therefore resets twice with the same variation and random state: the first reset clears the previous
-episode, and the second samples the recorded scene, whatever ran before. Records carry
-`clearing_reset_max_abs_diff`, the first reset's distance from the recorded scene, which is what a
-single reset would have given. Section 9 measures both, and the same distance for every episode of
-PerAct's own `eval.py`.
+from the end of a played episode can place objects differently from the recorded scene: RLBench's placement
+rejects samples that collide with objects the previous episode left behind, so the number of random draws,
+and with it the scene, depends on how the previous episode ended (for example, after a `close_jar`
+episode that screwed the lid on, the next test episode's jars land elsewhere). In PerAct's `eval.py`, which
+plays the 25 episodes of a task in order, episode `i`'s scene therefore depends on the planner's random
+outcome in episode `i - 1`. The Kit runs episodes on whichever worker is free, so it cannot reproduce that
+history, and a single reset would make the scene depend on scheduling. The worker therefore resets twice
+with the same variation and random state: the first reset clears the previous episode, and the second
+samples the recorded scene. Records carry `clearing_reset_position_error_m`, the first reset's distance
+from the recorded scene, which is what a single reset would have given. Section 9 reports both, and the same
+distance for every episode of PerAct's own `eval.py`.
+
+The second reset removes the dependence on the previous episode; it does not make every scene exact. In a few
+tasks (`place_cups`, `place_shape_in_shape_sorter`, and single episodes of others) objects settle into
+contact during the reset, and that settling is not reproducible on this simulator build even from a freshly
+loaded task: two fresh loads of the same `place_shape_in_shape_sorter` episode differ, and some episodes start
+centimetres from their recorded scene. Those episodes are still scored; section 9 counts them.
 
 **Upstream behaviour kept as is: the instruction re-runs the task's `init_episode`.**
 `get_task_descriptions()` calls the task's `init_episode` again after the first observation was taken. In
@@ -236,8 +243,8 @@ tasks whose `init_episode` samples object poses (for example `close_jar` re-samp
 `insert_onto_square_peg` its pegs), those objects move to a second, unvalidated random placement that the
 Policy does not see until its first action has been executed, and some tasks register their success
 condition twice. PerAct's evaluation, and therefore its published numbers, include this; the profile keeps it
-so that it reproduces them. Each record carries `descriptions_moved_objects_max_abs`, the largest change
-of the task state that call made. A corrected profile, which takes the instruction from `reset()`, would be a
+so that it reproduces them. Each record carries `descriptions_moved_objects_m`, the largest distance an
+object moved in that call. A corrected profile, which takes the instruction from `reset()`, would be a
 separate suite with its own results.
 
 ## 6. Rollout, termination, and success
@@ -291,4 +298,77 @@ Quick Test and `--episodes` runs are not formal. Sharded runs sum the per-task r
 
 ## 9. Correctness baseline
 
-RESULTS
+Measured on 2026-11-05 with `roboscope-kit` 0.8.0b27 (this change) on a shared Linux host: 2 x Intel Xeon
+Silver 4214R (48 logical CPUs, other jobs keeping the load average at 5–16), 188 GB RAM, Ubuntu 22.04, one
+NVIDIA RTX 3080 10 GB (driver 560.35.03, CUDA 12.6; about 4.4 GB of it used by other processes throughout).
+Xvfb is Ubuntu 22.04's `xvfb` 21.1.4 (unpacked from its package without root), rendering with Mesa 23.0.4
+llvmpipe. Checkpoint: PerAct 600k (`seed0`) and CLIP RN50 with the SHA-256s of `examples/peract/assets.py`.
+Policy: `examples/peract`, run with the runtime's Python on GPU 0. Workers do not use the GPU.
+
+### Build, self-test, and Quick Test
+
+- Two clean builds into fresh directories with the committed script, reusing the uv cache and the 18
+  downloaded test zips (`RLBENCH_PERACT_TEST_ZIPS`; downloading them from Google Drive took about 40
+  minutes at 6–8 MB/s over parallel streams). Both verified the versions, the pinned checkouts, all 18
+  test-episode digests, and all 18 variation counts, and rendered a headless reset. The second build ran
+  `--self-test` itself (the first build's self-test step exposed the report-parsing bug fixed before the
+  second; `--self-test` on the first build passed afterwards). Their `pip-freeze.txt` files are identical
+  apart from the install path. The second build took 10 min 6 s: about 1 minute for CoppeliaSim, 1.5 for
+  the four source checkouts, 0.5 for CPython and the 90 locked packages, 7 to verify and extract the 19 GB
+  test split, and 20 s for the build check and `--self-test` (6–7 s).
+- `--quick-test`: `open_drawer` test episode 0 succeeded in 3 actions (93 simulation steps). Policy load
+  11.7 s, runtime preparation 1.6 s, evaluation 8.4 s, 23 s end to end. The scene matched the recorded test
+  episode to 1e-6 m.
+
+### Full evaluation
+
+`--concurrency 12 --replicas 1` (fixed K/g, so no autotune phase): all 450 records present exactly once,
+no worker failures, restarts, or OOM events, `formal: true` and `test_episodes_verified: true`:
+
+| Task | Success | Executed actions | Simulation steps | Mean episode time (s) | Planning errors | Timeouts | Scene > 1 cm (first / second reset) | Authors' 420k test run |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `close_jar` | 15/25 (60%) | 360 | 3,977 | 31.3 | 0 | 10 | 22 / 0 | 56% |
+| `insert_onto_square_peg` | 3/25 (12%) | 565 | 9,739 | 51.7 | 0 | 22 | 0 / 0 | 8% |
+| `light_bulb_in` | 8/25 (32%) | 454 | 5,958 | 42.0 | 1 | 16 | 0 / 0 | 20% |
+| `meat_off_grill` | 22/25 (88%) | 209 | 3,958 | 21.2 | 0 | 3 | 8 / 0 | 92% |
+| `open_drawer` | 22/25 (88%) | 76 | 2,277 | 13.5 | 3 | 0 | 0 / 0 | 92% |
+| `place_cups` | 0/25 (0%) | 544 | 9,214 | 55.7 | 8 | 17 | 15 / 4 | 0% |
+| `place_shape_in_shape_sorter` | 1/25 (4%) | 592 | 7,533 | 56.8 | 1 | 23 | 18 / 17 | 8% |
+| `place_wine_at_rack_location` | 16/25 (64%) | 238 | 6,826 | 26.7 | 5 | 4 | 0 / 0 | 48% |
+| `push_buttons` | 7/25 (28%) | 508 | 5,860 | 42.6 | 0 | 18 | 0 / 0 | 56% |
+| `put_groceries_in_cupboard` | 6/25 (24%) | 305 | 11,362 | 38.9 | 12 | 7 | 11 / 1 | 8% |
+| `put_item_in_drawer` | 12/25 (48%) | 362 | 10,412 | 46.4 | 8 | 5 | 14 / 0 | 60% |
+| `put_money_in_safe` | 10/25 (40%) | 427 | 13,266 | 40.7 | 0 | 15 | 0 / 0 | 32% |
+| `reach_and_drag` | 25/25 (100%) | 151 | 3,733 | 14.7 | 0 | 0 | 24 / 0 | 100% |
+| `slide_block_to_color_target` | 23/25 (92%) | 106 | 3,193 | 11.0 | 1 | 1 | 0 / 0 | 72% |
+| `stack_blocks` | 2/25 (8%) | 588 | 14,064 | 56.4 | 3 | 20 | 8 / 1 | 8% |
+| `stack_cups` | 1/25 (4%) | 566 | 12,383 | 55.0 | 5 | 19 | 8 / 2 | 4% |
+| `sweep_to_dustpan_of_size` | 17/25 (68%) | 247 | 5,381 | 25.5 | 3 | 5 | 0 / 0 | 56% |
+| `turn_tap` | 21/25 (84%) | 142 | 3,309 | 15.9 | 0 | 4 | 0 / 0 | 96% |
+| Total | 211/450; mean 46.9% | 6,440 | 132,445 | | 50 | 189 | 128 / 25 | mean 45.3% |
+
+"Scene > 1 cm" counts episodes in which some object was more than 1 cm from its recorded first-frame
+position: after the first (clearing) reset, which is what a single reset gives, and after the second, which
+the episode starts from. The second reset brings 103 of those 128 episodes back to the recorded scene; the 25
+that remain are the contact-settling tasks of section 5. The last column is not an expected value: it is the
+authors' own test run in `test_data.csv` inside the released checkpoint zip, for their 420k weights rather
+than the released 600k ones, with their renderer. No task reported a fail condition; every failure was a
+timeout or a planning error.
+
+| Phase | Time |
+| --- | --- |
+| Checkpoint preparation | < 0.01 s |
+| Policy load (agent build, 600k weights, CLIP RN50, SHA-256 checks) | 10.3 s |
+| Runtime preparation (12 workers, each with its Xvfb and CoppeliaSim) | 1.6 s |
+| Evaluation | 1,459.5 s |
+| End to end (process wall clock, including writing results) | 1,477.6 s |
+| Throughput | 0.307 episodes/s (0.320 between the 10th and 90th percentile completions), 4.39 executed actions/s, 90.7 simulation steps/s |
+| Resources | 6.0 CPU cores on average (`time -v`; the kit's own sampling reports 12.0), 1.9 GB maximum RSS of the CLI (`time -v`), Policy replica 1.17 GB VRAM after load and up to about 4.2 GB in use, 91% mean GPU utilization |
+
+The evaluation is bound by the single Policy replica: PerAct's 100^3-voxel Perceiver takes about 0.2 s per
+action on this GPU, the replica was busy 91% of the time, and workers spent 66% of their episode time waiting
+for it (1.8 s per action at K=12). A second replica does not fit next to the other processes on this 10 GB
+GPU. The same throughput would need fewer workers; batching `act` across workers or a lower-precision
+Policy is the first target of a throughput change, measured against this baseline.
+
+NATIVE
