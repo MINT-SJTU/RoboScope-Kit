@@ -214,9 +214,11 @@ build rejects a test split whose task digests differ from the frozen table, and 
 recomputes each task's digest from its records.
 
 Each record also carries `initial_scene_position_error_m`: the largest distance, in metres and per
-coordinate, between the position of any task object after the reset and its position in the episode's
-recorded first frame (positions, not full poses, so quaternion signs and contact-force readings in RLBench's
-task state do not count). It shows whether the episode starts from its recorded test scene (section 9).
+coordinate, between the position of any object of the task after the reset and its position in the episode's
+recorded first frame. RLBench's task state lists every object of the task, including invisible helpers
+(waypoints, proximity sensors), so a large value does not always mean a visibly different scene; positions
+rather than full poses are compared, so quaternion signs and contact-force readings do not count. It shows
+whether the episode starts from its recorded test state (section 9).
 
 **Deviation from `eval.py`: two seeded resets instead of one.** PerAct resets once. A reset that starts
 from the end of a played episode can place objects differently from the recorded scene: RLBench's placement
