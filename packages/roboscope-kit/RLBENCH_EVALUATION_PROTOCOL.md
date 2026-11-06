@@ -59,7 +59,7 @@ RLBench table only for the same test split and the same aggregation (section 7).
 ## 2. Environment, versions, and licence gates
 
 The RLBench simulator is not a dependency of `roboscope-kit`. Build it with
-[`benchmarks/rlbench/build-runtime.sh`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/rlbench/build-runtime.sh) `<install-dir>`
+[`benchmarks/rlbench/build-runtime.sh`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/rlbench/build-runtime.sh) `--accept-licenses <install-dir>`
 (Linux x86_64, uv 0.11.14, git, curl, `tar` with xz, network access, and an Xvfb server; no GPU is needed
 for the simulator). It installs a uv-managed CPython 3.11.15 under `<install-dir>/python` and a venv under
 `<install-dir>/env`:
@@ -111,8 +111,9 @@ so the comparison in section 9 is paired.
   which are under the ARM licence it ships (Imperial College London, non-commercial research use like
   RLBench's). OpenAI CLIP is MIT, torch is BSD-3-Clause.
 
-The build refuses to run until `ROBOSCOPE_ACCEPT_COPPELIASIM_EDU_LICENSE=YES` and
-`ROBOSCOPE_ACCEPT_RLBENCH_LICENSE=YES` are set, and nothing licensed is committed to this repository:
+**Running `build-runtime.sh --accept-licenses` means that you have read the CoppeliaSim Edu and RLBench
+licences above and accept them.** Without `--accept-licenses` the build stops before downloading anything.
+Nothing licensed is committed to this repository:
 CoppeliaSim, the RLBench sources, and the test split are downloaded from their official sources and checked
 against the pinned digests and commits. The model (the PerAct checkpoint and CLIP RN50) is not part of the
 runtime; `examples/peract/download_assets.py` downloads it with pinned SHA-256s.
@@ -450,8 +451,9 @@ and the reset diagnostics), and worker and Policy logs; the native run keeps `na
 `run.json`, PerAct's `eval_data.csv`, and its log. The commands, with `CUDA_VISIBLE_DEVICES=0`:
 
 ```bash
-ROBOSCOPE_ACCEPT_COPPELIASIM_EDU_LICENSE=YES ROBOSCOPE_ACCEPT_RLBENCH_LICENSE=YES XVFB=/path/to/Xvfb \
-    KIT_PYTHON=/path/to/kit/python benchmarks/rlbench/build-runtime.sh /sim/rlbench
+# --accept-licenses accepts the CoppeliaSim Edu and RLBench licences (section 2).
+XVFB=/path/to/Xvfb KIT_PYTHON=/path/to/kit/python \
+    benchmarks/rlbench/build-runtime.sh --accept-licenses /sim/rlbench
 python examples/peract/download_assets.py /models/peract
 python -m roboscope_kit.runtime.benchmark --benchmark rlbench --self-test \
     --benchmark-manifest /sim/rlbench/benchmark-manifest.json --output-dir /runs/rlbench-self-test

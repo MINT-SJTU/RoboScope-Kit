@@ -44,9 +44,14 @@ keep.
 1. Build the RLBench runtime; it also holds the pinned PerAct source and torch this Policy uses:
 
    ```bash
-   ROBOSCOPE_ACCEPT_COPPELIASIM_EDU_LICENSE=YES ROBOSCOPE_ACCEPT_RLBENCH_LICENSE=YES \
-       benchmarks/rlbench/build-runtime.sh /sim/rlbench
+   benchmarks/rlbench/build-runtime.sh --accept-licenses /sim/rlbench
    ```
+
+   **Passing `--accept-licenses` means that you accept the licences of CoppeliaSim Edu (free only for
+   educational entities and non-commercial use) and RLBench (non-commercial, internal or academic research
+   only).** Read them first: [CoppeliaSim licensing](https://www.coppeliarobotics.com/helpFiles/en/licensing.htm),
+   [RLBench licence](https://github.com/stepjam/RLBench/blob/master/LICENSE). Without the flag the build stops
+   before downloading anything. The build also needs an Xvfb server on `PATH` or in `XVFB` (Ubuntu: `xvfb`).
 
 2. Download the checkpoint (124 MB, Apache-2.0 like the PerAct source) and CLIP RN50 (256 MB, MIT):
 

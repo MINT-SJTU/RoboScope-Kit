@@ -11,7 +11,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   RLBench's motion planner (`rlbench.ee-pose-planning-v1`, 9 `float64` values), for at most 25 actions.
   `benchmarks/rlbench/build-runtime.sh` builds CoppeliaSim Edu 4.1, PyRep, the PerAct RLBench and YARR
   forks, PerAct, and the test split on CPython 3.11 after the user accepts the CoppeliaSim Edu and RLBench
-  licences, and checks every task's test episodes against frozen digests.
+  licences by passing `--accept-licenses`, and checks every task's test episodes against frozen digests.
 - Add `examples/peract/`: a Policy for the released PerAct 600k checkpoint, a runner for PerAct's own
   `eval.py`, and an episode-by-episode comparison.
 

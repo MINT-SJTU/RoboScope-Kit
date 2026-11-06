@@ -13,15 +13,15 @@ set -Eeuo pipefail
 #     bin/Xvfb                  link to the host's Xvfb, used for headless rendering
 #     pip-freeze.txt            what env/ actually contains
 #
-# Usage: build-runtime.sh <install-dir>
+# Usage: build-runtime.sh --accept-licenses <install-dir>
 # Then:  python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 \
 #          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
 #
 # Licences. CoppeliaSim Edu is free only for educational entities (hobbyists, students,
 # teachers, schools and universities) and non-commercial use; RLBench is licensed by Imperial
 # College London for non-commercial, internal or academic research only, and the PerAct test
-# set was generated with it. Read both and set ROBOSCOPE_ACCEPT_COPPELIASIM_EDU_LICENSE=YES and
-# ROBOSCOPE_ACCEPT_RLBENCH_LICENSE=YES yourself; the build does not accept them for you.
+# set was generated with it. Passing --accept-licenses means that you have read both licences
+# and accept them; without it the build stops before downloading anything.
 # Nothing licensed is committed to the repository: everything is downloaded from its
 # official source and checked against the SHA-256 or commit pinned here.
 #
@@ -36,25 +36,36 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 KIT_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd -P)"
-[[ $# -eq 1 ]] || {
-  echo "usage: $0 <install-dir>" >&2
+usage() {
+  echo "usage: $0 --accept-licenses <install-dir>" >&2
   exit 2
 }
+ACCEPT_LICENSES=0
+INSTALL_ARG=""
+for arg in "$@"; do
+  case "${arg}" in
+    --accept-licenses) ACCEPT_LICENSES=1 ;;
+    -*) usage ;;
+    *)
+      [[ -z "${INSTALL_ARG}" ]] || usage
+      INSTALL_ARG="${arg}"
+      ;;
+  esac
+done
+[[ -n "${INSTALL_ARG}" ]] || usage
+set -- "${INSTALL_ARG}"
 
 if [[ "$(uname -s):$(uname -m)" != "Linux:x86_64" ]]; then
   echo "RLBench runtime builds require Linux x86_64" >&2
   exit 3
 fi
-case "${ROBOSCOPE_ACCEPT_COPPELIASIM_EDU_LICENSE:-}:${ROBOSCOPE_ACCEPT_RLBENCH_LICENSE:-}" in
-  YES:YES) ;;
-  *)
-    echo "The RLBench runtime uses CoppeliaSim Edu and RLBench, which have non-commercial licences." >&2
-    echo "Read them and set ROBOSCOPE_ACCEPT_COPPELIASIM_EDU_LICENSE=YES and ROBOSCOPE_ACCEPT_RLBENCH_LICENSE=YES:" >&2
-    echo "  https://www.coppeliarobotics.com/helpFiles/en/licensing.htm" >&2
-    echo "  https://github.com/stepjam/RLBench/blob/master/LICENSE" >&2
-    exit 3
-    ;;
-esac
+if [[ "${ACCEPT_LICENSES}" != 1 ]]; then
+  echo "The RLBench runtime uses CoppeliaSim Edu and RLBench, which have non-commercial licences:" >&2
+  echo "  https://www.coppeliarobotics.com/helpFiles/en/licensing.htm" >&2
+  echo "  https://github.com/stepjam/RLBench/blob/master/LICENSE" >&2
+  echo "Read them, then rerun with --accept-licenses; passing it means that you accept both." >&2
+  exit 3
+fi
 
 MANIFEST="${SCRIPT_DIR}/benchmark-manifest.json"
 LOCK="${SCRIPT_DIR}/runtime-requirements.txt"
