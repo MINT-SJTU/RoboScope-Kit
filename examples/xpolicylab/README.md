@@ -110,19 +110,23 @@ environment and checkpoint, and, unless it has `reset_evaluation`, `--concurrenc
 
 ## Results
 
-Simate_beta, layouts 0–2 of all 42 `arx_x5` tasks (126 episodes), on one RTX 4090 48 GB, 2026-11-06:
+Simate_beta, layouts 0–2 of all 42 `arx_x5` tasks (126 episodes), on one RTX 4090 48 GB, 2026-11-06. The Kit
+(0.8.0b25) ran with its defaults, which autotuning set to two simulator Workers sharing one Policy replica; upstream
+ran its own client with one environment, task by task.
 
 | | Kit | Upstream native |
 |---|---:|---:|
-| Successes | 25/126 (19.8%) | 26/126 (20.6%) |
-| Mean score | 0.283 | 0.271 |
+| Successes | 26/126 (20.6%) | 26/126 (20.6%) |
+| Mean score | 0.278 | 0.271 |
+| Evaluation time | 4.4 h (15,770 s) | 6.6 h (23,753 s) |
+| Total time, including the Kit's 30 min autotuning | 4.9 h (17,576 s) | 6.6 h (23,753 s) |
 
-**No difference between the Kit and upstream was found.** Paired by task and layout, 5 episodes succeed only in
-the Kit and 6 only upstream (McNemar p = 1.0), and 90 of the 95 episodes that fail on both sides stop at the same
+**No difference between the Kit and upstream was found.** Paired by task and layout, 6 episodes succeed only in
+the Kit and 6 only upstream (McNemar p = 1.0), and 88 of the 94 episodes that fail on both sides stop at the same
 step. The same layout can succeed in one run and fail in the next, so expect differences of an episode or two per
 task between any two runs.
 
-Throughput is tracked in [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). Per-episode records
+Throughput tuning is tracked in [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). Per-episode records
 and timings are in the [raw data](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robodojo-simate-acceptance-20261106);
 discussion is in [#17](https://github.com/MINT-SJTU/RoboScope-Kit/issues/17).
 
