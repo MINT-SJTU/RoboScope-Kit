@@ -77,6 +77,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   robosuite v1.4.1, MuJoCo 2.3.7, torch 2.4.1) and verifies the frozen initial-state digests of every task.
 - Add `examples/robomimic/`, a Policy for the five robomimic v0.1 model-zoo PH low-dim BC-RNN checkpoints,
   with a checksum-verifying downloader and a per-seed comparison against upstream `run_trained_agent.py`.
+
 ## 0.8.0b25 - 2026-11-05
 
 - Add `--profile`, which runs each Worker under Nsight Systems and captures its first episode, starting from
