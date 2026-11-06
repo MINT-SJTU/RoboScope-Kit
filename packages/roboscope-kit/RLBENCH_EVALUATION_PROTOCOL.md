@@ -322,59 +322,154 @@ Policy: `examples/peract`, run with the runtime's Python on GPU 0. Workers do no
   apart from the install path. The second build took 10 min 6 s: about 1 minute for CoppeliaSim, 1.5 for
   the four source checkouts, 0.5 for CPython and the 90 locked packages, 7 to verify and extract the 19 GB
   test split, and 20 s for the build check and `--self-test` (6–7 s).
-- `--quick-test`: `open_drawer` test episode 0 succeeded in 3 actions (93 simulation steps). Policy load
-  11.7 s, runtime preparation 1.6 s, evaluation 8.4 s, 23 s end to end. The scene matched the recorded test
-  episode to 1e-6 m.
+- `--quick-test` on build 1: `open_drawer` test episode 0 succeeded in 3 actions (93 simulation steps).
+  Policy load 11.7 s, runtime preparation 1.6 s, evaluation 8.4 s, 23 s end to end; the scene matched the
+  recorded test episode to 1e-6 m. On build 2, with the final Policy (the time-feature fix of the native
+  comparison below): success in 3 actions (94 simulation steps); Policy load 18.7 s, runtime preparation
+  6.2 s, evaluation 9.0 s, 40 s end to end (load and preparation times vary with the other jobs on the host).
 
 ### Full evaluation
 
-`--concurrency 12 --replicas 1` (fixed K/g, so no autotune phase): all 450 records present exactly once,
-no worker failures, restarts, or OOM events, `formal: true` and `test_episodes_verified: true`:
+`--concurrency 12 --replicas 1` (fixed K/g, so no autotune phase) on build 1: all 450 records present exactly
+once, no worker failures, restarts, or OOM events, `formal: true` and `test_episodes_verified: true`:
 
-| Task | Success | Executed actions | Simulation steps | Mean episode time (s) | Planning errors | Timeouts | Scene > 1 cm (first / second reset) | Authors' 420k test run |
+| Task | Success | Executed actions | Simulation steps | Mean episode time (s) | Planning errors | Timeouts | State > 1 cm off (first / second reset) | Authors' 420k test run |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `close_jar` | 15/25 (60%) | 360 | 3,977 | 31.3 | 0 | 10 | 22 / 0 | 56% |
-| `insert_onto_square_peg` | 3/25 (12%) | 565 | 9,739 | 51.7 | 0 | 22 | 0 / 0 | 8% |
-| `light_bulb_in` | 8/25 (32%) | 454 | 5,958 | 42.0 | 1 | 16 | 0 / 0 | 20% |
-| `meat_off_grill` | 22/25 (88%) | 209 | 3,958 | 21.2 | 0 | 3 | 8 / 0 | 92% |
-| `open_drawer` | 22/25 (88%) | 76 | 2,277 | 13.5 | 3 | 0 | 0 / 0 | 92% |
-| `place_cups` | 0/25 (0%) | 544 | 9,214 | 55.7 | 8 | 17 | 15 / 4 | 0% |
-| `place_shape_in_shape_sorter` | 1/25 (4%) | 592 | 7,533 | 56.8 | 1 | 23 | 18 / 17 | 8% |
-| `place_wine_at_rack_location` | 16/25 (64%) | 238 | 6,826 | 26.7 | 5 | 4 | 0 / 0 | 48% |
-| `push_buttons` | 7/25 (28%) | 508 | 5,860 | 42.6 | 0 | 18 | 0 / 0 | 56% |
-| `put_groceries_in_cupboard` | 6/25 (24%) | 305 | 11,362 | 38.9 | 12 | 7 | 11 / 1 | 8% |
-| `put_item_in_drawer` | 12/25 (48%) | 362 | 10,412 | 46.4 | 8 | 5 | 14 / 0 | 60% |
-| `put_money_in_safe` | 10/25 (40%) | 427 | 13,266 | 40.7 | 0 | 15 | 0 / 0 | 32% |
-| `reach_and_drag` | 25/25 (100%) | 151 | 3,733 | 14.7 | 0 | 0 | 24 / 0 | 100% |
-| `slide_block_to_color_target` | 23/25 (92%) | 106 | 3,193 | 11.0 | 1 | 1 | 0 / 0 | 72% |
-| `stack_blocks` | 2/25 (8%) | 588 | 14,064 | 56.4 | 3 | 20 | 8 / 1 | 8% |
-| `stack_cups` | 1/25 (4%) | 566 | 12,383 | 55.0 | 5 | 19 | 8 / 2 | 4% |
-| `sweep_to_dustpan_of_size` | 17/25 (68%) | 247 | 5,381 | 25.5 | 3 | 5 | 0 / 0 | 56% |
-| `turn_tap` | 21/25 (84%) | 142 | 3,309 | 15.9 | 0 | 4 | 0 / 0 | 96% |
-| Total | 211/450; mean 46.9% | 6,440 | 132,445 | | 50 | 189 | 128 / 25 | mean 45.3% |
+| `close_jar` | 8/25 (32%) | 492 | 4,977 | 42.6 | 0 | 17 | 13 / 0 | 56% |
+| `insert_onto_square_peg` | 1/25 (4%) | 606 | 10,521 | 56.9 | 0 | 24 | 0 / 0 | 8% |
+| `light_bulb_in` | 7/25 (28%) | 503 | 5,171 | 45.7 | 0 | 18 | 0 / 0 | 20% |
+| `meat_off_grill` | 17/25 (68%) | 322 | 5,663 | 32.2 | 0 | 8 | 5 / 0 | 92% |
+| `open_drawer` | 24/25 (96%) | 83 | 2,326 | 13.6 | 1 | 0 | 0 / 0 | 92% |
+| `place_cups` | 0/25 (0%) | 556 | 9,078 | 56.6 | 6 | 19 | 15 / 4 | 0% |
+| `place_shape_in_shape_sorter` | 2/25 (8%) | 607 | 7,893 | 60.6 | 0 | 23 | 15 / 12 | 8% |
+| `place_wine_at_rack_location` | 14/25 (56%) | 221 | 5,994 | 25.3 | 7 | 4 | 0 / 0 | 48% |
+| `push_buttons` | 7/25 (28%) | 514 | 6,306 | 44.2 | 0 | 18 | 0 / 0 | 56% |
+| `put_groceries_in_cupboard` | 1/25 (4%) | 428 | 16,583 | 55.7 | 12 | 12 | 3 / 1 | 8% |
+| `put_item_in_drawer` | 16/25 (64%) | 384 | 11,922 | 46.5 | 4 | 5 | 15 / 0 | 60% |
+| `put_money_in_safe` | 12/25 (48%) | 404 | 13,678 | 40.2 | 0 | 13 | 0 / 0 | 32% |
+| `reach_and_drag` | 24/25 (96%) | 168 | 4,098 | 17.3 | 1 | 0 | 23 / 0 | 100% |
+| `slide_block_to_color_target` | 17/25 (68%) | 241 | 4,925 | 23.6 | 1 | 7 | 0 / 0 | 72% |
+| `stack_blocks` | 6/25 (24%) | 560 | 14,096 | 54.2 | 1 | 18 | 9 / 1 | 8% |
+| `stack_cups` | 3/25 (12%) | 532 | 12,177 | 51.9 | 4 | 18 | 7 / 2 | 4% |
+| `sweep_to_dustpan_of_size` | 12/25 (48%) | 359 | 7,058 | 35.3 | 2 | 11 | 0 / 0 | 56% |
+| `turn_tap` | 21/25 (84%) | 149 | 3,464 | 15.1 | 0 | 4 | 0 / 0 | 96% |
+| Total | 192/450; mean 42.7% | 7,129 | 145,930 | | 39 | 219 | 105 / 20 | mean 45.3% |
 
-"Scene > 1 cm" counts episodes in which some object was more than 1 cm from its recorded first-frame
-position: after the first (clearing) reset, which is what a single reset gives, and after the second, which
-the episode starts from. The second reset brings 103 of those 128 episodes back to the recorded scene; the 25
-that remain are the contact-settling tasks of section 5. The last column is not an expected value: it is the
-authors' own test run in `test_data.csv` inside the released checkpoint zip, for their 420k weights rather
-than the released 600k ones, with their renderer. No task reported a fail condition; every failure was a
-timeout or a planning error.
+"State > 1 cm off" counts episodes in which some object of the task (section 5) was more than 1 cm from its
+recorded first-frame position: after the first (clearing) reset, which is what a single reset gives, and after
+the second, which the episode starts from. The second reset brings 85 of those 105 episodes back to the
+recorded state; the 20 that remain are the contact-settling tasks of section 5. The last column is not an
+expected value: it is the authors' own test run in `test_data.csv` inside the released checkpoint zip, for
+their 420k weights rather than the released 600k ones, on their renderer. No task reported a fail condition;
+every failure was a timeout or a planning error.
 
 | Phase | Time |
 | --- | --- |
 | Checkpoint preparation | < 0.01 s |
-| Policy load (agent build, 600k weights, CLIP RN50, SHA-256 checks) | 10.3 s |
+| Policy load (agent build, 600k weights, CLIP RN50, SHA-256 checks) | 9.1 s |
 | Runtime preparation (12 workers, each with its Xvfb and CoppeliaSim) | 1.6 s |
-| Evaluation | 1,459.5 s |
-| End to end (process wall clock, including writing results) | 1,477.6 s |
-| Throughput | 0.307 episodes/s (0.320 between the 10th and 90th percentile completions), 4.39 executed actions/s, 90.7 simulation steps/s |
-| Resources | 6.0 CPU cores on average (`time -v`; the kit's own sampling reports 12.0), 1.9 GB maximum RSS of the CLI (`time -v`), Policy replica 1.17 GB VRAM after load and up to about 4.2 GB in use, 91% mean GPU utilization |
+| Evaluation | 1,618.8 s |
+| End to end (process wall clock, including writing results) | 1,635.5 s |
+| Throughput | 0.277 episodes/s (0.288 between the 10th and 90th percentile completions), 4.38 executed actions/s, 90.1 simulation steps/s |
+| Resources | 12.0 CPU cores on average (the kit's sampling; `time -v` sees 5.9 because it counts only waited-for processes), 1.8 GB maximum RSS of the CLI, Policy replica 1.17 GB VRAM after load and up to about 4.2 GB in use, 90% mean GPU utilization |
 
 The evaluation is bound by the single Policy replica: PerAct's 100^3-voxel Perceiver takes about 0.2 s per
-action on this GPU, the replica was busy 91% of the time, and workers spent 66% of their episode time waiting
-for it (1.8 s per action at K=12). A second replica does not fit next to the other processes on this 10 GB
-GPU. The same throughput would need fewer workers; batching `act` across workers or a lower-precision
-Policy is the first target of a throughput change, measured against this baseline.
+action on this GPU, the replica was busy 90% of the time, and workers spent 67% of their episode time waiting
+for it. A second replica does not fit next to the other processes on this 10 GB GPU. Batching `act` across
+workers, or a lower-precision Policy, is the first target of a throughput change, measured against this
+baseline.
 
-NATIVE
+### Native comparison
+
+`examples/peract/run_native.py` ran PerAct's pinned `eval.py` with its README's test command (all 18 tasks in
+one process, `eval_envs=1`, test episodes 0–24, `eval_type=last`, headless) on build 1, with the same
+checkpoint, CLIP file, and test split, and logged every episode through read-only hooks. Its own
+`eval_data.csv` agrees with that log (for example `close_jar` return 44.0 = 11/25, length 16.88 = 422/25
+actions). `compare_native.py` paired it with the Kit run above episode by episode, and a second Kit pass on
+build 2 with `--concurrency 6` gives the Kit-to-Kit spread of the same protocol:
+
+| Task | Kit (build 1, K=12) | Kit (build 2, K=6) | Native `eval.py` | Kit vs native: same outcome | Kit vs Kit: same outcome | First action equal (Kit 1 vs native) | Executed actions (Kit 1 / native) | Simulation steps (Kit 1 / native) | Native start > 1 cm off |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `close_jar` | 8 | 10 | 11 | 20/25 | 19/25 | 20/25 | 492 / 422 | 4,977 / 4,797 | 17 |
+| `insert_onto_square_peg` | 1 | 2 | 2 | 24/25 | 24/25 | 17/25 | 606 / 587 | 10,521 / 10,165 | 0 |
+| `light_bulb_in` | 7 | 5 | 7 | 19/25 | 21/25 | 22/25 | 503 / 494 | 5,171 / 5,169 | 0 |
+| `meat_off_grill` | 17 | 18 | 16 | 20/25 | 22/25 | 25/25 | 322 / 330 | 5,663 / 5,506 | 7 |
+| `open_drawer` | 24 | 23 | 23 | 22/25 | 22/25 | 25/25 | 83 / 86 | 2,326 / 2,345 | 0 |
+| `place_cups` | 0 | 1 | 0 | 25/25 | 24/25 | 13/25 | 556 / 565 | 9,078 / 8,787 | 14 |
+| `place_shape_in_shape_sorter` | 2 | 1 | 0 | 23/25 | 24/25 | 15/25 | 607 / 625 | 7,893 / 7,664 | 16 |
+| `place_wine_at_rack_location` | 14 | 11 | 10 | 19/25 | 16/25 | 24/25 | 221 / 239 | 5,994 / 8,561 | 0 |
+| `push_buttons` | 7 | 9 | 6 | 20/25 | 19/25 | 23/25 | 514 / 507 | 6,306 / 6,024 | 0 |
+| `put_groceries_in_cupboard` | 1 | 3 | 3 | 21/25 | 21/25 | 17/25 | 428 / 304 | 16,583 / 10,656 | 6 |
+| `put_item_in_drawer` | 16 | 14 | 13 | 14/25 | 17/25 | 19/25 | 384 / 430 | 11,922 / 12,196 | 13 |
+| `put_money_in_safe` | 12 | 12 | 12 | 19/25 | 19/25 | 23/25 | 404 / 422 | 13,678 / 14,206 | 0 |
+| `reach_and_drag` | 24 | 23 | 23 | 22/25 | 24/25 | 18/25 | 168 / 157 | 4,098 / 3,817 | 23 |
+| `slide_block_to_color_target` | 17 | 23 | 22 | 18/25 | 17/25 | 23/25 | 241 / 127 | 4,925 / 3,282 | 0 |
+| `stack_blocks` | 6 | 8 | 6 | 21/25 | 23/25 | 13/25 | 560 / 544 | 14,096 / 14,095 | 13 |
+| `stack_cups` | 3 | 0 | 3 | 23/25 | 22/25 | 16/25 | 532 / 527 | 12,177 / 10,202 | 8 |
+| `sweep_to_dustpan_of_size` | 12 | 13 | 11 | 20/25 | 22/25 | 22/25 | 359 / 387 | 7,058 / 6,839 | 0 |
+| `turn_tap` | 21 | 21 | 22 | 22/25 | 21/25 | 24/25 | 149 / 126 | 3,464 / 3,423 | 0 |
+| Total (mean success) | 192 (42.7%) | 197 (43.8%) | 190 (42.2%) | 372/450 | 377/450 | 359/450 | 7,129 / 6,879 | 145,930 / 137,734 | 117 |
+
+What the comparison checks, and what it found:
+
+- **Inputs and mapping.** All 450 pairs have the same variation and the same instruction. Where both sides
+  start from the recorded state (329 episodes), the first action, which depends only on the first
+  observation, is bit-identical in 278, and the two runs then execute on average the same first 3.5 actions.
+  Of the 51 that differ, 26 differ only in rotation, 14 in position by one 1 cm voxel, 7 only in the gripper
+  or collision flag, and 4 by more than a voxel: the reset does not reproduce the scene bit for bit even on one
+  side (two fresh loads of the same episode leave the arm joints
+  up to 3e-4 rad apart, which changes thousands of wrist-camera pixels), and PerAct's arg-max sometimes falls
+  the other way.
+- **The time feature (found by this comparison).** The first Kit pass computed PerAct's time feature from
+  `step`. Its mean success was 46.9% (211/450), but its action sequences left the native ones after 1.4
+  actions on average, because `eval.py` repeats the first time value (section 4). With the lag reproduced,
+  the sequences agree for 3.2 actions on average and the totals match (192 against 190).
+- **Initial states.** 117 of the 450 native episodes started more than 1 cm from their recorded state (none of
+  them a task's first episode), because `eval.py` resets once after the previous episode (section 5). The Kit
+  started 20 episodes that far off, all in the contact-settling tasks.
+- **Outcomes.** Per-episode outcomes cannot be paired: RLBench's motion planner samples IK solutions and
+  RRT-Connect paths from CoppeliaSim's own generator, which neither side seeds, and the reset jitter above
+  feeds into every later step. The Kit and native outcomes agree in 372 of 450 episodes, and the two Kit passes
+  agree in 377: the Kit differs from PerAct's `eval.py` about as much as from itself. The task totals behave
+  the same way; the largest Kit-to-native gap, `slide_block_to_color_target` (17 against 22), is smaller than
+  the gap between the two Kit passes on that task (17 against 23). One run per side does not establish
+  statistical equivalence; it shows no systematic difference at this sample size, and the overall means (42.7%
+  and 43.8% against 42.2%) agree within that spread.
+
+Native timing on the same GPU: 8,330 s end to end (2 h 19 min) for 450 episodes, 0.054 episodes/s and 0.83
+executed actions/s, 2.3 CPU cores on average and 6.3 GB maximum RSS (`time -v`). Besides running one episode
+at a time, `eval.py` loads every recorded image of each test episode (`get_stored_demos` with
+`image_paths=False`), which the Kit worker does not need. The Kit run above was 5.1 times faster in
+episodes/s on the same GPU.
+
+### Raw results and reproduction
+
+Each Kit run directory keeps `result.json`, `manifest.json` (expected work items and record count),
+`metrics.json`, `events.jsonl`, the per-episode records under `queue/completed/` (with every executed action
+and the reset diagnostics), and worker and Policy logs; the native run keeps `native-episodes.jsonl`,
+`run.json`, PerAct's `eval_data.csv`, and its log. The commands, with `CUDA_VISIBLE_DEVICES=0`:
+
+```bash
+ROBOSCOPE_ACCEPT_COPPELIASIM_EDU_LICENSE=YES ROBOSCOPE_ACCEPT_RLBENCH_LICENSE=YES XVFB=/path/to/Xvfb \
+    KIT_PYTHON=/path/to/kit/python benchmarks/rlbench/build-runtime.sh /sim/rlbench
+python examples/peract/download_assets.py /models/peract
+python -m roboscope_kit.runtime.benchmark --benchmark rlbench --self-test \
+    --benchmark-manifest /sim/rlbench/benchmark-manifest.json --output-dir /runs/rlbench-self-test
+python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 --quick-test \
+    --checkpoint-source /models/peract --benchmark-manifest /sim/rlbench/benchmark-manifest.json \
+    --policy-config roboscope-policy.json --output-dir /runs/rlbench-quick
+python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 \
+    --concurrency 12 --replicas 1 \
+    --checkpoint-source /models/peract --benchmark-manifest /sim/rlbench/benchmark-manifest.json \
+    --policy-config roboscope-policy.json --output-dir /runs/rlbench-full
+PYTHONPATH=packages/roboscope-kit/src /sim/rlbench/env/bin/python examples/peract/run_native.py \
+    --runtime /sim/rlbench --checkpoint-source /models/peract --output /runs/rlbench-native
+python examples/peract/compare_native.py --kit-run /runs/rlbench-full --native /runs/rlbench-native \
+    --output /runs/rlbench-compare.json
+```
+
+The second Kit pass (build 2, `--concurrency 6 --replicas 1`) ran at the same rate as K=12: 1,633.3 s
+evaluation, 0.274 episodes/s (0.276 steady), 4.18 executed actions/s, with workers waiting 42% instead of 67%
+of their episode time; its GPU memory peaked at 9.9 GB device-wide, close to this card's limit. Autotune was
+not measured: the Policy replica is the bottleneck from about K=6 on this GPU, and the worker search would
+take CPUs other jobs were using, so the baseline uses a fixed K/g.
