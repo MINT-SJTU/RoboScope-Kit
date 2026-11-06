@@ -8,6 +8,9 @@ its own installer. The example loads `XPolicyLab.policy.<name>.model.Model` from
 copied here. The RoboDojo integration this builds on is adapted from the work of
 [@QLL-CCDD](https://github.com/QLL-CCDD).
 
+Only the Policy is example code; the simulator side is the Kit's built-in RoboDojo benchmark
+(`--benchmark robodojo`).
+
 ## How it maps
 
 The episode loop is XPolicyLab's reference `deploy.py`: `update_obs` on every control step, `get_action` for a
@@ -40,7 +43,8 @@ Keep shell and scheduler logs outside the output directory.
 `Simate_beta` is the validated configuration: the released Simate-beta AE checkpoint
 ([`SIPAILab/sipai-robodojo-eval-ae`](https://huggingface.co/SIPAILab/sipai-robodojo-eval-ae) at `0738aab`),
 FP32, 10 flow steps, 50 predicted actions of which the first 10 are executed, and a 25-frame history sampled
-every 20 steps. The paths below are placeholders.
+every 20 steps. It is a public RoboDojo leaderboard submission by SIPAILab, not a checkpoint trained by the RoboDojo
+authors. The paths below are placeholders.
 
 1. Build the simulator. Read the
    [Isaac Sim license](https://docs.isaacsim.omniverse.nvidia.com/latest/common/NVIDIA_Omniverse_License_Agreement.html)
@@ -91,3 +95,38 @@ every 20 steps. The paths below are placeholders.
 
 Another XPolicyLab policy runs the same way with `--policy <name>` in `roboscope-policy.json`, its own
 environment and checkpoint, and, unless it has `reset_evaluation`, `--concurrency K --replicas K`.
+
+## Evaluation protocol
+
+- **Tasks.** `--suite arx_x5` is RoboDojo's 42 base tasks; `arx_x5_randomized` adds 12 randomized variants. Each
+  task has 25 or 50 fixed layouts. `--episodes N` evaluates the first N layouts of every task with seed 1, the
+  same layouts as upstream `EVAL_NUM=N`.
+- **Episodes.** One episode per layout. It ends when RoboDojo's success check passes or at the task's step limit,
+  which is between 200 and 1,900 control steps. RoboDojo also gives each episode a partial-credit score from 0 to
+  1. An episode takes from under a minute to about ten minutes.
+- **Results.** A task's success rate is over its episodes; the overall rate and mean score are over all episodes.
+  The Kit rejects a layout shard that RoboDojo returns incomplete and evaluates it again, so a result has exactly
+  one record per task and layout.
+
+## Results
+
+Simate_beta, layouts 0–2 of all 42 `arx_x5` tasks (126 episodes), on one RTX 4090 48 GB, 2026-11-06:
+
+| | Kit | Upstream native |
+|---|---:|---:|
+| Successes | 25/126 (19.8%) | 26/126 (20.6%) |
+| Mean score | 0.283 | 0.271 |
+
+**No difference between the Kit and upstream was found.** Paired by task and layout, 5 episodes succeed only in
+the Kit and 6 only upstream (McNemar p = 1.0), and 90 of the 95 episodes that fail on both sides stop at the same
+step. The same layout can succeed in one run and fail in the next, so expect differences of an episode or two per
+task between any two runs.
+
+Throughput is tracked in [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). Per-episode records
+and timings are in the [raw data](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robodojo-simate-acceptance-20261106);
+discussion is in [#17](https://github.com/MINT-SJTU/RoboScope-Kit/issues/17).
+
+## Known limitations
+
+- Only `Simate_beta` has been compared with upstream. Other XPolicyLab policies use the same mapping.
+- RoboDojo episodes are not reproducible run to run, so compare runs statistically rather than episode by episode.
