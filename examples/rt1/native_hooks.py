@@ -12,7 +12,8 @@ The hooks wrap, without changing their behavior:
 - ``maniskill2_evaluator.run_maniskill2_eval_single_episode``: the episode's arguments,
   its success, and its wall time;
 - ``maniskill2_evaluator.build_maniskill2_env``: the returned environment's ``step`` (step
-  count, a SHA-256 over every float64 action passed to ``env.step``, the last
+  count, a SHA-256 over every float64 action passed to ``env.step`` and an 8-hex-digit
+  digest of each step's action, the last
   ``truncated`` and ``episode_stats``) and ``advance_to_next_subtask``;
 - ``maniskill2_evaluator.get_image_from_maniskill2_obs_dict``: a SHA-256 of the episode's
   first policy image.
@@ -55,6 +56,7 @@ class EpisodeLog:
     def reset(self) -> None:
         self.steps = 0
         self.actions = hashlib.sha256()
+        self.step_digests: list[str] = []
         self.truncated = False
         self.terminated = False
         self.episode_stats: dict[str, Any] = {}
@@ -79,7 +81,9 @@ def install(record: Path, write_videos: bool) -> None:
         instruction = env.get_language_instruction
 
         def logged_step(action):
-            log.actions.update(np.ascontiguousarray(action, dtype=np.float64).tobytes())
+            raw = np.ascontiguousarray(action, dtype=np.float64).tobytes()
+            log.actions.update(raw)
+            log.step_digests.append(hashlib.sha256(raw).hexdigest()[:8])
             obs, reward, done, truncated, info = step(action)
             log.steps += 1
             log.terminated = bool(done)
@@ -137,6 +141,7 @@ def install(record: Path, write_videos: bool) -> None:
             "instructions": log.instructions,
             "episode_stats": log.episode_stats,
             "actions_sha256": log.actions.hexdigest(),
+            "step_action_digests": log.step_digests,
             "first_image_sha256": log.first_image_sha256,
             "elapsed_s": elapsed,
         }

@@ -15,7 +15,8 @@ Usage (with the SimplerEnv runtime's Python and the kit source on ``PYTHONPATH``
 2. **Episodes.** Native and Kit episodes are paired on (variant, robot pose, object pose or
    episode id). For each pair it compares success, executed steps, how the episode ended,
    the final ``episode_stats``, the instructions, a SHA-256 of the first policy image, and a
-   SHA-256 over every float64 action passed to ``env.step``.
+   SHA-256 over every float64 action passed to ``env.step``; with per-step action digests on
+   both sides, also the first step whose action differs.
 3. **Metrics.** Per task: both sides' official success rate (mean of variant rates) and the
    paired agreement counts.
 
@@ -89,6 +90,17 @@ def episode_key(episode: dict[str, Any]) -> str:
     else:
         obj = ["xy", round(episode["obj_init_x"], 9), round(episode["obj_init_y"], 9)]
     return json.dumps([pose, obj])
+
+
+def first_divergence(kit: list[str] | None, native: list[str] | None) -> int | None:
+    """The first step whose env.step action differs (-1 if none), or None without per-step digests."""
+
+    if kit is None or native is None:
+        return None
+    for index, (left, right) in enumerate(zip(kit, native, strict=False)):
+        if left != right:
+            return index
+    return -1 if len(kit) == len(native) else min(len(kit), len(native))
 
 
 def kit_records(run_dir: Path) -> dict[str, dict]:
@@ -197,6 +209,9 @@ def main() -> int:
                 "same_outcome": k["success"] == n["success"],
                 "same_steps": k["steps"] == n["steps"],
                 "same_actions": km["actions_sha256"] == n["actions_sha256"],
+                "first_divergent_step": first_divergence(
+                    km.get("step_action_digests"), n.get("step_action_digests")
+                ),
                 "same_first_image": km["first_image_sha256"] == n["first_image_sha256"],
                 "same_episode_stats": km["episode_stats"] == n["episode_stats"],
                 "same_instructions": km["instructions"] == n["instructions"],

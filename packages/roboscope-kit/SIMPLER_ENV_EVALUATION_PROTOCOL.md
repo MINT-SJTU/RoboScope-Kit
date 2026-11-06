@@ -189,7 +189,8 @@ The worker runs upstream's `run_maniskill2_eval_single_episode` loop:
 
 Each record carries the executed steps, whether the policy terminated and whether the time limit truncated,
 the instructions, the number of subtask advances, the final `episode_stats`, a SHA-256 of the first policy
-image, and a SHA-256 over every `float64` action passed to `env.step`. The aggregate rejects a record outside
+image, a SHA-256 over every `float64` action passed to `env.step`, and an 8-hex-digit digest of each step's
+action (`step_action_digests`). The aggregate rejects a record outside
 the work manifest, a duplicate, steps outside `[1, max_episode_steps]`, and an episode that ended neither by
 policy termination nor by truncation at the step limit.
 

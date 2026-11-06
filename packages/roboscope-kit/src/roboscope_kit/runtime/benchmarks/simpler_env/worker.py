@@ -183,6 +183,7 @@ def run_episode(
     )
     reset_done = time.perf_counter()
     actions_digest = hashlib.sha256()
+    step_digests: list[str] = []
     inference_wait_s = 0.0
     chunk = np.empty((0, ACTION_DIM), dtype=np.float64)
     predicted_terminated = truncated = done = False
@@ -215,6 +216,7 @@ def run_episode(
                 subtask_advances += 1
             env_action = np.ascontiguousarray(action[:7], dtype=np.float64)
             actions_digest.update(env_action.tobytes())
+            step_digests.append(hashlib.sha256(env_action.tobytes()).hexdigest()[:8])
             obs, _reward, done, truncated, info = env.step(env_action)
             new_instruction = env.get_language_instruction()
             if new_instruction != instruction:
@@ -251,6 +253,7 @@ def run_episode(
             "truncated": bool(truncated),
             "episode_stats": _jsonable(info.get("episode_stats", {})),
             "actions_sha256": actions_digest.hexdigest(),
+            "step_action_digests": step_digests,
             "first_image_sha256": first_image_sha256,
             "success_criterion": SUCCESS_CRITERION,
             "env_build_s": built - started,
