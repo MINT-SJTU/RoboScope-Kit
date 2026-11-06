@@ -272,9 +272,9 @@ The exact contracts are in the protocol documents:
 - [SimplerEnv](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md):
   the Google Robot visual-matching and variant-aggregation suites and the WidowX visual-matching suite, kept
   separate; the frozen pose sweeps, episode loop, termination, aggregation, and the native comparison.
-  Status: code candidate; build-verified, with real-model full evaluations of the two visual-matching suites
-  (native comparison complete for WidowX, partial for Google Robot) and no evaluation of variant aggregation
-  yet; ships in `0.8.0b28`, released when that version is merged.
+  Status: code candidate; build-verified, with real-model full evaluations of all three suites and
+  episode-by-episode native comparisons on one RTX 4090 (measured on earlier commits of this change; see the
+  pull request); ships in `0.8.0b33`, released when that version is merged.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md):
   environment build, suites, observation and action layouts, step observation updates, and experimental
   runtime switches.
