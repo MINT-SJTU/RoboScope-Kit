@@ -27,6 +27,15 @@ RoboScope Kit evaluates your model on standard robot simulation benchmarks. You 
 `Policy` class; the benchmark runtime drives the simulators, schedules the evaluation, and scores the results.
 Each benchmark is wrapped once in an adapter around its own evaluator, so its rules and scoring stay unchanged.
 
+## News
+
+- **2026-11-06:** [robomimic](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) is supported (`ph_low_dim`,
+  v0.8.0b26). With the robomimic model-zoo checkpoints, all 250 episodes match the upstream evaluator one to one.
+- **2026-11-04:** [RoboDojo](benchmarks/robodojo/README.md) is supported, with an
+  [XPolicyLab Policy example](examples/xpolicylab/).
+- **2026-11-02:** The [technical report](https://arxiv.org/abs/2611.03850) is on arXiv.
+- **2026-10-30:** RoboScope Kit is on PyPI: `pip install roboscope-kit`.
+
 ## Highlights
 
 - 🚀 **Faster evaluation:** on 500 episodes with a StarVLA checkpoint, evaluation is **6.16×**
