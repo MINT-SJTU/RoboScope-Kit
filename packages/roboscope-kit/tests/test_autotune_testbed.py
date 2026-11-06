@@ -56,19 +56,19 @@ UNKNOWN_ON_REAL = (
 # Lowering an expected value is allowed only in a PR that says why, and it needs maintainer review.
 # A tolerance comes from repeated fixed runs (repeat_tolerance) once the selection and the best
 # configuration have three each; until then it is NOISE_TOLERANCE.
-JUDGED = {FULL_AUTO: (0.6484, 0.1995), LIBERO: (0.9994, NOISE_TOLERANCE)}
+JUDGED = {FULL_AUTO: (0.9370, 0.1367), LIBERO: (0.9994, NOISE_TOLERANCE)}
 # Judged workload -> the recorded real search that ran the autotune code of this branch. Its
 # replay must probe the same K/g in the same order, stop for the same reason, select the same K/g,
 # and take the same time. A change to the search names here the searches it still reproduces; a
 # new workload needs a real search of the current code.
-REPRODUCED = {FULL_AUTO: "main 5f79ce2", LIBERO: "main d26a908"}
+REPRODUCED = {FULL_AUTO: "#81 81e3824", LIBERO: "#81 81e3824"}
 # Real workloads the rule does not judge, and why.
 NOT_JUDGED = {REAL: "the same workload as FULL_AUTO, without fixed runs or replica probes"}
 
 # (workload, strategy, estimator override) -> what the search must do. A strategy or a workload
 # added without an entry here fails test_strategy_on_workload.
 EXPECTED = {
-    # Known problem, #80: no window at K=16 ends the search, and the replica phase never runs.
+    # After K=16 has no window, the replica phase asks for K=16/g=2, which #80 did not measure.
     (REAL, "diagonal", None): {
         "selected": (8, 1),
         "best_recorded": (8, 1),
@@ -76,7 +76,7 @@ EXPECTED = {
         "probes": 5,
         "tuning_s": None,
         "safe": True,
-        "gaps": (),
+        "gaps": (Gap(16, 2, "configuration"),),
         "unknown_signals": UNKNOWN_ON_REAL,
     },
     (REAL, "diagonal", "steady"): {
@@ -86,7 +86,7 @@ EXPECTED = {
         "probes": 5,
         "tuning_s": None,
         "safe": True,
-        "gaps": (),
+        "gaps": (Gap(16, 2, "configuration"),),
         "unknown_signals": UNKNOWN_ON_REAL,
     },
     # two-phase's own estimator needs an elapsed rate, which #80 does not give for any K.
@@ -111,28 +111,28 @@ EXPECTED = {
         "gaps": (),
         "unknown_signals": UNKNOWN_ON_REAL,
     },
-    # Built by the record command from real runs. Known problem, #80: the search stops at K=8/g=1,
-    # while the sweep shows K=12/g=2 as the fastest configuration.
+    # Built by the record command from real runs: the replay repeats the real search, K=16/g=2 in
+    # 955 s. The sweep shows K=12/g=2 as the fastest configuration.
     (FULL_AUTO, "diagonal", None): {
-        "selected": (8, 1),
+        "selected": (16, 2),
         "best_recorded": (12, 2),
-        "relative_throughput": pytest.approx(0.6484, abs=0.0001),
-        "probes": 5,
-        "tuning_s": pytest.approx(851.97, abs=0.01),
-        "end_to_end_s": pytest.approx(6648.8, abs=0.1),
-        "end_to_end_vs_best": pytest.approx(1.769, abs=0.001),
+        "relative_throughput": pytest.approx(0.9370, abs=0.0001),
+        "probes": 6,
+        "tuning_s": pytest.approx(955.43, abs=0.01),
+        "end_to_end_s": pytest.approx(4966.7, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.321, abs=0.001),
         "safe": True,
         "gaps": (),
         "unknown_signals": ("queue_wait_p95_ms",),
     },
     (FULL_AUTO, "diagonal", "steady"): {
-        "selected": (8, 1),
+        "selected": (16, 2),
         "best_recorded": (12, 2),
-        "relative_throughput": pytest.approx(0.6484, abs=0.0001),
-        "probes": 5,
-        "tuning_s": pytest.approx(851.97, abs=0.01),
-        "end_to_end_s": pytest.approx(6648.8, abs=0.1),
-        "end_to_end_vs_best": pytest.approx(1.769, abs=0.001),
+        "relative_throughput": pytest.approx(0.9370, abs=0.0001),
+        "probes": 6,
+        "tuning_s": pytest.approx(955.43, abs=0.01),
+        "end_to_end_s": pytest.approx(4966.7, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.321, abs=0.001),
         "safe": True,
         "gaps": (),
         "unknown_signals": ("queue_wait_p95_ms",),
@@ -210,21 +210,21 @@ EXPECTED = {
         "stand_ins": ((9, 1), (8, 4)),
     },
     (SYNTHETIC, "diagonal", None): {
-        "selected": (4, 1),
-        "best_recorded": (4, 1),
+        "selected": (8, 2),
+        "best_recorded": (8, 2),
         "relative_throughput": 1.0,
-        "probes": 4,
-        "tuning_s": 400.0,
+        "probes": 6,
+        "tuning_s": 580.0,
         "safe": True,
         "gaps": (),
         "unknown_signals": ("record_success",),
     },
     (SYNTHETIC, "diagonal", "steady"): {
-        "selected": (4, 1),
-        "best_recorded": (4, 1),
+        "selected": (8, 2),
+        "best_recorded": (8, 2),
         "relative_throughput": 1.0,
-        "probes": 4,
-        "tuning_s": 400.0,
+        "probes": 6,
+        "tuning_s": 580.0,
         "safe": True,
         "gaps": (),
         "unknown_signals": ("record_success",),
@@ -385,31 +385,54 @@ def test_replay_reproduces_the_real_search_of_this_autotune_code() -> None:
         assert search_mismatches(record, _search_index(record, code)) == (), name
 
 
-def test_replay_shows_where_another_autotune_code_searched_differently() -> None:
-    """The #81 search went on to K=16/g=2; the code here stops after K=16/g=1, as #80 reports."""
+def test_replay_shows_where_the_search_on_main_went_differently() -> None:
+    """#80: the search on main stopped after K=16/g=1; the code here goes on to K=16/g=2."""
 
     record = _load(FULL_AUTO)
-    mismatches = search_mismatches(record, _search_index(record, "#81 81e3824"))
-    assert any(item.startswith("probes [(1, 1), (2, 1), (4, 1), (8, 1), (16, 1)]") for item in mismatches)
-    assert "selected (8, 1), the search selected (16, 2)" in mismatches
+    mismatches = search_mismatches(record, _search_index(record, "main 5f79ce2"))
+    probed = "probes [(1, 1), (2, 1), (4, 1), (8, 1), (16, 1), (16, 2)]"
+    assert any(item.startswith(probed) for item in mismatches)
+    assert "selected (16, 2), the search selected (8, 1)" in mismatches
 
 
-def test_issue80_ends_the_search_before_the_replica_phase_on_real_data() -> None:
-    """Known problem, #80: a K probe without a steady window ends the whole search."""
+def test_issue80_regression_on_real_data_reaches_the_replica_phase() -> None:
+    """#80: a K probe without a steady window ended the search before any replica probe.
 
-    for name in (REAL, FULL_AUTO):
-        score = replay_strategy(_load(name), "diagonal")
-        assert score.selected == (8, 1)
-        assert score.stop_reason.startswith("no_steady_window")
-        assert score.complete
+    The record has no g > 1 point, so what real data can show is that the search asks for one.
+    """
+
+    score = replay_strategy(_load(REAL), "diagonal")
+    assert "no_steady_window" in score.stop_reason
+    assert "unrecorded_configuration" in score.stop_reason
+    assert score.gaps == (Gap(16, 2, "configuration"),)
 
 
-def test_replay_repeats_a_real_search_and_its_wall_time() -> None:
-    """The second repeat of each probe is the real search that stopped at K=8/g=1 in 818 s."""
+def test_issue80_regression_with_replica_data_selects_past_the_windowless_probe() -> None:
+    score = replay_strategy(_load(SYNTHETIC), "diagonal")
+    assert "no_steady_window" in score.stop_reason
+    assert score.selected == (8, 2)
 
-    score = replay_strategy(_load(FULL_AUTO), "diagonal", repeat=1)
-    assert score.selected == (8, 1)
-    assert score.tuning_s == pytest.approx(817.85, abs=0.01)
+
+def test_real_search_reaches_replicas_past_the_windowless_probe() -> None:
+    """#80 on the outputs of real runs: the search with the fix selected K=16/g=2."""
+
+    score = replay_strategy(_load(FULL_AUTO), "diagonal")
+    assert score.selected == (16, 2)
+    assert score.stop_reason.startswith("no_steady_window")
+    assert "predicted GPU memory" in score.stop_reason
+
+
+def test_a_decision_on_an_unknown_elapsed_rate_is_reported() -> None:
+    """The replica step compares elapsed rates, and #80 gives none for the incumbent K=8."""
+
+    record = _with_measurements(
+        _load(REAL),
+        {"k": 16, "g": 2, "source": "probe", "outcome": "no_steady_window", "steps_per_s": 200.0},
+        {"k": 24, "g": 3, "source": "probe", "outcome": "worker_oom"},
+    )
+    score = replay_strategy(record, "diagonal")
+    assert Gap(8, 1, "steps_per_s") in score.gaps
+    assert not score.complete
 
 
 def test_replay_ignores_the_cpu_quota_of_this_machine(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -660,11 +683,11 @@ def test_record_from_run_outputs_replays_the_same_search(tmp_path: Path) -> None
     assert record["bound_hint"] == "cpu"
     assert record["replica_vram_bytes"] == 3 * 1024**3
     assert [search["autotune"] for search in record["observed_searches"]] == ["first", "second"]
-    assert record["observed_searches"][0]["selected"] == {"k": 2, "g": 1}
+    assert record["observed_searches"][0]["selected"] == {"k": 4, "g": 2}
     assert [search_mismatches(record, index) for index in (0, 1)] == [(), ()]
     score = replay_strategy(record, "diagonal")
-    assert score.selected == (2, 1)
-    assert score.tuning_s == 40.0
+    assert score.selected == (4, 2)
+    assert score.tuning_s == 50.0
     assert score.gaps == ()
     assert score.unknown_signals == ()
 
@@ -763,5 +786,5 @@ def test_score_command_says_which_recorded_searches_this_code_reproduces(
 ) -> None:
     assert main(["score", str(WORKLOADS / f"{FULL_AUTO}.json"), "--strategy", "diagonal"]) == 0
     printed = capsys.readouterr().out
-    assert "observed search 1 (main 5f79ce2): reproduced by this code" in printed
-    assert "observed search 0 (#81 81e3824): NOT reproduced" in printed
+    assert "observed search 0 (#81 81e3824): reproduced by this code" in printed
+    assert "observed search 1 (main 5f79ce2): NOT reproduced" in printed

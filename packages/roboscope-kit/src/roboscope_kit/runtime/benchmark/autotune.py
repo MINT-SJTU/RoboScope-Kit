@@ -384,6 +384,9 @@ class BenchmarkAutotuneController:
         self.cache: dict[tuple[int, int], tuple[KTrial, int | None, dict[str, Any]]] = {}
         # Per-episode success of every accepted probe, keyed by record id.
         self.record_success: dict[tuple[int, int], dict[str, bool]] = {}
+        # Elapsed rate of every accepted probe, and the probes that have only that rate.
+        self.elapsed_throughput: dict[tuple[int, int], float] = {}
+        self.elapsed_fallbacks: set[tuple[int, int]] = set()
         self.candidates: list[dict[str, Any]] = []
         self.bound_hint = BoundHint.GPU_INFER
         self.bound_hints: dict[tuple[int, int], BoundHint] = {}
@@ -506,7 +509,35 @@ class BenchmarkAutotuneController:
             "replica_vram_bytes": replica_vram,
         }
 
-    def measure_trial(self, k: int, g: int, *, ramp: str) -> KTrial:
+    def gain(self, trial: KTrial, incumbent: KTrial) -> float:
+        """Throughput gain over the incumbent, with one estimator for both probes.
+
+        A steady rate leaves out warm-up and the drain tail, so it cannot be compared
+        with an elapsed rate. When either probe has only an elapsed rate, both are
+        compared on elapsed rates. Those understate the larger K, whose fixed start-up
+        and drain tail weigh more, so a step that passes is a real gain.
+        """
+
+        keys = [(entry.k, entry.servers.replicas) for entry in (trial, incumbent)]
+        if self.elapsed_fallbacks.isdisjoint(keys):
+            return _gain(trial, incumbent)
+        rate, baseline = (self.elapsed_throughput[key] for key in keys)
+        return rate / max(baseline, 1e-9) - 1
+
+    def measure_trial(
+        self,
+        k: int,
+        g: int,
+        *,
+        ramp: str,
+        elapsed_fallback: bool = False,
+    ) -> KTrial:
+        """Measure one K/g probe, or return it from the cache.
+
+        ``elapsed_fallback`` keeps a probe without a steady-state window, on its elapsed
+        rate, instead of stopping it; compare such a probe with :meth:`gain`.
+        """
+
         key = (k, g)
         if key in self.cache:
             return self.cache[key][0]
@@ -541,7 +572,10 @@ class BenchmarkAutotuneController:
                     stop_reason=probe_limits.timeout_reason,
                     health=health,
                 )
-            trial = _as_trial(k, g, output, health, self.limits.throughput_estimator)
+            estimator = self.limits.throughput_estimator
+            if elapsed_fallback and output["result"].get("steady_steps_per_s") is None:
+                estimator = "elapsed"
+            trial = _as_trial(k, g, output, health, estimator)
             record_success = dict(output.get("record_success", {}))
             self._check_correctness(k, g, health, record_success)
         except ProbeStopped as exc:
@@ -565,6 +599,9 @@ class BenchmarkAutotuneController:
             raise
         self.cache[key] = (trial, replica_vram, health)
         self.record_success[key] = record_success
+        self.elapsed_throughput[key] = float(output["result"]["steps_per_s"])
+        if estimator != self.limits.throughput_estimator:
+            self.elapsed_fallbacks.add(key)
         self.bound_hint = _bound_hint(output)
         self.bound_hints[key] = self.bound_hint
         self._finish_candidate(
@@ -572,7 +609,7 @@ class BenchmarkAutotuneController:
             status="accepted",
             started_s=candidate_started,
             health=health,
-            metrics=_trial_dict(trial),
+            metrics={**_trial_dict(trial), "throughput_estimator": estimator},
         )
         return trial
 
@@ -755,6 +792,11 @@ def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]
     K = r * g (capped by measured CPU use per worker); keep the step while it
     gains at least ``replica_minimum_gain``. A resource limit, a failed probe,
     or an exhausted budget ends the search with the last accepted configuration.
+
+    A worker probe without a steady-state window ends only the worker phase: the
+    workload was too small for K workers, which says nothing about resources. The
+    replica phase then reaches the same K on the same workload, so its probes fall
+    back to elapsed rates rather than stop for the same reason.
     """
 
     base = controller.bounds.gpu_count
@@ -773,7 +815,7 @@ def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]
         try:
             trial = controller.measure_trial(k_next, base, ramp="k")
         except (ProbeStopped, AutotuneBudgetExhausted) as exc:
-            stop_reason, limited = _stop_reason(exc), True
+            stop_reason, limited = _stop_reason(exc), not _lacks_steady_window(exc)
             break
         gain = _gain(trial, incumbent)
         required = controller.limits.worker_knee_gain * (k_next / incumbent.k - 1.0)
@@ -805,11 +847,11 @@ def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]
             stop_reason += f"; {memory}"
             break
         try:
-            trial = controller.measure_trial(k_next, g_next, ramp="g")
+            trial = controller.measure_trial(k_next, g_next, ramp="g", elapsed_fallback=True)
         except (ProbeStopped, AutotuneBudgetExhausted) as exc:
             stop_reason += f"; {_stop_reason(exc)}"
             break
-        gain = _gain(trial, incumbent)
+        gain = controller.gain(trial, incumbent)
         path.append({"k": k_next, "g": g_next, "gain": gain})
         limit = controller.resource_limit(trial)
         if limit is not None:
@@ -919,6 +961,10 @@ def _stop_reason(exc: ProbeStopped | AutotuneBudgetExhausted) -> str:
     if isinstance(exc, ProbeStopped):
         return f"{exc.stop_reason}: {exc}"
     return str(exc)
+
+
+def _lacks_steady_window(exc: ProbeStopped | AutotuneBudgetExhausted) -> bool:
+    return isinstance(exc, ProbeStopped) and exc.stop_reason == "no_steady_window"
 
 
 def _concurrency_health(k: int, output: dict[str, Any]) -> dict[str, Any]:
