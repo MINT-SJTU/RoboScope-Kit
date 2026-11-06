@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "kind": "real",
+    "source": "The table in issue #80 of MINT-SJTU/RoboScope-Kit, reported on 2026-11-05.",
+    "notes": [
+      "Transcribed by hand from the issue, not produced by the record command, because the run's output directory is not available. Only numbers the issue states are here.",
+      "Rates are rounded to 0.1 steps/s and GPU utilization to whole percents, as in the issue.",
+      "replica_vram_bytes is the issue's approximate '~11 GiB', and vram_per_gpu_bytes its '48 GiB', not exact byte counts.",
+      "The issue gives 818 s for the whole search only, so no probe has a wall time.",
+      "cpu_cores is the issue's '208 CPU cores'. Whether that was the cgroup quota the search saw is not stated.",
+      "All rows are diagonal probes (steady estimator, three work items per Worker). two-phase with its default elapsed estimator runs a different, fixed-size probe, which this record does not cover.",
+      "bound_hint is absent; the controller's default, gpu_infer, is what the RoboCasa adapter of commit d26a908 reports.",
+      "date is unknown: the issue states when the run was reported, not when it ran."
+    ]
+  },
+  "workload": {
+    "benchmark": "robocasa",
+    "suite": "tabletop",
+    "policy": "StarVLA Qwen3-VL-OFT-Robocasa",
+    "kit_version": "0.8.0b27 (PR #39 commit d26a908)",
+    "date": "unknown",
+    "host": {
+      "gpu_model": "RTX 4090",
+      "gpu_count": 1,
+      "vram_per_gpu_bytes": 51539607552,
+      "cpu_cores": 208
+    }
+  },
+  "replica_vram_bytes": 11811160064,
+  "manifest_defaults": {
+    "autotune_total_budget_s": 1800.0
+  },
+  "observed_search": {
+    "strategy": "diagonal",
+    "throughput_estimator": "steady",
+    "selected": {
+      "k": 8,
+      "g": 1
+    },
+    "elapsed_s": 818.0
+  },
+  "unknown_fields": [
+    "cpu_cores",
+    "gpu_utilization",
+    "health",
+    "peak_memory_bytes",
+    "probe_items",
+    "queue_wait_p95_ms",
+    "record_success",
+    "steady_window",
+    "steps_per_s",
+    "throttle_time_ratio",
+    "wall_time_s"
+  ],
+  "unmeasured": "Every point with g > 1, and every K above 16. K=16/g=1 finished without a steady window and the issue gives no rates for it. The fixed-K/g sweep announced in issue #80 had not landed when this record was written.",
+  "measurements": [
+    {
+      "k": 1,
+      "g": 1,
+      "source": "probe",
+      "outcome": "completed",
+      "steady_steps_per_s": 24.8,
+      "gpu_utilization": 0.07
+    },
+    {
+      "k": 2,
+      "g": 1,
+      "source": "probe",
+      "outcome": "completed",
+      "steady_steps_per_s": 47.3,
+      "gpu_utilization": 0.12
+    },
+    {
+      "k": 4,
+      "g": 1,
+      "source": "probe",
+      "outcome": "completed",
+      "steady_steps_per_s": 91.6,
+      "gpu_utilization": 0.24
+    },
+    {
+      "k": 8,
+      "g": 1,
+      "source": "probe",
+      "outcome": "completed",
+      "steady_steps_per_s": 147.7,
+      "gpu_utilization": 0.33
+    },
+    {
+      "k": 16,
+      "g": 1,
+      "source": "probe",
+      "outcome": "no_steady_window"
+    }
+  ]
+}

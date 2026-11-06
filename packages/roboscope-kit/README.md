@@ -141,6 +141,10 @@ out (RoboCasa's 24 tasks, MetaWorld's 50), larger `K` cannot be measured and the
 accepted configuration. Probes it measures but does not keep are
 marked `rejected` in `selection.json`.
 
+To compare searches without a GPU, the
+[autotune testbed](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/autotune-testbed.md)
+replays recorded workloads through the same controller and scores any registered strategy.
+
 To measure or reproduce one configuration, add `--concurrency K --replicas G`, for example
 `--concurrency 12 --replicas 3`. The evaluation then runs at that `K` and `g` without probing, and
 `result.json` records `"autotune": {"k": K, "g": G, "mode": "fixed"}`. Both flags are required together,
