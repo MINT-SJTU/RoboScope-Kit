@@ -454,7 +454,7 @@ with a distractor, not with the basket). The unbalanced goals of
 
 ### Correctness baseline
 
-Recorded on 2026-11-05 with kit 0.8.0b26, the runtime built by this section's script, the
+Recorded on 2026-11-05 with this change's kit (0.8.0b29), the runtime built by this section's script, the
 [StarVLA demo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/starvla/libero_pro/demo.yaml)
 (`StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1` at `a60fff4`, StarVLA `7e4a473`, bf16, `starvla_policy.py`), and one
 RTX 3080 10 GB.
@@ -508,6 +508,42 @@ This is one run per side on 4 of the 16 suites and initial states 0–4. It supp
 does not establish statistical equivalence of scores, or anything about the suites and episodes it did not
 cover.
 
+### Full evaluation
+
+All 16 suites of the standard profile, 500 episodes each (10 tasks × initial states 0–49, every episode
+exactly once), 8,000 episodes in total, with the same demo Policy and snapshot as above. 13 suites ran on
+the RTX 3080 10 GB at fixed K=2/g=1. `libero_10_swap`, `libero_10_lan`, and `libero_10_task` ran on one
+RTX 4090 48 GB at fixed K=8/g=2 with `OMP_NUM_THREADS=8`, sharing the GPU with other evaluation jobs, using
+a runtime built by the same script (identical package set). Success rates (each cell one suite; the last
+row is a mean of suite success rates):
+
+| Base suite | Object | Position | Semantic | Task |
+| --- | ---: | ---: | ---: | ---: |
+| `libero_goal` | 70.2% | 1.2% | 88.6% | 9.4% |
+| `libero_spatial` | 95.2% | 0.0% | 93.4% | 55.0% |
+| `libero_10` | 47.4% | 0.0% | 91.8% | 10.6% |
+| `libero_object` | 90.2% | 0.0% | 96.4% | 9.6% |
+| Mean of the 4 suites | 75.8% | 0.3% | 92.5% | 21.1% |
+
+| Suite | Episodes | Successes | Hardware, K/g |
+| --- | ---: | ---: | --- |
+| `libero_goal_object` | 500 | 351 | 3080, 2/1 |
+| `libero_goal_swap` | 500 | 6 | 3080, 2/1 |
+| `libero_goal_lan` | 500 | 443 | 3080, 2/1 |
+| `libero_goal_task` | 500 | 47 | 3080, 2/1 |
+| `libero_spatial_object` | 500 | 476 | 3080, 2/1 |
+| `libero_spatial_swap` | 500 | 0 | 3080, 2/1 |
+| `libero_spatial_lan` | 500 | 467 | 3080, 2/1 |
+| `libero_spatial_task` | 500 | 275 | 3080, 2/1 |
+| `libero_10_object` | 500 | 237 | 3080, 2/1 |
+| `libero_10_swap` | 500 | 0 | 4090, 8/2 |
+| `libero_10_lan` | 500 | 459 | 4090, 8/2 |
+| `libero_10_task` | 500 | 53 | 4090, 8/2 |
+| `libero_object_object` | 500 | 451 | 3080, 2/1 |
+| `libero_object_swap` | 500 | 0 | 3080, 2/1 |
+| `libero_object_lan` | 500 | 482 | 3080, 2/1 |
+| `libero_object_task` | 500 | 48 | 3080, 2/1 |
+
 ### Hardware and performance baseline
 
 On this 10 GB GPU, one bf16 replica of the 3B checkpoint held 8.3–8.8 GB and one EGL Worker about 0.46 GB
@@ -515,8 +551,8 @@ of the same GPU (measured with a single Worker). At K=2/g=1, with
 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` in the Policy's environment, the peak over the runs so far
 was 9,811 MiB of the card's 10,240 MiB. In the one K=4/g=1 run, the Policy ran out of memory and the run
 aborted. K=3 was not tried: another Worker's 0.46 GB is not expected to fit. Autotune was not used, because
-its probes would try larger K. The runs here use fixed `--concurrency 2 --replicas 1`. A larger GPU, or
-rendering on another GPU, would raise this limit; that was not tested.
+its probes would try larger K. The RTX 3080 runs use fixed `--concurrency 2 --replicas 1`. A larger GPU
+raises this limit (the RTX 4090 runs below use K=8/g=2); rendering on another GPU was not tested.
 
 | `libero_goal_object`, 500 episodes, K=2/g=1 | Value |
 | --- | ---: |
@@ -531,6 +567,8 @@ rendering on another GPU, would raise this limit; that was not tested.
 
 A Quick Test (`libero_goal_task`) takes 40.7 s end to end, of which Policy load 18.8 s and the 300-step
 episode 18.3 s. A clean build takes about 21 minutes on a slow shared link, almost all of it downloads.
+
+On the shared RTX 4090 48 GB (2 × Xeon Platinum 8470Q host, Kit and Policy pinned to cores 0–63), the three `libero_10` suites ran at K=8/g=2: `libero_10_swap` 102 steps/s (2,541 s), `libero_10_lan` 131 steps/s (1,039 s), `libero_10_task` 147 steps/s (1,717 s). Two bf16 replicas held about 8.5 GB each. The GPU was busy with other jobs at the same time (device utilization near 100%, inference wait about 70% of episode time), so these numbers are not comparable with the RTX 3080 runs; `result.json`'s GPU memory and utilization cover the whole device, other jobs included. Limit the Policy's CPU threads on many-core hosts: in two short K=6/g=2 runs on this host, the Policy without `OMP_NUM_THREADS` kept about 12 cores busy per process and the run reached about 15 steps/s; with `OMP_NUM_THREADS=8` it reached 86 steps/s. The other jobs' load was not controlled between the two runs.
 
 ## 12. Other benchmarks
 
