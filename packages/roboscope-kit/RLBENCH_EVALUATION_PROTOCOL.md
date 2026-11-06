@@ -121,8 +121,11 @@ runtime; `examples/peract/download_assets.py` downloads it with pinned SHA-256s.
 The build checks the installed versions and that RLBench and YARR import from their pinned checkouts,
 downloads (or, with `RLBENCH_PERACT_TEST_ZIPS`, reuses) and verifies the 18 test zips, extracts them to
 `<install-dir>/peract-test/test`, recomputes every task's test-episode digest (section 5) against the
-frozen table, launches CoppeliaSim headless and renders one reset through the worker's own code, records
-`pip-freeze.txt`, and copies
+frozen table, launches CoppeliaSim headless and renders one reset through the worker's own code, resets
+each of the 450 test episodes once on a freshly loaded task and compares its scene with the recorded one
+against the frozen list in `peract-initial-scenes.json` (section 5; `RLBENCH_CHECK_JOBS` CoppeliaSim
+processes, by default half the CPUs and at most 6, with the per-episode results in
+`<install-dir>/initial-scenes.json`), records `pip-freeze.txt`, and copies
 [`benchmark-manifest.json`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/rlbench/benchmark-manifest.json)
 into `<install-dir>`. Its runtime paths (`python`, `coppeliasim`, `test_set`, `xvfb`) are relative to the
 manifest. Workers import the kit from its source tree through `PYTHONPATH`, so `roboscope-kit` is not
@@ -206,9 +209,8 @@ Test episode `i` of a task is directory `episode<i>` of `<task>/all_variations/e
 
 1. read `variation_number.pkl` and the `random_seed` stored in `low_dim_obs.pkl` (the NumPy `MT19937`
    state captured just before that episode's scene was sampled during data generation);
-2. `set_variation(variation)`, `np.random.set_state(random_seed)`, and `TaskEnvironment.reset()`, which
-   samples the scene, places it, and lets objects settle; then the same three calls once more
-   (see below);
+2. `set_variation(variation)`, `np.random.set_state(random_seed)`, and one `TaskEnvironment.reset()`, which
+   samples the scene, places it, and lets objects settle; whatever episode the worker ran before;
 3. take the first observation, then the instruction `get_task_descriptions()[0]`.
 
 The worker reads the two pickles with an unpickler that only resolves the RLBench `Demo` and
@@ -218,31 +220,76 @@ the SHA-256 of its variation and its full random state; a task's digest is the S
 build rejects a test split whose task digests differ from the frozen table, and a formal aggregate
 recomputes each task's digest from its records.
 
-Each record also carries `initial_scene_position_error_m`: the largest distance, in metres and per
-coordinate, between the position of any object of the task after the reset and its position in the episode's
-recorded first frame. RLBench's task state lists every object of the task, including invisible helpers
-(waypoints, proximity sensors), so a large value does not always mean a visibly different scene; positions
-rather than full poses are compared, so quaternion signs and contact-force readings do not count. It shows
-whether the episode starts from its recorded test state (section 9).
+**Initial-scene diagnostic.** Each record carries `initial_scene_position_error_m`, the largest distance,
+in metres and per coordinate, between the position of any object of the task after the reset and its
+position in the episode's recorded first frame (`task_low_dim_state` of frame 0 in `low_dim_obs.pkl`), and
+`initial_scene_worst_object`, that object's name. RLBench's task state lists every object of the task,
+including invisible helpers (waypoints, proximity sensors), so a large value does not always mean a visibly
+different scene; positions rather than full poses are compared, so quaternion signs and contact-force
+readings do not count. Objects are matched by their CoppeliaSim handle, not by their index in the vector:
 
-**Deviation from `eval.py`: two seeded resets instead of one.** PerAct resets once. A reset that starts
-from the end of a played episode can place objects differently from the recorded scene: RLBench's placement
-rejects samples that collide with objects the previous episode left behind, so the number of random draws,
-and with it the scene, depends on how the previous episode ended (for example, after a `close_jar`
-episode that screwed the lid on, the next test episode's jars land elsewhere). In PerAct's `eval.py`, which
-plays the 25 episodes of a task in order, episode `i`'s scene therefore depends on the planner's random
-outcome in episode `i - 1`. The Kit runs episodes on whichever worker is free, so it cannot reproduce that
-history, and a single reset would make the scene depend on scheduling. The worker therefore resets twice
-with the same variation and random state: the first reset clears the previous episode, and the second
-samples the recorded scene. Records carry `clearing_reset_position_error_m`, the first reset's distance
-from the recorded scene, which is what a single reset would have given. Section 9 reports both, and the same
-distance for every episode of PerAct's own `eval.py`.
+- The recorded vector has no names. `Task.get_low_dim_state` (`rlbench/backend/task.py:84`, at the pinned
+  RLBench commit) concatenates, for each object of `Task._initial_objs_in_scene`, its pose (7 values), then a
+  joint's position (+1) or a force sensor's forces and torques (+6). `Scene.reset` rebuilds that list from
+  the task's object tree at every reset (`rlbench/backend/scene.py:168`, `task.py:169`).
+- That order changes within one loaded task. When the gripper grasps an object, PyRep re-parents it to the
+  gripper (`pyrep/robots/end_effectors/gripper.py:50`); the `release()` at the start of the next
+  `Scene.reset` (`scene.py:152`) re-parents it to its old parent (`gripper.py:63`), where CoppeliaSim lists
+  it after its siblings; `Task.restore_state` (`task.py:342`) restores poses, not that order. On this
+  runtime the tree was observed back in its original order by the end of the same reset (during
+  `validate()`'s path planning), after `_initial_objs_in_scene` had already been taken: a second reset, or
+  re-reading the list after the first, lists the objects in the recorded order again. The worker does not
+  rely on that.
+- The worker therefore captures the task's object list once, at the first reset after the task is loaded
+  (`LoadedTask` in the worker), lays the recorded vector out over that list with a strict length check, and
+  compares object by object. A task whose object set changes after loading fails the worker.
 
-The second reset removes the dependence on the previous episode; it does not make every scene exact. In a few
-tasks (`place_cups`, `place_shape_in_shape_sorter`, and single episodes of others) objects settle into
-contact during the reset, and that settling is not reproducible on this simulator build even from a freshly
-loaded task: two fresh loads of the same `place_shape_in_shape_sorter` episode differ, and some episodes start
-centimetres from their recorded scene. Those episodes are still scored; section 9 counts them.
+An earlier version of this profile compared the vectors by index. After one reset following a played
+episode it then paired different objects: 105 of 450 Kit episodes and 117 of 450 episodes of PerAct's own
+`eval.py` appeared more than 1 cm off, and that version reset twice to avoid it. The difference was in the
+measurement, not in the scene. In a replay of 8 tasks (episodes 1–24 each, 192 episodes, each reset after
+replaying the previous episode's Kit actions), compared by object, one reset and a second reset left 21
+and 23 episodes more than 1 cm off; the NumPy random state and the placement attempts after the reset were
+the same in all 192; compared by index, the first reset showed 110 and its object list was out of order in
+95.
+
+**Upstream's `task_low_dim_state` order is unreliable after a grasp, and this profile does not provide it.**
+RLBench's `task_low_dim_state` observation is the same vector. After an episode in which the gripper grasped
+something, a later episode's vector in the same loaded task lists that object in another place than the
+recorded one, so a Policy reading it by index would see objects swapped. The worker's observation config sets
+`task_low_dim_state=False` (PerAct does not use it), and the Policy never receives it. The recorded test
+set has the same property: the data generator loads the task afresh for every episode
+(`tools/dataset_generator.py:375`), but `TaskEnvironment._get_live_demos` (`rlbench/task_environment.py:140`)
+retries a failed demonstration in the same loaded task, after a demonstration that may have grasped an
+object (`scene.py:425`).
+
+**Build-time check, episode by episode.** `build-runtime.sh` runs
+[`initial_scenes`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/src/roboscope_kit/runtime/benchmarks/rlbench/initial_scenes.py):
+for every task and test episode it loads the task afresh, resets it once with the worker's code, requires
+that the recorded vector has exactly the length of the fresh object list's layout, and compares the scene by
+handle. For an episode more than 1 cm off it lays the recorded vector out over the order that releasing each
+graspable object, or each ordered pair, would have left (its model of CoppeliaSim's order must first
+reproduce the task's own list), and classifies the episode. The outcome is frozen in
+[`peract-initial-scenes.json`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/rlbench/peract-initial-scenes.json)
+with its digest, and the build fails when an episode is off that the file does not list, when a listed
+recorded order is no longer explained by releasing the same objects, or when a recorded vector does not fit
+the layout. Each task runs in its own CoppeliaSim process with episodes in order, because contact settling
+depends on what the process simulated before; settling past the tolerance in a task already known to settle
+is reported rather than failed. On this runtime all 450 recorded vectors fit the fresh layout, and 20
+episodes start more than 1 cm off (section 9):
+
+| Cause | Episodes | Meaning |
+| --- | --- | --- |
+| `recorded_order` | 7: `place_cups` 13, `place_shape_in_shape_sorter` 7 and 16, `put_groceries_in_cupboard` 7, `stack_blocks` 12, `stack_cups` 9 and 12 | The recorded vector was laid out after one object (`released`) had been grasped and released; over that order the scene is within 1 cm (at most 5 mm off) |
+| `recorded_order_and_settling` | 4: `place_cups` 11 and 16, `place_shape_in_shape_sorter` 13 and 24 | Such an order explains part of the difference; objects are still 5–24 cm off |
+| `settling` | 9: `place_cups` 19, `place_shape_in_shape_sorter` 1, 2, 4, 5, 12, 14, 15, 18 | No release order explains it; objects that settle into contact during the reset land elsewhere |
+
+Episodes on the list are still scored. For the 7 `recorded_order` episodes the record's
+`initial_scene_position_error_m` reports the misordered vector, not a different scene. Contact settling is
+not reproducible on this simulator build across processes: the same episode, loaded fresh, settles
+differently depending on what the CoppeliaSim process simulated before, so in the worker (which runs
+episodes in scheduling order) the settling episodes of `place_cups` and `place_shape_in_shape_sorter` are not
+the same set as the build's.
 
 **Upstream behaviour kept as is: the instruction re-runs the task's `init_episode`.**
 `get_task_descriptions()` calls the task's `init_episode` again after the first observation was taken. In
@@ -296,7 +343,7 @@ Quick Test and `--episodes` runs are not formal. Sharded runs sum the per-task r
 ## 8. Validation sequence
 
 1. Build the runtime with `build-runtime.sh` in a fresh directory; it verifies versions, the test split's
-   digests, and a rendered reset.
+   digests, a rendered reset, and every test episode's initial scene against the frozen list.
 2. `--self-test --benchmark-manifest <install-dir>/benchmark-manifest.json`.
 3. `--quick-test` with the real Policy (`open_drawer`, test episode 0).
 4. The full `peract_18` evaluation.
@@ -323,6 +370,15 @@ Policy: `examples/peract`, run with the runtime's Python on GPU 0. Workers do no
   apart from the install path. The second build took 10 min 6 s: about 1 minute for CoppeliaSim, 1.5 for
   the four source checkouts, 0.5 for CPython and the 90 locked packages, 7 to verify and extract the 19 GB
   test split, and 20 s for the build check and `--self-test` (6–7 s).
+- A third clean build (build 3, 2026-11-06) with the script that adds the per-episode initial-scene check
+  (section 5) passed all of the above. The check took 114.7 s with 6 CoppeliaSim processes (112–193 s in
+  standalone runs on build 2, with the host's other load varying); the whole build took 15 min 51 s, this time
+  downloading CoppeliaSim and fetching the four sources again. All 450 recorded vectors fit their fresh
+  layout, and build 3's per-episode distances equal build 2's to 1e-6 m in all 450 episodes, and so does
+  `peract-initial-scenes.json` (20 episodes). On build 2 the result was also identical between 6 and 3
+  processes, and between two runs with 6. Before each task got its own process, the result depended on
+  how tasks were grouped in a process: with 6 and with 3 processes, 6 `place_shape_in_shape_sorter` episodes
+  were more than 1 cm off in one grouping and not in the other.
 - `--quick-test` on build 1: `open_drawer` test episode 0 succeeded in 3 actions (93 simulation steps).
   Policy load 11.7 s, runtime preparation 1.6 s, evaluation 8.4 s, 23 s end to end; the scene matched the
   recorded test episode to 1e-6 m. On build 2, with the final Policy (the time-feature fix of the native
