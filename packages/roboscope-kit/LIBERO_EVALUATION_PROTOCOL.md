@@ -440,9 +440,10 @@ This also differs from plain LIBERO where the dimension does not perturb languag
 the unperturbed base tasks is not their file-name instruction for `libero_spatial` ("pick the akita black
 bowl ..." for "pick up the black bowl ..."), `libero_object` ("pick the ..." for "pick up the ..."), and 5
 of 10 `libero_goal` tasks, so the Object and Position suites of those bases also see that wording; for
-`libero_10` the two are identical. Upstream runners that feed `Task.language` (the openvla-oft, openpi,
-lerobot, and StarVLA LIBERO clients) score something else, and leaderboard numbers produced that way are not
-comparable to these for the Semantic and Task dimensions.
+`libero_10` the two are identical. Runners that feed `Task.language` score something else: StarVLA's
+LIBERO client does (checked at `7e4a473`), and LIBERO-PRO#27 reports the same for the openvla-oft, openpi,
+and lerobot clients. Scores produced that way, possibly including published ones, are not comparable to
+these for the Semantic and Task dimensions.
 
 Known upstream content issues that this protocol does not correct, because the released files are scored
 as released: [LIBERO-PRO#38](https://github.com/Zxy-MLlab/LIBERO-PRO/issues/38) (`libero_10_task`
@@ -476,31 +477,46 @@ and initial states 0–4 of every task of `libero_goal_task`, `libero_spatial_la
 | first action chunk, bit for bit, where the first image is equal | 194 / 194 |
 | whole executed action sequence, bit for bit | 186 / 200 |
 
-Per suite, the Kit and native success counts are 4/4, 48/48, 0/0, and 23/23 of 50. Observation
-construction, image resizing, instruction, action unnormalization and gripper mapping, chunk execution,
-settle steps, horizons, and success detection therefore match the native evaluator. Two effects keep the
-rest from pairing exactly:
+Per suite, the Kit and native success counts are 4/4, 48/48, 0/0, and 23/23 of 50. What these 200
+episodes verify, and what they do not:
 
-- LIBERO seeds a task environment once and reuses it, and the state after `reset()`, `set_init_state()`, and
-  the settle steps still depends on the random draws of that environment's earlier resets (a fresh
-  environment and one that already ran episode 0 give different states for episode 1; re-seeding restores
-  the fresh one). The native client always runs a task's episodes in order on one environment; with K=2 the
-  Kit can split a task between two Workers, and all 6 first-image mismatches are such episodes. This is
-  upstream LIBERO behavior that plain LIBERO shares; the Kit keeps upstream's seed-once semantics rather
-  than re-seeding per episode, which would change outcomes.
-- In 8 episodes with identical starts, the action sequences diverge later, consistent with GPU inference
-  that is not bitwise reproducible; success and steps still match in all 8, and the 3 step differences are
-  successes 1–3 steps apart.
+- Instruction: identical in 200 of 200 episodes.
+- Observation and action mapping: in the 194 episodes whose first agent-view frame was identical on both
+  sides, the first 8-action chunk the environment executed was also identical bit for bit. On those starts,
+  the image flip, resizing, instruction, model input, unnormalization, gripper mapping, and chunk order give
+  the same first actions. Only the primary frame and the actions were hashed, not the wrist frame.
+- Whole episodes: the full executed action sequence was identical in 186 of 200, the policy step count in
+  197 of 200, and success in 200 of 200.
 
-This is one run per side, so it shows identical mappings, not statistical equivalence of scores.
+The differences, and what explains them:
+
+- 6 episodes start from a different first frame. LIBERO seeds a task environment once and reuses it, and
+  the state after `reset()`, `set_init_state()`, and the settle steps still depends on the random draws of
+  that environment's earlier resets. A CPU-only check on one task (`libero_spatial_lan` task 9) showed this:
+  a fresh environment and one that had already run episode 0 reach different simulator states for episode 1,
+  and re-seeding before the episode restores the fresh state. The native client always runs a task's
+  episodes in order on one environment. With K=2 the Kit split two tasks between Workers, and the 6 episodes
+  are exactly those whose Worker environment had a different history (`libero_goal_task` task 9 episodes
+  3–4, `libero_spatial_lan` task 9 episodes 1–4). The 3 step-count differences are among them: successes
+  1–3 steps apart. This is upstream LIBERO behavior that plain LIBERO shares. The Kit keeps upstream's
+  seed-once semantics; re-seeding per episode would change outcomes relative to upstream.
+- 8 episodes start identically but diverge later in the action sequence, with the same success and step
+  count. This was not traced; it is consistent with GPU inference that is not bitwise reproducible, but that
+  was not shown.
+
+This is one run per side on 4 of the 16 suites and initial states 0–4. It supports the mappings above; it
+does not establish statistical equivalence of scores, or anything about the suites and episodes it did not
+cover.
 
 ### Hardware and performance baseline
 
-On a 10 GB GPU, one bf16 replica of the 3B checkpoint holds 8.3–8.8 GB and each EGL Worker about 0.46 GB of
-the same GPU, so K=2/g=1 is the largest pair that fits (peak 9.81 GB, with
-`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` in the Policy's environment); at K=4 the Policy runs out
-of memory and the run aborts. The runs above and the full evaluation below therefore use fixed
-`--concurrency 2 --replicas 1`. A 24 GB GPU or a separate rendering GPU removes the limit.
+On this 10 GB GPU, one bf16 replica of the 3B checkpoint held 8.3–8.8 GB and one EGL Worker about 0.46 GB
+of the same GPU (measured with a single Worker). At K=2/g=1, with
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` in the Policy's environment, the peak over the runs so far
+was 9,811 MiB of the card's 10,240 MiB. In the one K=4/g=1 run, the Policy ran out of memory and the run
+aborted. K=3 was not tried: another Worker's 0.46 GB is not expected to fit. Autotune was not used, because
+its probes would try larger K. The runs here use fixed `--concurrency 2 --replicas 1`. A larger GPU, or
+rendering on another GPU, would raise this limit; that was not tested.
 
 | `libero_goal_object`, 500 episodes, K=2/g=1 | Value |
 | --- | ---: |
