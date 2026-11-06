@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from .autotune import (
+    AutotuneBounds,
     BenchmarkAutotuneController,
     ProbeCapacityReached,
     ProbeCorrectnessRegression,
@@ -57,6 +58,8 @@ FAILED_OUTCOMES = (
     "worker_oom",
     "worker_shortfall",
 )
+# Repeats of one LIBERO search differed by under 2%. Revisit once each workload has repeats.
+NOISE_TOLERANCE = 0.05
 # A finished measurement should hold all of these; the record must list the ones it does not.
 TRACKED_FIELDS = (
     "cpu_cores",
@@ -124,6 +127,10 @@ class Score:
     # ``None`` when a probe had no recorded wall time.
     tuning_s: float | None
     budget_s: float
+    # Tuning time plus the evaluation at the selection's fixed-run rate, and that total over the
+    # evaluation alone at the best recorded rate. ``None`` when the record lacks an input.
+    end_to_end_s: float | None
+    end_to_end_vs_best: float | None
     # ``None`` when nothing was selected.
     safe: bool | None
     gaps: tuple[Gap, ...]
@@ -138,6 +145,19 @@ class Score:
         """Whether the search ran to its own end, without running off the record."""
 
         return not self.gaps
+
+
+@dataclass(frozen=True)
+class FixedDefault:
+    """The trivial baseline: no tuning, ``K`` at the CPU worker cap, one replica per GPU."""
+
+    k: int
+    g: int
+    # ``None`` when the record has no finished rate for this K/g.
+    relative_throughput: float | None
+    evaluation_s: float | None
+    # ``None`` when the record has no measurement of this K/g, as for a selection.
+    safe: bool | None
 
 
 def validate_record(record: dict[str, Any]) -> None:
@@ -159,6 +179,9 @@ def validate_record(record: dict[str, Any]) -> None:
             raise ValueError(f"record workload.host.{field} is required")
     if not record.get("unmeasured"):
         raise ValueError("record unmeasured must say which K/g were not measured")
+    steps = record.get("evaluation_steps", 1)
+    if not isinstance(steps, int) or steps < 1:
+        raise ValueError("record evaluation_steps must be a positive integer")
     measurements = record.get("measurements")
     if not measurements:
         raise ValueError("record has no measurements")
@@ -223,6 +246,7 @@ def record_runs(
     gpu_model: str,
     kit_version: str,
     date: str,
+    evaluation_steps: int | None = None,
 ) -> dict[str, Any]:
     """Build a real workload record from existing evaluation outputs.
 
@@ -251,6 +275,7 @@ def record_runs(
     measured = {
         "schema_version": SCHEMA_VERSION,
         "provenance": {"kind": "real", "source": source, "notes": []},
+        **({} if evaluation_steps is None else {"evaluation_steps": evaluation_steps}),
         "workload": {
             "benchmark": metadata["benchmark"],
             "suite": metadata["suite"],
@@ -512,15 +537,10 @@ def replay_strategy(
     without a selection.
     """
 
-    host = record["workload"]["host"]
-    defaults = {
-        "vram_per_gpu_bytes": host["vram_per_gpu_bytes"],
-        **record.get("manifest_defaults", {}),
-        "autotune_strategy": strategy,
-    }
+    defaults = {**_manifest_defaults(record), "autotune_strategy": strategy}
     if throughput_estimator is not None:
         defaults["autotune_throughput_estimator"] = throughput_estimator
-    bounds = resolve_bounds(host["gpu_count"], defaults, cpu_cores=float(host["cpu_cores"]))
+    bounds = _bounds(record, defaults)
     limits = resolve_limits(defaults)
     replay = WorkloadReplay(record, throughput_estimator=limits.throughput_estimator, repeat=repeat)
     with tempfile.TemporaryDirectory(prefix="autotune-replay-") as output_dir:
@@ -538,6 +558,55 @@ def replay_strategy(
     return _score(record, strategy, limits.throughput_estimator, limits.total_budget_s, result, replay)
 
 
+def fixed_default(record: dict[str, Any]) -> FixedDefault:
+    """Score the configuration a user gets without any search, on fixed-run rates only."""
+
+    bounds = _bounds(record, _manifest_defaults(record))
+    key = (bounds.max_workers, bounds.gpu_count)
+    rates = _median_rates(record, "steps_per_s", "fixed-run")
+    eligible = [item for item in rates if not _failed(record, *item)]
+    relative, evaluation_s = None, None
+    if key in rates and eligible:
+        relative = rates[key] / max(rates[item] for item in eligible)
+        if "evaluation_steps" in record:
+            evaluation_s = record["evaluation_steps"] / rates[key]
+    measured = any((item["k"], item["g"]) == key for item in record["measurements"])
+    return FixedDefault(*key, relative, evaluation_s, not _failed(record, *key) if measured else None)
+
+
+def regression_failures(
+    score: Score,
+    expected_relative_throughput: float,
+    *,
+    tolerance: float = NOISE_TOLERANCE,
+) -> tuple[str, ...]:
+    """Why ``score`` fails the regression rule on its workload; empty when it passes.
+
+    Each workload is judged by itself. An incomplete search cannot be judged at all, so it fails
+    until the missing point is measured and added to the record.
+    """
+
+    failures = []
+    if not score.complete:
+        failures.append("incomplete search: measure the missing points and add them to the record")
+    if score.safe is not True:
+        failures.append("unsafe: nothing selected, or the selection failed in a recorded run")
+    floor = expected_relative_throughput * (1 - tolerance)
+    if score.relative_throughput is None or score.relative_throughput < floor:
+        failures.append(f"relative throughput {score.relative_throughput} is below {floor:.4f}")
+    return tuple(failures)
+
+
+def _manifest_defaults(record: dict[str, Any]) -> dict[str, Any]:
+    vram = record["workload"]["host"]["vram_per_gpu_bytes"]
+    return {"vram_per_gpu_bytes": vram, **record.get("manifest_defaults", {})}
+
+
+def _bounds(record: dict[str, Any], defaults: dict[str, Any]) -> AutotuneBounds:
+    host = record["workload"]["host"]
+    return resolve_bounds(host["gpu_count"], defaults, cpu_cores=float(host["cpu_cores"]))
+
+
 def _score(
     record: dict[str, Any],
     strategy: str,
@@ -553,6 +622,8 @@ def _score(
     stop_reason = result.get("stop_reason") or "; ".join(
         reason for reason in (result.get("k_stop_reason"), result.get("g_ramp_reason")) if reason
     )
+    tuning_s = replay.now if used and all("wall_time_s" in item for item in used) else None
+    end_to_end_s, end_to_end_vs_best = _end_to_end(record, selected, best, tuning_s)
     return Score(
         workload=f"{workload['benchmark']}/{workload['suite']}",
         kind=record["provenance"]["kind"],
@@ -562,8 +633,10 @@ def _score(
         best_recorded=best,
         relative_throughput=relative,
         probes=len(used),
-        tuning_s=replay.now if used and all("wall_time_s" in item for item in used) else None,
+        tuning_s=tuning_s,
         budget_s=budget_s,
+        end_to_end_s=end_to_end_s,
+        end_to_end_vs_best=end_to_end_vs_best,
         safe=None if selected is None else not _failed(record, *selected),
         gaps=tuple(replay.gaps),
         unknown_signals=tuple(
@@ -611,6 +684,22 @@ def _relative_throughput(
     return None, None
 
 
+def _end_to_end(
+    record: dict[str, Any],
+    selected: tuple[int, int] | None,
+    best: tuple[int, int] | None,
+    tuning_s: float | None,
+) -> tuple[float | None, float | None]:
+    """Estimate tuning plus evaluation. Only fixed runs ran a workload like the evaluation."""
+
+    steps = record.get("evaluation_steps")
+    rates = _median_rates(record, "steps_per_s", "fixed-run")
+    if steps is None or tuning_s is None or selected not in rates or best not in rates:
+        return None, None
+    end_to_end_s = tuning_s + steps / rates[selected]
+    return end_to_end_s, end_to_end_s / (steps / rates[best])
+
+
 def _median_rates(
     record: dict[str, Any],
     field: str,
@@ -637,8 +726,13 @@ def format_score(score: Score) -> str:
         f"{relative} of best recorded {point(score.best_recorded)}",
         f"{score.probes} probes",
         f"tuning time {tuning} of {score.budget_s:.0f} s",
-        f"safe {safe}",
     ]
+    if score.end_to_end_s is not None:
+        parts.append(
+            f"end to end {score.end_to_end_s:.0f} s, "
+            f"{score.end_to_end_vs_best:.2f}x the best recorded evaluation"
+        )
+    parts.append(f"safe {safe}")
     if score.complete:
         parts.append("complete")
     else:
@@ -649,6 +743,19 @@ def format_score(score: Score) -> str:
     if score.unknown_signals:
         parts.append(f"unknown signals {', '.join(score.unknown_signals)}")
     head = f"{score.workload} ({score.kind}) {score.strategy} [{score.throughput_estimator}]"
+    return f"{head}: {'; '.join(parts)}"
+
+
+def format_fixed_default(default: FixedDefault) -> str:
+    """One line for the no-tuning baseline of a workload."""
+
+    head = f"fixed default K={default.k}/g={default.g}, no tuning"
+    if default.relative_throughput is None:
+        return f"{head}: no fixed run recorded"
+    parts = [f"{default.relative_throughput:.3f} of best recorded"]
+    if default.evaluation_s is not None:
+        parts.append(f"evaluation {default.evaluation_s:.0f} s")
+    parts.append(f"safe {'yes' if default.safe else 'NO'}")
     return f"{head}: {'; '.join(parts)}"
 
 
@@ -663,6 +770,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     record.add_argument("--gpu-model", required=True)
     record.add_argument("--kit-version", required=True, help="the roboscope-kit version of the run")
     record.add_argument("--date", required=True, help="the date of the run, YYYY-MM-DD")
+    record.add_argument("--evaluation-steps", type=int, help="total steps of the full evaluation")
     record.add_argument("--output", type=Path, required=True)
     score = commands.add_parser("score", help="replay strategies on workload records")
     score.add_argument("records", type=Path, nargs="+")
@@ -683,6 +791,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             gpu_model=args.gpu_model,
             kit_version=args.kit_version,
             date=args.date,
+            evaluation_steps=args.evaluation_steps,
         )
         args.output.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         print(f"wrote {len(record['measurements'])} measurements to {args.output}", file=sys.stderr)
@@ -690,6 +799,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     for path in args.records:
         record = load_record(path)
         print(f"{path.name}: not measured: {record['unmeasured']}")
+        print(format_fixed_default(fixed_default(record)))
         for strategy in args.strategy or autotune_strategies():
             print(
                 format_score(

@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import copy
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from roboscope_kit.runtime.benchmark import autotune
 from roboscope_kit.runtime.benchmark.autotune import (
+    DEFAULT_AUTOTUNE_STRATEGY,
     AutotuneBounds,
     AutotuneLimits,
     BenchmarkAutotuneController,
@@ -20,10 +22,13 @@ from roboscope_kit.runtime.benchmark.autotune import (
     resolve_bounds,
 )
 from roboscope_kit.runtime.benchmark.autotune_testbed import (
+    FixedDefault,
     Gap,
+    fixed_default,
     load_record,
     main,
     record_runs,
+    regression_failures,
     replay_strategy,
     validate_record,
 )
@@ -42,6 +47,12 @@ UNKNOWN_ON_REAL = (
     "throttle_time_ratio",
     "wall_time_s",
 )
+
+# The regression rule, on the default strategy: workload -> expected relative throughput. Lowering a
+# value is allowed only in a PR that says why, and it needs maintainer review.
+JUDGED = {FULL_AUTO: 0.7214}
+# Real workloads the rule does not judge, and why.
+NOT_JUDGED = {REAL: "the same workload as FULL_AUTO, without fixed runs or replica probes"}
 
 # (workload, strategy, estimator override) -> what the search must do. A strategy or a workload
 # added without an entry here fails test_strategy_on_workload.
@@ -97,6 +108,8 @@ EXPECTED = {
         "relative_throughput": pytest.approx(0.7214, abs=0.0001),
         "probes": 5,
         "tuning_s": pytest.approx(851.97, abs=0.01),
+        "end_to_end_s": pytest.approx(5973.1, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.617, abs=0.001),
         "safe": True,
         "gaps": (),
         "unknown_signals": ("queue_wait_p95_ms",),
@@ -107,6 +120,8 @@ EXPECTED = {
         "relative_throughput": pytest.approx(0.7214, abs=0.0001),
         "probes": 5,
         "tuning_s": pytest.approx(851.97, abs=0.01),
+        "end_to_end_s": pytest.approx(5973.1, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.617, abs=0.001),
         "safe": True,
         "gaps": (),
         "unknown_signals": ("queue_wait_p95_ms",),
@@ -197,6 +212,51 @@ def test_strategy_on_workload(workload: str, strategy: str, estimator: str | Non
     score = replay_strategy(_load(workload), strategy, throughput_estimator=estimator)
     actual = {name: getattr(score, name) for name in expected}
     assert actual == expected
+
+
+@pytest.mark.parametrize("workload", sorted(JUDGED))
+def test_judged_workloads_pass_the_regression_rule(workload: str) -> None:
+    score = replay_strategy(_load(workload), DEFAULT_AUTOTUNE_STRATEGY)
+    assert regression_failures(score, JUDGED[workload]) == ()
+
+
+def test_every_real_workload_is_judged_or_says_why_not() -> None:
+    names = [path.stem for path in WORKLOADS.glob("*.json")]
+    real = {name for name in names if _load(name)["provenance"]["kind"] == "real"}
+    assert real == JUDGED.keys() | NOT_JUDGED.keys()
+    assert not JUDGED.keys() & NOT_JUDGED.keys()
+
+
+def test_the_regression_rule_allows_noise_and_fails_a_larger_drop() -> None:
+    score = replace(replay_strategy(_load(FULL_AUTO), "diagonal"), relative_throughput=0.76)
+    assert regression_failures(score, 0.8) == ()
+    assert "below" in regression_failures(score, 0.81)[0]
+
+
+def test_the_regression_rule_fails_an_unsafe_or_incomplete_search() -> None:
+    score = replay_strategy(_load(FULL_AUTO), "diagonal")
+    assert "unsafe" in regression_failures(replace(score, safe=False), 0.5)[0]
+    assert "unsafe" in regression_failures(replace(score, safe=None), 0.5)[0]
+    assert "incomplete" in regression_failures(replace(score, gaps=(Gap(9, 1, "configuration"),)), 0.5)[0]
+
+
+def test_end_to_end_needs_the_evaluation_size_and_a_fixed_run_of_the_selection() -> None:
+    record = copy.deepcopy(_load(FULL_AUTO))
+    del record["evaluation_steps"]
+    assert replay_strategy(record, "diagonal").end_to_end_s is None
+
+    assert replay_strategy(_load(SYNTHETIC), "two-phase").end_to_end_s is None
+
+
+def test_fixed_default_scores_the_worker_cap_with_one_replica_per_gpu() -> None:
+    record = _load(FULL_AUTO)
+    assert fixed_default(record) == FixedDefault(9, 1, None, None, None)
+
+    measured = {"k": 9, "g": 1, "source": "fixed-run", "outcome": "no_steady_window", "steps_per_s": 180.0}
+    default = fixed_default(_with_measurements(record, measured))
+    assert default.relative_throughput == pytest.approx(180.0 / 233.8686, abs=0.0001)
+    assert default.evaluation_s == 4800.0
+    assert default.safe is True
 
 
 def test_real_workload_exists_and_synthetic_ones_are_labeled() -> None:
@@ -557,6 +617,7 @@ def test_score_command_prints_what_the_record_does_not_cover(capsys: pytest.Capt
     assert main(["score", str(WORKLOADS / f"{REAL}.json")]) == 0
     printed = capsys.readouterr().out
     assert "not measured: Every point with g > 1" in printed
+    assert "fixed default K=64/g=1, no tuning: no fixed run recorded" in printed
     assert "diagonal [steady]: selected K=8/g=1" in printed
     assert "INCOMPLETE, ran off the record at K=1/g=1 (steps_per_s)" in printed
     assert "tuning time unknown of 1800 s" in printed

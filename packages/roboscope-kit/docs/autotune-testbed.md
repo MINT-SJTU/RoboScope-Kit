@@ -29,10 +29,14 @@ among repeated measurements. Each workload prints what it does not cover, then o
 | relative to best recorded | Selected throughput over the best configuration the record does not show failing, both on one rate, using the median of repeats. |
 | probes | Probes the record answered. |
 | tuning time | Sum of the replayed wall times against the budget, or `unknown` if a probe has no wall time. |
+| end to end | Tuning time plus `evaluation_steps` at the selection's fixed-run rate, also as a multiple of the evaluation alone at the best recorded rate. Left out when the record lacks an input. It is an estimate: a fixed run is shorter than the evaluation. |
 | safe | `NO` if any measurement of the selected K/g in the record failed. |
 | complete / INCOMPLETE | Whether the search ended by itself or ran off the record, and where. |
 | fixed-run stand-ins | K/g answered from a fixed run because no search probed them. |
 | unknown signals | Signals of the replayed probes that the record does not hold. |
+
+Each workload also prints a `fixed default` line: `K` at the CPU worker cap with one replica per GPU, and no
+tuning, scored on fixed runs. It shows what a search adds over doing nothing. It needs a fixed run at that K/g.
 
 **Read relative throughput together with the coverage.** It compares only against what was measured. On a
 record that stops at `g=1`, 1.000 means "best of the `g=1` points", not "best configuration".
@@ -48,6 +52,7 @@ a record that fails it. A test checks the file name of synthetic workloads.
 | `provenance.kind` | `real`, or `synthetic` for numbers nobody measured. A synthetic file's name starts with `synthetic-`. |
 | `provenance.source`, `provenance.notes` | Where the numbers come from, and anything approximate or assumed. |
 | `workload` | `benchmark`, `suite`, `policy`, `kit_version`, `date`, and `host` with `gpu_model`, `gpu_count`, `vram_per_gpu_bytes`, `cpu_cores`. A value the source does not state is the string `unknown`. |
+| `evaluation_steps` | Optional: total steps of the full evaluation a search tunes, for the end-to-end estimate. |
 | `bound_hint` | The adapter's bottleneck class. Absent means the controller's default, `gpu_infer`. |
 | `replica_vram_bytes` | The replica VRAM footprint `measure` returns. Absent means unknown. |
 | `manifest_defaults` | The bounds and limits inputs, with the names of the manifest's `defaults`. With `host`, they go through the real `resolve_bounds` and `resolve_limits`, never through this machine's CPU quota. |
@@ -105,6 +110,32 @@ time holds only for the same path. Likewise, a probe's size depends on the estim
 Worker three items, while `elapsed` runs a fixed-size probe, so elapsed rates recorded from a steady search are
 not exactly what an elapsed search would measure.
 
+## Regression rule
+
+The rule answers one narrow question: is a change worse than today on the workloads we care about? It does not
+say whether an algorithm is good in general; only more real records can widen that. How far a selection is from
+the recorded best is shown for people to read and is not a gate by itself.
+
+`JUDGED` in `tests/test_autotune_testbed.py` holds each judged workload with its expected relative throughput, on
+the default strategy. `regression_failures` applies the rule:
+
+- **Each workload is judged by itself.** A gain on one does not offset a loss on another.
+- **A change fails** if, on any judged workload, relative throughput falls more than 5% below the expected value,
+  the selection is unsafe, or the search is incomplete.
+- **The 5% tolerance** comes from repeats of one LIBERO search, which differed by under 2%. Revisit it once each
+  workload has repeats.
+- **Lowering an expected value** is allowed only in a PR that says why, and it needs maintainer review. Raise the
+  value when a change improves it, so later changes cannot give the gain back.
+- **An incomplete search cannot be judged.** Measure the missing point on a GPU and add it to the record.
+- **Only real records are judged.** Synthetic workloads cover edge cases in unit tests. A real record that is not
+  judged must say why in `NOT_JUDGED`.
+
+`EXPECTED` pins what every strategy does on every workload, so any change of a search shows in the PR's diff.
+Update it with the change; it is for review, and the rule above decides.
+
+Before merging an algorithm change, also run it once for real on a workload or host outside the testbed, and add
+that run as a new record, so the algorithm is not fitted to the records alone.
+
 ## Adding a workload
 
 1. Run a search on the host, keeping its output directory. Run it again for repeats.
@@ -114,6 +145,8 @@ not exactly what an elapsed search would measure.
    ```
 
 2. For configurations no search visits, run them fixed, one output directory each, as many as the budget allows.
+   Cover what a search may select, the best configuration you can find, and `K` at the worker cap with `g` at the
+   GPU count, for the fixed default.
 
    ```bash
    python -m roboscope_kit.runtime.benchmark --benchmark <benchmark> --suite <suite> ... \
@@ -121,13 +154,14 @@ not exactly what an elapsed search would measure.
    ```
 
 3. Build the record. `--run` and `--sweep` repeat. Existing outputs carry everything else; the run outputs do
-   not name the Policy, the GPU model, or the Kit version, so pass those.
+   not name the Policy, the GPU model, or the Kit version, so pass those. `--evaluation-steps` is `total_steps`
+   of a full evaluation's `result.json`, or the steps per episode times its episodes.
 
    ```bash
    python -m roboscope_kit.runtime.benchmark.autotune_testbed record \
      --run <run> --sweep <sweep-k16-g2> \
      --source "RoboCasa sweep, issue #80" --policy "StarVLA Qwen3-VL-OFT-Robocasa" \
-     --gpu-model "RTX 4090" --kit-version 0.8.0b29 --date 2026-11-05 \
+     --gpu-model "RTX 4090" --kit-version 0.8.0b29 --date 2026-11-05 --evaluation-steps 864000 \
      --output tests/autotune_workloads/<benchmark>-<suite>-<gpu>.json
    ```
 
@@ -139,7 +173,7 @@ not exactly what an elapsed search would measure.
 
 5. Check the file for anything that should not be public. Then score it, and add the expected search of every
    strategy to `EXPECTED` in `tests/test_autotune_testbed.py`; a workload or a strategy without an entry there
-   fails the test.
+   fails the test. Add a real workload to `JUDGED`, or say why not in `NOT_JUDGED`.
 
 A new strategy needs only step 5. To record numbers from somewhere other than run outputs, such as a table in an
 issue, write the JSON by hand with only the fields the source gives, and list the rest in `unknown_fields`, as
@@ -156,11 +190,13 @@ is for edge cases only, and must say so in `provenance.kind` and in its file nam
 
 Scores on `robocasa-tabletop-rtx4090-full-auto.json`:
 
-| Strategy | Estimator | Selected | Relative to best recorded | Probes | Tuning time | Safe | Search |
-| --- | --- | --- | ---: | ---: | --- | --- | --- |
-| `diagonal` | steady (default) | `K=8/g=1` | 0.721 of `K=12/g=2` | 5 | 852 s | yes | Complete: stops at `K=16` without a steady window, a known problem (#80) |
-| `two-phase` | elapsed (default) | `K=8/g=1` | 0.721 of `K=12/g=2` | 4 | 732 s | yes | Incomplete: asks for `K=9/g=1`, which is not recorded |
-| `two-phase` | steady | `K=8/g=1` | 0.721 of `K=12/g=2` | 4 | 732 s | yes | Incomplete: asks for `K=9/g=1`, which is not recorded |
+| Strategy | Estimator | Selected | Relative to best recorded | Probes | Tuning time | End to end | Safe | Search |
+| --- | --- | --- | ---: | ---: | --- | --- | --- | --- |
+| `diagonal` | steady (default) | `K=8/g=1` | 0.721 of `K=12/g=2` | 5 | 852 s | 5973 s, 1.62x | yes | Complete: stops at `K=16` without a steady window, a known problem (#80) |
+| `two-phase` | elapsed (default) | `K=8/g=1` | 0.721 of `K=12/g=2` | 4 | 732 s | 5853 s, 1.58x | yes | Incomplete: asks for `K=9/g=1`, which is not recorded |
+| `two-phase` | steady | `K=8/g=1` | 0.721 of `K=12/g=2` | 4 | 732 s | 5853 s, 1.58x | yes | Incomplete: asks for `K=9/g=1`, which is not recorded |
+
+The fixed default on this host is `K=9/g=1`, which has no fixed run yet, so it has no score.
 
 `--repeat 1` of `diagonal` replays the real search that stopped at `K=8/g=1`, and repeats the 818 s it took. The
 first repeat, scored above, comes from a search with a candidate fix for #80, which went on to `K=16/g=2`; that is

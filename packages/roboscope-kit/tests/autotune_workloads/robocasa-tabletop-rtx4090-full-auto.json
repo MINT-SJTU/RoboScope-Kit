@@ -12,9 +12,11 @@
       "K=20/g=3 and K=24/g=2 failed in fixed runs when a Policy replica was killed (-9) at the container memory limit, an evaluation error rather than a probe rejection.",
       "K=16/g=4 failed in a fixed run with CUDA out of memory, with four replicas and 16 EGL renderers on the GPU. The runtime reported repeated Worker failures.",
       "K=32/g=2 was stopped by hand at the same memory limit and left no usable output, so it has no measurement.",
-      "All probes are diagonal probes, three work items per Worker. Default two-phase runs a fixed-size probe, which this record does not cover, so its score here only shows how it would decide on these rates."
+      "All probes are diagonal probes, three work items per Worker. Default two-phase runs a fixed-size probe, which this record does not cover, so its score here only shows how it would decide on these rates.",
+      "evaluation_steps is the full evaluation of 24 tasks x 50 episodes, at the 720 steps per episode of every fixed run. Measured full evaluations took 5457.1 s at K=8/g=1, 3750.0 s at K=16/g=2, and 3465.7 s at K=12/g=2, while the fixed-run rates here predict 5121 s, 3864 s, and 3694 s, so end-to-end times are estimates within about 7%."
     ]
   },
+  "evaluation_steps": 864000,
   "workload": {
     "benchmark": "robocasa",
     "suite": "tabletop",
