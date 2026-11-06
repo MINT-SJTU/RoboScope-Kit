@@ -93,7 +93,6 @@ def main() -> int:
             "first_action_max_abs_diff": max_difference(km["actions"][0], n["actions"][0]),
             "identical_action_prefix": common_prefix(km["actions"], n["actions"]),
             "kit_initial_scene_position_error_m": km["initial_scene_position_error_m"],
-            "kit_clearing_reset_position_error_m": km["clearing_reset_position_error_m"],
             "native_initial_scene_position_error_m": n["initial_scene_position_error_m"],
             "kit": {"success": k["success"], "steps": k["steps"], "termination": km["termination"]},
             "native": {"success": n["success"], "steps": n["steps"], "termination": n["termination"]},

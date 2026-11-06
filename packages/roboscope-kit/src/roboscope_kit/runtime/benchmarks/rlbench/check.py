@@ -53,7 +53,7 @@ def main() -> int:
         print(f"PerAct test-episode digests differ for: {', '.join(mismatched)}", file=sys.stderr)
         return 1
 
-    from .worker import create_environment, reset_to_test_episode, start_xvfb, task_class
+    from .worker import LoadedTask, create_environment, reset_to_test_episode, start_xvfb, task_class
 
     started = time.perf_counter()
     start_xvfb(args.xvfb)
@@ -74,8 +74,9 @@ def main() -> int:
                     f"RLBench task {task} has {count} variations, expected {TASKS_BY_NAME[task].variations}"
                 )
         loaded = time.perf_counter()
+        # The last task loaded is the first requested one; this is its first reset after loading.
         observation, instruction, diagnostics = reset_to_test_episode(
-            task_env, load_test_episode(args.test_set, tasks[0], 0)
+            LoadedTask(task_env), load_test_episode(args.test_set, tasks[0], 0)
         )
         for camera in CAMERAS:
             rgb = np.asarray(getattr(observation, f"{camera}_rgb"))

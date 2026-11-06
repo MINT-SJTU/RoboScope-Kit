@@ -30,7 +30,12 @@ from yarr.runners.independent_env_runner import IndependentEnvRunner
 from yarr.utils.process_str import change_case
 
 from roboscope_kit.runtime.benchmarks.rlbench.test_set import load_test_episode
-from roboscope_kit.runtime.benchmarks.rlbench.worker import max_displacement
+from roboscope_kit.runtime.benchmarks.rlbench.worker import (
+    LoadedTask,
+    max_displacement,
+    recorded_positions,
+    scene_positions,
+)
 
 EPISODE_LENGTH = 25
 
@@ -40,17 +45,20 @@ class EpisodeLog:
         self.path = path
         self.current: dict | None = None
         self.simulation_steps = 0
-        # Task state right after TaskEnvironment.reset_to_demo, and the demo's recorded one.
-        self.sampled_state = None
-        self.recorded_state = None
+        # The task loaded last, with its object list captured at its first reset (see the Kit
+        # worker's LoadedTask), and the object positions right after TaskEnvironment.reset_to_demo.
+        self.loaded: LoadedTask | None = None
+        self.sampled = None
 
-    def start(self, rlbench_task, described_state, **episode) -> None:
-        episode["initial_scene_position_error_m"] = max_displacement(
-            rlbench_task, self.sampled_state, self.recorded_state
-        )
+    def start(self, recorded_state, **episode) -> None:
+        objects = self.loaded.objects
+        recorded = recorded_positions(objects, recorded_state)
+        error, worst = max_displacement(objects, self.sampled, recorded)
+        episode["initial_scene_position_error_m"] = error
+        episode["initial_scene_worst_object"] = worst
         episode["descriptions_moved_objects_m"] = max_displacement(
-            rlbench_task, described_state, self.sampled_state
-        )
+            objects, scene_positions(objects), self.sampled
+        )[0]
         self.current = {**episode, "actions": [], "started": time.time()}
         self.simulation_steps = 0
 
@@ -74,6 +82,7 @@ class EpisodeLog:
             "variation": current["variation"],
             "instruction": current["instruction"],
             "initial_scene_position_error_m": current["initial_scene_position_error_m"],
+            "initial_scene_worst_object": current["initial_scene_worst_object"],
             "descriptions_moved_objects_m": current["descriptions_moved_objects_m"],
             "success": success,
             "steps": executed,
@@ -93,7 +102,10 @@ def _install(log: EpisodeLog) -> None:
 
     def task_reset_to_demo(self, demo):
         result = original_task_reset_to_demo(self, demo)
-        log.sampled_state = self._task.get_low_dim_state()
+        if log.loaded is None or log.loaded.env is not self:
+            # PerAct's task swap loads a new TaskEnvironment; this is its first reset.
+            log.loaded = LoadedTask(self)
+        log.sampled = scene_positions(log.loaded.capture_objects())
         return result
 
     TaskEnvironment.reset_to_demo = task_reset_to_demo
@@ -107,12 +119,8 @@ def _install(log: EpisodeLog) -> None:
             task = change_case(self._task._task.__class__.__name__)
             # get_stored_demos drops the task state PerAct's observation config does not request,
             # so read the recorded first frame the way the Kit worker does.
-            log.recorded_state = load_test_episode(
-                Path(self._task._dataset_root), task, int(i)
-            ).recorded_task_state
             log.start(
-                self._task._task,
-                self._task._task.get_low_dim_state(),
+                load_test_episode(Path(self._task._dataset_root), task, int(i)).recorded_task_state,
                 task=task,
                 episode=int(i),
                 variation=int(self._task._variation_number),

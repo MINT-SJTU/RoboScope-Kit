@@ -12,6 +12,11 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   `benchmarks/rlbench/build-runtime.sh` builds CoppeliaSim Edu 4.1, PyRep, the PerAct RLBench and YARR
   forks, PerAct, and the test split on CPython 3.11 after the user accepts the CoppeliaSim Edu and RLBench
   licences by passing `--accept-licenses`, and checks every task's test episodes against frozen digests.
+  Each episode is reset once from its stored state, as PerAct's `eval.py` does. Records carry
+  `initial_scene_position_error_m`, which compares the scene with the recorded first frame object by object
+  (by handle, over the object list captured when the task is loaded). The build resets each of the 450 test
+  episodes on a freshly loaded task and compares the result with the frozen list of episodes that start more
+  than 1 cm off, `benchmarks/rlbench/peract-initial-scenes.json`.
 - Add `examples/peract/`: a Policy for the released PerAct 600k checkpoint, a runner for PerAct's own
   `eval.py`, and an episode-by-episode comparison.
 

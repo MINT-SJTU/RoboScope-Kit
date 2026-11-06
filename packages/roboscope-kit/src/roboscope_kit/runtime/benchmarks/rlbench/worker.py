@@ -7,7 +7,7 @@ The worker reproduces one test episode of the pinned PerAct ``eval.py`` (YARR's
 ``RolloutGenerator`` driving PerAct's ``CustomMultiTaskRLBenchEnv``):
 
 1. ``set_variation`` to the test episode's variation, restore its stored NumPy random state, and
-   ``reset()`` the task, twice (see ``reset_to_test_episode``), which samples the recorded scene of
+   ``reset()`` the task once (see ``reset_to_test_episode``), which samples the recorded scene of
    the test episode; the instruction is ``get_task_descriptions()[0]``, read after the reset as
    PerAct does;
 2. up to 25 key-frame actions. Each action is executed by RLBench's ``MoveArmThenGripper``
@@ -17,6 +17,13 @@ The worker reproduces one test episode of the pinned PerAct ``eval.py`` (YARR's
 3. the episode succeeds when a step returns reward >= 1 (all success conditions met), which also
    terminates it; it fails when a fail condition terminates it, on a planning error, or after the
    25th action.
+
+Each record also carries how far the starting scene is from the test episode's recorded first
+frame, compared object by object through the handles captured when the task was loaded
+(``LoadedTask``). RLBench's task low-dimensional state lists the objects in an order a grasp
+changes within one loaded task, so after a grasp its order is not the recorded one; the
+profile does not give that state to the Policy (``task_low_dim_state=False``, which PerAct also
+does not use).
 
 Each worker owns one CoppeliaSim instance, rendered headless through its own Xvfb server.
 """
@@ -178,77 +185,138 @@ def task_class(name: str):
 
 @dataclass(frozen=True)
 class ResetDiagnostics:
-    # Largest object displacement (m) after the clearing reset, from the recorded first frame.
-    clearing_reset_position_error_m: float
-    # The same after the episode's reset: how far the observed scene is from the recorded one.
+    # Largest object displacement (m) after the reset from the recorded first frame, by object.
     initial_scene_position_error_m: float
+    # The object at that distance.
+    initial_scene_worst_object: str
     # Largest object displacement (m) made by get_task_descriptions() after the observation.
     descriptions_moved_objects_m: float
 
 
-def object_positions(task, state: np.ndarray) -> np.ndarray | None:
-    """The positions of the task's objects in an RLBench task low-dimensional state vector.
+def _state_lengths(objects) -> list[int]:
+    """Per-object slot lengths of ``Task.get_low_dim_state`` (``rlbench/backend/task.py``).
 
-    ``Task.get_low_dim_state`` concatenates, per object, its pose (x, y, z, qx, qy, qz, qw),
-    then a joint's position or a force sensor's six readings. Positions compare scenes without
-    quaternion sign ambiguity or contact-force noise.
+    Each object contributes its pose (x, y, z, qx, qy, qz, qw), then a joint's position (+1) or a
+    force sensor's three forces and three torques (+6); a deleted object contributes zeros of the
+    same length.
     """
 
     from pyrep.const import ObjectType
 
-    positions = []
-    index = 0
-    for _object, object_type in task._initial_objs_in_scene:
-        positions.append(state[index : index + 3])
-        index += 7 + {ObjectType.JOINT: 1, ObjectType.FORCE_SENSOR: 6}.get(object_type, 0)
-    if index != state.size:
-        return None
-    return np.asarray(positions, dtype=np.float64)
+    return [7 + {ObjectType.JOINT: 1, ObjectType.FORCE_SENSOR: 6}.get(kind, 0) for _, kind in objects]
 
 
-def max_displacement(task, actual: np.ndarray, expected: np.ndarray) -> float:
-    """Largest per-object position difference (m) between two task states; -1 if incomparable."""
+def recorded_positions(objects, state) -> np.ndarray:
+    """Per-object positions in a recorded task state laid out over ``objects``.
 
-    left = object_positions(task, np.asarray(actual, dtype=np.float64))
-    right = object_positions(task, np.asarray(expected, dtype=np.float64))
-    if left is None or right is None or left.shape != right.shape:
-        return -1.0
-    return float(np.max(np.abs(left - right))) if left.size else 0.0
+    Raises ``ValueError`` when the state's length is not the layout's: the recorded state was then
+    not taken over this object list, and no object-by-object comparison is possible.
+    """
+
+    state = np.asarray(state, dtype=np.float64).reshape(-1)
+    lengths = _state_lengths(objects)
+    if sum(lengths) != state.size:
+        raise ValueError(
+            f"recorded task state has {state.size} values; the {len(objects)} task objects "
+            f"lay out {sum(lengths)}"
+        )
+    offsets = np.cumsum([0, *lengths[:-1]], dtype=np.int64)
+    return np.asarray([state[offset : offset + 3] for offset in offsets], dtype=np.float64).reshape(-1, 3)
 
 
-def _seeded_reset(task_env, episode: TestEpisode):
+def scene_positions(objects) -> np.ndarray:
+    """Current positions of ``objects`` (zeros for a deleted object, as RLBench records it)."""
+
+    return np.asarray(
+        [obj.get_position() if obj.still_exists() else (0.0, 0.0, 0.0) for obj, _ in objects],
+        dtype=np.float64,
+    ).reshape(-1, 3)
+
+
+def max_displacement(objects, actual: np.ndarray, expected: np.ndarray) -> tuple[float, str]:
+    """Largest per-coordinate position difference (m) of any object, and that object's name."""
+
+    if not len(objects):
+        return 0.0, ""
+    distance = np.max(np.abs(np.asarray(actual) - np.asarray(expected)), axis=1)
+    worst = int(np.argmax(distance))
+    obj = objects[worst][0]
+    return float(distance[worst]), obj.get_name() if obj.still_exists() else f"handle {obj.get_handle()}"
+
+
+class LoadedTask:
+    """A task loaded into the scene, with the object list its recorded task states are laid out over.
+
+    ``Task.get_low_dim_state`` (``rlbench/backend/task.py:84``) concatenates one slot per object of
+    ``Task._initial_objs_in_scene``, which every ``Scene.reset`` rebuilds from the task's object
+    tree (``rlbench/backend/scene.py:168``, ``task.py:169``). That order is not stable within one
+    loaded task: a grasp re-parents the object to the gripper (``pyrep/robots/end_effectors/
+    gripper.py:50``), the ``release()`` at the start of the next reset (``scene.py:152``) re-parents
+    it to its old parent (``gripper.py:63``), where CoppeliaSim lists it after its siblings, and
+    ``Task.restore_state`` (``task.py:342``) restores poses but not that order. The list is
+    therefore captured once, at the first reset after the task was loaded, and every comparison
+    goes through those object handles. The data generator loads the task afresh for each episode
+    (``tools/dataset_generator.py:375``), so a recorded state is laid out over that order unless a
+    failed demonstration was retried after a grasp in the same loaded task; ``initial_scenes``
+    lists the test episodes where that happened. A changed object set raises.
+    """
+
+    def __init__(self, task_env) -> None:
+        self.env = task_env
+        self.objects: tuple | None = None
+
+    def capture_objects(self) -> tuple:
+        current = tuple(self.env._task._initial_objs_in_scene)
+        if self.objects is None:
+            self.objects = current
+        elif sorted(obj.get_handle() for obj, _ in current) != sorted(
+            obj.get_handle() for obj, _ in self.objects
+        ):
+            raise RuntimeError(
+                f"RLBench task {self.env.get_name()} changed its object set after it was loaded"
+            )
+        return self.objects
+
+
+def reset_scene(task: LoadedTask, episode: TestEpisode):
+    """One seeded reset to a test episode: the first observation and the scene, object by object.
+
+    Returns the observation, the task's objects (``LoadedTask.objects``), their positions after the
+    reset, and their positions in the episode's recorded first frame.
+    """
+
+    task_env = task.env
     task_env.set_variation(episode.variation)
     np.random.set_state(episode.random_state)
     _, observation = task_env.reset()
-    return observation, np.asarray(task_env._task.get_low_dim_state(), dtype=np.float64)
+    objects = task.capture_objects()
+    recorded = recorded_positions(objects, episode.recorded_task_state)
+    return observation, objects, scene_positions(objects), recorded
 
 
-def reset_to_test_episode(task_env, episode: TestEpisode):
+def reset_to_test_episode(task: LoadedTask, episode: TestEpisode):
     """PerAct ``CustomMultiTaskRLBenchEnv.reset_to_demo`` without loading the recorded images.
 
-    PerAct restores the episode's variation and random state and resets once. A reset that starts
-    from the end of a played episode can place the objects differently (RLBench's placement
-    rejects samples against objects the previous episode left behind), so the scene would depend on
-    which episode a worker ran before. The worker therefore resets twice with the same variation
-    and random state: the first reset clears the previous episode, and the second samples the
-    recorded scene of the test episode, whatever ran before it.
+    Like PerAct, it restores the episode's variation and random state and resets once, whatever
+    episode ran before on this worker, and takes the instruction from ``get_task_descriptions()``
+    after the reset has produced the first observation. That call runs the task's
+    ``init_episode`` once more, and tasks whose ``init_episode`` samples object poses move those
+    objects again without a new observation. The protocol keeps this upstream behaviour and records
+    how far it moved them.
 
-    Like PerAct, the instruction comes from ``get_task_descriptions()``, called after the reset
-    has produced the first observation. That call runs the task's ``init_episode`` once more, and
-    tasks whose ``init_episode`` samples object poses move those objects again without a new
-    observation. The protocol keeps this upstream behaviour and records how far it moved them.
+    The initial-scene diagnostic compares each object's position, by object handle (see
+    ``LoadedTask``), with its position in the recorded first frame; the observation the Policy
+    receives does not include the task state.
     """
 
-    recorded = np.asarray(episode.recorded_task_state, dtype=np.float64)
-    _, cleared = _seeded_reset(task_env, episode)
-    observation, sampled = _seeded_reset(task_env, episode)
-    instruction = task_env.get_task_descriptions()[0]
-    described = np.asarray(task_env._task.get_low_dim_state(), dtype=np.float64)
-    task = task_env._task
+    observation, objects, sampled, recorded = reset_scene(task, episode)
+    instruction = task.env.get_task_descriptions()[0]
+    described = scene_positions(objects)
+    error, worst = max_displacement(objects, sampled, recorded)
     diagnostics = ResetDiagnostics(
-        clearing_reset_position_error_m=max_displacement(task, cleared, recorded),
-        initial_scene_position_error_m=max_displacement(task, sampled, recorded),
-        descriptions_moved_objects_m=max_displacement(task, described, sampled),
+        initial_scene_position_error_m=error,
+        initial_scene_worst_object=worst,
+        descriptions_moved_objects_m=max_displacement(objects, described, sampled)[0],
     )
     return observation, instruction, diagnostics
 
@@ -300,7 +368,7 @@ class StepCounter:
 
 def run_episode(
     client: PolicyClient,
-    task_env,
+    task: LoadedTask,
     counter: StepCounter,
     episode: TestEpisode,
 ) -> tuple[EvaluationRecord, float]:
@@ -308,7 +376,8 @@ def run_episode(
     from rlbench.backend.exceptions import InvalidActionError
 
     episode_id = episode_id_for(episode.task, episode.episode)
-    observation, instruction, diagnostics = reset_to_test_episode(task_env, episode)
+    task_env = task.env
+    observation, instruction, diagnostics = reset_to_test_episode(task, episode)
     client.reset(
         EpisodeContext(
             episode_id=episode_id,
@@ -374,8 +443,8 @@ def run_episode(
             "termination": termination,
             "error": error,
             "simulation_steps": counter.steps,
-            "clearing_reset_position_error_m": diagnostics.clearing_reset_position_error_m,
             "initial_scene_position_error_m": diagnostics.initial_scene_position_error_m,
+            "initial_scene_worst_object": diagnostics.initial_scene_worst_object,
             "descriptions_moved_objects_m": diagnostics.descriptions_moved_objects_m,
             "actions": actions,
             "protocol": PROTOCOL_VERSION,
@@ -399,21 +468,21 @@ def main() -> None:
     def task_environment(name: str):
         if current["task"] != name:
             # Loading a task replaces the scene's previous one, as PerAct's task swap does.
-            current["env"] = environment.get_task(task_class(name))
+            current["env"] = LoadedTask(environment.get_task(task_class(name)))
             current["task"] = name
-            current["env"]._scene.register_step_callback(counter)
+            current["env"].env._scene.register_step_callback(counter)
         return current["env"]
 
     def evaluate(item: WorkItem, client: PolicyClient) -> WorkResult:
         task = str(item.payload["task"])
         episodes = [int(episode) for episode in item.payload["episodes"]]
-        task_env = task_environment(task)
+        loaded = task_environment(task)
         started = time.perf_counter()
         records = []
         inference_wait_s = 0.0
         for index in episodes:
             episode = load_test_episode(args.test_set, task, index)
-            record, wait = run_episode(client, task_env, counter, episode)
+            record, wait = run_episode(client, loaded, counter, episode)
             records.append(record)
             inference_wait_s += wait
         return WorkResult(

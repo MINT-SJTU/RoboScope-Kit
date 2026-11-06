@@ -12,6 +12,7 @@ set -Eeuo pipefail
 #     peract-test/test/         PerAct's released RLBench test split (18 tasks x 25 episodes)
 #     bin/Xvfb                  link to the host's Xvfb, used for headless rendering
 #     pip-freeze.txt            what env/ actually contains
+#     initial-scenes.json       every test episode's single-reset scene against its recorded one
 #
 # Usage: build-runtime.sh --accept-licenses <install-dir>
 # Then:  python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 \
@@ -70,9 +71,10 @@ fi
 MANIFEST="${SCRIPT_DIR}/benchmark-manifest.json"
 LOCK="${SCRIPT_DIR}/runtime-requirements.txt"
 TEST_SET_PINS="${SCRIPT_DIR}/peract-test-set.txt"
+INITIAL_SCENE_PINS="${SCRIPT_DIR}/peract-initial-scenes.json"
 PERACT_PATCH="${SCRIPT_DIR}/patches/peract-python311.patch"
 KIT_SOURCE="${KIT_ROOT}/packages/roboscope-kit/src"
-for input in "${MANIFEST}" "${LOCK}" "${TEST_SET_PINS}" "${PERACT_PATCH}"; do
+for input in "${MANIFEST}" "${LOCK}" "${TEST_SET_PINS}" "${INITIAL_SCENE_PINS}" "${PERACT_PATCH}"; do
   [[ -f "${input}" ]] || {
     echo "RLBench build input is missing: ${input}" >&2
     exit 3
@@ -311,6 +313,16 @@ ln -sfn "$(readlink -f -- "${XVFB_BIN}")" "${INSTALL_DIR}/bin/Xvfb"
 "${runtime_env[@]}" PYTHONPATH="${KIT_SOURCE}" LP_NUM_THREADS=2 \
   "${PYTHON}" -m roboscope_kit.runtime.benchmarks.rlbench.check \
   --test-set "${TEST_SET}" --xvfb "${INSTALL_DIR}/bin/Xvfb"
+
+# Every one of the 450 test episodes, on a freshly loaded task with one seeded reset, against its
+# recorded first frame object by object, compared with the frozen list of episodes that start
+# more than 1 cm off (peract-initial-scenes.json). RLBENCH_CHECK_JOBS CoppeliaSim processes
+# (default: half the CPUs, at most 6) share the work; initial-scenes.json keeps every episode.
+check_jobs="${RLBENCH_CHECK_JOBS:-$(($(nproc) / 2 > 6 ? 6 : $(nproc) / 2))}"
+"${runtime_env[@]}" PYTHONPATH="${KIT_SOURCE}" LP_NUM_THREADS=2 \
+  "${PYTHON}" -m roboscope_kit.runtime.benchmarks.rlbench.initial_scenes \
+  --test-set "${TEST_SET}" --xvfb "${INSTALL_DIR}/bin/Xvfb" --pins "${INITIAL_SCENE_PINS}" \
+  --jobs "$((check_jobs > 0 ? check_jobs : 1))" --report "${INSTALL_DIR}/initial-scenes.json"
 
 install -m 0644 "${MANIFEST}" "${INSTALL_DIR}/benchmark-manifest.json"
 echo "Built RLBench peract_18 in ${INSTALL_DIR}"

@@ -1,0 +1,193 @@
+{
+  "protocol": "rlbench-peract-v1",
+  "tolerance_m": 0.01,
+  "episodes_sha256": "cf53027453764a3935aa4372bff8b9290233aa2d43a809eabd424e5de2864c38",
+  "episodes": [
+    {
+      "task": "place_cups",
+      "episode": 11,
+      "object": "waypoint1",
+      "max_error_m": 0.2612,
+      "cause": "recorded_order_and_settling",
+      "released": [
+        "mug1",
+        "mug0"
+      ],
+      "error_after_release_m": 0.1106
+    },
+    {
+      "task": "place_cups",
+      "episode": 13,
+      "object": "mug1",
+      "max_error_m": 0.1334,
+      "cause": "recorded_order",
+      "released": [
+        "mug0"
+      ],
+      "error_after_release_m": 0.0006
+    },
+    {
+      "task": "place_cups",
+      "episode": 16,
+      "object": "mug_visual0",
+      "max_error_m": 0.2591,
+      "cause": "recorded_order_and_settling",
+      "released": [
+        "mug0"
+      ],
+      "error_after_release_m": 0.2439
+    },
+    {
+      "task": "place_cups",
+      "episode": 19,
+      "object": "mug1",
+      "max_error_m": 0.1377,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 1,
+      "object": "cylinder",
+      "max_error_m": 0.0193,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 2,
+      "object": "cylinder",
+      "max_error_m": 0.0106,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 4,
+      "object": "cylinder_grasp_point",
+      "max_error_m": 0.0176,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 5,
+      "object": "cylinder",
+      "max_error_m": 0.0174,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 7,
+      "object": "moon",
+      "max_error_m": 0.2221,
+      "cause": "recorded_order",
+      "released": [
+        "triangular_prism"
+      ],
+      "error_after_release_m": 0.0022
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 12,
+      "object": "cylinder_grasp_point",
+      "max_error_m": 0.0139,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 13,
+      "object": "cube_grasp_point",
+      "max_error_m": 0.1359,
+      "cause": "recorded_order_and_settling",
+      "released": [
+        "cube"
+      ],
+      "error_after_release_m": 0.0507
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 14,
+      "object": "cylinder",
+      "max_error_m": 0.0222,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 15,
+      "object": "cylinder_grasp_point",
+      "max_error_m": 0.0252,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 16,
+      "object": "cylinder_grasp_point",
+      "max_error_m": 0.2171,
+      "cause": "recorded_order",
+      "released": [
+        "cube"
+      ],
+      "error_after_release_m": 0.0049
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 18,
+      "object": "cylinder_grasp_point",
+      "max_error_m": 0.0643,
+      "cause": "settling"
+    },
+    {
+      "task": "place_shape_in_shape_sorter",
+      "episode": 24,
+      "object": "cylinder_grasp_point",
+      "max_error_m": 0.2875,
+      "cause": "recorded_order_and_settling",
+      "released": [
+        "star",
+        "moon"
+      ],
+      "error_after_release_m": 0.1665
+    },
+    {
+      "task": "put_groceries_in_cupboard",
+      "episode": 7,
+      "object": "cupboard",
+      "max_error_m": 0.594,
+      "cause": "recorded_order",
+      "released": [
+        "soup"
+      ],
+      "error_after_release_m": 0.0
+    },
+    {
+      "task": "stack_blocks",
+      "episode": 12,
+      "object": "stack_blocks_distractor1",
+      "max_error_m": 0.6999,
+      "cause": "recorded_order",
+      "released": [
+        "stack_blocks_target1"
+      ],
+      "error_after_release_m": 0.0
+    },
+    {
+      "task": "stack_cups",
+      "episode": 9,
+      "object": "cup3",
+      "max_error_m": 0.0713,
+      "cause": "recorded_order",
+      "released": [
+        "cup3"
+      ],
+      "error_after_release_m": 0.0
+    },
+    {
+      "task": "stack_cups",
+      "episode": 12,
+      "object": "waypoint3",
+      "max_error_m": 0.308,
+      "cause": "recorded_order",
+      "released": [
+        "cup1"
+      ],
+      "error_after_release_m": 0.0
+    }
+  ]
+}
