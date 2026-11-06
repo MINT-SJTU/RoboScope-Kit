@@ -217,5 +217,105 @@ whole matrix.
 
 ## 8. Correctness baseline
 
-Pending: the results of the RT-1-X Quick Test, full evaluations, native comparison, and performance baseline are
-added here as they are measured.
+Measured 2026-11-05/06 with the RT-1-X checkpoint (`examples/rt1/`), Kit `0.8.0b28`, on one RTX 3080 (10 GB,
+driver 560.35.03) shared with other users' jobs (about 4.4 GB of it held by them) on a shared 48-core host.
+Fixed `--concurrency 2 --replicas 1`, no autotuning, TensorFlow capped at 1,536 MB. Evaluation on this host
+was stopped by the maintainer before every suite was finished; this section reports what finished, and only
+that.
+
+| Suite | Kit run | Native run | Status |
+| --- | --- | --- | --- |
+| `widowx_visual_matching` | 96/96, formal | 96/96 | Complete |
+| `google_robot_visual_matching` | 864/864, formal | 201 episodes logged (4 of 244 invocations complete, others cut off) | Kit complete; native partial |
+| `google_robot_variant_aggregation` | not run | not run | Not evaluated |
+
+### Build, self-test, and Quick Test
+
+A clean build into a fresh directory with the committed script passed its checks and `--self-test` in 88 s
+(warm uv cache). The first build attempt exposed the Vulkan SC teardown crash of section 1; the build passed
+after that host check was added. A second clean build was planned and not run. `--quick-test` on
+`google_robot_visual_matching` (horizontal coke can, `urdf_version=None`, episode 0) succeeded in 47 steps, ended
+by the policy's terminate signal: 65 s end to end (Policy load 40 s, evaluation 23 s).
+
+### Full evaluation
+
+`widowx_visual_matching`: 96/96 unique records, `formal: true`, no worker failures, restarts, or OOM events.
+
+| Task | Success | Grasped (partial success) | Executed steps |
+| --- | --- | --- | --- |
+| `put_spoon_on_tablecloth` | 1/24 (4.2%) | 3/24 | 820 |
+| `put_carrot_on_plate` | 1/24 (4.2%) | 7/24 | 934 |
+| `stack_green_block_on_yellow_block` | 0/24 (0.0%) | 3/24 | 815 |
+| `put_eggplant_in_basket` | 0/24 (0.0%) | 1/24 | 1,536 |
+
+`google_robot_visual_matching`: 864/864 unique records, `formal: true`, no worker failures, restarts, or OOM
+events.
+
+| Task | Episodes | Success (mean of variant rates) | Executed steps | Policy-terminated / truncated |
+| --- | --- | --- | --- | --- |
+| `pick_coke_can` (horizontal 82/100, vertical 34/100, standing 60/100) | 300 | 176 (58.7%) | 12,962 | 240 / 63 |
+| `move_near` | 240 | 81 (33.8%) | 14,151 | 117 / 123 |
+| `open_drawer` (top 7/36, middle 15/36, bottom 9/36) | 108 | 31 (28.7%) | 11,332 | 25 / 83 |
+| `close_drawer` (top 31/36, middle 35/36, bottom 27/36) | 108 | 93 (86.1%) | 6,215 | 85 / 23 |
+| `place_apple_in_closed_top_drawer` | 108 | 25 (23.1%) | 19,471 | 33 / 75 |
+
+An episode the policy terminates on its last allowed step is counted in both columns. For context only,
+SimplerEnv's published RT-1-X visual-matching numbers (`SIMPLER_PERF`, the authors' run on their hardware) are
+56.7%, 31.7%, 29.6%, 89.1%, and 21.3%; that is not a paired comparison.
+
+### Native comparison
+
+`run_native.py` ran SimplerEnv's unmodified `main_inference.py` with the official scripts' RT-1-X command lines on
+the same runtime, checkpoint, and GPU. `compare_native.py` matched every native invocation to exactly one frozen
+Kit variant with an identical episode list (visual matching 244/244, WidowX 4/4) and paired episodes on variant,
+robot pose, and object pose or episode id.
+
+| Pairing | Episodes | Kit / native successes | Same outcome | Same steps | Same action trajectory | Same first image |
+| --- | --- | --- | --- | --- | --- | --- |
+| WidowX, all four tasks | 96 | 2 / 3 | 95 | 84 | 82 | 96 |
+| Visual matching `pick_coke_can` (partial native run) | 185 | 119 / 119 | 183 | 179 | 173 | 185 |
+| Visual matching `move_near` (partial native run) | 16 | 1 / 1 | 16 | 15 | 14 | 16 |
+| Kit vs the separate Quick-Test-time native run, `pick_coke_can/horizontal/urdf_none` | 25 | 22 / 22 | 25 | 25 | 25 | 25 |
+| **Native vs native**, same 21 episodes of that variant in two native runs | 21 | 18 / 18 | 21 | 20 | 20 | n/a |
+
+"Same action trajectory" compares a SHA-256 over every float64 action passed to `env.step`; "same first image"
+a SHA-256 of the first policy image.
+
+- **Observation mapping.** The first policy image is identical in all 297 Kit-vs-native pairs of the main runs (the first three rows), so the robot pose,
+  object pose, overlay, recolor settings, and camera reach the policy as upstream renders them.
+- **Action mapping and loop.** 269 of those 297 trajectories are identical action for action, and all 25 against the separate Quick-Test-time native run, which requires the
+  same observation-to-action path, subtask and termination handling, and step count.
+- **Divergence is not specific to the Kit.** Two native runs of the same 21 episodes also differ in one action
+  trajectory. Some run-to-run variation exists inside upstream's own pipeline on this host; I did not isolate its
+  source (candidates are GPU kernel nondeterminism in TensorFlow inference and SAPIEN contact or rendering
+  nondeterminism, and other users' jobs shared the GPU). Once a trajectory diverges, outcome and steps can differ:
+  WidowX `put_carrot_on_plate` episode 5 failed in the Kit and succeeded natively after diverging.
+- **Not established.** The native visual-matching run covers 201 of 864 episodes (coke can and move near only, no
+  ray-traced task), and each side ran once, so these counts do not establish statistical equivalence; they show
+  no systematic Kit-vs-native difference on the paired episodes.
+
+### Performance baseline
+
+| Run | Policy load | Evaluation | Episodes/s | Env steps/s |
+| --- | --- | --- | --- | --- |
+| Kit, WidowX, K=2 | 39 s | 565 s | 0.170 | 7.25 |
+| Native, WidowX, 2 invocations at a time | (loaded per invocation, 4 times) | 627 s wall | 0.153 | 6.16 |
+| Kit, Google Robot visual matching, K=2 | 54 s | 11,139 s | 0.078 | 5.76 |
+
+The WidowX rows ran the same 96 episodes back to back on the same host; the native run loads the model once per
+invocation and its episodes took fewer steps in total (3,865 vs 4,105), so the two rows differ in more than the
+runtime. Per-process sampling during the Kit visual-matching run (every 20 s): the two workers used 1.42 CPU
+cores together and the Policy replica 0.68; peak resident memory 1.96 GB per worker and 4.07 GB for the replica;
+peak GPU memory 1.42 GB per worker (ray-traced scenes) and 1.78 GB for the replica.
+
+Ray-traced episodes (32 samples per pixel, OptiX denoiser, as upstream) cost about 0.15 s per environment step
+alone on this card, against about 0.12 s rasterized. Earlier attempts at K=4, K=3, and once at K=2 made no
+progress for 7–17 minutes on ray-traced episodes with the GPU at 100%; the formal K=2 run that followed did not
+stall. I did not isolate the cause; other users' and agents' jobs were starting and stopping on the same GPU.
+
+### Raw results and reproduction
+
+The per-episode Kit records (`queue/completed/`), native `episodes/*.jsonl` and `plan.jsonl`, the comparison
+JSON files, and the logs are kept on the evaluation host. Reproduce with the commands of section 1 and
+`examples/rt1/README.md`; the native visual-matching run, both variant-aggregation runs, the second clean build,
+and a Kit-vs-Kit repeat still need an authorized GPU machine.
