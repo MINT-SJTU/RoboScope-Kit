@@ -211,12 +211,12 @@ python /workspace/robotwin-mps-search-20261106/summarize_search.py \
   /workspace/reproduce-short --expected 20
 ```
 
-Attachment identities below refer to operator-supplied evidence, not files committed to the repository. Each packet contains actual commands, configurations, per-episode records and logs; the trace packets also contain SQLite exports. Weights/assets are excluded.
+[Download the evidence release](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robotwin-mps-evidence-20261106) and its [SHA256 manifest](https://github.com/QLL-CCDD/RoboScope-Kit/releases/download/robotwin-mps-evidence-20261106/SHA256SUMS). These attachments are outside Git. Each packet contains actual commands, configurations, per-episode records and logs; the trace packets also contain SQLite exports. Weights/assets are excluded.
 
 | Packet | Data | SHA256 |
 | --- | --- | --- |
-| Integration `raw-results.tar.gz` | Profiling repair, paired runs and report-content audits | `6b926cc3161251b1d38a4188c7a2682a85130e7f219231969a0713344a8541f6` |
-| Primary `raw-results.tar.gz` | b25 screening, four500-episode runs and early diagnostics | `4adcc09ea84c2250027eca5a503d477d2bd055d0a7110533c2e843a525ec88fb` |
-| Follow-up `raw-results-followup.tar.gz` | b26 grid, OOM recovery, four clean CUDA/Vulkan captures | `f70447666446cde8b644e172d526c7be43d966a0df0e835e4f522994148e5c81` |
-| Search `raw-results-search.tar.gz` | Ten20episode cells, K6/K7 hundred-episode checks, extra telemetry | `d6b351a706765d8c6130cbb8827f021fb309927fff5e6264537673c5ae1ed458` |
-| Prior consolidation `evidence.tar.gz` | Prior local candidate QuickTest, reports, PID audit and counter failure | `b34c6a0ad9f77e16f71d20932aceca33503e3dd677936ee3b71383493b8cf4d9` |
+| [profiling-integration-raw-results.tar.gz](https://github.com/QLL-CCDD/RoboScope-Kit/releases/download/robotwin-mps-evidence-20261106/profiling-integration-raw-results.tar.gz) | Profiling repair, paired runs and report-content audits | `6b926cc3161251b1d38a4188c7a2682a85130e7f219231969a0713344a8541f6` |
+| [mps-primary-raw-results.tar.gz](https://github.com/QLL-CCDD/RoboScope-Kit/releases/download/robotwin-mps-evidence-20261106/mps-primary-raw-results.tar.gz) | b25 screening, four500-episode runs and early diagnostics | `4adcc09ea84c2250027eca5a503d477d2bd055d0a7110533c2e843a525ec88fb` |
+| [raw-results-followup.tar.gz](https://github.com/QLL-CCDD/RoboScope-Kit/releases/download/robotwin-mps-evidence-20261106/raw-results-followup.tar.gz) | b26 grid, OOM recovery, four clean CUDA/Vulkan captures | `f70447666446cde8b644e172d526c7be43d966a0df0e835e4f522994148e5c81` |
+| [raw-results-search.tar.gz](https://github.com/QLL-CCDD/RoboScope-Kit/releases/download/robotwin-mps-evidence-20261106/raw-results-search.tar.gz) | Ten20episode cells, K6/K7 hundred-episode checks, extra telemetry | `d6b351a706765d8c6130cbb8827f021fb309927fff5e6264537673c5ae1ed458` |
+| [validation-evidence.tar.gz](https://github.com/QLL-CCDD/RoboScope-Kit/releases/download/robotwin-mps-evidence-20261106/validation-evidence.tar.gz) | Current b31 QuickTest, reports, source identity, PID audit and counter failure | `3f8047a353d18c448b2ffaa51a58161e7c2ed1d935379d5b51ddf7c71254d2da` |
