@@ -14,6 +14,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from roboscope_kit import profiling
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -92,12 +93,25 @@ class PolicyServer:
                 if received is None:
                     return
                 request, encoding = received
-                with self._request_lock:
-                    response = self._handle(request)
+                if profiling.ENABLED:
+                    response = self._profiled_handle(request)
+                else:
+                    with self._request_lock:
+                        response = self._handle(request)
             except Exception as exc:
                 request_id = str(request.get("request_id") or "") if request is not None else ""
                 response = self._error_response(exc, request_id=request_id)
             send_message(connection, response, encoding)
+
+    def _profiled_handle(self, request: dict[str, Any]) -> dict[str, Any]:
+        operation = str(request.get("operation") or "")
+        with profiling.span(f"server.queue.{operation}"):
+            self._request_lock.acquire()
+        try:
+            with profiling.span(f"server.{operation}"):
+                return self._handle(request)
+        finally:
+            self._request_lock.release()
 
     def _handle(self, request: dict[str, Any]) -> dict[str, Any]:
         request_id = str(request.get("request_id") or uuid.uuid4())
@@ -143,7 +157,11 @@ class PolicyServer:
             context, capabilities = self._loaded_contract()
             observation = Observation.from_dict(payload["observation"])
             validate_observation(observation, context.benchmark, capabilities)
-            action = self.policy.act(observation)
+            if profiling.ENABLED:
+                with profiling.span("inference.act"):
+                    action = self.policy.act(observation)
+            else:
+                action = self.policy.act(observation)
             if not isinstance(action, ActionChunk):
                 raise TypeError("Policy.act() must return ActionChunk")
             validate_action_chunk(action, context.benchmark)
@@ -171,7 +189,11 @@ class PolicyServer:
                 )
             for observation in observations:
                 validate_observation(observation, context.benchmark, capabilities)
-            actions = self.policy.act_batch(observations)
+            if profiling.ENABLED:
+                with profiling.span("inference.act_batch"):
+                    actions = self.policy.act_batch(observations)
+            else:
+                actions = self.policy.act_batch(observations)
             if len(actions) != len(observations):
                 raise ValueError("Policy.act_batch() must return one ActionChunk per observation")
             for action in actions:

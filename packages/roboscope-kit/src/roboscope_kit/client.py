@@ -102,6 +102,11 @@ class PolicyClient:
     def reset(self, context: EpisodeContext) -> dict[str, Any]:
         if profiling.ENABLED:
             profiling.episode_start()
+            try:
+                return self._request("reset", {"context": context.to_dict()})
+            except BaseException:
+                profiling.episode_end()
+                raise
         return self._request("reset", {"context": context.to_dict()})
 
     def act(self, observation: Observation) -> ActionChunk:
@@ -121,10 +126,12 @@ class PolicyClient:
     def end_episode(self, episode_id: str) -> dict[str, Any]:
         if not episode_id:
             raise ValueError("episode_id cannot be empty")
-        result = self._request("end_episode", {"episode_id": episode_id})
         if profiling.ENABLED:
-            profiling.episode_end()
-        return result
+            try:
+                return self._request("end_episode", {"episode_id": episode_id})
+            finally:
+                profiling.episode_end()
+        return self._request("end_episode", {"episode_id": episode_id})
 
     def unload(self) -> dict[str, Any]:
         return self._request("unload", {})

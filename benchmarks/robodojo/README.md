@@ -52,7 +52,7 @@ the metadata service is unavailable, and `ROBODOJO_ASSET_WORKERS` controls downl
 Profiled with the Kit's `--profile`; how to run and read a capture is in the
 [profiling notes](../../packages/roboscope-kit/docs/profiling.md).
 
-### 2026-11-05: `arx_x5` keeps the GPU busy only about 11% of the time
+### 2026-11-05: captured CUDA kernels cover about 11% of an `arx_x5` episode
 
 - **Machine:** AutoDL, RTX 4090 48 GB, driver 580.105.08, 208 cores; Nsight Systems 2026.5.1.
 - **Configuration:** RoboDojo `arx_x5` with a placeholder Policy that returns the same action every step
@@ -60,16 +60,19 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
   of `--profile` (PR #55).
 - **Results:**
 
-| Run | Worker | `episode` | `policy.act` | GPU busy | Share |
+| Run | Worker | `episode` | `policy.act` | Captured CUDA kernel union | Share |
 |---|---|---:|---:|---:|---:|
 | `--quick-test` | 000 | 19.0 s | 20 calls, 0.8 s | 2.2 s | 12% |
 | K=3, g=1 | 000 | 110.2 s | 105 calls, 3.8 s | 11.2 s | 10% |
 | K=3, g=1 | 001 | 19.7 s | 20 calls, 0.8 s | 2.2 s | 11% |
 | K=3, g=1 | 002 | 101.7 s | 105 calls, 3.9 s | 11.0 s | 11% |
 
-- **Conclusion:** GPU kernels take about 11% of an episode and Policy round trips about 4%. The rest is
-  spent outside the GPU: the simulator's CPU work and the synchronization and waiting between kernels. To
-  raise RoboDojo throughput, work on the simulator side; more GPU work will not help. This matches the
-  earlier manual `nsys` measurement of about 11%.
+- **Conclusion:** captured CUDA kernels cover about 11% of an episode and Policy round trips about 4%.
+  CUDA/NVTX-only tracing does not cover Vulkan/OpenGL GPU rendering, so the remaining wall time is not
+  assigned by this capture; it cannot all be labeled CPU work or GPU idle time. These values retain the
+  historical first-episode measurement, rather than establishing a whole-GPU utilization or throughput
+  bottleneck. That capture also omitted the separate Policy process, whose placeholder work was minimal.
 - **Next steps:** enable CPU sampling in the Kit's `nsys` arguments (currently `--sample=none`) to find where the
-  CPU time goes, and profile again with a real Policy to include its cost.
+  CPU time goes, account for graphics separately, and profile with a real Policy to include its cost.
+  The current built-in profiling path also records each Policy process's complete lifetime; that updated
+  coverage has not yet been revalidated on RoboDojo hardware here.

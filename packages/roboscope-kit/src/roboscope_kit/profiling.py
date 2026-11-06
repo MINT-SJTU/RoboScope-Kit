@@ -156,9 +156,14 @@ def _range(name: str) -> Iterator[None]:
 
 def request(operation: str) -> AbstractContextManager[Any]:
     """Mark one Policy round trip."""
+    return span(f"policy.{operation}")
+
+
+def span(name: str) -> AbstractContextManager[Any]:
+    """Mark an inclusive host operation without synchronizing GPU execution."""
     if _nvtx is None:
         return nullcontext()
-    return _range(f"policy.{operation}")
+    return _range(name)
 
 
 def episode_start() -> None:

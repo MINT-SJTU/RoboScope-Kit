@@ -41,7 +41,7 @@ from .manifest import (
     BenchmarkManifest,
     load_benchmark_manifest,
 )
-from .nsys import require_nsys
+from .nsys import GpuMetricsSession, require_nsys
 from .orchestrator import ParallelBenchmarkRuntime, RuntimeConfig, append_event
 from .output import reserve_output_directory
 from .policy_process import PolicyProcessAdapter
@@ -91,8 +91,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--profile",
         action="store_true",
-        help="capture each Worker's first episode with Nsight Systems into <output-dir>/profile/; "
+        help="capture each Worker's first episode and each Policy Server with Nsight Systems "
+        "into <output-dir>/profile/; "
         "needs Nsight Systems (nsys on PATH) and --quick-test or --concurrency and --replicas",
+    )
+    parser.add_argument(
+        "--profile-gpu-metrics", metavar="METRIC_SET",
+        help="sample device-wide GPU counters with one Nsight collector, including autotune; "
+        "for example ad10x-gfxt; permission or tool failures are recorded as unavailable",
+    )
+    parser.add_argument(
+        "--profile-gpu-metrics-frequency", type=int, metavar="HZ",
+        help="GPU counter sampling frequency, 10..200000 Hz (default: 10000); "
+        "requires --profile-gpu-metrics",
     )
     parser.add_argument(
         "--autotune-strategy",
@@ -220,6 +231,13 @@ def _preflight_evaluation(
         if not args.quick_test and not fixed:
             raise ValueError("--profile requires --quick-test or --concurrency and --replicas")
         require_nsys()
+    if args.profile_gpu_metrics is not None and not args.profile_gpu_metrics.strip():
+        raise ValueError("--profile-gpu-metrics requires a metric set")
+    if args.profile_gpu_metrics_frequency is not None:
+        if args.profile_gpu_metrics is None:
+            raise ValueError("--profile-gpu-metrics-frequency requires --profile-gpu-metrics")
+        if not 10 <= args.profile_gpu_metrics_frequency <= 200000:
+            raise ValueError("--profile-gpu-metrics-frequency must be 10..200000 Hz")
     if args.shard_count is not None and args.shard_index is None:
         raise ValueError("--shard-count requires --shard-index")
     if args.shard_index is not None and args.shard_index < 0:
@@ -279,7 +297,20 @@ def _run_evaluation(
     shard_kwargs = plan.shard_kwargs
     fixed = args.concurrency is not None
     cuda_mps: CudaMpsSession | None = None
+    gpu_metrics = (
+        GpuMetricsSession(
+            args.output_dir, gpu_devices, args.profile_gpu_metrics,
+            args.profile_gpu_metrics_frequency or 10000,
+        ) if args.profile_gpu_metrics is not None else None
+    )
+    gpu_metrics_config = (
+        {key: gpu_metrics.metadata[key] for key in (
+            "requested", "scope", "devices", "device_selector", "metric_set", "frequency_hz",
+        )} if gpu_metrics is not None else None
+    )
     try:
+        if gpu_metrics is not None:
+            gpu_metrics.start()
         if args.cuda_mps:
             # Autotune probes and the formal pass both run under MPS, so K/g is
             # selected for the configuration that is evaluated.
@@ -307,6 +338,7 @@ def _run_evaluation(
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
                 profile=args.profile,
+                gpu_metrics_config=gpu_metrics_config,
             )
         else:
             output, selected = _autotuned_run(
@@ -320,12 +352,19 @@ def _run_evaluation(
                 phase_timing_callback,
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
+                gpu_metrics_config=gpu_metrics_config,
             )
     finally:
-        if cuda_mps is not None:
-            cuda_mps.stop()
+        try:
+            if cuda_mps is not None:
+                cuda_mps.stop()
+        finally:
+            if gpu_metrics is not None:
+                gpu_metrics.stop()
     output["autotune"] = selected
     output["cuda_mps"] = cuda_mps.metadata() if cuda_mps is not None else {"enabled": False}
+    if gpu_metrics is not None:
+        output["gpu_metrics"] = gpu_metrics.metadata
     atomic_json(args.output_dir / "result.json", output)
     return 0
 
@@ -374,6 +413,7 @@ def _autotuned_run(
     phase_timing_callback: PhaseTimingCallback,
     shard_kwargs: dict[str, Any] | None = None,
     cuda_mps: CudaMpsSession | None = None,
+    gpu_metrics_config: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Load the policy pool once, probe candidates against it, then run for real.
 
@@ -417,6 +457,7 @@ def _autotuned_run(
                     probe_limits,
                     probe_progress,
                     output_dir,
+                    gpu_metrics_config=gpu_metrics_config,
                 ),
                 output_dir=output_dir / "autotune",
                 bounds=bounds,
@@ -434,6 +475,7 @@ def _autotuned_run(
             probe=False,
             phase_timing_callback=phase_timing_callback,
             shard_kwargs=shard_kwargs,
+            gpu_metrics_config=gpu_metrics_config,
         )
         return final, selected
     finally:
@@ -463,6 +505,7 @@ def _measure_shared(
     probe_limits: ProbeLimits,
     probe_progress: ProbeProgressFn,
     probe_root: Path,
+    gpu_metrics_config: dict[str, Any] | None = None,
 ):
     output = _run_with_pool(
         factory=factory,
@@ -476,6 +519,7 @@ def _measure_shared(
         probe=True,
         probe_limits=probe_limits,
         progress_callback=lambda progress, _results: probe_progress(progress),
+        gpu_metrics_config=gpu_metrics_config,
     )
     return output, pool.adapter.vram_bytes_per_replica()
 
@@ -507,6 +551,7 @@ def _run_with_pool(
     phase_timing_callback: PhaseTimingCallback | None = None,
     progress_callback=None,
     shard_kwargs: dict[str, Any] | None = None,
+    gpu_metrics_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     adapter = (
         factory.create_probe(request, manifest, concurrency) if probe else factory.create(request, manifest)
@@ -520,6 +565,7 @@ def _run_with_pool(
             base_port=int(manifest.defaults.get("base_port", 16694)),
             ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
             probe_limits=probe_limits,
+            gpu_metrics_config=gpu_metrics_config,
             **(shard_kwargs or {}),
         ),
         inference=pool.adapter,
@@ -548,6 +594,7 @@ def run_candidate(
     shard_kwargs: dict[str, Any] | None = None,
     cuda_mps: CudaMpsSession | None = None,
     profile: bool = False,
+    gpu_metrics_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     adapter = (
         factory.create_probe(request, manifest, concurrency) if probe else factory.create(request, manifest)
@@ -562,6 +609,7 @@ def run_candidate(
             base_port=int(manifest.defaults.get("base_port", 16694)),
             ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
             profile=profile,
+            gpu_metrics_config=gpu_metrics_config,
             **(shard_kwargs or {}),
         ),
         inference=inference,

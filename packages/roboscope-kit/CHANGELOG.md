@@ -2,6 +2,21 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b31 - 2026-11-07
+
+- Complete RoboTwin first-episode NVTX capture and capture Policy Server processes with request queue,
+  service and inference spans. Preserve Policy reports during graceful shutdown and give restarted
+  replicas separate report names. Identify profiled socket servers by their peer credentials so MPS
+  attachment and cleanup target the actual server process group rather than the Nsight launcher.
+  Let normal server exit flush CUPTI before terminating any remaining MPS clients.
+- Close SDK episode ranges on reset/end RPC errors and clarify CUDA-only, graphics and CALVIN-subtask
+  coverage in the profiling documentation.
+- Add opt-in `--profile-gpu-metrics METRIC_SET` and its sampling-frequency option. One device-wide
+  collector spans fixed or autotuned evaluation independently of Worker/Policy tracing and CUDA MPS.
+  Record commands, tool version, diagnostics and actual exported sample availability; denied counters
+  or unavailable tools warn without stopping evaluation or changing counter permissions. Mark metric
+  requests as diagnostic profiling in run manifests independently of CUDA/NVTX tracing.
+
 ## 0.8.0b30 - 2026-11-06
 
 - Add `examples/xpolicylab/compare_native.py`, which runs a Kit RoboDojo run's tasks and layouts through the
