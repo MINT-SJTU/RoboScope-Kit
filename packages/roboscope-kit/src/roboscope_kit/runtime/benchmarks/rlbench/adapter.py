@@ -135,6 +135,9 @@ class RLBenchBenchmarkAdapter:
     def aggregate(self, results: Sequence[WorkResult]) -> dict[str, Any]:
         per_task = self._collect(results)
         rows = [self._row(task, per_task.get(task, [])) for task in self.config.tasks]
+        missing = [row["task"] for row in rows if row["episodes"] != self.config.episodes_per_task]
+        if self.config.formal and missing:
+            raise RuntimeError(f"RLBench formal result is incomplete: {', '.join(missing)}")
         official: dict[str, Any] = {
             "metric": "per_task_success_rate",
             "formal": self.config.formal,
@@ -144,8 +147,7 @@ class RLBenchBenchmarkAdapter:
             # Not part of the official metric, and not merged across shards.
             "diagnostics": {task: self._diagnostics(per_task.get(task, [])) for task in self.config.tasks},
         }
-        missing = [row["task"] for row in rows if row["episodes"] != self.config.episodes_per_task]
-        if self.config.formal and not missing:
+        if self.config.formal:
             for task in self.config.tasks:
                 actual = test_episodes_sha256(
                     (int(record.metadata["episode"]), str(record.metadata["episode_state_sha256"]))
@@ -158,6 +160,26 @@ class RLBenchBenchmarkAdapter:
                     )
             official["test_episodes_verified"] = True
         return official
+
+    def aggregate_partial(self, results: Sequence[WorkResult]) -> dict[str, Any]:
+        """Keep episode identities for result-only merging; no shard is a formal result."""
+
+        per_task = self._collect(results)
+        return {
+            "partial": True,
+            "formal": False,
+            "tasks": [self._row(task, per_task.get(task, [])) for task in self.config.tasks],
+            "episode_states": [
+                {
+                    "task": task,
+                    "episode": int(record.metadata["episode"]),
+                    "state_sha256": str(record.metadata["episode_state_sha256"]),
+                    "success": record.success,
+                }
+                for task in self.config.tasks
+                for record in per_task.get(task, [])
+            ],
+        }
 
     @staticmethod
     def _row(task: str, records: list) -> dict[str, Any]:
@@ -215,7 +237,7 @@ class RLBenchBenchmarkAdapter:
             "suite": self.config.suite,
             "protocol": PROTOCOL_VERSION,
             "metric": "per_task_success_rate",
-            "formal": self.config.formal,
+            "full_profile": self.config.formal,
             "task_order": list(self.config.tasks),
             "tasks": [
                 {

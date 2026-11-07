@@ -29,7 +29,9 @@ timings), PerAct's own ``eval_data.csv`` under ``<output>/logdir``, and its log.
 from __future__ import annotations
 
 import argparse
+import csv
 import json
+import math
 import os
 import runpy
 import shutil
@@ -111,8 +113,46 @@ def prepare_logdir(checkpoint_source: Path, output: Path) -> Path:
     return logdir
 
 
+def validate_native_output(episodes_path: Path, logdir: Path, tasks: list[str], episodes: int) -> None:
+    """Reject a failed/incomplete evaluator child before marking a native run successful."""
+
+    expected = {(task, episode) for task in tasks for episode in range(episodes)}
+    records: dict[tuple[str, int], bool] = {}
+    try:
+        with episodes_path.open(encoding="utf-8") as stream:
+            for line in stream:
+                record = json.loads(line)
+                task, episode, success = record["task"], record["episode"], record["success"]
+                if not isinstance(task, str) or type(episode) is not int or type(success) is not bool:
+                    raise ValueError("native episode has an invalid task, episode, or success")
+                key = (task, episode)
+                if key not in expected or key in records:
+                    raise ValueError(f"duplicate or unexpected native episode {key}")
+                records[key] = success
+        missing = expected - records.keys()
+        if missing:
+            raise ValueError(f"native evaluation is missing {len(missing)} episodes: {sorted(missing)[:5]}")
+        csv_path = logdir / "multi" / "PERACT_BC" / "seed0" / "eval_data.csv"
+        with csv_path.open(encoding="utf-8", newline="") as stream:
+            rows = list(csv.DictReader(stream))
+        matches = [row for row in rows if row.get("step") == str(CHECKPOINT_WEIGHT)]
+        if len(matches) != 1:
+            raise ValueError(f"expected one native metrics row for checkpoint {CHECKPOINT_WEIGHT}")
+        for task in tasks:
+            rate = float(matches[0][f"eval_envs/return/{task}"])
+            expected_rate = 100.0 * sum(records[(task, episode)] for episode in range(episodes)) / episodes
+            if not math.isfinite(rate) or not math.isclose(rate, expected_rate, rel_tol=1e-6, abs_tol=1e-6):
+                raise ValueError(f"native CSV success rate disagrees with episode records for {task}")
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError(f"native evaluation did not complete consistently: {exc}") from exc
+
+
 def main() -> int:
     args = parse_args()
+    if not 1 <= args.episodes <= 25:
+        raise SystemExit("--episodes must be between 1 and 25")
+    if args.task and len(set(args.task)) != len(args.task):
+        raise SystemExit("--task must not contain duplicates")
     runtime = args.runtime.resolve()
     reexec_with_runtime_environment(runtime)
     started = time.time()
@@ -165,6 +205,7 @@ def main() -> int:
     sys.argv = [str(peract_root / "eval.py"), *overrides]
     # As `python eval.py ...`: hydra resolves conf/ next to the __main__ script.
     runpy.run_path(str(peract_root / "eval.py"), run_name="__main__")
+    validate_native_output(episodes_path, logdir, tasks, args.episodes)
     run = json.loads((output / "run.json").read_text(encoding="utf-8"))
     run["finished"] = time.time()
     run["elapsed_s"] = run["finished"] - started

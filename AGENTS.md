@@ -18,6 +18,7 @@ A change is complete when it is committed, carries the required version bump, an
 | `examples/xvla/` | The X-VLA `Policy` example: a stateful Policy serving several benchmarks |
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
 | `examples/peract/` | A PerAct `Policy` example for RLBench, with PerAct's native `eval.py` runner and an episode-by-episode comparison |
+| `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
 | `ci/` and `.github/workflows/` | Build, compatibility, and PyPI release automation |
 
 When a path moves, update the source and every caller directly. Do not add compatibility wrappers or
@@ -37,6 +38,10 @@ runtime paths, and evaluation defaults. Runtime paths are relative to the manife
 script copies the manifest into `<install-dir>`, where those paths resolve. Keep the manifest and its build
 script consistent, and never change frozen protocol values (such as the RoboTwin seed protocol and
 generation digests) without regenerating what depends on them.
+
+Benchmark integrations and new suites follow `packages/roboscope-kit/BENCHMARK_ACCEPTANCE.md`.
+Inventory the complete requested upstream task scope and validate every task; label partial work as
+partial and do not claim full acceptance while tasks or native comparisons are missing.
 
 ## Versioning and releases
 
@@ -78,6 +83,13 @@ Examples:
 
 - `feat(robodojo): integrate RoboDojo simulation evaluation with a correctness baseline`
 - `perf(robodojo): improve RoboDojo evaluation throughput`
+
+## Pull request merges
+
+Squash and merge pull requests, using the PR title as the squash commit title. Delete the head branch after
+its PR is merged; fork contributors can delete their own branches. Before merging, check for open PRs that
+use the head branch as their base: deleting it can retarget them, so check their base and diff afterwards.
+Keep long-lived branches such as `website-dist`.
 
 ## Python compatibility
 

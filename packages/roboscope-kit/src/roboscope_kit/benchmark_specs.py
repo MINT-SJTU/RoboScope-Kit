@@ -14,12 +14,14 @@ from roboscope_kit.contracts import ActionSpec, BenchmarkSpec, FeatureKind, Feat
 class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include Python 3.10
     LIBERO = "libero"
     LIBERO_PLUS = "libero_plus"
+    LIBERO_PRO = "libero_pro"
     ROBOCASA = "robocasa"
     ROBOTWIN = "robotwin"
     CALVIN = "calvin"
     METAWORLD = "metaworld"
     ROBODOJO = "robodojo"
     RLBENCH = "rlbench"
+    ROBOMIMIC = "robomimic"
 
 
 class BenchmarkDefinition(ABC):
@@ -109,6 +111,11 @@ class LiberoBenchmarkDefinition(BenchmarkDefinition):
 class LiberoPlusBenchmarkDefinition(LiberoBenchmarkDefinition):
     name = BenchmarkName.LIBERO_PLUS
     protocol_version = "libero-plus-v1"
+
+
+class LiberoProBenchmarkDefinition(LiberoBenchmarkDefinition):
+    name = BenchmarkName.LIBERO_PRO
+    protocol_version = "libero-pro-v1"
 
 
 class RoboCasaBenchmarkDefinition(BenchmarkDefinition):
@@ -270,6 +277,54 @@ class MetaworldBenchmarkDefinition(BenchmarkDefinition):
         )
 
 
+class RobomimicBenchmarkDefinition(BenchmarkDefinition):
+    """robomimic v0.1 low-dimensional observations and OSC_POSE delta actions.
+
+    Single-arm tasks (Lift, Can, Square, Tool Hang) send the ``robot0`` features and take
+    7-dimensional actions; Transport also sends the ``robot1`` features and takes 14.
+    """
+
+    name = BenchmarkName.ROBOMIMIC
+    protocol_version = "robomimic-v1"
+    supported_action_representations = ("robomimic.osc-pose-delta-v1",)
+    default_action_representation = "robomimic.osc-pose-delta-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        robot_features = []
+        for index in range(2):
+            for key, size, description in (
+                ("eef_pos", 3, "end-effector position in the world frame"),
+                ("eef_quat", 4, "end-effector orientation quaternion (x, y, z, w)"),
+                ("gripper_qpos", 2, "gripper finger joint positions"),
+            ):
+                robot_features.append(
+                    _feature(
+                        f"state.robot{index}_{key}",
+                        FeatureKind.STATE,
+                        f"robosuite robot{index}_{key}: robot {index} {description}"
+                        + ("." if index == 0 else " (two-arm Transport only)."),
+                        required=index == 0,
+                        shape=(size,),
+                    )
+                )
+        return (
+            *robot_features,
+            _feature(
+                "state.object",
+                FeatureKind.STATE,
+                "robomimic `object` observation (robosuite object-state); its size depends on the task.",
+                shape=(None,),
+            ),
+        )
+
+    def action(self, _suite: str) -> ActionSpec:
+        return ActionSpec(
+            "action.robot",
+            "Per arm, robosuite OSC_POSE delta position (3), delta axis-angle rotation (3) and gripper (1) "
+            "in [-1, 1]; Transport concatenates robot0 then robot1 (14).",
+        )
+
+
 RLBENCH_CAMERAS = ("front", "left_shoulder", "right_shoulder", "wrist")
 
 
@@ -362,12 +417,14 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
     for definition in (
         LiberoBenchmarkDefinition(),
         LiberoPlusBenchmarkDefinition(),
+        LiberoProBenchmarkDefinition(),
         RoboCasaBenchmarkDefinition(),
         RoboTwinBenchmarkDefinition(),
         RoboDojoBenchmarkDefinition(),
         CalvinBenchmarkDefinition(),
         MetaworldBenchmarkDefinition(),
         RLBenchBenchmarkDefinition(),
+        RobomimicBenchmarkDefinition(),
     )
 }
 

@@ -27,6 +27,13 @@ from typing import Any
 
 from roboscope_kit.runtime.benchmarks.calvin.adapter import merge_sequence_lengths
 from roboscope_kit.runtime.benchmarks.metaworld.adapter import merge_task_results
+from roboscope_kit.runtime.benchmarks.rlbench.tasks import (
+    EPISODES_PER_TASK,
+    SUITES,
+    TASK_NAMES,
+    TASKS_BY_NAME,
+    test_episodes_sha256,
+)
 
 from .shard_validation import (
     require_count,
@@ -41,10 +48,11 @@ from .shard_validation import (
 _ADDITIVE_TABLES: dict[str, tuple[str, bool]] = {
     "libero": ("task_id", True),
     "libero_plus": ("task_id", True),
+    "libero_pro": ("task_id", True),
     "robotwin": ("task", False),
     "robocasa": ("task", False),
     "robodojo": ("task", False),
-    "rlbench": ("task", False),
+    "robomimic": ("task", False),
 }
 _SHARD_RATE_KEYS = ("elapsed_s", "steps_per_s", "episodes_per_s", "total_steps")
 
@@ -60,7 +68,10 @@ def merge_shard_results(shard_results: Sequence[Mapping[str, Any]]) -> dict[str,
     for shard in ordered:
         validate_shard_accounting(shard)
     standard = _merge_standard(ordered, shard_meta["full_total_records"])
-    official = _merge_official(identity["benchmark"], [shard["official_result"] for shard in ordered])
+    if identity["benchmark"] == "rlbench":
+        official = _merge_rlbench(ordered, identity)
+    else:
+        official = _merge_official(identity["benchmark"], [shard["official_result"] for shard in ordered])
     for shard in ordered:
         _validate_partial_counts(identity["benchmark"], shard)
     _validate_official_counts(identity["benchmark"], official, standard)
@@ -115,6 +126,95 @@ def _merge_official(benchmark: str, partials: Sequence[Mapping[str, Any]]) -> di
     if benchmark == "metaworld":
         return merge_task_results(list(partials))
     raise ValueError(f"no shard reducer for benchmark {benchmark!r}")
+
+
+def _merge_rlbench(shards: Sequence[Mapping[str, Any]], identity: Mapping[str, Any]) -> dict[str, Any]:
+    """Verify every episode and its shard before deriving the RLBench official result."""
+
+    order = identity["task_order"]
+    episodes = require_count(identity["episodes_per_task"], "episodes_per_task", minimum=1)
+    chunk_size = require_count(identity["chunk_size"], "chunk_size", minimum=1)
+    if (
+        not isinstance(order, list)
+        or not order
+        or len(order) != len(set(order))
+        or any(task not in TASKS_BY_NAME for task in order)
+        or episodes > EPISODES_PER_TASK
+        or identity.get("suite") not in SUITES
+    ):
+        raise ValueError("invalid RLBench workload identity")
+    seen: dict[str, dict[int, tuple[str, bool]]] = {task: {} for task in order}
+    positions = {task: index for index, task in enumerate(order)}
+    for shard in shards:
+        meta = shard_metadata(shard)
+        partial = shard["official_result"]
+        if partial.get("partial") is not True or partial.get("formal") is not False:
+            raise ValueError("RLBench shard must report a non-formal partial result")
+        rows = partial["tasks"]
+        if not isinstance(rows, list) or [row["task"] for row in rows] != order:
+            raise ValueError("RLBench shard task order differs from its workload")
+        states = partial["episode_states"]
+        if not isinstance(states, list):
+            raise ValueError("RLBench shard must record episode identities")
+        local: dict[str, list[bool]] = {task: [] for task in order}
+        for record in states:
+            task = record["task"]
+            episode = record["episode"]
+            digest = record["state_sha256"]
+            success = record["success"]
+            if (
+                task not in positions
+                or type(episode) is not int
+                or not 0 <= episode < episodes
+                or not isinstance(digest, str)
+                or len(digest) != 64
+                or any(char not in "0123456789abcdef" for char in digest)
+                or type(success) is not bool
+            ):
+                raise ValueError("invalid RLBench episode identity")
+            ordinal = (episode // chunk_size) * len(order) + positions[task]
+            if ordinal % meta["count"] != meta["index"]:
+                raise ValueError(f"RLBench episode {task}/{episode} is in the wrong shard")
+            if episode in seen[task]:
+                raise ValueError(f"duplicate RLBench episode {task}/{episode}")
+            seen[task][episode] = (digest, success)
+            local[task].append(success)
+        for row in rows:
+            task = row["task"]
+            reported = (
+                require_count(row["episodes"], "task episodes"),
+                require_count(row["successes"], "task successes"),
+            )
+            if reported != (len(local[task]), sum(local[task])):
+                raise ValueError(f"RLBench shard counts disagree with episode identities for {task}")
+    rows = []
+    formal = tuple(order) == TASK_NAMES and episodes == EPISODES_PER_TASK
+    if identity.get("full_profile") is not formal:
+        raise ValueError("RLBench profile identity is inconsistent")
+    for task in order:
+        task_episodes = seen[task]
+        if set(task_episodes) != set(range(episodes)):
+            raise ValueError(f"RLBench merged episodes are incomplete for {task}")
+        if formal:
+            digest = test_episodes_sha256((episode, entry[0]) for episode, entry in task_episodes.items())
+            if digest != TASKS_BY_NAME[task].test_episodes_sha256:
+                raise ValueError(f"RLBench test episode digest differs for {task}")
+        successes = sum(entry[1] for entry in task_episodes.values())
+        rows.append({
+            "task": task,
+            "episodes": episodes,
+            "successes": successes,
+            "success_rate": successes / episodes,
+        })
+    result: dict[str, Any] = {
+        "metric": "per_task_success_rate",
+        "formal": formal,
+        "tasks": rows,
+        "mean_success_rate": sum(row["success_rate"] for row in rows) / len(rows),
+    }
+    if formal:
+        result["test_episodes_verified"] = True
+    return result
 
 
 def _sum_task_tables(

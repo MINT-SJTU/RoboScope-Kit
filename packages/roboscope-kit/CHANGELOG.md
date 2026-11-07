@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b27 - 2026-11-05
+## 0.8.0b31 - 2026-11-07
 
 - Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v1`): the PerAct 18-task
   reproduction profile, not all of RLBench. Each task replays PerAct's 25 released test episodes from their
@@ -19,6 +19,47 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   than 1 cm off, `benchmarks/rlbench/peract-initial-scenes.json`.
 - Add `examples/peract/`: a Policy for the released PerAct 600k checkpoint, a runner for PerAct's own
   `eval.py`, and an episode-by-episode comparison.
+- RLBench shard reduction verifies every episode's identity and frozen state before reporting a formal result;
+  the native runner checks episode coverage and PerAct's CSV before reporting completion.
+
+## 0.8.0b30 - 2026-11-06
+
+- Add `examples/xpolicylab/compare_native.py`, which runs a Kit RoboDojo run's tasks and layouts through the
+  upstream native entry point and compares them episode by episode.
+
+## 0.8.0b29 - 2026-11-06
+
+- Add LIBERO-Pro (`--benchmark libero_pro`, protocol `libero-pro-v1`): the 16 released single-perturbation
+  suites `libero_{goal,spatial,10,object}_{object,swap,lan,task}` (Object, Position, Semantic, Task), each 10
+  tasks × 50 initial states at its base suite's horizon. `benchmarks/libero_pro/build-runtime.sh` builds
+  LIBERO-PRO `eafdb80` on CPython 3.11.18 and places the 320 task files of the `zhouxueyang/LIBERO-Pro`
+  dataset at `c86fc3b`, each checked against `task-files.sha256`. The Policy receives the instruction of the
+  perturbed BDDL file, not the file-name-derived `Task.language`, which would undo the Semantic and Task
+  perturbations. Environment and combined perturbations have no frozen files and are not supported.
+- The shared LIBERO worker gains `--max-steps` and `--instruction-source`; LIBERO and LIBERO+ keep their
+  suite horizons and `Task.language`.
+- The StarVLA example adds a `libero_pro` demo, and `starvla_policy.py` serves LIBERO-Pro with the LIBERO
+  image preprocessing.
+
+## 0.8.0b27 - 2026-11-06
+
+- The Policy socket protocol gains a MessagePack encoding: arrays travel as `bin` values with their dtype
+  and shape instead of base64 inside JSON. A RoboDojo observation with three 640×480 RGB frames takes about
+  2 ms per round trip instead of 56 ms. A client offers it in `health` and uses it only when the server
+  lists it, and the server answers each frame in the encoding it arrived in, so Policies on an older
+  roboscope-kit keep working over JSON. RoboDojo Workers prefer MessagePack; the other benchmarks still
+  use JSON. `PolicyClient` takes `encoding=` (default `ROBOSCOPE_POLICY_ENCODING`, else `json`), and
+  `msgpack>=1.0.8,<2` is now a dependency.
+
+## 0.8.0b26 - 2026-11-05
+
+- Add the `robomimic` benchmark with the `ph_low_dim` suite (protocol `robomimic-v1`): the robomimic v0.1
+  Lift, Can, Square, Transport, and Tool Hang tasks with low-dimensional observations, 50 seeded episodes
+  per task, the checkpoints' rollout horizons, and upstream `run_trained_agent.py` rollout semantics.
+  `benchmarks/robomimic/build-runtime.sh` builds the pinned CPython 3.11 environment (robomimic v0.4.0,
+  robosuite v1.4.1, MuJoCo 2.3.7, torch 2.4.1) and verifies the frozen initial-state digests of every task.
+- Add `examples/robomimic/`, a Policy for the five robomimic v0.1 model-zoo PH low-dim BC-RNN checkpoints,
+  with a checksum-verifying downloader and a per-seed comparison against upstream `run_trained_agent.py`.
 
 ## 0.8.0b25 - 2026-11-05
 

@@ -88,3 +88,5 @@ keep.
    ```
 
    `run_native.py` runs all 18 tasks in one process, as PerAct's README does; `--task` selects a subset.
+   It reports success only after the episode identities and per-task success rates agree with PerAct's CSV;
+   an incomplete native child run fails.

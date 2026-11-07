@@ -131,7 +131,7 @@ YARR_COMMIT="8d0f2e228b97efa207eeccedfc6dac9334342ba3"
 PERACT_URL="https://github.com/peract/peract.git"
 PERACT_COMMIT="02fb87681c5a47be9dbf20141bedb836ee2d3ef9"
 
-for pin in "torch==" "numpy==" "cffi==" "clip @ git+https://github.com/openai/CLIP.git@"; do
+for pin in "torch==" "numpy==" "msgpack==" "cffi==" "clip @ git+https://github.com/openai/CLIP.git@"; do
   grep -qF "${pin}" "${LOCK}" || {
     echo "RLBench runtime lock must pin ${pin}" >&2
     exit 3
@@ -251,7 +251,8 @@ from importlib.metadata import version
 from pathlib import Path
 
 source_root = Path(sys.argv[1])
-for name, locked in (("numpy", "1.26.4"), ("torch", "2.4.1"), ("pyrep", "4.1.0.3"), ("rlbench", "1.2.0")):
+for name, locked in (("numpy", "1.26.4"), ("msgpack", "1.2.4"), ("torch", "2.4.1"),
+                     ("pyrep", "4.1.0.3"), ("rlbench", "1.2.0")):
     actual = version(name)
     if actual != locked:
         raise SystemExit(f"RLBench runtime {name} is {actual}, expected {locked}")

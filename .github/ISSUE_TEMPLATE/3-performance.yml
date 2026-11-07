@@ -18,12 +18,14 @@ body:
       options:
         - LIBERO
         - LIBERO-Plus
+        - LIBERO-Pro
         - RoboTwin
         - RoboDojo
         - RoboCasa
         - CALVIN
         - MetaWorld
         - RLBench
+        - robomimic
         - Not benchmark-specific
     validations:
       required: true
