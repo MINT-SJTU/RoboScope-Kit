@@ -206,6 +206,10 @@ def _preflight_evaluation(
         raise ValueError("--episodes must be positive")
     if args.quick_test and args.shard_index is not None:
         raise ValueError("--quick-test cannot be combined with sharding")
+    if benchmark is BenchmarkName.RLBENCH and args.shard_index is not None:
+        raise ValueError(
+            "RLBench sharding is unavailable until policy identity can be verified; run unsharded"
+        )
     fixed = args.concurrency is not None or args.replicas is not None
     if fixed:
         if args.concurrency is None or args.replicas is None:

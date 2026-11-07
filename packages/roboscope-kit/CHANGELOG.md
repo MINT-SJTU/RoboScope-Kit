@@ -2,6 +2,27 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b31 - 2026-11-07
+
+- Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v1`): the PerAct 18-task
+  reproduction profile, not all of RLBench. Each task replays PerAct's 25 released test episodes from their
+  stored variation and random state, with PerAct's four 128x128 cameras (RGB, depth, point cloud, and
+  calibration), low-dimensional state, the instruction, and key-frame end-effector actions executed by
+  RLBench's motion planner (`rlbench.ee-pose-planning-v1`, 9 `float64` values), for at most 25 actions.
+  `benchmarks/rlbench/build-runtime.sh` builds CoppeliaSim Edu 4.1, PyRep, the PerAct RLBench and YARR
+  forks, PerAct, and the test split on CPython 3.11 after the user accepts the CoppeliaSim Edu and RLBench
+  licences by passing `--accept-licenses`, and checks every task's test episodes against frozen digests.
+  Each episode is reset once from its stored state, as PerAct's `eval.py` does. Records carry
+  `initial_scene_position_error_m`, which compares the scene with the recorded first frame object by object
+  (by handle, over the object list captured when the task is loaded). The build resets each of the 450 test
+  episodes on a freshly loaded task and compares the result with the frozen list of episodes that start more
+  than 1 cm off, `benchmarks/rlbench/peract-initial-scenes.json`.
+- Add `examples/peract/`: a Policy for the released PerAct 600k checkpoint, a runner for PerAct's own
+  `eval.py`, and an episode-by-episode comparison.
+- RLBench sharding is disabled until cross-shard Policy and checkpoint identity can be verified; the native
+  runner checks episode coverage and PerAct's CSV before reporting completion, and native comparison rejects
+  missing or mismatched test-episode inputs.
+
 ## 0.8.0b30 - 2026-11-06
 
 - Add `examples/xpolicylab/compare_native.py`, which runs a Kit RoboDojo run's tasks and layouts through the
