@@ -1,0 +1,8 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/path/to/envs/starVLA/bin/python",
+    "/path/to/RoboScope-Kit/examples/starvla/starvla_robocasa_policy.py"
+  ],
+  "cwd": "/path/to/starVLA"
+}

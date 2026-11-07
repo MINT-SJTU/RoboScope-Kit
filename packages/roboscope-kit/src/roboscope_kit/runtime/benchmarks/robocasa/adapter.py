@@ -195,6 +195,7 @@ class RoboCasaBenchmarkAdapter:
                 "OPENBLAS_NUM_THREADS": threads,
                 "NUMEXPR_NUM_THREADS": threads,
                 "TOKENIZERS_PARALLELISM": "false",
+                "ROBOSCOPE_POLICY_ENCODING": os.environ.get("ROBOSCOPE_POLICY_ENCODING", "msgpack"),
                 # Upstream novel-task generation hashes class names at import.
                 "PYTHONHASHSEED": str(self.config.seed),
                 "PYTHONDONTWRITEBYTECODE": "1",

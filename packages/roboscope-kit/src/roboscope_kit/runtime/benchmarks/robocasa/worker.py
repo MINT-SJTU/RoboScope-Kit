@@ -221,6 +221,7 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
                         "env_name": env_name,
                         "episode_index": episode_index,
                         "seed": episode_seed,
+                        "policy_encoding": client.encoding,
                         "python_hash_seed": os.environ.get("PYTHONHASHSEED"),
                         "reset_s": reset_s,
                         "policy_s": policy_s,

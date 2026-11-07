@@ -5,7 +5,7 @@ checkpoint:
   repo: StarVLA/Qwen3-VL-OFT-Robocasa
   revision: 30ec4b5c5c8ffbb3ad651b2ab53b30714c8c2fd4
 starvla_revision: 985c2238627481f25476fbee478083812dd82a21
-policy: starvla_policy.py
+policy: starvla_robocasa_policy.py
 # Merged into the checkpoint's config.yaml.
 config:
   framework:
