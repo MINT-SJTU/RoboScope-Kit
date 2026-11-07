@@ -158,6 +158,7 @@ def observation_config():
         gripper_open=True,
         gripper_matrix=True,
         gripper_joint_positions=True,
+        record_ignore_collisions=True,
     )
 
 
@@ -341,12 +342,13 @@ def build_observation(
             getattr(observation, f"{camera}_point_cloud"), dtype=np.float32
         )
         features[f"state.{camera}_camera_extrinsics"] = np.asarray(
-            misc[f"{camera}_camera_extrinsics"], dtype=np.float32
+            misc[f"{camera}_camera_extrinsics"], dtype=np.float64
         )
         features[f"state.{camera}_camera_intrinsics"] = np.asarray(
-            misc[f"{camera}_camera_intrinsics"], dtype=np.float32
+            misc[f"{camera}_camera_intrinsics"], dtype=np.float64
         )
     features["state.gripper_open"] = np.asarray([observation.gripper_open], dtype=np.float32)
+    features["state.ignore_collisions"] = np.asarray([observation.ignore_collisions], dtype=np.float32)
     for name in ("gripper_joint_positions", "gripper_pose", "joint_positions", "joint_velocities"):
         features[f"state.{name}"] = np.asarray(getattr(observation, name), dtype=np.float32)
     return Observation(episode_id=episode_id, step=step, timestamp_s=time.time(), features=features)

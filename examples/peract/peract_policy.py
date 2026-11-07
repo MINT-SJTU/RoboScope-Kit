@@ -17,7 +17,8 @@ Everything model-specific stays here, as PerAct's ``eval.py`` does it:
   ``low_dim_state`` of PerAct's environment wrapper (gripper open, finger positions clipped to
   [0, 0.04], and the time feature ``(1 - i / (episode_length - 1)) * 2 - 1`` with ``i`` the
   wrapper's step counter as ``eval.py`` reads it, ``max(t - 1, 0)`` before action ``t``), and the CLIP
-  tokens of the instruction, each with batch and time dimensions of one;
+  tokens of the instruction and collision-ignore flag, each with batch and time dimensions of one.
+  YARR converts camera calibration matrices to float32 on reset and retains float64 on later steps;
 - the voxelization, the Perceiver, and the arg-max over translation, rotation, gripper, and
   collision classes are PerAct's own ``act``, called with ``deterministic=True``.
 
@@ -60,6 +61,7 @@ REQUIRED_FEATURES = (
     ),
     "state.gripper_open",
     "state.gripper_joint_positions",
+    "state.ignore_collisions",
     "language.instruction",
 )
 # PerAct's CustomMultiTaskRLBenchEnv clips the finger positions to this range.
@@ -131,16 +133,18 @@ class PerActPolicy(Policy):
             raise RuntimeError(f"PerAct action requested for unknown episode {observation.episode_id}")
         features = observation.features
         obs: dict[str, np.ndarray] = {}
+        # YARR casts float64 observations at reset but not when appending later steps.
+        calibration_dtype = np.float32 if observation.step == 0 else np.float64
         for camera in CAMERAS:
             obs[f"{camera}_rgb"] = np.transpose(features[f"images.{camera}"], (2, 0, 1))
             obs[f"{camera}_point_cloud"] = np.transpose(
                 features[f"state.{camera}_point_cloud"], (2, 0, 1)
             ).astype(np.float32)
             obs[f"{camera}_camera_extrinsics"] = features[f"state.{camera}_camera_extrinsics"].astype(
-                np.float32
+                calibration_dtype
             )
             obs[f"{camera}_camera_intrinsics"] = features[f"state.{camera}_camera_intrinsics"].astype(
-                np.float32
+                calibration_dtype
             )
         # PerAct's wrapper computes the time feature from its step counter before incrementing it
         # (CustomMultiTaskRLBenchEnv.step calls extract_obs, then self._i += 1), so the observation
@@ -155,6 +159,7 @@ class PerActPolicy(Policy):
             ]
         ).astype(np.float32)
         obs["lang_goal_tokens"] = self.tokenize([features["language.instruction"]])[0].numpy()
+        obs["ignore_collisions"] = features["state.ignore_collisions"]
         torch = self._torch
         # RolloutGenerator: torch.tensor([history]) with a one-step history -> (1, 1, ...).
         prepped = {key: torch.tensor(np.asarray([[value]]), device=self.device) for key, value in obs.items()}

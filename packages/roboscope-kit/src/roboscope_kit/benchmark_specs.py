@@ -59,12 +59,14 @@ def _feature(
     *,
     required: bool = True,
     shape: tuple[int | None, ...] | None = None,
+    dtype: str | None = None,
 ) -> FeatureSpec:
-    dtype = {
-        FeatureKind.IMAGE: "uint8",
-        FeatureKind.STATE: "float32",
-        FeatureKind.LANGUAGE: "string",
-    }[kind]
+    if dtype is None:
+        dtype = {
+            FeatureKind.IMAGE: "uint8",
+            FeatureKind.STATE: "float32",
+            FeatureKind.LANGUAGE: "string",
+        }[kind]
     return FeatureSpec(
         name=name,
         kind=kind,
@@ -365,12 +367,14 @@ class RLBenchBenchmarkDefinition(BenchmarkDefinition):
                         FeatureKind.STATE,
                         f"RLBench {label} camera-to-world pose as a 4x4 matrix.",
                         shape=(4, 4),
+                        dtype="float64",
                     ),
                     _feature(
                         f"state.{camera}_camera_intrinsics",
                         FeatureKind.STATE,
                         f"RLBench {label} camera intrinsic matrix.",
                         shape=(3, 3),
+                        dtype="float64",
                     ),
                 )
             )
@@ -380,6 +384,12 @@ class RLBenchBenchmarkDefinition(BenchmarkDefinition):
                 "state.gripper_open",
                 FeatureKind.STATE,
                 "Gripper open state: 1.0 open, 0.0 closed.",
+                shape=(1,),
+            ),
+            _feature(
+                "state.ignore_collisions",
+                FeatureKind.STATE,
+                "RLBench observation's current-waypoint collision-ignore flag.",
                 shape=(1,),
             ),
             _feature(

@@ -180,18 +180,21 @@ anyway, so rendering and point clouds are unchanged. Every observation carries, 
 | `images.<camera>` | `(128, 128, 3)`, `uint8` | `<camera>_rgb` |
 | `state.<camera>_depth` | `(128, 128)`, `float32` | `<camera>_depth` converted to metres with the camera's near and far planes |
 | `state.<camera>_point_cloud` | `(128, 128, 3)`, `float32` | `<camera>_point_cloud`: world-frame x, y, z in metres per pixel |
-| `state.<camera>_camera_extrinsics` | `(4, 4)`, `float32` | `misc["<camera>_camera_extrinsics"]` (camera-to-world) |
-| `state.<camera>_camera_intrinsics` | `(3, 3)`, `float32` | `misc["<camera>_camera_intrinsics"]` |
+| `state.<camera>_camera_extrinsics` | `(4, 4)`, `float64` | `misc["<camera>_camera_extrinsics"]` (camera-to-world) |
+| `state.<camera>_camera_intrinsics` | `(3, 3)`, `float64` | `misc["<camera>_camera_intrinsics"]` |
 | `state.gripper_open` | `(1,)`, `float32` | `gripper_open` (1 open, 0 closed) |
+| `state.ignore_collisions` | `(1,)`, `float32` | `ignore_collisions` for the current waypoint |
 | `state.gripper_joint_positions` | `(2,)`, `float32` | `gripper_joint_positions`, unclipped |
 | `state.gripper_pose` | `(7,)`, `float32` | `gripper_pose`: x, y, z, qx, qy, qz, qw |
 | `state.joint_positions`, `state.joint_velocities` | `(7,)`, `float32` | Panda arm joints |
 | `language.instruction` | string | `get_task_descriptions()[0]` (section 5) |
 
 `<camera>` is each of the four cameras. `step` counts the actions executed so far, from 0. PerAct's
-`float32` conversions happen in YARR's rollout loop; doing them in the worker gives the Policy the same
-values. PerAct's own preprocessing (clipping the finger positions to `[0, 0.04]`, its time feature, and CLIP
-tokens) stays in the Policy. PerAct's time feature lags one action behind `step`: its environment wrapper
+YARR converts `float64` inputs to `float32` when initializing its observation history, but appends later
+observations without that conversion. The example Policy therefore converts the camera matrices to `float32`
+on the first action and retains `float64` on later actions. PerAct's own preprocessing (clipping the finger
+positions to `[0, 0.04]`, its time feature, and CLIP tokens) stays in the Policy. PerAct's time feature lags
+one action behind `step`: its environment wrapper
 extracts the observation after an action before incrementing its step counter, so in `eval.py` the agent sees
 the counter value `max(step - 1, 0)`, the same value at its first and second action. The example Policy
 reproduces this; a Policy computing PerAct's feature from `step` itself gets a different input from the

@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b32 - 2026-11-07
+## 0.8.0b33 - 2026-11-07
 
 - Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v1`): the PerAct 18-task
   reproduction profile, not all of RLBench. Each task replays PerAct's 25 released test episodes from their
@@ -22,6 +22,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - RLBench sharding is disabled until cross-shard Policy and checkpoint identity can be verified; the native
   runner checks episode coverage and PerAct's single-task or multi-task CSV metrics before reporting completion,
   and native comparison rejects missing or mismatched test-episode inputs.
+- Preserve RLBench camera calibration precision and the collision-ignore observation so the PerAct Policy
+  reproduces YARR's initial and subsequent input preparation.
 
 ## 0.8.0b30 - 2026-11-06
 
