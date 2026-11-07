@@ -148,20 +148,41 @@ and neither can be combined with `--quick-test` or `--autotune-strategy`.
 
 ### Profiling
 
-Add `--profile` to `--quick-test` or to a fixed `--concurrency K --replicas G` run to see where a Worker's
-time goes. Each Worker then runs under Nsight Systems, and its first episode is written to
+Add `--profile` to `--quick-test` or to a fixed `--concurrency K --replicas G` run for a short performance
+diagnostic. Each Worker then runs under Nsight Systems, and its first episode is written to
 `<output-dir>/profile/worker-<id>-attempt-<n>.nsys-rep`. The report holds the CUDA kernels and API calls of the
 Worker and its child processes, with NVTX ranges for the episode and each Policy request (`policy.act`,
-`policy.observe`). Open it in Nsight Systems or summarize it with `nsys stats`.
+`policy.observe`). CALVIN's first episode is its first subtask, rather than a complete five-task sequence.
+Every Policy Server is also captured from launch through unload in
+`<output-dir>/profile/policy-<id>-attempt-<n>.nsys-rep`, including model loading, CUDA inference, server
+queue/service spans and the actual Policy method. Restarted replicas have distinct attempt numbers.
+Open these reports in Nsight Systems or summarize them with `nsys stats`.
 
 Profiling needs Nsight Systems on the machine that runs the evaluation, which the Kit does not install.
 Install its CLI from [NVIDIA](https://developer.nvidia.com/nsight-systems/get-started) so that `nsys` is on
 `PATH`; it was checked with 2026.5.1. Without `nsys`, `--profile` stops before any Worker starts.
 
-The ranges are written through Nsight Systems' own injection library, so no environment needs an extra
-package, and without `--profile` nothing is loaded. Capture starts when the Worker's `PolicyClient` resets an
-episode, so benchmarks with their own client, such as RoboTwin, record nothing yet. Tracing slows the run, so
-`manifest.json` records `"profile": true`, and such a run is not a throughput measurement.
+SDK ranges use Nsight Systems' injection library. RoboTwin retains its independent socket client and
+uses Torch NVTX already available in its simulator to mark episodes, requests and simulation calls,
+without importing the Kit there. No environment needs the separate `nvtx` package. Worker capture starts
+at reset; Policy capture covers its complete lifetime. The spans are inclusive host durations and do not
+force GPU synchronization. CUDA/NVTX tracing excludes Vulkan/OpenGL GPU rendering, CPU sampling and
+SM/Tensor/RT throughput counters; captured CUDA time is not whole-GPU busy time. Tracing and full-lifetime
+Policy capture add overhead and can produce large files, so `manifest.json` records `"profile": true` and
+profiled throughput must be kept separate from unprofiled measurements.
+
+For device-wide hardware counters, request `--profile-gpu-metrics METRIC_SET`, for example
+`--profile-gpu-metrics ad10x-gfxt` on a host whose Nsight installation supports that set.
+`--profile-gpu-metrics-frequency HZ` accepts 10–200000 Hz and defaults to 10000 Hz. This runs one
+evaluation-level collector across the selected GPUs, independently of `--profile`, fixed K/g or
+autotune, and leaves `--cuda-mps` behavior unchanged. It samples all GPU processes, not individual
+Workers. The request and actual availability are recorded in `result.json` under `gpu_metrics` and in
+`<output-dir>/profile/gpu-metrics.json`, with commands, logs, tool version and report/export paths.
+`manifest.json` records the requested `gpu_metrics` settings and `diagnostic_profile: true`, even when
+Worker/Policy `--profile` tracing is off.
+Availability requires actual exported `GPU_METRICS` samples. Missing tools, unsupported sets or denied
+permissions warn and mark collection unavailable while evaluation continues; the Kit changes no
+counter permissions. Use short diagnostics, since successful sampling may affect evaluation timings.
 
 How to read the reports, which benchmarks are covered, and the findings so far are in the
 [profiling notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/profiling.md).
