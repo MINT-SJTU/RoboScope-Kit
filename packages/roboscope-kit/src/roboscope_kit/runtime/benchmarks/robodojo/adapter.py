@@ -31,6 +31,7 @@ class RoboDojoRuntimeConfig:
     control_state_reuse: bool = False
     physics_threads: int | None = None
     observation_queue_size: int = 0
+    envs_per_worker: int = 1
 
     def __post_init__(self) -> None:
         if self.suite not in SUITES:
@@ -51,6 +52,10 @@ class RoboDojoRuntimeConfig:
             raise ValueError("RoboDojo physics_threads must be null, 1, 4 or 8")
         if type(self.observation_queue_size) is not int or not 0 <= self.observation_queue_size <= 10:
             raise ValueError("RoboDojo observation_queue_size must be an integer from 0 to 10")
+        if type(self.envs_per_worker) is not int or not 1 <= self.envs_per_worker <= 10:
+            raise ValueError("RoboDojo envs_per_worker must be an integer from 1 to 10")
+        if self.envs_per_worker > 1 and self.observation_queue_size:
+            raise ValueError("RoboDojo observation_queue_size requires envs_per_worker 1")
         for task, count in self.episodes.items():
             if type(count) is not int or not 1 <= count <= TASK_EPISODES[task]:
                 raise ValueError(f"invalid episode count for RoboDojo task {task!r}: {count!r}")
@@ -90,6 +95,7 @@ class RoboDojoBenchmarkAdapter:
                 "--policy-socket", str(context.replica_socket),
                 "--action-representation", context.execution_contract.action_representation,
                 "--observation-queue-size", str(self.config.observation_queue_size),
+                "--observation-stride", str(context.execution_contract.observation_stride),
                 *(("--step-observation-updates",)
                   if context.execution_contract.step_observation_updates else ()),
                 "--benchmark-python", str(self.config.python),
@@ -102,6 +108,7 @@ class RoboDojoBenchmarkAdapter:
                 *(("--control-state-reuse",) if self.config.control_state_reuse else ()),
                 *(("--physics-threads", str(self.config.physics_threads))
                   if self.config.physics_threads is not None else ()),
+                "--envs-per-worker", str(self.config.envs_per_worker),
             ),
             cwd=self.config.benchmark_root,
             env={
@@ -146,6 +153,7 @@ class RoboDojoBenchmarkAdapter:
                 "control_state_reuse": self.config.control_state_reuse,
                 "physics_threads": self.config.physics_threads,
                 "observation_queue_size": self.config.observation_queue_size,
+                "envs_per_worker": self.config.envs_per_worker,
             },
             "bound_hint": "gpu_infer",
         }

@@ -1,12 +1,19 @@
 # Copyright 2026 RoboScope Team
 # SPDX-License-Identifier: Apache-2.0
 
-"""RoboDojo's single-environment evaluation loop for a RoboScope Policy."""
+"""RoboDojo's evaluation loops for a RoboScope Policy.
+
+``eval_one_episode`` runs one environment. ``eval_one_episode_batch`` runs RoboDojo's
+lockstep multi-environment batch (``--num_envs N``), with one Kit episode per
+environment and each environment's action chunks, step observations and episode end
+handled exactly as in the single-environment loop.
+"""
 
 from __future__ import annotations
 
 import os
 import time
+from collections import deque
 
 import numpy as np
 
@@ -79,31 +86,39 @@ def _action(row, representation):
     raise ValueError(f"unsupported RoboDojo action representation: {representation!r}")
 
 
+def _chunk(actions):
+    actions = np.asarray(actions, dtype=np.float32)
+    if actions.ndim == 1:
+        actions = actions[None, :]
+    if actions.ndim != 2 or actions.shape[0] == 0 or actions.shape[1] != 14:
+        raise ValueError("RoboDojo Policy returned an invalid action chunk")
+    return actions
+
+
 def eval_one_episode(TASK_ENV, model_client):
     task = str(TASK_ENV.task_name)
     layout_id = int(TASK_ENV.env_seeds[0])
     representation = os.environ["ROBOSCOPE_ROBODOJO_ACTION_REPRESENTATION"]
     step_updates = os.environ.get("ROBOSCOPE_ROBODOJO_STEP_UPDATES") == "1"
+    stride = int(os.environ.get("ROBOSCOPE_ROBODOJO_OBSERVATION_STRIDE", "1"))
     episode_id = model_client.begin_episode(task, layout_id)
     started = time.monotonic()
     try:
         while not TASK_ENV.is_episode_end():
             step = int(TASK_ENV.take_action_cnt[0])
             observation = _observation(episode_id, step, TASK_ENV.get_obs())
-            actions = np.asarray(model_client.act(observation), dtype=np.float32)
-            if actions.ndim == 1:
-                actions = actions[None, :]
-            if actions.ndim != 2 or actions.shape[0] == 0 or actions.shape[1] != 14:
-                raise ValueError("RoboDojo Policy returned an invalid action chunk")
+            actions = _chunk(model_client.act(observation))
             for index, action in enumerate(actions):
                 TASK_ENV.take_action(_action(action, representation))
                 if TASK_ENV.is_episode_end():
                     break
                 if step_updates and index + 1 < len(actions):
-                    observation = _observation(
-                        episode_id, int(TASK_ENV.take_action_cnt[0]), TASK_ENV.get_obs()
-                    )
-                    model_client.observe(observation)
+                    # get_obs() also renders and writes the video frame, so it runs on every
+                    # step; the stride only skips delivering the observation to the Policy.
+                    raw = TASK_ENV.get_obs()
+                    step = int(TASK_ENV.take_action_cnt[0])
+                    if step % stride == 0:
+                        model_client.observe(_observation(episode_id, step, raw))
     except BaseException as primary:
         try:
             model_client.end_episode()
@@ -114,3 +129,58 @@ def eval_one_episode(TASK_ENV, model_client):
         TASK_ENV._roboscope_episode_elapsed_s = time.monotonic() - started
     if model_client.episode_id:
         model_client.end_episode()
+
+
+def eval_one_episode_batch(TASK_ENV, model_client):
+    """Run one lockstep batch of RoboDojo environments, one Kit episode each.
+
+    Every running environment requests a new chunk when its previous one is used up
+    and, with step updates, sends the observations between a chunk's actions, in the
+    same order as ``eval_one_episode``. An environment's episode ends as soon as it
+    terminates, while the others continue.
+    """
+    if TASK_ENV.num_envs == 1:
+        eval_one_episode(TASK_ENV, model_client)
+        return
+    task = str(TASK_ENV.task_name)
+    representation = os.environ["ROBOSCOPE_ROBODOJO_ACTION_REPRESENTATION"]
+    step_updates = os.environ.get("ROBOSCOPE_ROBODOJO_STEP_UPDATES") == "1"
+    stride = int(os.environ.get("ROBOSCOPE_ROBODOJO_OBSERVATION_STRIDE", "1"))
+    model_client.end_episode()
+    episodes = {}
+    started = time.monotonic()
+    try:
+        for env_idx in TASK_ENV.get_running_env_idx_list():
+            episodes[env_idx] = model_client.open_episode(task, int(TASK_ENV.env_seeds[env_idx]))
+        chunks = {env_idx: deque() for env_idx in episodes}
+        while not TASK_ENV.is_episode_end():
+            running = [env_idx for env_idx in TASK_ENV.get_running_env_idx_list() if env_idx in episodes]
+            if not running:
+                raise RuntimeError("RoboDojo batch has running environments without an episode")
+            observed = [env_idx for env_idx in running if not chunks[env_idx] or step_updates]
+            rows = dict(zip(observed, TASK_ENV.get_obs_batch(observed), strict=True)) if observed else {}
+            for env_idx in running:
+                if env_idx not in rows:
+                    continue
+                step = int(TASK_ENV.take_action_cnt[env_idx])
+                observation = _observation(episodes[env_idx], step, rows[env_idx])
+                if not chunks[env_idx]:
+                    chunks[env_idx].extend(_chunk(model_client.act(observation)))
+                elif step % stride == 0:
+                    model_client.observe(observation)
+            TASK_ENV.take_action_batch(
+                [_action(chunks[env_idx].popleft(), representation) for env_idx in running], running
+            )
+            for env_idx in running:
+                if TASK_ENV.end_flag[env_idx]:
+                    chunks[env_idx].clear()
+                    model_client.end_episode(episodes.pop(env_idx))
+    except BaseException as primary:
+        try:
+            model_client.end_episode()
+        except BaseException as cleanup:
+            raise primary from cleanup
+        raise
+    finally:
+        TASK_ENV._roboscope_episode_elapsed_s = time.monotonic() - started
+    model_client.end_episode()

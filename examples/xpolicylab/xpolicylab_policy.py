@@ -106,10 +106,28 @@ def _action_row(action: dict, action_type: str) -> np.ndarray:
     return np.concatenate(parts)
 
 
+def _strided_history_interval(config: dict, stride: int) -> int:
+    """History interval in delivered observations, for a model that reads only every ``stride``-th one.
+
+    The model reads the newest observation when it infers, at the start of each chunk, and history
+    frames ``history_interval`` control steps apart. If both are multiples of ``stride``, the skipped
+    observations are never read and the model sees exactly the same inputs.
+    """
+
+    chunk, interval = config.get("exec_chunk_size"), config.get("history_interval")
+    if not isinstance(chunk, int) or not isinstance(interval, int) or chunk % stride or interval % stride:
+        raise ValueError(
+            f"--observation-stride {stride} requires exec_chunk_size and history_interval divisible by it; "
+            f"got {chunk} and {interval}"
+        )
+    return interval // stride
+
+
 class XPolicyLabPolicy(Policy):
-    def __init__(self, policy_name: str, action_type: str | None) -> None:
+    def __init__(self, policy_name: str, action_type: str | None, observation_stride: int = 1) -> None:
         self.policy_name = policy_name
         self.action_type = action_type
+        self.observation_stride = observation_stride
         self.model = None
         self.scoped = False
         self.active_episode = ""
@@ -142,6 +160,8 @@ class XPolicyLabPolicy(Policy):
             action_type=action_type,
             checkpoint_path=context.checkpoint_path,
         )
+        if self.observation_stride > 1:
+            config["history_interval"] = _strided_history_interval(config, self.observation_stride)
         model_class = importlib.import_module(f"XPolicyLab.policy.{self.policy_name}.model").Model
         self.model = model_class(config)
         self.action_type = action_type
@@ -156,6 +176,7 @@ class XPolicyLabPolicy(Policy):
             else tuple(range(1, MAX_CHUNK + 1)),
             action_representations={BENCHMARK: ACTION_REPRESENTATIONS[action_type]},
             step_observation_updates=(BENCHMARK,),
+            observation_strides={BENCHMARK: self.observation_stride},
         )
 
     def _scope(self, episode_id: str) -> dict:
@@ -199,11 +220,15 @@ def main() -> None:
     parser.add_argument("--policy", required=True, help="XPolicyLab policy directory name, e.g. Simate_beta")
     parser.add_argument("--action-type", choices=tuple(ACTION_REPRESENTATIONS),
                         help="defaults to the policy's deploy.yml action_type, else joint")
+    parser.add_argument("--observation-stride", type=int, default=1,
+                        help="deliver every Nth control-step observation; see the README")
     args = parser.parse_args()
+    if args.observation_stride < 1:
+        parser.error("--observation-stride must be positive")
 
     from roboscope_kit.server import run  # noqa: PLC0415
 
-    run(XPolicyLabPolicy(args.policy, args.action_type))
+    run(XPolicyLabPolicy(args.policy, args.action_type, args.observation_stride))
 
 
 if __name__ == "__main__":

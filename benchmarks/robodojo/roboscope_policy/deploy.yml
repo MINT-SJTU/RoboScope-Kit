@@ -1,3 +1,4 @@
 policy_name: RoboScopeKit
 protocol: ws
-eval_batch: false
+# The Worker chooses --num_envs; one environment runs eval_one_episode unchanged.
+eval_batch: true

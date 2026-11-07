@@ -206,6 +206,10 @@ RoboTwin accepts a positive observation stride. The default is 1, so every new a
 observation. Randomized lighting, the viewer, video logging, and point-cloud observations always render
 every step, whatever stride you declare.
 
+RoboDojo accepts a positive observation stride too. It applies to `step_observation_updates`: `observe()`
+receives every Nth control-step observation, and `act()` still receives the first observation of each chunk.
+Rendering and video always run on every step.
+
 Concurrency (`K`) and replica count (`g`) are not capabilities; the runtime chooses them, or you fix them
 with `--concurrency` and `--replicas` (see [Automatic tuning](#automatic-tuning-kg)).
 

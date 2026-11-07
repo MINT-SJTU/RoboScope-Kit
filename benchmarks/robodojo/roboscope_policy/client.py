@@ -14,11 +14,17 @@ from roboscope_kit import EpisodeContext, PolicyClient
 
 
 class WsModelClient:
-    """RoboDojo client interface backed by the kit's local Policy protocol."""
+    """RoboDojo client interface backed by the kit's local Policy protocol.
+
+    Each RoboDojo environment slot runs its own Kit episode. With one environment
+    (the default) there is at most one open episode; a multi-environment batch
+    opens one episode per environment and ends each one independently.
+    """
 
     def __init__(self, **_kwargs):
         self.socket_path = os.environ["ROBOSCOPE_INFERENCE_SOCKET"]
         self.episode_id = ""
+        self.episodes: list[str] = []
         self.queue_size = int(os.environ.get("ROBOSCOPE_ROBODOJO_OBSERVATION_QUEUE_SIZE", "0"))
         if not 0 <= self.queue_size <= 10:
             raise ValueError("RoboDojo observation queue size must be between 0 and 10")
@@ -32,6 +38,12 @@ class WsModelClient:
 
     def begin_episode(self, task, layout_id):
         self.end_episode()
+        episode_id = self.open_episode(task, layout_id)
+        self.episode_id = episode_id
+        return episode_id
+
+    def open_episode(self, task, layout_id):
+        """Start one more concurrent episode, for a multi-environment batch."""
         episode_id = f"robodojo-{uuid.uuid4()}"
         with PolicyClient(self.socket_path, timeout_s=900) as client:
             client.reset(EpisodeContext(
@@ -39,7 +51,7 @@ class WsModelClient:
                 task_id=task,
                 metadata={"layout_id": layout_id},
             ))
-        self.episode_id = episode_id
+        self.episodes.append(episode_id)
         return episode_id
 
     def act(self, observation):
@@ -66,20 +78,40 @@ class WsModelClient:
         while self.pending:
             self.pending.popleft().result()
 
-    def end_episode(self):
-        if self.episode_id:
-            episode_id, self.episode_id = self.episode_id, ""
+    def end_episode(self, episode_id=None):
+        """End one episode, or every open episode when no ID is given."""
+        if episode_id is None:
+            targets = list(self.episodes)
+        elif episode_id in self.episodes:
+            targets = [episode_id]
+        else:
+            return
+        if not targets:
+            return
+        for target in targets:
+            self.episodes.remove(target)
+        if self.episode_id in targets:
+            self.episode_id = ""
+        try:
+            self._flush()
+        except BaseException as primary:
             try:
-                self._flush()
-            except BaseException as primary:
-                try:
-                    with PolicyClient(self.socket_path, timeout_s=900) as client:
-                        client.end_episode(episode_id)
-                except BaseException as cleanup:
-                    raise primary from cleanup
-                raise
-            with PolicyClient(self.socket_path, timeout_s=900) as client:
-                client.end_episode(episode_id)
+                self._end(targets)
+            except BaseException as cleanup:
+                raise primary from cleanup
+            raise
+        self._end(targets)
+
+    def _end(self, episode_ids):
+        failure = None
+        for episode_id in episode_ids:
+            try:
+                with PolicyClient(self.socket_path, timeout_s=900) as client:
+                    client.end_episode(episode_id)
+            except BaseException as exc:
+                failure = failure or exc
+        if failure is not None:
+            raise failure
 
     def close(self):
         try:

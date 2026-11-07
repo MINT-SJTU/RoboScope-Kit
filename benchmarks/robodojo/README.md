@@ -17,6 +17,8 @@ The `arx_x5` suite contains the 42 base simulation tasks at the pinned RoboDojo 
 upstream default of 25 or 50 layouts and uses seed 1. `--episodes` can request a smaller common prefix;
 requests above an upstream task limit are rejected. Work is divided into non-overlapping fixed-layout
 shards. A shard missing a layout or returning incomplete results fails rather than reporting a partial run.
+If retrying missing layouts would reduce the simulator's environment count, the shard fails rather than
+mixing results from different environment counts. Each episode records the evaluator's `--num_envs` argument.
 
 The Policy receives `images.head`, `images.left_wrist`, and `images.right_wrist` as RGB uint8 arrays,
 `language.instruction` as a string, and `state.joints` as 14 float32 values ordered as six left-arm joints,
@@ -73,3 +75,52 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
   earlier manual `nsys` measurement of about 11%.
 - **Next steps:** enable CPU sampling in the Kit's `nsys` arguments (currently `--sample=none`) to find where the
   CPU time goes, and profile again with a real Policy to include its cost.
+
+## Throughput
+
+Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18); repeats, the autotune comparison and the
+MessagePack-only ablation are still running, and the numbers below may change.
+
+### 2026-11-07: `Simate_beta` (compute-bound VLA)
+
+- **Machine:** AutoDL, RTX 4090 48 GB, a 20-CPU cgroup quota on a host that reports 208 cores.
+- **Workload:** the #17 scope, `arx_x5`, 42 tasks × 3 layouts = 126 episodes, the same layouts in every run.
+- **Configurations:** the baseline is the #17 Kit default (autotune chose K=2, G=1) on 0.8.0b26 with JSON
+  Policy messages. The other runs use 0.8.0b31 with MessagePack, K=3, G=1. `stride` is
+  `--observation-stride 10` ([XPolicyLab notes](../../examples/xpolicylab/README.md#skip-observations-the-model-never-reads));
+  `4 threads` sets `OMP_NUM_THREADS=4 MKL_NUM_THREADS=4` for the Policy process.
+
+| Run | Configuration | Evaluation | Episodes/h | Steps/s | Successes | Gain (episodes/h) |
+|---|---|---:|---:|---:|---:|---:|
+| `g0` | K=2, JSON (baseline) | 15,810 s | 28.69 | 5.63 | 23/126 | 1.00× |
+| `g1` | K=3, stride | 11,216 s | 40.44 | 7.71 | 32/126 | 1.41× |
+| `h1` | K=3, 4 threads | 11,054 s | 41.03 | 8.05 | 28/126 | 1.43× |
+| `h1` | K=3, stride, 4 threads | 9,897 s | 45.83 | 8.84 | 28/126 | 1.60× |
+
+Every run returned 126 unique episodes with no OOM; `g1` and the first `h1` re-evaluated one layout after a PhysX
+break. Evaluation excludes setup and the baseline's 30 min of autotuning.
+
+- **Stride:** `Simate_beta` reads the newest observation at the start of each 10-step chunk and history frames
+  20 steps apart. Stride 10 gives identical actions and skips the other observations, about 12% at K=3.
+- **Policy threads:** PyTorch opens one thread per reported core, 104 here, and the 20-CPU quota throttles the
+  whole container (throttled fraction 0.35–0.44). Four threads remove the throttling.
+- **Limits:** each simulator takes 8.0–10.3 GB and the Policy 15.2 GB, so K=3 is the most that fits in 48 GB
+  (peak 42.8 GB); K=4 would need up to 56 GB on the larger tasks. GPU utilization is already 0.77 at K=3, and
+  the simulator's CPU side dominates each step (see [Profiling](#profiling)).
+- **Conclusion so far:** about 1.6× in formal throughput, short of the 2× target for this workload.
+
+### 2026-11-07: latency-bound Policy (synthetic)
+
+[`examples/latency-policy/`](../../examples/latency-policy/README.md) sleeps 3 s per `act()` and returns 10
+actions. It characterizes scheduling only; acceptance for #18 needs a real agent.
+
+| K = G | Episodes/h | Gain | Peak GPU memory |
+|---:|---:|---:|---:|
+| 1 | 38.4 | 1.00× | 8.2 GB |
+| 4 | 148.3 | 3.86× | 32.5 GB |
+| 5 | 180.1 | 4.69× | — |
+| 6 | 214.9 | 5.60× | 48.4 GB |
+
+Six step-limited episodes per Worker on one task. Across all 42 tasks at K=5, two runs each completed 42/42
+episodes (43.6 episodes/h) with a 44.6 GB peak. With 0.5 s, 1 s and 10 s per call, K=5 gains 4.22×, 4.48×
+and 4.88× over K=1.
