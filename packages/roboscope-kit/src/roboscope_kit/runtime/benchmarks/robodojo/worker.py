@@ -145,12 +145,18 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     # RoboDojo abandons a layout whose physics breaks and, with no spare seeds in a fixed shard,
     # returns without it. Evaluate the missing layouts again, so the shard keeps its layout set.
     expected = list(range(start, start + count))
+    actual_envs = min(args.envs_per_worker, count)
     rows: dict[int, dict] = {}
     result_paths = []
     # Append, so a Worker that retries this item keeps the failed attempt's log.
     with log_path.open("a", encoding="utf-8") as log:
         for _ in range(LAYOUT_PASSES):
             missing = [layout for layout in expected if layout not in rows]
+            if len(missing) < actual_envs:
+                raise RuntimeError(
+                    f"RoboDojo cannot retry missing layouts {missing} without reducing environments "
+                    f"from {actual_envs} to {len(missing)}; see {result_paths}"
+                )
             run_id = f"roboscope-{uuid.uuid4().hex}"
             result_path = (
                 root / "eval_result/RoboDojo" / task / "RoboScopeKit/arx_x5" / f"{seed}_roboscope" / run_id
@@ -161,7 +167,7 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
                 "ROBODOJO_LAYOUT_IDS": json.dumps(missing),
                 "EVAL_NUM": str(len(missing)),
             })
-            command[command.index("--num_envs") + 1] = str(min(args.envs_per_worker, len(missing)))
+            command[command.index("--num_envs") + 1] = str(actual_envs)
             _run_evaluator(command, root, env, log, log_path)
             if not result_path.is_file():
                 raise RuntimeError(f"RoboDojo did not write results; see {log_path}")
@@ -187,14 +193,16 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
             success=success,
             steps=steps,
             elapsed_s=float(elapsed),
-            metadata={"task": task, "layout_id": layout, "score": float(score)},
+            metadata={"task": task, "layout_id": layout, "score": float(score),
+                      "envs_per_worker": actual_envs},
         ))
     return WorkResult(
         item_id=item.item_id,
         group_id=item.group_id,
         worker_id=args.worker_id,
         records=tuple(records),
-        metadata={"task": task, "result_paths": result_paths, "log_path": str(log_path)},
+        metadata={"task": task, "result_paths": result_paths, "log_path": str(log_path),
+                  "envs_per_worker": actual_envs},
     )
 
 
