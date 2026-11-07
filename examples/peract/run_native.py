@@ -147,7 +147,11 @@ def validate_native_output(episodes_path: Path, logdir: Path, tasks: list[str], 
         if len(matches) != 1:
             raise ValueError(f"expected one native metrics row for checkpoint {CHECKPOINT_WEIGHT}")
         for task in tasks:
-            rate = float(matches[0][f"eval_envs/return/{task}"])
+            # YARR omits the task suffix when evaluating exactly one task.
+            metric = f"eval_envs/return/{task}"
+            if len(tasks) == 1 and metric not in matches[0]:
+                metric = "eval_envs/return"
+            rate = float(matches[0][metric])
             expected_rate = 100.0 * sum(records[(task, episode)] for episode in range(episodes)) / episodes
             if not math.isfinite(rate) or not math.isclose(rate, expected_rate, rel_tol=1e-6, abs_tol=1e-6):
                 raise ValueError(f"native CSV success rate disagrees with episode records for {task}")
