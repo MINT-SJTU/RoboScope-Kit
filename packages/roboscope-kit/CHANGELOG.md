@@ -7,6 +7,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - Prefer negotiated MessagePack for RoboCasa Policy requests and record the encoding used for each
   episode. The StarVLA RoboCasa launcher limits inference CPU threads so simulators can run concurrently,
   and hints that clean checkpoint cache pages can be reclaimed after loading.
+- Schedule RoboCasa task episodes in smaller groups so workers can share long evaluations more evenly,
+  while retaining each task's original episode indices and seeds.
 
 - Speed up RoboCasa evaluation, ported from suica/evostudio-evaluation-kit#6. With videos off, the worker
   no longer renders or post-processes the camera images of the native steps inside an action chunk, whose

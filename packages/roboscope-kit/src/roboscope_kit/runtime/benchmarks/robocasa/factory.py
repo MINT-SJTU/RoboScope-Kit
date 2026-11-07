@@ -101,6 +101,7 @@ class RoboCasaBenchmarkFactory:
                 suite=request.suite,
                 tasks=tasks,
                 episodes_per_task=episodes,
+                episode_shard_size=int(manifest.defaults.get("episode_shard_size", 10)),
                 action_steps=int(manifest.defaults.get("action_steps", 12)),
                 max_episode_steps=int(manifest.defaults.get("max_episode_steps", 720)),
                 save_videos=bool(manifest.defaults.get("save_videos", False)) and not request.quick_test,

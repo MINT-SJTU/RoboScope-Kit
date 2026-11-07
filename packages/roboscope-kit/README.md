@@ -278,7 +278,9 @@ The exact contracts are in the protocol documents:
 - RoboCasa seeds: the manifest's `seed` (42) fixes every scene. Each task's environment is built with a seed
   derived from the manifest seed and the task name, each episode resets with that seed plus its index, and
   every Worker starts with `PYTHONHASHSEED` set to the manifest seed, because upstream novel-task generation
-  hashes class names. Scenes therefore do not depend on `K`, `g`, or which Worker runs a task. With videos
+  hashes class names. Scenes therefore do not depend on `K`, `g`, or which Worker runs a task. Work is
+  scheduled in groups of ten episodes per task by default; the manifest's `episode_shard_size` changes
+  that group size without changing episode seeds. With videos
   off, `defer_observations` (default `true`) renders camera images only on the native step whose
   observation the Policy receives, the last of each action chunk; every native physics step, reward, and
   success check still runs. Video evaluation keeps the per-step observation path. Since 0.8.0b12 the

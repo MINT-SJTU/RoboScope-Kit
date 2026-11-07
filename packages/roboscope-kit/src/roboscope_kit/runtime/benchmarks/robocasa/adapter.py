@@ -104,6 +104,7 @@ class RoboCasaRuntimeConfig:
     suite: str
     tasks: tuple[tuple[str, str], ...]
     episodes_per_task: int
+    episode_shard_size: int = 10
     action_steps: int = 12
     max_episode_steps: int = 720
     save_videos: bool = False
@@ -115,8 +116,8 @@ class RoboCasaRuntimeConfig:
     def __post_init__(self) -> None:
         if self.suite != ROBOCASA_TABLETOP_SUITE:
             raise ValueError(f"unsupported RoboCasa suite: {self.suite}")
-        if not self.tasks or self.episodes_per_task < 1:
-            raise ValueError("RoboCasa tasks and episodes must be positive")
+        if not self.tasks or self.episodes_per_task < 1 or self.episode_shard_size < 1:
+            raise ValueError("RoboCasa tasks, episodes, and episode_shard_size must be positive")
         if self.action_steps < 1 or self.max_episode_steps < 1 or self.cpu_threads < 1:
             raise ValueError("RoboCasa action steps, episode steps, and CPU threads must be positive")
         if self.render_backend != "egl":
@@ -133,20 +134,27 @@ class RoboCasaBenchmarkAdapter:
         self.config = config
 
     def work_items(self) -> Sequence[WorkItem]:
-        return tuple(
-            WorkItem(
-                ordinal=index,
-                item_id=f"{self.config.suite}-{task_name}",
-                group_id=task_name,
-                payload={
-                    "task_name": task_name,
-                    "env_name": env_name,
-                    "episodes": self.config.episodes_per_task,
-                },
-                expected_results=self.config.episodes_per_task,
-            )
-            for index, (task_name, env_name) in enumerate(self.config.tasks)
-        )
+        items = []
+        total = self.config.episodes_per_task
+        for start in range(0, total, self.config.episode_shard_size):
+            count = min(self.config.episode_shard_size, total - start)
+            for task_name, env_name in self.config.tasks:
+                item_id = f"{self.config.suite}-{task_name}-episodes-{start:04d}-{start + count:04d}"
+                items.append(
+                    WorkItem(
+                        ordinal=len(items),
+                        item_id=item_id,
+                        group_id=item_id,
+                        payload={
+                            "task_name": task_name,
+                            "env_name": env_name,
+                            "episode_start": start,
+                            "episodes": count,
+                        },
+                        expected_results=count,
+                    )
+                )
+        return tuple(items)
 
     def worker_process(self, context: WorkerContext) -> ProcessSpec:
         threads = str(self.config.cpu_threads)
@@ -225,6 +233,7 @@ class RoboCasaBenchmarkAdapter:
             "bound_hint": "gpu_infer",
             "task_count": len(self.config.tasks),
             "episodes_per_task": self.config.episodes_per_task,
+            "episode_shard_size": self.config.episode_shard_size,
             "action_steps": self.config.action_steps,
             "max_episode_steps": self.config.max_episode_steps,
             "video_logging": self.config.save_videos,

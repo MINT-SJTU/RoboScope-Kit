@@ -139,9 +139,10 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     task_name = str(item.payload["task_name"])
     env_name = str(item.payload["env_name"])
     episodes = int(item.payload["episodes"])
+    episode_start = int(item.payload["episode_start"])
     video_dir = None
     if not args.disable_video:
-        video_dir = str(args.output_dir / "video" / f"worker-{args.worker_id:03d}" / task_name)
+        video_dir = str(args.output_dir / "video" / f"worker-{args.worker_id:03d}" / item.item_id)
     config = SimulationConfig(
         env_name=env_name,
         n_episodes=1,
@@ -167,7 +168,7 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     queue = WorkQueue(args.queue_dir)
     started = time.perf_counter()
     try:
-        for episode_index in range(episodes):
+        for episode_index in range(episode_start, episode_start + episodes):
             # Seed both upstream RNGs: the Gym wrapper seeds numpy, while robosuite
             # owns a separate Generator used for scene and object placement on reset.
             episode_seed = (construction_seed + episode_index) % 2**32
