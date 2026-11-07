@@ -1,0 +1,8 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/sim/robocasa365-policy/env/bin/python",
+    "/path/to/RoboScope-Kit/examples/robocasa365_diffusion/policy.py"
+  ],
+  "cwd": "/path/to/RoboScope-Kit/examples/robocasa365_diffusion"
+}

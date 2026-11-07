@@ -243,6 +243,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | RoboTwin | SDK-native adapter and worker calling the pinned RoboTwin launcher | RoboTwin environment and source, deploy policy, checkpoint assets, and validated seed cache |
 | RoboDojo | SDK-native adapter and worker calling the pinned RoboDojo simulator | Isaac Sim environment, RoboDojo source and evaluation assets |
 | RoboCasa | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa environment, simulator and task source, and dataset assets |
+| RoboCasa365 | SDK-native adapter preserving native five-slot task groups and consecutive-frame history | Pinned RoboCasa 1.0.1, robosuite, MuJoCo, all six asset archives, and a compatible 12-dimensional policy |
 | CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
@@ -263,6 +264,9 @@ The exact contracts are in the protocol documents:
 - [MetaWorld](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md):
   MT50 manifest, camera setup, official training-goal evaluation, four-difficulty macro aggregation, and
   validation.
+- [RoboCasa365](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/robocasa365-protocol.md):
+  the official multi-task matrix uses 50 tasks in pretrain scenes and 50 rollouts per task.
+  `robocasa365` is isolated from GR1 `robocasa/tabletop`; Quick Tests are smoke subsets.
 - [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md):
   the `ph_low_dim` suite, supported and unsupported task/dataset/observation combinations, version and
   license gates, seeded initial states, upstream rollout semantics, the native comparison, and the baseline.

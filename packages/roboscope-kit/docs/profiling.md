@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-05
+Updated: 2026-11-07
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -70,9 +70,12 @@ PY
 
 ## Coverage
 
-Capture starts when the Worker's `PolicyClient` opens the `episode` range, so only benchmarks that call the
-Policy through `PolicyClient` record anything. The Policy Server does not run under `nsys`: its own GPU time
+Capture starts when the Worker opens the `episode` range. Most workers do this through
+`PolicyClient`; RoboCasa365 keeps one range open around its complete native episode group. The Policy Server does not run under `nsys`: its own GPU time
 is not in the report, only the round-trip time of each request.
+RoboCasa365 opens that range after its group's environment resets and before
+Policy reset calls. Construction/reset timing uses separate worker wall timers;
+these timers do not establish verified Nsight hardware coverage.
 
 | Benchmark | Uses `PolicyClient` | Verified on hardware |
 |---|---|---|
@@ -81,6 +84,7 @@ is not in the report, only the round-trip time of each request.
 | MetaWorld | Yes | Not yet |
 | robomimic | Yes | Not yet |
 | RoboCasa | Yes | Not yet |
+| RoboCasa365 | Yes; first native group after environment resets | Nsight not verified; b35 worker wall timers recorded separately |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |
 
@@ -100,5 +104,16 @@ is not in the report, only the round-trip time of each request.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
+- [RoboCasa365 integration readiness](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/validation-20261107.md):
+  a fresh b35 native-five-slot Kettle smoke recorded 86.465 s in native steps,
+  39.198 s in Policy round trips, 27.833 s in evaluated resets and 30.395 s in
+  environment construction (2026-11-07, RTX 4090, K=1/G=1). These are nested
+  descriptive wall timers, not GPU kernel attribution or speed evidence. The group
+  produced 5 unique 450-step records: 2/5 task successes, 2,250 steps and zero
+  worker failures/retries/OOM.
+  Historical uncorrected multi-slot scores/timings are superseded by the EGL
+  cleanup erratum; earlier b33 results are prior evidence, not matched b35 parity.
+  Nsight and separate Policy GPU attribution remain unverified. Full target50/native
+  comparison acceptance is pending; no throughput or unchanged-accuracy claim is made.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).

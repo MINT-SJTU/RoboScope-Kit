@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "patches": [
+    {
+      "id": "owning-egl-context-cleanup",
+      "source": "robosuite",
+      "revision": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "path": "robosuite/utils/binding_utils.py",
+      "patch": "patches/owning-egl-context-cleanup.patch",
+      "patch_sha256": "f74957cfab6e2201798436e29df935ce4b451f39573544cfc922691a444201de",
+      "original_sha256": "a3d2526fb2e60875e2c3a87b8828b8e3b512781708c80d0c96ee6024980896c8",
+      "patched_sha256": "24672892427a0c14e478f59409e0f824c9d8781376628678a78108c4d50d089a"
+    },
+    {
+      "id": "preserve-egl-thread-state",
+      "source": "robosuite",
+      "revision": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "path": "robosuite/renderers/context/egl_context.py",
+      "patch": "patches/preserve-egl-thread-state.patch",
+      "patch_sha256": "205b1e6f957908a62785d596f6cea5454c592b5b8cb41ff360b42be4c7123f7c",
+      "original_sha256": "72ff1e153da85b85a35ebd0350c4693d3b89ffd5e1f13ff49813b7a3ad4c51c6",
+      "patched_sha256": "c56e7e2a030d2d6ee41f0ad323afa6137ed093e55632bdd285295b2660e19e1a"
+    }
+  ]
+}
