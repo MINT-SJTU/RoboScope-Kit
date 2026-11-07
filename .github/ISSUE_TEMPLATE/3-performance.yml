@@ -25,6 +25,7 @@ body:
         - CALVIN
         - MetaWorld
         - robomimic
+        - SimplerEnv
         - Not benchmark-specific
     validations:
       required: true
