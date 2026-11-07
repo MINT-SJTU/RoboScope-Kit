@@ -123,8 +123,16 @@ def validate_native_output(episodes_path: Path, logdir: Path, tasks: list[str], 
             for line in stream:
                 record = json.loads(line)
                 task, episode, success = record["task"], record["episode"], record["success"]
-                if not isinstance(task, str) or type(episode) is not int or type(success) is not bool:
-                    raise ValueError("native episode has an invalid task, episode, or success")
+                digest = record["episode_state_sha256"]
+                if (
+                    not isinstance(task, str)
+                    or type(episode) is not int
+                    or type(success) is not bool
+                    or not isinstance(digest, str)
+                    or len(digest) != 64
+                    or any(char not in "0123456789abcdef" for char in digest)
+                ):
+                    raise ValueError("native episode has an invalid task, episode, state digest, or success")
                 key = (task, episode)
                 if key not in expected or key in records:
                     raise ValueError(f"duplicate or unexpected native episode {key}")

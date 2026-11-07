@@ -43,6 +43,11 @@ only. `--episodes N` (1 to 25) runs episodes `0..N-1` of every task; values belo
 task list, episode count, cameras, action representation, and episode length are frozen in the kit's
 [task table](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/src/roboscope_kit/runtime/benchmarks/rlbench/tasks.py).
 
+The released 450 episodes contain 149 of the 249 declared task variations. The other 100 variations
+occur in eight tasks, listed in the [coverage inventory](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/rlbench/peract-variation-coverage.csv).
+This profile's official 450-episode score must not be presented as validation of those unobserved
+variations. Any supplemental fresh-episode checks are separate from the released test-set score.
+
 ### What is not supported, and why
 
 | Combination | Status | Reason |
@@ -339,10 +344,10 @@ and actions/s.
 A record is identified by `<task>-episode-<episode:02d>`. The aggregate rejects records outside the work
 manifest, duplicates, out-of-range action counts, inconsistent terminations, and timeouts before 25 actions.
 A formal result requires all 450 records and verified test-episode digests (`test_episodes_verified: true`);
-Quick Test and runs of fewer than 25 episodes per task are not formal. Individual shards are non-formal. Result-only shard
-reduction checks each episode identity, its assigned shard, per-task counts, complete coverage, and, for the
-full profile, the frozen task digests before reporting the official per-task rates and unweighted mean.
-Record-tree merging also rechecks the complete workload and recomputes the full aggregate.
+Quick Test and runs of fewer than 25 episodes per task are not formal. RLBench sharding and both shard
+merge paths are disabled: the shared runtime cannot yet verify that independent shards used identical
+Policy code, dependencies and checkpoint contents. Run this profile without sharding until that provenance
+is available. A partial result never establishes a formal score.
 
 ## 8. Validation sequence
 
@@ -453,6 +458,8 @@ python examples/peract/compare_native.py --kit-run /runs/rlbench-full --native /
     --output /runs/rlbench-compare.json
 ```
 
-The native runner checks the requested episode identities and the native CSV success rates before it marks
-the run finished. Keep the original episode records, manifests, logs, configuration, comparison and timing
-along with any acceptance result.
+The native runner records each test episode's state digest and checks the requested episode identities and
+native CSV success rates before it marks the run finished. The comparison checks both runs against the Kit
+manifest and rejects variation, instruction or episode-state digest mismatches. Older native logs without
+state digests cannot pass this check. Keep the original episode records, manifests, logs, configuration,
+comparison and timing along with any acceptance result.

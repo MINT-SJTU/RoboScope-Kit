@@ -76,6 +76,8 @@ keep.
    ```
 
    Drop `--quick-test` for the full 18 x 25 evaluation; add `--concurrency K --replicas G` to skip autotuning.
+   RLBench does not support cross-instance sharding until the Policy and checkpoint identity can be verified
+   across shards.
 
 5. Run PerAct's own `eval.py` on the same test episodes and compare:
 
@@ -89,4 +91,6 @@ keep.
 
    `run_native.py` runs all 18 tasks in one process, as PerAct's README does; `--task` selects a subset.
    It reports success only after the episode identities and per-task success rates agree with PerAct's CSV;
-   an incomplete native child run fails.
+   an incomplete native child run fails. The comparison requires the full declared workload and rejects
+   missing or mismatched variation, instruction or stored-state digest; older native logs without per-episode
+   state digests cannot pass this check.

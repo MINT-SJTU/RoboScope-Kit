@@ -169,14 +169,34 @@ fetch() {
 }
 
 checkout() {
-  # checkout <url> <commit> <dir>: a detached checkout of exactly <commit>.
-  local url="$1" commit="$2" dir="$3"
+  # checkout <url> <commit> <dir> [allowed-patch]: never reuse modified source.
+  local url="$1" commit="$2" dir="$3" allowed_patch="${4:-}" untracked
   if [[ ! -d "${dir}/.git" ]]; then
     git init -q "${dir}"
     git -C "${dir}" remote add origin "${url}"
   fi
   if ! git -C "${dir}" cat-file -e "${commit}^{commit}" 2>/dev/null; then
     git -C "${dir}" fetch -q --depth 1 origin "${commit}"
+  fi
+  # Rebuilding after running PerAct may leave Python bytecode. Other untracked files could
+  # change imports; tracked changes are allowed only when exactly the committed PerAct patch.
+  untracked="$(git -C "${dir}" ls-files --others --exclude-standard | while IFS= read -r path; do
+    case "${path}" in
+      __pycache__/*.pyc | */__pycache__/*.pyc) ;;
+      *) printf '%s\n' "${path}" ;;
+    esac
+  done)"
+  if [[ -n "${untracked}" ]]; then
+    echo "${dir} contains untracked source files; use a clean install directory" >&2
+    return 5
+  fi
+  if git -C "${dir}" rev-parse --verify HEAD >/dev/null 2>&1 && \
+     ! git -C "${dir}" diff --quiet HEAD --; then
+    if [[ -z "${allowed_patch}" ]] || \
+       ! git -C "${dir}" diff --no-ext-diff --binary HEAD -- | cmp -s - "${allowed_patch}"; then
+      echo "${dir} contains local modifications; use a clean install directory" >&2
+      return 5
+    fi
   fi
   git -C "${dir}" -c advice.detachedHead=false checkout -q --detach "${commit}"
   [[ "$(git -C "${dir}" rev-parse HEAD)" == "${commit}" ]] || {
@@ -199,7 +219,7 @@ fi
 checkout "${PYREP_URL}" "${PYREP_COMMIT}" "${SOURCE_ROOT}/PyRep"
 checkout "${RLBENCH_URL}" "${RLBENCH_COMMIT}" "${SOURCE_ROOT}/RLBench"
 checkout "${YARR_URL}" "${YARR_COMMIT}" "${SOURCE_ROOT}/YARR"
-checkout "${PERACT_URL}" "${PERACT_COMMIT}" "${SOURCE_ROOT}/peract"
+checkout "${PERACT_URL}" "${PERACT_COMMIT}" "${SOURCE_ROOT}/peract" "${PERACT_PATCH}"
 # PerAct imports pytorch3d at module level only for training-time augmentation; pytorch3d has
 # no Python 3.11 build. The patch defers that import; evaluation code is unchanged.
 if git -C "${SOURCE_ROOT}/peract" apply --check "${PERACT_PATCH}" 2>/dev/null; then

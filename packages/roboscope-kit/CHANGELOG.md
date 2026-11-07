@@ -19,8 +19,9 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   than 1 cm off, `benchmarks/rlbench/peract-initial-scenes.json`.
 - Add `examples/peract/`: a Policy for the released PerAct 600k checkpoint, a runner for PerAct's own
   `eval.py`, and an episode-by-episode comparison.
-- RLBench shard reduction verifies every episode's identity and frozen state before reporting a formal result;
-  the native runner checks episode coverage and PerAct's CSV before reporting completion.
+- RLBench sharding is disabled until cross-shard Policy and checkpoint identity can be verified; the native
+  runner checks episode coverage and PerAct's CSV before reporting completion, and native comparison rejects
+  missing or mismatched test-episode inputs.
 
 ## 0.8.0b30 - 2026-11-06
 

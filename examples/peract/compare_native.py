@@ -7,13 +7,11 @@
         --native /runs/peract-native --output /runs/peract-compare.json
 
 Both sides replay the same test episodes (task, episode index, variation and stored random
-state), so every episode is paired by (task, episode). For each pair it reports whether the
-variation and instruction agree, how far each side's initial scene is from the recorded first
-frame of the test episode, the largest difference between the first actions (the
-first action depends only on the initial observation, so equal initial scenes give equal first
-actions), the length of the common prefix of identical actions, and both outcomes and executed
-action counts. Per task it reports both success counts and executed action and simulation-step
-totals.
+state), so every episode is paired by (task, episode). The comparison rejects missing,
+duplicate, unexpected or mismatched inputs. For each pair it reports how far each side's
+initial scene is from the recorded first frame, the largest first-action difference, the length
+of the common prefix of identical actions, and both outcomes and executed action counts. Per
+task it reports both success counts and executed action and simulation-step totals.
 
 RLBench's motion planner samples with CoppeliaSim's own random generator, which neither side
 seeds, so trajectories may diverge after the first planned motion; differing outcomes in single
@@ -26,9 +24,44 @@ import argparse
 import json
 from pathlib import Path
 
+from run_native import TASKS
+
+from roboscope_kit.runtime.benchmarks.rlbench.tasks import TASKS_BY_NAME, test_episodes_sha256
+
 ACTION_TOLERANCE = 1e-6
-# An object more than 1 cm from its recorded position: the episode did not start from its test scene.
+# This is a diagnostic against the recorded vector, which may use another object order.
 SCENE_TOLERANCE_M = 0.01
+
+
+def expected_records(run_dir: Path) -> set[tuple[str, int]]:
+    """Reconstruct the intended workload independently of either run's terminal records."""
+
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    benchmark = manifest["benchmark"]
+    tasks = benchmark["task_order"]
+    count = benchmark["episodes_per_task"]
+    if (
+        benchmark.get("benchmark") != "rlbench"
+        or benchmark.get("suite") != "peract_18"
+        or not isinstance(tasks, list)
+        or not tasks
+        or len(tasks) != len(set(tasks))
+        or any(task not in TASKS for task in tasks)
+        or type(count) is not int
+        or not 1 <= count <= 25
+    ):
+        raise SystemExit("Kit manifest has an invalid RLBench workload")
+    expected = {(task, episode) for task in tasks for episode in range(count)}
+    recorded = []
+    for item in manifest["items"]:
+        payload = item["payload"]
+        if item["group_id"] != payload["task"] or item["expected_results"] != len(payload["episodes"]):
+            raise SystemExit("Kit manifest has an inconsistent work item")
+        recorded.extend((payload["task"], episode) for episode in payload["episodes"])
+    if (len(recorded) != len(expected) or set(recorded) != expected
+            or manifest["total_records"] != len(expected)):
+        raise SystemExit("Kit manifest does not cover its declared workload exactly once")
+    return expected
 
 
 def kit_records(run_dir: Path) -> dict[tuple[str, int], dict]:
@@ -74,22 +107,41 @@ def main() -> int:
     parser.add_argument("--native", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    expected = expected_records(args.kit_run)
     kit = kit_records(args.kit_run)
     native = native_records(args.native)
-    if set(kit) != set(native):
-        missing = sorted(set(kit) ^ set(native))
-        raise SystemExit(f"the runs cover different episodes: {missing[:10]}")
+    for name, records in (("Kit", kit), ("native", native)):
+        if set(records) != expected:
+            difference = sorted(set(records) ^ expected)
+            raise SystemExit(f"{name} run does not cover the declared workload: {difference[:10]}")
+    for task in {task for task, _episode in expected}:
+        indices = sorted(episode for name, episode in expected if name == task)
+        if len(indices) == 25:
+            digest = test_episodes_sha256(
+                (episode, str(kit[(task, episode)]["metadata"]["episode_state_sha256"]))
+                for episode in indices
+            )
+            if digest != TASKS_BY_NAME[task].test_episodes_sha256:
+                raise SystemExit(f"Kit test episode digest differs from the frozen task: {task}")
     episodes = []
     tasks: dict[str, dict] = {}
     for key in sorted(kit):
         task, episode = key
         k, n = kit[key], native[key]
         km = k["metadata"]
+        if (
+            not n.get("episode_state_sha256")
+            or km.get("episode_state_sha256") != n["episode_state_sha256"]
+            or km["variation"] != n["variation"]
+            or km["instruction"] != n["instruction"]
+        ):
+            raise SystemExit(f"Kit and native episode inputs differ or lack state digests: {key}")
         row = {
             "task": task,
             "episode": episode,
             "variation_equal": km["variation"] == n["variation"],
             "instruction_equal": km["instruction"] == n["instruction"],
+            "episode_state_equal": True,
             "first_action_max_abs_diff": max_difference(km["actions"][0], n["actions"][0]),
             "identical_action_prefix": common_prefix(km["actions"], n["actions"]),
             "kit_initial_scene_position_error_m": km["initial_scene_position_error_m"],

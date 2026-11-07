@@ -29,6 +29,7 @@ from rlbench.task_environment import TaskEnvironment
 from yarr.runners.independent_env_runner import IndependentEnvRunner
 from yarr.utils.process_str import change_case
 
+from roboscope_kit.runtime.benchmarks.rlbench.tasks import episode_state_sha256
 from roboscope_kit.runtime.benchmarks.rlbench.test_set import load_test_episode
 from roboscope_kit.runtime.benchmarks.rlbench.worker import (
     LoadedTask,
@@ -49,6 +50,7 @@ class EpisodeLog:
         # worker's LoadedTask), and the object positions right after TaskEnvironment.reset_to_demo.
         self.loaded: LoadedTask | None = None
         self.sampled = None
+        self.demo_state_sha256: str | None = None
 
     def start(self, recorded_state, **episode) -> None:
         objects = self.loaded.objects
@@ -79,6 +81,7 @@ class EpisodeLog:
         record = {
             "task": current["task"],
             "episode": current["episode"],
+            "episode_state_sha256": current["episode_state_sha256"],
             "variation": current["variation"],
             "instruction": current["instruction"],
             "initial_scene_position_error_m": current["initial_scene_position_error_m"],
@@ -101,6 +104,7 @@ def _install(log: EpisodeLog) -> None:
     original_task_reset_to_demo = TaskEnvironment.reset_to_demo
 
     def task_reset_to_demo(self, demo):
+        log.demo_state_sha256 = episode_state_sha256(self._variation_number, demo.random_seed)
         result = original_task_reset_to_demo(self, demo)
         if log.loaded is None or log.loaded.env is not self:
             # PerAct's task swap loads a new TaskEnvironment; this is its first reset.
@@ -119,10 +123,14 @@ def _install(log: EpisodeLog) -> None:
             task = change_case(self._task._task.__class__.__name__)
             # get_stored_demos drops the task state PerAct's observation config does not request,
             # so read the recorded first frame the way the Kit worker does.
+            test_episode = load_test_episode(Path(self._task._dataset_root), task, int(i))
+            if log.demo_state_sha256 != test_episode.state_sha256:
+                raise RuntimeError(f"native demo does not match test episode {task}/{i}")
             log.start(
-                load_test_episode(Path(self._task._dataset_root), task, int(i)).recorded_task_state,
+                test_episode.recorded_task_state,
                 task=task,
                 episode=int(i),
+                episode_state_sha256=log.demo_state_sha256,
                 variation=int(self._task._variation_number),
                 instruction=self._lang_goal,
             )
