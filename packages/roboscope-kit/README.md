@@ -280,10 +280,10 @@ The exact contracts are in the protocol documents:
   every Worker starts with `PYTHONHASHSEED` set to the manifest seed, because upstream novel-task generation
   hashes class names. Scenes therefore do not depend on `K`, `g`, or which Worker runs a task. Work is
   scheduled in groups of ten episodes per task by default; the manifest's `episode_shard_size` changes
-  that group size without changing episode seeds. With videos
-  off, `defer_observations` (default `true`) renders camera images only on the native step whose
-  observation the Policy receives, the last of each action chunk; every native physics step, reward, and
-  success check still runs. Video evaluation keeps the per-step observation path. Since 0.8.0b12 the
+  that group size without changing episode seeds. With videos off, `defer_observations` (default `true`)
+  skips intermediate Groot observation conversions within an action chunk. Camera rendering, basic
+  observations, physics, reward, and success checks still run at every native step. Video evaluation
+  keeps the per-step conversion path. Since 0.8.0b12 the
   runtime also uses replacement kitchen-asset archives, so compare RoboCasa scores only with runs on the
   same version.
 

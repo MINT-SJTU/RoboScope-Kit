@@ -1,11 +1,10 @@
 # Copyright 2026 RoboScope Team
 # SPDX-License-Identifier: Apache-2.0
 
-"""Avoid rendering observations discarded by the single-frame action wrapper."""
+"""Avoid preprocessing observations discarded by the single-frame action wrapper."""
 
 from __future__ import annotations
 
-from functools import wraps
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -19,14 +18,13 @@ def enable_chunk_observations(environment: gym.Wrapper) -> gym.Wrapper:
     import gymnasium as gym
 
     class ChunkObservationWrapper(gym.Wrapper):
-        """Keep the native sensor clock, refreshing images on consumed steps.
+        """Keep every native sensor call and preprocess only consumed steps.
 
         The upstream MultiStepWrapper uses only the final observation of each action
-        chunk (delta indices [0]). Intermediate RGB values are never consumed by a
-        policy or video recorder. Substituting the previous image for those sensor
-        calls leaves physics, state sensors, reward and success evaluation intact.
-        The original camera sensors run at their original sampling instants on the
-        last native step, including the final, potentially shorter action chunk.
+        chunk (delta indices [0]). With video disabled, intermediate transformed
+        observations are not consumed by the policy. Still render each native
+        camera sample and run the basic observation path, including its cache
+        updates; only defer the final Groot conversion until a consumed step.
         """
 
         def __init__(self, env: gym.Env, action_steps: int, max_episode_steps: int) -> None:
@@ -77,25 +75,16 @@ def enable_chunk_observations(environment: gym.Wrapper) -> gym.Wrapper:
                 for observable in cameras
             ):
                 return self._observed_step(action)
-            originals = [(observable, observable._sensor) for observable in cameras]
             groot = self.env.unwrapped
-            basic_observation = groot.get_basic_observation
             groot_observation = groot.get_groot_observation
             try:
-                for observable in cameras:
-                    image = observable.obs
-                    observable._sensor = wraps(observable._sensor)(lambda _cache, image=image: image)
-                # No video recorder or history consumes these intermediate values;
-                # avoid the otherwise discarded flips, crop/pad/resize and copies.
-                groot.get_basic_observation = lambda raw: raw
+                # No video recorder or history consumes the intermediate Groot
+                # conversions. Native sensors and the basic conversion still run.
                 groot.get_groot_observation = lambda _raw: self.last_observation
                 self.deferred_steps += 1
                 return self.env.step(action)
             finally:
-                groot.get_basic_observation = basic_observation
                 groot.get_groot_observation = groot_observation
-                for observable, sensor in originals:
-                    observable._sensor = sensor
 
     if not np.array_equal(environment.video_delta_indices, [0]) or not np.array_equal(
         environment.state_delta_indices, [0]
