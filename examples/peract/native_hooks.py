@@ -1,7 +1,7 @@
 # Copyright 2026 RoboScope Team
 # SPDX-License-Identifier: Apache-2.0
 
-"""Read-only instrumentation of PerAct's ``eval.py``, installed by ``run_native.py``.
+"""Instrumentation of PerAct's ``eval.py``, installed by ``run_native.py``.
 
 YARR forces the ``spawn`` start method, so PerAct evaluates in a fresh child process that
 re-imports everything. ``run_native.py`` therefore makes ``eval.py`` construct
@@ -14,6 +14,9 @@ episode to ``$ROBOSCOPE_NATIVE_EPISODES``: the task, test episode, variation, in
 action passed to RLBench, the planning error if any, the outcome, executed actions, and
 simulation steps. They also hand PerAct's ``load_clip`` the pinned CLIP RN50 file in
 ``$ROBOSCOPE_PERACT_CLIP`` instead of downloading it, as the Kit Policy does.
+
+For one-episode evaluations only, an accumulator subclass emits YARR's usual statistics for the
+single completed return. The pinned upstream accumulator otherwise emits no CSV for that case.
 """
 
 from __future__ import annotations
@@ -26,8 +29,10 @@ from pathlib import Path
 from helpers import custom_rlbench_env
 from helpers.clip.core import clip as peract_clip
 from rlbench.task_environment import TaskEnvironment
+from yarr.runners import independent_env_runner as runner_module
 from yarr.runners.independent_env_runner import IndependentEnvRunner
 from yarr.utils.process_str import change_case
+from yarr.utils.stat_accumulator import SimpleAccumulator
 
 from roboscope_kit.runtime.benchmarks.rlbench.tasks import episode_state_sha256
 from roboscope_kit.runtime.benchmarks.rlbench.test_set import load_test_episode
@@ -39,6 +44,23 @@ from roboscope_kit.runtime.benchmarks.rlbench.worker import (
 )
 
 EPISODE_LENGTH = 25
+
+
+class SingleEpisodeAccumulator(SimpleAccumulator):
+    """Keep YARR's normal statistics when exactly one evaluation episode completed.
+
+    The pinned YARR version suppresses summaries unless at least two returns are available.
+    PerAct's native runner otherwise writes no CSV for a one-episode request. This affects only
+    reporting: the same accumulated rewards and lengths are summarized with YARR's own code.
+    """
+
+    def pop(self):
+        train = self._train_acc.pop()
+        evaluation = self._eval_acc.pop()
+        if not evaluation and len(self._eval_acc._episode_returns) == 1:
+            evaluation = self._eval_acc.peak()
+            self._eval_acc._reset_data()
+        return train + evaluation
 
 
 class EpisodeLog:
@@ -164,3 +186,5 @@ if _clip:
 _episodes = os.environ.get("ROBOSCOPE_NATIVE_EPISODES")
 if _episodes:
     _install(EpisodeLog(Path(_episodes)))
+if os.environ.get("ROBOSCOPE_NATIVE_SINGLE_EPISODE") == "1":
+    runner_module.SimpleAccumulator = SingleEpisodeAccumulator

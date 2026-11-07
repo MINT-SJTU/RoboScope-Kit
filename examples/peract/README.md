@@ -90,7 +90,8 @@ keep.
    ```
 
    `run_native.py` runs all 18 tasks in one process, as PerAct's README does; `--task` selects a subset.
-   It reports success only after the episode identities and per-task success rates agree with PerAct's CSV;
-   an incomplete native child run fails. The comparison requires the full declared workload and rejects
+   It reports success only after the episode identities and per-task success rates agree with PerAct's CSV.
+   For a single episode, the wrapper enables YARR's usual summary calculation for that one return.
+   An incomplete native child run fails. The comparison requires the full declared workload and rejects
    missing or mismatched variation, instruction or stored-state digest; older native logs without per-episode
    state digests cannot pass this check.

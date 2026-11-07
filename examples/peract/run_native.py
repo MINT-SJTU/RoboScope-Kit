@@ -9,7 +9,7 @@
 This is the native entry point the Kit is compared with: the pinned PerAct ``eval.py`` with the
 README's test command (all requested tasks in one process, ``eval_envs=1``, episodes 0..24 of
 the released test split, ``eval_type=last``, the 600k weights, headless). ``eval.py`` runs as
-``__main__``, unmodified, with three additions that do not change what it computes:
+``__main__``, unmodified, with additions that do not change episode execution:
 
 - CLIP RN50 is read from the pinned local file in ``--checkpoint-source``, as the Kit Policy does,
   instead of being downloaded to ``~/.cache/clip``;
@@ -20,6 +20,8 @@ the released test split, ``eval_type=last``, the 600k weights, headless). ``eval
   simulation steps. YARR evaluates in a ``spawn``-ed child process, so ``eval.py`` is given
   ``native_hooks.HookedIndependentEnvRunner``, an unchanged subclass of YARR's runner whose module
   installs the hooks when the child unpickles it;
+- For a one-episode request, the hooks let YARR emit its normal statistics for that episode;
+  the pinned accumulator otherwise emits no CSV until it has at least two returns.
 - CoppeliaSim runs on a private Xvfb display, like the Kit workers.
 
 Writes ``<output>/native-episodes.jsonl`` (one line per episode), ``<output>/run.json`` (command,
@@ -185,6 +187,7 @@ def main() -> int:
     sys.path.insert(0, str(peract_root))
     os.chdir(peract_root)
     os.environ["ROBOSCOPE_NATIVE_EPISODES"] = str(episodes_path)
+    os.environ["ROBOSCOPE_NATIVE_SINGLE_EPISODE"] = "1" if args.episodes == 1 else "0"
     os.environ["ROBOSCOPE_PERACT_CLIP"] = str(checkpoint_source / CLIP_RN50.relative_path)
     import native_hooks
     import yarr.runners.independent_env_runner as runner_module
