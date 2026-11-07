@@ -76,7 +76,9 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
 
 The RoboCasa Policy launcher limits CPU work in each inference replica to one thread by default, leaving
 CPU time available for concurrent simulators. Set `ROBOSCOPE_POLICY_CPU_THREADS` to a positive integer
-before starting the benchmark to choose a different budget.
+before starting the benchmark to choose a different budget. After loading, it also asks the operating system
+to release clean cached pages of that checkpoint when supported; subsequent loads may need to read the file
+again. The hint is optional and does not change the checkpoint or the Policy's actions.
 
 ## Files
 

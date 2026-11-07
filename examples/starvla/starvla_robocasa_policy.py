@@ -3,6 +3,20 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
+
+
+def release_checkpoint_cache(checkpoint: Path) -> None:
+    """Hint that the loaded checkpoint's clean file pages need not stay cached."""
+    if not hasattr(os, "posix_fadvise") or not hasattr(os, "POSIX_FADV_DONTNEED"):
+        return
+    try:
+        with checkpoint.open("rb") as stream:
+            os.posix_fadvise(stream.fileno(), 0, 0, os.POSIX_FADV_DONTNEED)
+    except OSError as error:
+        print(f"StarVLA checkpoint cache hint unavailable: {error}", flush=True)
+    else:
+        print("StarVLA checkpoint cache drop requested", flush=True)
 
 
 def main() -> None:
@@ -25,9 +39,19 @@ def main() -> None:
         flush=True,
     )
 
-    from starvla_policy import main as run_policy
+    from starvla_policy import StarVLAPolicy, resolve_starvla_run_snapshot
 
-    run_policy()
+    from roboscope_kit.policy import PolicyCapabilities, SessionContext
+    from roboscope_kit.server import run
+
+    class RoboCasaStarVLAPolicy(StarVLAPolicy):
+        def load(self, context: SessionContext) -> PolicyCapabilities:
+            checkpoint, _ = resolve_starvla_run_snapshot(context.checkpoint_path)
+            capabilities = super().load(context)
+            release_checkpoint_cache(checkpoint)
+            return capabilities
+
+    run(RoboCasaStarVLAPolicy())
 
 
 if __name__ == "__main__":
