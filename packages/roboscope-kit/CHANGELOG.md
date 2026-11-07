@@ -8,7 +8,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   episode. The StarVLA RoboCasa launcher limits inference CPU threads so simulators can run concurrently,
   and hints that clean checkpoint cache pages can be reclaimed after loading.
 - Schedule RoboCasa task episodes in smaller groups so workers can share long evaluations more evenly,
-  while retaining each task's original episode indices and seeds.
+  while retaining each task's original episode indices and seeds. Recycle workers after a completed
+  group once they have handled at least ten episodes to bound simulator memory growth.
 
 - Speed up RoboCasa evaluation by skipping discarded intermediate observation conversions inside an
   action chunk when video is off, while preserving the render cache. Camera sensors, physics, rewards,

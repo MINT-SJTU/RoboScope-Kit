@@ -268,6 +268,7 @@ def main() -> None:
         queue_dir=args.queue_dir,
         state_dir=args.worker_state_dir,
         poll_interval_s=args.poll_interval,
+        recycle_after_records=10,
     ).run(lambda item: run_task(args, item))
 
 

@@ -283,7 +283,8 @@ The exact contracts are in the protocol documents:
   that group size without changing episode seeds. With videos off, `defer_observations` (default `true`)
   skips intermediate observation conversions within an action chunk while updating the render cache.
   Camera rendering, physics, reward, and success checks still run at every native step. Video evaluation
-  keeps the per-step conversion path. Since 0.8.0b12 the
+  keeps the per-step conversion path. Workers recycle after a group when they have completed at least
+  ten episodes, limiting simulator memory growth. Since 0.8.0b12 the
   runtime also uses replacement kitchen-asset archives, so compare RoboCasa scores only with runs on the
   same version.
 
