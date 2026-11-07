@@ -23,8 +23,8 @@ def enable_chunk_observations(environment: gym.Wrapper) -> gym.Wrapper:
         The upstream MultiStepWrapper uses only the final observation of each action
         chunk (delta indices [0]). With video disabled, intermediate transformed
         observations are not consumed by the policy. Still render each native
-        camera sample and run the basic observation path, including its cache
-        updates; only defer the final Groot conversion until a consumed step.
+        camera sample and preserve its render cache; defer the other basic and
+        Groot conversions until a consumed step.
         """
 
         def __init__(self, env: gym.Env, action_steps: int, max_episode_steps: int) -> None:
@@ -49,6 +49,8 @@ def enable_chunk_observations(environment: gym.Wrapper) -> gym.Wrapper:
             return result
 
         def step(self, action):
+            from robocasa.utils.gym_utils.gymnasium_basic import RoboCasaEnv
+            from robocasa.utils.gym_utils.gymnasium_groot import GrootRoboCasaEnv
             from robosuite.utils.observables import NO_CORRUPTION, NO_DELAY, NO_FILTER
 
             self.steps += 1
@@ -76,14 +78,36 @@ def enable_chunk_observations(environment: gym.Wrapper) -> gym.Wrapper:
             ):
                 return self._observed_step(action)
             groot = self.env.unwrapped
+            if (
+                getattr(type(groot), "get_basic_observation", None) is not RoboCasaEnv.get_basic_observation
+                or (
+                    getattr(type(groot), "get_groot_observation", None)
+                    is not GrootRoboCasaEnv.get_groot_observation
+                )
+                or not getattr(groot, "enable_render", False)
+                or not isinstance(getattr(groot, "render_obs_key", None), str)
+                or not groot.render_obs_key.endswith("_image")
+            ):
+                return self._observed_step(action)
+            basic_observation = groot.get_basic_observation
             groot_observation = groot.get_groot_observation
+
+            def cache_rendered_image(raw):
+                image = raw.get(groot.render_obs_key)
+                if not isinstance(image, np.ndarray) or image.ndim != 3:
+                    return basic_observation(raw)
+                # Matches the pinned basic path's flip and copy for render().
+                groot.render_cache = np.copy(image[::-1, :, :])
+                return raw
+
             try:
-                # No video recorder or history consumes the intermediate Groot
-                # conversions. Native sensors and the basic conversion still run.
+                # Native cameras still render at every sampling instant.
+                groot.get_basic_observation = cache_rendered_image
                 groot.get_groot_observation = lambda _raw: self.last_observation
                 self.deferred_steps += 1
                 return self.env.step(action)
             finally:
+                groot.get_basic_observation = basic_observation
                 groot.get_groot_observation = groot_observation
 
     if not np.array_equal(environment.video_delta_indices, [0]) or not np.array_equal(

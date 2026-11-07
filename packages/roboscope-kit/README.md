@@ -281,8 +281,8 @@ The exact contracts are in the protocol documents:
   hashes class names. Scenes therefore do not depend on `K`, `g`, or which Worker runs a task. Work is
   scheduled in groups of ten episodes per task by default; the manifest's `episode_shard_size` changes
   that group size without changing episode seeds. With videos off, `defer_observations` (default `true`)
-  skips intermediate Groot observation conversions within an action chunk. Camera rendering, basic
-  observations, physics, reward, and success checks still run at every native step. Video evaluation
+  skips intermediate observation conversions within an action chunk while updating the render cache.
+  Camera rendering, physics, reward, and success checks still run at every native step. Video evaluation
   keeps the per-step conversion path. Since 0.8.0b12 the
   runtime also uses replacement kitchen-asset archives, so compare RoboCasa scores only with runs on the
   same version.

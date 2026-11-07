@@ -10,8 +10,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - Schedule RoboCasa task episodes in smaller groups so workers can share long evaluations more evenly,
   while retaining each task's original episode indices and seeds.
 
-- Speed up RoboCasa evaluation by skipping the discarded intermediate Groot observation conversions
-  inside an action chunk when video is off. Camera sensors, the basic observation path, physics, rewards,
+- Speed up RoboCasa evaluation by skipping discarded intermediate observation conversions inside an
+  action chunk when video is off, while preserving the render cache. Camera sensors, physics, rewards,
   and success checks still run on every step. The manifest's `defer_observations: false` restores every
   conversion; video evaluation always uses the per-step path.
 - Make RoboCasa scenes reproducible under any `K`/`g`. The manifest's `seed` (42) seeds each task's
