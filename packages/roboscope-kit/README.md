@@ -228,6 +228,17 @@ The observation passed to `act()` starts each chunk; `observe()` receives the in
 Updates are synchronous by default. The RoboDojo manifest can opt into an experimental bounded queue;
 updates are drained before the next `act()` and before ending the episode.
 
+An interactive RoboDojo Policy can declare `interactive_benchmarks=("robodojo",)` and return
+`EpisodeControl("wait")` or `EpisodeControl("finish")` from `act()` or `poll(episode_id)`; import
+`EpisodeControl` from `roboscope_kit.policy`. The runtime polls without sending a duplicate observation
+or advancing the simulator while it waits. On finish it asks RoboDojo to judge the current scene and
+passes its verdict to `episode_outcome(episode_id, outcome)` before `end_episode()`. Native state and
+camera metadata accompany the canonical image features in `Observation.metadata["robodojo_native"]`.
+Interactive policies currently require one environment per Worker and cannot use step-observation
+overlap. See the experimental [PyRUA-Lean example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/pyrua).
+Policies can also set `max_workers_per_replica` to bound the number of Workers sharing one replica;
+this is separate from the maximum inference batch size.
+
 ### Input preprocessing
 
 Each benchmark sends its canonical observation unchanged: no model-specific resizing, normalization, or

@@ -75,6 +75,7 @@ class Observation:
     step: int
     features: dict[str, Any]
     timestamp_s: float | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.episode_id:
@@ -89,6 +90,7 @@ class Observation:
             step=int(value["step"]),
             features=dict(value["features"]),
             timestamp_s=float(value["timestamp_s"]) if value.get("timestamp_s") is not None else None,
+            metadata=dict(value.get("metadata") or {}),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -97,6 +99,7 @@ class Observation:
             "step": self.step,
             "features": self.features,
             "timestamp_s": self.timestamp_s,
+            "metadata": self.metadata,
         }
 
 
@@ -121,6 +124,20 @@ class ActionChunk:
 
 
 @dataclass(frozen=True)
+class EpisodeControl:
+    """An interactive policy is waiting for an action or has finished."""
+
+    kind: str
+
+    def __post_init__(self) -> None:
+        if self.kind not in ("wait", "finish"):
+            raise ValueError("episode control must be 'wait' or 'finish'")
+
+    def to_dict(self) -> dict[str, str]:
+        return {"kind": self.kind}
+
+
+@dataclass(frozen=True)
 class PolicyCapabilities:
     supported_benchmarks: tuple[str, ...]
     required_features: tuple[str, ...]
@@ -130,6 +147,8 @@ class PolicyCapabilities:
     action_representations: dict[str, str] = field(default_factory=dict)
     observation_strides: dict[str, int] = field(default_factory=dict)
     step_observation_updates: tuple[str, ...] = ()
+    interactive_benchmarks: tuple[str, ...] = ()
+    max_workers_per_replica: int | None = None
 
     def __post_init__(self) -> None:
         if not self.supported_benchmarks:
@@ -164,6 +183,16 @@ class PolicyCapabilities:
             raise ValueError("step observation update benchmarks must be unique")
         if set(self.step_observation_updates) - set(self.supported_benchmarks):
             raise ValueError("step observation updates contain an unsupported benchmark")
+        if (len(set(self.interactive_benchmarks)) != len(self.interactive_benchmarks)
+                or set(self.interactive_benchmarks) - {"robodojo"}
+                or set(self.interactive_benchmarks) - set(self.supported_benchmarks)):
+            raise ValueError("interactive benchmarks must be declared and currently support only RoboDojo")
+        if set(self.interactive_benchmarks) & set(self.step_observation_updates):
+            raise ValueError("interactive policies cannot also request intermediate step updates")
+        if self.max_workers_per_replica is not None and (
+            type(self.max_workers_per_replica) is not int or self.max_workers_per_replica < 1
+        ):
+            raise ValueError("max_workers_per_replica must be a positive integer or null")
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> PolicyCapabilities:
@@ -187,6 +216,8 @@ class PolicyCapabilities:
                 for name, stride in (value.get("observation_strides") or {}).items()
             },
             step_observation_updates=tuple(str(item) for item in value.get("step_observation_updates", ())),
+            interactive_benchmarks=tuple(str(item) for item in value.get("interactive_benchmarks", ())),
+            max_workers_per_replica=value.get("max_workers_per_replica"),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -201,6 +232,8 @@ class PolicyCapabilities:
             "action_representations": dict(self.action_representations),
             "observation_strides": dict(self.observation_strides),
             "step_observation_updates": list(self.step_observation_updates),
+            "interactive_benchmarks": list(self.interactive_benchmarks),
+            "max_workers_per_replica": self.max_workers_per_replica,
         }
 
 
@@ -212,6 +245,7 @@ class PolicyExecutionContract:
     observation_stride: int = 1
     observation_stride_source: str = "safe_default"
     step_observation_updates: bool = False
+    interactive: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -221,6 +255,7 @@ class PolicyExecutionContract:
             "observation_stride": self.observation_stride,
             "observation_stride_source": self.observation_stride_source,
             "step_observation_updates": self.step_observation_updates,
+            "interactive": self.interactive,
         }
 
 
@@ -250,6 +285,7 @@ def negotiate_policy_action_contract(
             "policy" if benchmark.name in capabilities.observation_strides else "safe_default"
         ),
         step_observation_updates=benchmark.name in capabilities.step_observation_updates,
+        interactive=benchmark.name in capabilities.interactive_benchmarks,
     )
 
 
@@ -348,10 +384,18 @@ class Policy(ABC):
         raise NotImplementedError("Policy.observe must be implemented when step updates are declared")
 
     @abstractmethod
-    def act(self, observation: Observation) -> ActionChunk:
+    def act(self, observation: Observation) -> ActionChunk | EpisodeControl:
         """Produce one action or an action chunk for a canonical observation."""
 
-    def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
+    def poll(self, episode_id: str) -> ActionChunk | EpisodeControl:
+        """Poll an interactive episode without delivering a new observation."""
+        raise NotImplementedError("interactive policies must implement poll()")
+
+    def episode_outcome(self, episode_id: str, outcome: dict[str, Any]) -> None:
+        """Receive the simulator's final verdict for an interactive episode."""
+        raise NotImplementedError("interactive policies must implement episode_outcome()")
+
+    def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk | EpisodeControl, ...]:
         """Produce actions for an explicit batch; override to use native model batching."""
         return tuple(self.act(observation) for observation in observations)
 

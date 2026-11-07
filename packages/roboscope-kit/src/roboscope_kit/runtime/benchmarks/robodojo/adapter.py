@@ -87,6 +87,12 @@ class RoboDojoBenchmarkAdapter:
         threads = str(self.config.cpu_threads)
         if self.config.observation_queue_size and not context.execution_contract.step_observation_updates:
             raise ValueError("RoboDojo observation overlap requires a Policy that declares step updates")
+        if context.execution_contract.interactive and (
+            self.config.envs_per_worker != 1 or self.config.observation_queue_size
+        ):
+            raise ValueError(
+                "interactive RoboDojo policies require one environment and no observation overlap"
+            )
         return ProcessSpec(
             command=(
                 sys.executable, "-I", "-m", "roboscope_kit.runtime.benchmarks.robodojo.worker",
@@ -98,6 +104,7 @@ class RoboDojoBenchmarkAdapter:
                 "--observation-stride", str(context.execution_contract.observation_stride),
                 *(("--step-observation-updates",)
                   if context.execution_contract.step_observation_updates else ()),
+                *(("--interactive-policy",) if context.execution_contract.interactive else ()),
                 "--benchmark-python", str(self.config.python),
                 "--benchmark-root", str(self.config.benchmark_root),
                 "--queue-dir", str(context.queue_dir),

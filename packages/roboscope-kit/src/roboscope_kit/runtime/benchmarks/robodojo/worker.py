@@ -38,11 +38,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--physics-threads", type=int, choices=(1, 4, 8))
     parser.add_argument("--envs-per-worker", type=int, default=1)
     parser.add_argument("--step-observation-updates", action="store_true")
+    parser.add_argument("--interactive-policy", action="store_true")
     parser.add_argument("--observation-stride", type=int, default=1)
     parser.add_argument("--observation-queue-size", type=int, choices=range(0, 11), default=0)
     args = parser.parse_args()
     if args.observation_queue_size and not args.step_observation_updates:
         parser.error("observation overlap requires step observation updates")
+    if args.interactive_policy and (args.envs_per_worker != 1 or args.observation_queue_size):
+        parser.error("interactive policies require one environment and no observation overlap")
     if args.envs_per_worker < 1:
         parser.error("envs per worker must be positive")
     if args.observation_stride < 1:
@@ -115,6 +118,7 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         "ROBOSCOPE_POLICY_ENCODING": "msgpack",
         "ROBOSCOPE_ROBODOJO_ACTION_REPRESENTATION": args.action_representation,
         "ROBOSCOPE_ROBODOJO_STEP_UPDATES": "1" if args.step_observation_updates else "0",
+        "ROBOSCOPE_ROBODOJO_INTERACTIVE": "1" if getattr(args, "interactive_policy", False) else "0",
         "ROBOSCOPE_ROBODOJO_OBSERVATION_QUEUE_SIZE": str(args.observation_queue_size),
         "ROBOSCOPE_ROBODOJO_OBSERVATION_STRIDE": str(args.observation_stride),
         # The caller has explicitly accepted the same EULA above.

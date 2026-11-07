@@ -42,12 +42,27 @@ by the build script. Its submodule selections keep the upstream installer's `--r
 tested revisions.
 Model code and checkpoints are supplied separately through the standard Kit Policy configuration;
 [`examples/xpolicylab/`](../../examples/xpolicylab/README.md) serves XPolicyLab policies this way.
+The experimental [`examples/pyrua/`](../../examples/pyrua/README.md) uses the interactive Policy
+contract to preserve PyRUA-Lean's waiting, early finish and native verdict on one environment per Worker.
 The layout-sharding patch is adapted from @QLL-CCDD's RoboDojo work.
 
 The asset downloader verifies the pinned inventory and each file's hash. `HF_ENDPOINT` selects the metadata
 and primary download host; `ROBODOJO_ASSET_TRANSPORT=modelscope` uses ModelScope as a first byte source
 with the same pinned hashes. `ROBODOJO_ASSET_INVENTORY` may point to pre-fetched inventory metadata when
 the metadata service is unavailable, and `ROBODOJO_ASSET_WORKERS` controls download concurrency.
+
+For a space-constrained machine with an existing pinned RoboDojo runtime, `build-runtime.sh` can
+create a separate overlay environment with `ROBODOJO_BASE_RUNTIME=/path/to/base`. Set
+`ROBODOJO_ASSET_SOURCE` to a read-only copy of the pinned assets, `ROBODOJO_ASSET_INVENTORY` to
+the pinned inventory, and `ROBODOJO_WHEELHOUSE` to an offline directory containing a Kit wheel
+built from this source and wheels for any dependencies missing from the base. The builder verifies
+source revisions, checks the wheel against the staged SDK code, installs into the new environment,
+and hashes every asset. Generated robot configuration files stay in the new runtime.
+
+This mode reuses the base environment's installed dependencies and CuRobo source: it does not make
+a self-contained runtime. Keep the base unchanged while evaluating, and retain the generated
+`base-provenance.json` for comparisons. The default full build remains available when an independent
+environment is required.
 
 ## Profiling
 

@@ -160,8 +160,10 @@ class PolicyProcessAdapter:
             if not self.capabilities:
                 self._execution_contract = None
 
-    def maximum_workers_per_replica(self) -> None:
-        return None
+    def maximum_workers_per_replica(self) -> int | None:
+        limits = [item.max_workers_per_replica for item in self.capabilities.values()]
+        finite = [limit for limit in limits if limit is not None]
+        return min(finite) if finite else None
 
     def vram_bytes_per_replica(self) -> int | None:
         """Estimated per-replica policy VRAM footprint, or ``None`` if unknown."""

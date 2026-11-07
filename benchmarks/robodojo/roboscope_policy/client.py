@@ -10,7 +10,7 @@ import uuid
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
-from roboscope_kit import EpisodeContext, PolicyClient
+from roboscope_kit import ActionChunk, EpisodeContext, PolicyClient
 
 
 class WsModelClient:
@@ -57,7 +57,18 @@ class WsModelClient:
     def act(self, observation):
         self._flush()
         with PolicyClient(self.socket_path, timeout_s=900) as client:
-            return client.act(observation).actions
+            answer = client.act(observation)
+        return answer.actions if isinstance(answer, ActionChunk) else answer
+
+    def poll(self, episode_id):
+        with PolicyClient(self.socket_path, timeout_s=900) as client:
+            answer = client.poll(episode_id)
+        return answer.actions if isinstance(answer, ActionChunk) else answer
+
+    def episode_outcome(self, episode_id, outcome):
+        self._flush()
+        with PolicyClient(self.socket_path, timeout_s=900) as client:
+            client.episode_outcome(episode_id, outcome)
 
     def _observe_after(self, previous, observation):
         if previous is not None:

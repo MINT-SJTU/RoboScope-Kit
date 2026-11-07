@@ -16,6 +16,7 @@ from roboscope_kit import profiling
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
+    EpisodeControl,
     Observation,
     PolicyCapabilities,
     SessionContext,
@@ -104,9 +105,25 @@ class PolicyClient:
             profiling.episode_start()
         return self._request("reset", {"context": context.to_dict()})
 
-    def act(self, observation: Observation) -> ActionChunk:
-        result = self._request("act", {"observation": observation.to_dict()})
+    @staticmethod
+    def _action_result(result: dict[str, Any]) -> ActionChunk | EpisodeControl:
+        if "episode_control" in result:
+            return EpisodeControl(kind=str(result["episode_control"]["kind"]))
         return ActionChunk.from_dict(result["action_chunk"])
+
+    def act(self, observation: Observation) -> ActionChunk | EpisodeControl:
+        result = self._request("act", {"observation": observation.to_dict()})
+        return self._action_result(result)
+
+    def poll(self, episode_id: str) -> ActionChunk | EpisodeControl:
+        if not episode_id:
+            raise ValueError("episode_id cannot be empty")
+        return self._action_result(self._request("poll", {"episode_id": episode_id}))
+
+    def episode_outcome(self, episode_id: str, outcome: dict[str, Any]) -> None:
+        if not episode_id:
+            raise ValueError("episode_id cannot be empty")
+        self._request("episode_outcome", {"episode_id": episode_id, "outcome": outcome})
 
     def observe(self, observation: Observation) -> None:
         self._request("observe", {"observation": observation.to_dict()})

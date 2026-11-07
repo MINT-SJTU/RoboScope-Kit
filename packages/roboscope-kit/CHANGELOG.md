@@ -2,6 +2,14 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b41 - 2026-11-07
+
+- Add an opt-in interactive RoboDojo Policy contract for waiting without simulation steps, ending an
+  episode early, preserving native observation metadata, and receiving the simulator's verdict.
+- Add an experimental PyRUA-Lean Policy example using the upstream RoboDojo agent and tool bridge.
+- Let the RoboDojo builder create a separate environment over a verified existing runtime when disk space
+  prevents a full independent installation; record the reused dependency provenance.
+
 ## 0.8.0b40 - 2026-11-07
 
 - Refuse to retry missing RoboDojo layouts at a smaller environment count within the same shard, and record

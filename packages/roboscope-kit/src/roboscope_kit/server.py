@@ -17,6 +17,7 @@ from typing import Any
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
+    EpisodeControl,
     Observation,
     Policy,
     PolicyCapabilities,
@@ -108,7 +109,8 @@ class PolicyServer:
             return self._success_response(request_id, result)
         except Exception as exc:
             if (
-                operation in {"load", "reset", "act", "act_batch", "observe", "end_episode"}
+                operation in {"load", "reset", "act", "act_batch", "observe", "poll",
+                              "episode_outcome", "end_episode"}
                 and not isinstance(exc, ProtocolError)
             ):
                 self.state = PolicyState.FAILED
@@ -130,6 +132,11 @@ class PolicyServer:
             validate_policy_capabilities(context.benchmark, capabilities)
             if capabilities.step_observation_updates and type(self.policy).observe is Policy.observe:
                 raise TypeError("Policy must implement observe() when it declares step observation updates")
+            if capabilities.interactive_benchmarks and (
+                type(self.policy).poll is Policy.poll
+                or type(self.policy).episode_outcome is Policy.episode_outcome
+            ):
+                raise TypeError("interactive Policy must implement poll() and episode_outcome()")
             self.context = context
             self.capabilities = capabilities
             self.state = PolicyState.READY
@@ -144,11 +151,26 @@ class PolicyServer:
             observation = Observation.from_dict(payload["observation"])
             validate_observation(observation, context.benchmark, capabilities)
             action = self.policy.act(observation)
-            if not isinstance(action, ActionChunk):
-                raise TypeError("Policy.act() must return ActionChunk")
-            validate_action_chunk(action, context.benchmark)
-            self._validate_action_chunk_size(action, capabilities)
-            return {"action_chunk": action.to_dict()}
+            return self._action_response(action, context, capabilities)
+        if operation == "poll":
+            self._require_state(operation, PolicyState.READY)
+            context, capabilities = self._loaded_contract()
+            if context.benchmark.name not in capabilities.interactive_benchmarks:
+                raise ProtocolError("policy did not declare interactive episode support")
+            episode_id = str(payload.get("episode_id") or "")
+            if not episode_id:
+                raise ValueError("episode_id cannot be empty")
+            return self._action_response(self.policy.poll(episode_id), context, capabilities)
+        if operation == "episode_outcome":
+            self._require_state(operation, PolicyState.READY)
+            context, capabilities = self._loaded_contract()
+            if context.benchmark.name not in capabilities.interactive_benchmarks:
+                raise ProtocolError("policy did not declare interactive episode support")
+            episode_id, outcome = str(payload.get("episode_id") or ""), payload.get("outcome")
+            if not episode_id or not isinstance(outcome, dict) or type(outcome.get("success")) is not bool:
+                raise ValueError("episode outcome requires an episode ID and a boolean success")
+            self.policy.episode_outcome(episode_id, outcome)
+            return {"state": self.state.value}
         if operation == "observe":
             self._require_state(operation, PolicyState.READY)
             context, capabilities = self._loaded_contract()
@@ -215,6 +237,20 @@ class PolicyServer:
         if self.context is None or self.capabilities is None:
             raise RuntimeError("policy contract is unavailable before load")
         return self.context, self.capabilities
+
+    def _action_response(
+        self, action: ActionChunk | EpisodeControl, context: SessionContext,
+        capabilities: PolicyCapabilities,
+    ) -> dict[str, Any]:
+        if isinstance(action, EpisodeControl):
+            if context.benchmark.name not in capabilities.interactive_benchmarks:
+                raise ProtocolError("policy returned episode control without declaring support")
+            return {"episode_control": action.to_dict()}
+        if not isinstance(action, ActionChunk):
+            raise TypeError("Policy must return an ActionChunk or declared EpisodeControl")
+        validate_action_chunk(action, context.benchmark)
+        self._validate_action_chunk_size(action, capabilities)
+        return {"action_chunk": action.to_dict()}
 
     @staticmethod
     def _validate_action_chunk_size(
