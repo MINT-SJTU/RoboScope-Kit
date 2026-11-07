@@ -1,0 +1,34 @@
+{
+  "schema_version": 3,
+  "supported_benchmarks": ["robocasa365"],
+  "protocol_versions": {"robocasa365": "robocasa365-multitask-v1"},
+  "supported_suites": {
+    "robocasa365": ["target50", "atomic_seen", "composite_seen", "composite_unseen"]
+  },
+  "runtime": {
+    "python": "env/bin/python",
+    "benchmark_root": "src/robocasa"
+  },
+  "defaults": {
+    "episodes": 50,
+    "client_cpu_threads": 1,
+    "ready_timeout_s": 900,
+    "save_videos": false,
+    "probe_task_count": 3,
+    "probe_items_per_worker": 3
+  },
+  "benchmark_protocols": {
+    "robocasa365": {
+      "robocasa_revision": "3443cdf3dd20f9ae8ed41adba442059b506891d0",
+      "robosuite_revision": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "scene_split": "pretrain",
+      "native_envs": 5,
+      "constructor_seed": 1111111,
+      "rollout_label_base": 100000,
+      "control_freq_hz": 20,
+      "observation_steps": 2,
+      "action_steps": 8,
+      "action_representation": "robocasa365.panda-omron-hybrid-v1"
+    }
+  }
+}

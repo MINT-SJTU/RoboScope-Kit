@@ -1,0 +1,70 @@
+--- a/robosuite/utils/binding_utils.py
++++ b/robosuite/utils/binding_utils.py
+@@ -3,6 +3,7 @@
+ """
+ 
+ import gc
++from contextlib import nullcontext
+ import os
+ from tempfile import TemporaryDirectory
+ 
+@@ -53,6 +54,8 @@
+ 
+     See https://github.com/openai/mujoco-py/blob/4830435a169c1f3e3b5f9b58a7c3d9c39bdf4acb/mujoco_py/mjrendercontext.pyx
+     """
++
++    _roboscope_owning_context_cleanup = 2
+ 
+     def __init__(self, sim, offscreen=True, device_id=-1, max_width=640, max_height=480):
+ 
+@@ -88,6 +91,8 @@
+         sim.forward()
+         # make sure sim has this context
+         sim.add_render_context(self)
++        # Replacing an old context may change the current GL context during cleanup.
++        self.gl_ctx.make_current()
+ 
+         self.model = sim.model
+         self.data = sim.data
+@@ -198,19 +203,28 @@
+         mujoco.mjr_uploadTexture(self.model._model, self.con, tex_id)
+ 
+     def __del__(self):
+-        # free mujoco rendering context and GL rendering context
+-        self.con.free()
+-        try:
+-            self.gl_ctx.free()
+-        except Exception:
+-            # avoid getting OpenGL.error.GLError
+-            pass
+-        del self.con
+-        del self.gl_ctx
+-        del self.scn
+-        del self.cam
+-        del self.vopt
+-        del self.pert
++        # Delayed GC may interrupt another renderer on this same thread.
++        preserve = (
++            self.gl_ctx.preserve_current()
++            if _SYSTEM == "Linux" and _MUJOCO_GL == "egl"
++            else nullcontext()
++        )
++        with preserve:
++            # MuJoCo GPU resources must be freed in their owning context.
++            self.gl_ctx.make_current()
++            # free mujoco rendering context and GL rendering context
++            self.con.free()
++            try:
++                self.gl_ctx.free()
++            except Exception:
++                # avoid getting OpenGL.error.GLError
++                pass
++            del self.con
++            del self.gl_ctx
++            del self.scn
++            del self.cam
++            del self.vopt
++            del self.pert
+ 
+ 
+ class MjRenderContextOffscreen(MjRenderContext):

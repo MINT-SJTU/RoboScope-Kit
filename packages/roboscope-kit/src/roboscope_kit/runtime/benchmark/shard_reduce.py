@@ -44,6 +44,7 @@ _ADDITIVE_TABLES: dict[str, tuple[str, bool]] = {
     "libero_pro": ("task_id", True),
     "robotwin": ("task", False),
     "robocasa": ("task", False),
+    "robocasa365": ("task", False),
     "robodojo": ("task", False),
     "robomimic": ("task", False),
 }
@@ -110,7 +111,23 @@ def _merge_standard(shards: Sequence[Mapping[str, Any]], full_total: int) -> dic
 def _merge_official(benchmark: str, partials: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     if benchmark in _ADDITIVE_TABLES:
         key, has_runtime_metrics = _ADDITIVE_TABLES[benchmark]
-        return _sum_task_tables(partials, key, has_runtime_metrics)
+        official = _sum_task_tables(partials, key, has_runtime_metrics)
+        if benchmark == "robocasa365":
+            from roboscope_kit.runtime.benchmarks.robocasa365.adapter import split_results
+
+            expected = partials[0]["coverage"]["expected"]
+            if any(partial["coverage"]["expected"] != expected for partial in partials):
+                raise ValueError("RoboCasa365 shards disagree on the expected workload")
+            completed = sum(row["episodes"] for row in official["tasks"])
+            official.update({
+                "metric": "episode_success_any_step",
+                "full_suite": all(partial["full_suite"] for partial in partials),
+                "native_equivalence_verified": False,
+                "coverage": {"expected": expected, "completed": completed,
+                             "complete": completed == expected},
+                "splits": split_results(official["tasks"]),
+            })
+        return official
     if benchmark == "calvin":
         return merge_sequence_lengths(list(partials))
     if benchmark == "metaworld":

@@ -1,0 +1,72 @@
+--- a/robosuite/renderers/context/egl_context.py
++++ b/robosuite/renderers/context/egl_context.py
+@@ -16,6 +16,7 @@
+ 
+ import atexit
+ import ctypes
++from contextlib import contextmanager
+ import os
+ 
+ PYOPENGL_PLATFORM = os.environ.get("PYOPENGL_PLATFORM")
+@@ -126,6 +127,8 @@
+                     "required for creating a headless rendering context."
+                 )
+             atexit.register(EGL.eglTerminate, EGL_DISPLAY)
++            # Thread-wide release belongs at process exit, not per-context cleanup.
++            atexit.register(EGL.eglReleaseThread)
+         EGL.eglChooseConfig(EGL_DISPLAY, EGL_ATTRIBUTES, config_ptr, config_size, num_configs)
+         if num_configs.value < 1:
+             raise RuntimeError(
+@@ -141,14 +144,49 @@
+         if not EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, self._context):
+             raise RuntimeError("Failed to make the EGL context current.")
+ 
++    @contextmanager
++    def preserve_current(self):
++        """Restore the interrupted EGL binding after temporary owning-context work."""
++        previous_api = EGL.eglQueryAPI()
++        previous_context = EGL.eglGetCurrentContext()
++        previous_display = EGL.eglGetCurrentDisplay()
++        previous_draw = EGL.eglGetCurrentSurface(EGL.EGL_DRAW)
++        previous_read = EGL.eglGetCurrentSurface(EGL.EGL_READ)
++        owner = self._context
++        previous_is_owner = bool(previous_context and owner) and previous_context.address == owner.address
++        try:
++            yield
++        finally:
++            # Never rebind the owner after this scope has destroyed it.
++            if previous_context and not (previous_is_owner and self._context is None):
++                if not EGL.eglBindAPI(previous_api):
++                    raise RuntimeError("Failed to restore the EGL client API.")
++                if not EGL.eglMakeCurrent(
++                    previous_display, previous_draw, previous_read, previous_context
++                ):
++                    raise RuntimeError("Failed to restore the interrupted EGL context.")
++            else:
++                # EGL_NO_DISPLAY is not valid even when unbinding a context.
++                if not EGL.eglBindAPI(EGL.EGL_OPENGL_API):
++                    raise RuntimeError("Failed to bind the EGL OpenGL API for cleanup.")
++                if not EGL.eglMakeCurrent(
++                    EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT
++                ):
++                    raise RuntimeError("Failed to clear the temporary EGL context.")
++                if not EGL.eglBindAPI(previous_api):
++                    raise RuntimeError("Failed to restore the EGL client API.")
++
+     def free(self):
+         """Frees resources associated with this context."""
+         if self._context:
+             current_context = EGL.eglGetCurrentContext()
+             if current_context and self._context.address == current_context.address:
+-                EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+-            EGL.eglDestroyContext(EGL_DISPLAY, self._context)
+-            EGL.eglReleaseThread()
++                if not EGL.eglMakeCurrent(
++                    EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT
++                ):
++                    raise RuntimeError("Failed to release the EGL context before destruction.")
++            if not EGL.eglDestroyContext(EGL_DISPLAY, self._context):
++                raise RuntimeError("Failed to destroy the EGL context.")
+         self._context = None
+ 
+     def __del__(self):

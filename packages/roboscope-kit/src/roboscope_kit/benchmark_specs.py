@@ -16,6 +16,7 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     LIBERO_PLUS = "libero_plus"
     LIBERO_PRO = "libero_pro"
     ROBOCASA = "robocasa"
+    ROBOCASA365 = "robocasa365"
     ROBOTWIN = "robotwin"
     CALVIN = "calvin"
     METAWORLD = "metaworld"
@@ -133,6 +134,38 @@ class RoboCasaBenchmarkDefinition(BenchmarkDefinition):
 
     def action(self, _suite: str) -> ActionSpec:
         return ActionSpec("action.robot", "RoboCasa GR1 arms, hands, and waist action vector.", 29)
+
+
+class RoboCasa365BenchmarkDefinition(BenchmarkDefinition):
+    name = BenchmarkName.ROBOCASA365
+    protocol_version = "robocasa365-multitask-v1"
+    supported_action_representations = ("robocasa365.panda-omron-hybrid-v1",)
+    default_action_representation = "robocasa365.panda-omron-hybrid-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        images = tuple(
+            _feature(name, FeatureKind.IMAGE, "Two consecutive physical-step RGB frames.",
+                     shape=(2, 256, 256, 3))
+            for name in ("images.agentview_left", "images.agentview_right", "images.wrist")
+        )
+        states = tuple(
+            _feature(f"state.{name}", FeatureKind.STATE,
+                     "Two consecutive raw PandaOmron state vectors; quaternions use xyzw.",
+                     shape=(2, dimension))
+            for name, dimension in (
+                ("end_effector_position_relative", 3), ("end_effector_rotation_relative", 4),
+                ("gripper_qpos", 2), ("base_position", 3), ("base_rotation", 4),
+            )
+        )
+        return (*images, *states,
+                _feature("language.instruction", FeatureKind.LANGUAGE, "Upstream episode instruction."))
+
+    def action(self, _suite: str) -> ActionSpec:
+        return ActionSpec(
+            "action.robot",
+            "PandaOmron end-effector delta (6), gripper (1), base/torso (4), hybrid mode (1).",
+            12,
+        )
 
 
 class RoboTwinBenchmarkDefinition(BenchmarkDefinition):
@@ -331,6 +364,7 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         LiberoPlusBenchmarkDefinition(),
         LiberoProBenchmarkDefinition(),
         RoboCasaBenchmarkDefinition(),
+        RoboCasa365BenchmarkDefinition(),
         RoboTwinBenchmarkDefinition(),
         RoboDojoBenchmarkDefinition(),
         CalvinBenchmarkDefinition(),
