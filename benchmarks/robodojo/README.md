@@ -18,7 +18,7 @@ upstream default of 25 or 50 layouts and uses seed 1. `--episodes` can request a
 requests above an upstream task limit are rejected. Work is divided into non-overlapping fixed-layout
 shards. A shard missing a layout or returning incomplete results fails rather than reporting a partial run.
 If retrying missing layouts would reduce the simulator's environment count, the shard fails rather than
-mixing results from different environment counts. Each episode records its actual `envs_per_worker`.
+mixing results from different environment counts. Each episode records the evaluator's `--num_envs` argument.
 
 The Policy receives `images.head`, `images.left_wrist`, and `images.right_wrist` as RGB uint8 arrays,
 `language.instruction` as a string, and `state.joints` as 14 float32 values ordered as six left-arm joints,

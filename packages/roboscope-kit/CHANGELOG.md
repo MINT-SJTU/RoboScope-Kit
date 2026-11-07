@@ -5,7 +5,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 ## 0.8.0b40 - 2026-11-07
 
 - Refuse to retry missing RoboDojo layouts at a smaller environment count within the same shard, and record
-  the actual simulator environment count in each episode and work result.
+  the evaluator's `--num_envs` argument in each episode and work result.
 
 - Honor a Policy's declared `observation_strides` on RoboDojo: `observe()` then receives every Nth control-step
   observation, while rendering and video stay on every step. The default of 1 is unchanged.
