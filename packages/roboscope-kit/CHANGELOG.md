@@ -2,6 +2,16 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b31 - 2026-11-06
+
+- Add an offline testbed for autotune strategies. `python -m roboscope_kit.runtime.benchmark.autotune_testbed`
+  builds a versioned workload record from an evaluation's `autotune/` outputs and replays it through the
+  unchanged controller, so any registered strategy runs and is scored without a GPU. A K/g the record does not
+  hold stops the search and is reported, never interpolated. The real workloads are the RoboCasa runs from #80,
+  as the table and as a record of two searches and a fixed-K/g sweep, and such a record for LIBERO. Scores include an end-to-end estimate and a
+  no-tuning baseline, and tests apply a per-workload regression rule. It is a development tool: evaluations do
+  not import it, and search behavior does not change. See `docs/autotune-testbed.md`.
+
 ## 0.8.0b30 - 2026-11-06
 
 - Add `examples/xpolicylab/compare_native.py`, which runs a Kit RoboDojo run's tasks and layouts through the
