@@ -2,6 +2,14 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b39 - 2026-11-07
+
+- Integrate task-configured ManiSkill GPU vector evaluation with the 18-task tabletop state and RGB manifests, per-task robots/controllers/horizons, dynamic action dimensions, camera mapping, and per-task/overall results.
+- Add a pinned runtime builder, selectable asset installer, official multi-model PPO example, and native GPU-vectorized reference. Validate representative tasks rather than benchmark every task during integration acceptance.
+- Pass the shared controller mode expected by the pinned ManiSkill multi-robot constructor while retaining upstream flat action mapping.
+- Preserve ZIP/GZIP asset cache formats, regular-file provenance and the original YCB content pin through an immutable official archive.
+- Preserve the public Policy API, existing benchmarks, transport, scheduler and Policy-only MPS behavior. Keep the original create/close-per-vector-group lifecycle for separate issue 31 optimization.
+
 ## 0.8.0b30 - 2026-11-06
 
 - Add `examples/xpolicylab/compare_native.py`, which runs a Kit RoboDojo run's tasks and layouts through the

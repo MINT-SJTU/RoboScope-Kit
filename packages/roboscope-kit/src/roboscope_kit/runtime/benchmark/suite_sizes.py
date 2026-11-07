@@ -61,6 +61,10 @@ SUITE_SIZES: dict[tuple[str, str], SuiteSize] = {
     ("robocasa", "tabletop"): SuiteSize(tasks=24, episodes_per_task=50),
     ("metaworld", "mt50"): SuiteSize(tasks=50, episodes_per_task=50),
     ("robomimic", "ph_low_dim"): SuiteSize(tasks=5, episodes_per_task=50),
+    ("maniskill", "pickcube_state_v1"): SuiteSize(tasks=1, episodes_per_task=100),
+    ("maniskill", "baseline_state_v1"): SuiteSize(tasks=3, episodes_per_task=100),
+    ("maniskill", "tabletop_state_v1"): SuiteSize(tasks=18, episodes_per_task=100),
+    ("maniskill", "tabletop_rgb_v1"): SuiteSize(tasks=18, episodes_per_task=100),
     ("robodojo", "arx_x5"): SuiteSize(tasks=42, episodes_per_task=None, fixed_total_records=1800),
     ("robodojo", "arx_x5_randomized"): SuiteSize(tasks=12, episodes_per_task=None, fixed_total_records=300),
 }

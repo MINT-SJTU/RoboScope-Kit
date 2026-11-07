@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "repository": "haosulab/ManiSkill_Demonstrations",
+  "revision": "3558f72cf99d51d04a6ac4779e88b3da4bbf1628",
+  "model_kind": "official RL-trained PPO state actor, deterministic FP32 evaluation",
+  "models": {
+    "PickCube-v1": {
+      "path": "PickCube-v1.pt",
+      "dataset_path": "demos/PickCube-v1/rl/ppo_pd_ee_delta_pos_ckpt.pt",
+      "bytes": 1152034,
+      "sha256": "0b17b5ed9690ccf83111d0f09af8d1599f69ee7ba0077e1aac48814ac78ce99c",
+      "robot_uid": "panda",
+      "obs_mode": "state",
+      "control_mode": "pd_ee_delta_pos",
+      "max_episode_steps": 50
+    },
+    "RollBall-v1": {
+      "path": "RollBall-v1.pt",
+      "dataset_path": "demos/RollBall-v1/rl/ppo_pd_ee_delta_pos_ckpt.pt",
+      "bytes": 1156130,
+      "sha256": "fb2b81ce700125bc189d540571fda66f858c84af06becff43dbe0142951a86ac",
+      "robot_uid": "panda",
+      "obs_mode": "state",
+      "control_mode": "pd_ee_delta_pos",
+      "max_episode_steps": 80
+    },
+    "PushT-v1": {
+      "path": "PushT-v1.pt",
+      "dataset_path": "demos/PushT-v1/rl/ppo_pd_ee_delta_pos_ckpt.pt",
+      "bytes": 1128482,
+      "sha256": "310ca96750e285573a424dca270a732bccd74bf44f09f26e0fe81016899aa340",
+      "robot_uid": "panda_stick",
+      "obs_mode": "state",
+      "control_mode": "pd_ee_delta_pos",
+      "max_episode_steps": 100
+    }
+  }
+}
