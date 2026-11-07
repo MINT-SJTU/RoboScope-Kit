@@ -1,0 +1,8 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/path/to/maniskill-runtime/env/bin/python",
+    "/path/to/RoboScope-Kit/examples/maniskill/ppo_policy.py"
+  ],
+  "cwd": "/path/to/RoboScope-Kit/examples/maniskill"
+}

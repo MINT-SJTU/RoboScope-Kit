@@ -89,7 +89,8 @@ python -m roboscope_kit.runtime.benchmark \
 `--checkpoint-source` is an absolute local path, passed to `Policy.load()` unchanged. Prepare the checkpoint
 before starting the evaluation. The runtime validates the Policy process contract before every run.
 `--quick-test` runs a short real evaluation with one Worker and one Server; without it, the run is a full
-scored evaluation. `--self-test` only checks that the manifest's runtime paths exist. Results, progress,
+scored evaluation. `--self-test` runs benchmark-specific runtime checks without loading your Policy;
+some checks create GPU simulator environments. Results, progress,
 and logs are written under `--output-dir`. Use a new or empty directory for each evaluation or self-test.
 A directory containing only `errors.jsonl` can be retried; new errors are appended to preserve earlier
 failures. Pure preflight checks run before any evaluation artifacts are written. Once a run has produced
@@ -410,6 +411,14 @@ again. To retry a failed upload, run the `SDK compatibility` workflow manually o
 Earlier source releases had a `libero` extra that only installed `imageio[ffmpeg]` and never a runnable
 LIBERO simulator, so it was removed. If you use `imageio` directly, declare `imageio[ffmpeg]>=2.34,<3.0` in
 your own dependencies.
+
+## ManiSkill multi-task integration
+
+The `maniskill` adapter executes manifest-configured tasks, robots, controllers, state/state_dict/RGB observations, and dynamic action dimensions through GPU vector environments and the existing Policy lifecycle. Built-in suites cover the pinned 18-task tabletop catalog, plus a three-task official PPO baseline. Per-task results and overall aggregation retain seed and episode accounting.
+
+Build with `benchmarks/maniskill/build-runtime.sh <install-dir>`. Select external assets with `MANISKILL_ASSET_SUITES`; source, simulator dependencies and PhysX remain pinned and isolated. See the [task catalog, protocol and build guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/README.md), [official model example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/README.md), and [representative acceptance results](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/MULTITASK_VALIDATION.md).
+
+Issue 25 integration and issue 31 throughput optimization remain separate. Hardware validation uses a local candidate; merge/release status is tracked by GitHub and CI.
 
 ## License
 

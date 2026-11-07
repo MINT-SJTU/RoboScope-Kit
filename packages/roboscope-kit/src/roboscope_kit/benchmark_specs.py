@@ -21,6 +21,7 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     METAWORLD = "metaworld"
     ROBODOJO = "robodojo"
     ROBOMIMIC = "robomimic"
+    MANISKILL = "maniskill"
 
 
 class BenchmarkDefinition(ABC):
@@ -115,6 +116,46 @@ class LiberoPlusBenchmarkDefinition(LiberoBenchmarkDefinition):
 class LiberoProBenchmarkDefinition(LiberoBenchmarkDefinition):
     name = BenchmarkName.LIBERO_PRO
     protocol_version = "libero-pro-v1"
+
+
+class ManiSkillBenchmarkDefinition(BenchmarkDefinition):
+    """Task-driven ManiSkill observations and native controller action vectors."""
+
+    name = BenchmarkName.MANISKILL
+    protocol_version = "maniskill-v1"
+    supported_action_representations = ("maniskill.native-controller-v1",)
+    default_action_representation = "maniskill.native-controller-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        return (
+            _feature(
+                "state.proprioception", FeatureKind.STATE,
+                "Upstream state, or nonvisual agent/extra fields for visual observations.",
+                required=False, shape=(None,),
+            ),
+            _feature(
+                "images.primary", FeatureKind.IMAGE, "Configured primary camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "images.wrist", FeatureKind.IMAGE, "Configured wrist camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "images.auxiliary", FeatureKind.IMAGE, "Configured auxiliary camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "language.instruction", FeatureKind.LANGUAGE, "Task instruction.", required=False,
+            ),
+        )
+
+    def action(self, _suite: str) -> ActionSpec:
+        # Each task validates against its robot/controller action space in the worker.
+        return ActionSpec(
+            "action.robot", "Unmodified action vector for the per-episode ManiSkill controller.",
+            None,
+        )
 
 
 class RoboCasaBenchmarkDefinition(BenchmarkDefinition):
@@ -330,6 +371,9 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         LiberoBenchmarkDefinition(),
         LiberoPlusBenchmarkDefinition(),
         LiberoProBenchmarkDefinition(),
+
+
+        ManiSkillBenchmarkDefinition(),
         RoboCasaBenchmarkDefinition(),
         RoboTwinBenchmarkDefinition(),
         RoboDojoBenchmarkDefinition(),
