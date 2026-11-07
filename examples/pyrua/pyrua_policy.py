@@ -32,6 +32,10 @@ CAMERAS = {"cam_head": "images.head", "cam_left_wrist": "images.left_wrist",
            "cam_right_wrist": "images.right_wrist"}
 ACTION_KEYS = ("left_arm_joint_state", "left_ee_joint_state",
                "right_arm_joint_state", "right_ee_joint_state")
+# Once the simulator sends its verdict, the agent may still be completing a
+# tool call and shutting down its model session. Keep that cleanup bounded but
+# allow enough time for a slow model response before rejecting the episode.
+OUTCOME_JOIN_TIMEOUT_S = 300.0
 
 
 def native_observation(observation: Observation) -> dict[str, Any]:
@@ -142,6 +146,14 @@ class PyRUAPolicy(Policy):
 
         if self.episodes:
             raise ValueError("PyRUA requires one active episode per replica; use one replica per Worker")
+        if Path(context.episode_id).name != context.episode_id or context.episode_id in (".", ".."):
+            raise ValueError("PyRUA episode ID must be a single path component")
+        episode_dir = self.result_dir / context.episode_id
+        episode_dir.mkdir(mode=0o700, exist_ok=False)
+        identity = {"episode_id": context.episode_id, "task": context.task_id,
+                    "layout_id": context.metadata.get("layout_id"),
+                    "robodojo_run_id": context.metadata.get("robodojo_run_id")}
+        (episode_dir / "kit_episode.json").write_text(json.dumps(identity) + "\n", encoding="utf-8")
         self.episodes[context.episode_id] = Episode(context, Bridge(poll_s=0.01))
 
     def act(self, observation: Observation) -> ActionChunk | EpisodeControl:
@@ -176,7 +188,7 @@ class PyRUAPolicy(Policy):
         episode.bridge.episode_end(outcome)
         if episode.thread is None:
             raise RuntimeError("PyRUA agent did not start")
-        episode.thread.join(timeout=30)
+        episode.thread.join(timeout=OUTCOME_JOIN_TIMEOUT_S)
         if episode.thread.is_alive():
             raise TimeoutError("PyRUA did not record the episode verdict")
         if episode.error is not None:

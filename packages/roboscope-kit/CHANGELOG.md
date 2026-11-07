@@ -2,6 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b42 - 2026-11-07
+
+- Reject interactive Policy batches before invoking the Policy, while keeping the server ready.
+- Record the native RoboDojo run ID with each PyRUA episode so retries remain distinguishable.
+- Allow a bounded five-minute PyRUA shutdown after the simulator reports its verdict.
+
 ## 0.8.0b41 - 2026-11-07
 
 - Add an opt-in interactive RoboDojo Policy contract for waiting without simulation steps, ending an

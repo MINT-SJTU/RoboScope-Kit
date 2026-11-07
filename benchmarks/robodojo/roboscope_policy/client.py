@@ -45,11 +45,14 @@ class WsModelClient:
     def open_episode(self, task, layout_id):
         """Start one more concurrent episode, for a multi-environment batch."""
         episode_id = f"robodojo-{uuid.uuid4()}"
+        metadata = {"layout_id": layout_id}
+        if run_id := os.environ.get("ROBODOJO_RUN_ID"):
+            metadata["robodojo_run_id"] = run_id
         with PolicyClient(self.socket_path, timeout_s=900) as client:
             client.reset(EpisodeContext(
                 episode_id=episode_id,
                 task_id=task,
-                metadata={"layout_id": layout_id},
+                metadata=metadata,
             ))
         self.episodes.append(episode_id)
         return episode_id

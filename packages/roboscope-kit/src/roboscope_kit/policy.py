@@ -395,9 +395,15 @@ class Policy(ABC):
         """Receive the simulator's final verdict for an interactive episode."""
         raise NotImplementedError("interactive policies must implement episode_outcome()")
 
-    def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk | EpisodeControl, ...]:
-        """Produce actions for an explicit batch; override to use native model batching."""
-        return tuple(self.act(observation) for observation in observations)
+    def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
+        """Produce batched actions; interactive policies use act() and poll() instead."""
+        actions = []
+        for observation in observations:
+            action = self.act(observation)
+            if not isinstance(action, ActionChunk):
+                raise TypeError("Policy.act_batch() requires ActionChunk values")
+            actions.append(action)
+        return tuple(actions)
 
     def end_episode(self, episode_id: str) -> None:
         """Release all mutable state owned by a completed episode."""

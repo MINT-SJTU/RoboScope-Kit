@@ -183,6 +183,8 @@ class PolicyServer:
         if operation == "act_batch":
             self._require_state(operation, PolicyState.READY)
             context, capabilities = self._loaded_contract()
+            if context.benchmark.name in capabilities.interactive_benchmarks:
+                raise ProtocolError("interactive policies do not support act_batch")
             observations = tuple(Observation.from_dict(item) for item in payload["observations"])
             if not observations:
                 raise ValueError("observation batch cannot be empty")
