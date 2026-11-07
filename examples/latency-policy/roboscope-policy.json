@@ -1,0 +1,12 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/sim/robodojo/env/bin/python",
+    "/path/to/RoboScope-Kit/examples/latency-policy/latency_policy.py",
+    "--latency-s",
+    "3",
+    "--chunk",
+    "10"
+  ],
+  "cwd": "/sim/robodojo/RoboDojo"
+}

@@ -100,6 +100,7 @@ def eval_one_episode(TASK_ENV, model_client):
     layout_id = int(TASK_ENV.env_seeds[0])
     representation = os.environ["ROBOSCOPE_ROBODOJO_ACTION_REPRESENTATION"]
     step_updates = os.environ.get("ROBOSCOPE_ROBODOJO_STEP_UPDATES") == "1"
+    stride = int(os.environ.get("ROBOSCOPE_ROBODOJO_OBSERVATION_STRIDE", "1"))
     episode_id = model_client.begin_episode(task, layout_id)
     started = time.monotonic()
     try:
@@ -112,10 +113,12 @@ def eval_one_episode(TASK_ENV, model_client):
                 if TASK_ENV.is_episode_end():
                     break
                 if step_updates and index + 1 < len(actions):
-                    observation = _observation(
-                        episode_id, int(TASK_ENV.take_action_cnt[0]), TASK_ENV.get_obs()
-                    )
-                    model_client.observe(observation)
+                    # get_obs() also renders and writes the video frame, so it runs on every
+                    # step; the stride only skips delivering the observation to the Policy.
+                    raw = TASK_ENV.get_obs()
+                    step = int(TASK_ENV.take_action_cnt[0])
+                    if step % stride == 0:
+                        model_client.observe(_observation(episode_id, step, raw))
     except BaseException as primary:
         try:
             model_client.end_episode()
@@ -142,6 +145,7 @@ def eval_one_episode_batch(TASK_ENV, model_client):
     task = str(TASK_ENV.task_name)
     representation = os.environ["ROBOSCOPE_ROBODOJO_ACTION_REPRESENTATION"]
     step_updates = os.environ.get("ROBOSCOPE_ROBODOJO_STEP_UPDATES") == "1"
+    stride = int(os.environ.get("ROBOSCOPE_ROBODOJO_OBSERVATION_STRIDE", "1"))
     model_client.end_episode()
     episodes = {}
     started = time.monotonic()
@@ -158,13 +162,12 @@ def eval_one_episode_batch(TASK_ENV, model_client):
             for env_idx in running:
                 if env_idx not in rows:
                     continue
-                observation = _observation(
-                    episodes[env_idx], int(TASK_ENV.take_action_cnt[env_idx]), rows[env_idx]
-                )
-                if chunks[env_idx]:
-                    model_client.observe(observation)
-                else:
+                step = int(TASK_ENV.take_action_cnt[env_idx])
+                observation = _observation(episodes[env_idx], step, rows[env_idx])
+                if not chunks[env_idx]:
                     chunks[env_idx].extend(_chunk(model_client.act(observation)))
+                elif step % stride == 0:
+                    model_client.observe(observation)
             TASK_ENV.take_action_batch(
                 [_action(chunks[env_idx].popleft(), representation) for env_idx in running], running
             )

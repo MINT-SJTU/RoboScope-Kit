@@ -95,6 +95,7 @@ class RoboDojoBenchmarkAdapter:
                 "--policy-socket", str(context.replica_socket),
                 "--action-representation", context.execution_contract.action_representation,
                 "--observation-queue-size", str(self.config.observation_queue_size),
+                "--observation-stride", str(context.execution_contract.observation_stride),
                 *(("--step-observation-updates",)
                   if context.execution_contract.step_observation_updates else ()),
                 "--benchmark-python", str(self.config.python),

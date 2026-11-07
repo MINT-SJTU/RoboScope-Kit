@@ -2,6 +2,19 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b31 - 2026-11-07
+
+- Honor a Policy's declared `observation_strides` on RoboDojo: `observe()` then receives every Nth control-step
+  observation, while rendering and video stay on every step. The default of 1 is unchanged.
+- Add `--observation-stride` to the XPolicyLab example.
+- Evaluate a RoboDojo layout again, up to three passes per shard, when the simulator abandons it after a PhysX
+  break. A fixed-layout shard used to come back short and cost the Worker its single restart; a second such
+  shard stopped the whole run. Each native log now keeps every attempt of its work item.
+- Add an experimental RoboDojo `envs_per_worker` default that runs several lockstep environments in one
+  simulator, one Kit episode each. The default of 1 is unchanged.
+- Add `examples/latency-policy/`, a synthetic Policy for measuring how a latency-bound workload scales with
+  concurrent episodes on RoboDojo.
+
 ## 0.8.0b30 - 2026-11-06
 
 - Add `examples/xpolicylab/compare_native.py`, which runs a Kit RoboDojo run's tasks and layouts through the

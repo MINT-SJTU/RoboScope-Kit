@@ -182,6 +182,7 @@ tuning, writing a Policy, CUDA MPS, and cross-instance sharding.
 | `examples/xvla/` | An X-VLA `Policy` example: a stateful Policy serving several benchmarks |
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
+| `examples/latency-policy/` | A synthetic latency-bound `Policy` for measuring RoboDojo concurrency |
 | `ci/` | Build, compatibility, and PyPI release scripts used by GitHub Actions |
 
 ## Contributing
