@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-05
+Updated: 2026-11-07
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -74,13 +74,13 @@ Capture starts when the Worker's `PolicyClient` opens the `episode` range, so on
 Policy through `PolicyClient` record anything. The Policy Server does not run under `nsys`: its own GPU time
 is not in the report, only the round-trip time of each request.
 
-| Benchmark | Uses `PolicyClient` | Verified on hardware |
+| Benchmark | Uses `PolicyClient` | Nsight Systems capture verified on hardware |
 |---|---|---|
 | RoboDojo | Yes | Yes (2026-11-05, K=1 and K=3) |
 | LIBERO, LIBERO-Plus | Yes | Not yet |
 | MetaWorld | Yes | Not yet |
 | robomimic | Yes | Not yet |
-| RoboCasa | Yes | Not yet |
+| RoboCasa | Yes | Not yet. Simulator CPU replay and live phase timings are available. |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |
 
@@ -100,5 +100,9 @@ is not in the report, only the round-trip time of each request.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
+- In GR1 Tabletop on an RTX 4090 host with a 12-CPU quota, MuJoCo `mj_step1` and `mj_step2`
+  accounted for 44% of the fixed-action simulator step interval with observation deferral enabled.
+  Live tests used Kit 0.8.0b34 from PR #39 rebased onto main (2026-11-07).
+  [RoboCasa GR1 throughput pilots](../../../benchmarks/robocasa/THROUGHPUT_PILOTS.md)
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).
