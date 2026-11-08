@@ -117,32 +117,32 @@ The rule answers one narrow question: is a change worse than today on the worklo
 say whether an algorithm is good in general; only more real records can widen that. How far a selection is from
 the recorded best is shown for people to read and is not a gate by itself.
 
-`JUDGED` in `tests/test_autotune_testbed.py` holds each judged workload with its expected relative throughput and
-tolerance, on the default strategy. `regression_failures` applies the rule:
+`JUDGED` in `tests/test_autotune_testbed.py` holds each judged workload with its expected relative throughput, on
+the default strategy. `regression_failures` applies the rule:
 
 - **Each workload is judged by itself.** A gain on one does not offset a loss on another.
 - **A change fails** if, on any judged workload, relative throughput falls below the expected value by more than
-  that workload's tolerance, the selection is unsafe, or the search is incomplete. A failure stops the change for
-  a person to look at; it does not prove the algorithm worse.
-- **The tolerance starts at 5%.** Replay adds no noise, since a record and the code give one score, so the noise is
-  in the recorded rates. On RoboCasa, repeated probes differ by at most 1.98%. Taken as a standard deviation of
-  `1.98 / sqrt(2)` per rate, and `sqrt(2)` more for a ratio of two rates, that gives about 5% at 1% false alerts
-  (2.576 standard deviations). Probes are not fixed runs, so this is a starting point.
-- **Each workload gets its own tolerance** once the selection and the best configuration have three fixed runs
-  each: `repeat_tolerance` takes each one's spread, the sample standard deviation of its fixed-run elapsed rates
-  over their mean, and gives `2.576 * sqrt(cv_selected**2 + cv_best**2)`, at least the 5% floor. `JUDGED` writes the
-  number out for review, and a test checks it against the calculation.
-- **RoboCasa's tolerance is 19.95%.** Its fixed runs are spread wider than its probes: `K=8/g=1` ran at 168.7,
-  149.1, and 147.8 steps/s (7.5%), `K=12/g=2` at 233.9, 226.3, and 229.9 (1.7%). The first run of each is from
-  2026-11-05, the other two from 2026-11-06 back to back, and the runs of one night agree closely, so most of the
-  spread is drift between days rather than noise within a run. That drift is what a user sees, so it stays in.
-  With #81, the selection is `K=16/g=2` (223.6, 202.2, 215.4; 5.0%), and the tolerance is 13.67%.
-- **LIBERO's tolerance is the 5% floor.** Its repeats give 0.69%: `K=16/g=4` ran at 209.0, 209.0, and 208.4 steps/s
-  (0.17%), `K=12/g=4` at 209.1, 209.7, and 208.9 (0.21%). All six ran within about 2.5 hours of one night, so they hold
-  no drift between days, which reached 13% on RoboCasa.
-- **RoboTwin's tolerance is the 5% floor.** Its repeats give 2.29%: `K=8/g=1` ran at 108.7, 108.9, and 109.7 steps/s
-  (0.49%), `K=10/g=1` at 115.2, 115.8, and 116.9 (0.74%). The first run of each is from one evening and the other two
-  from the next morning, so here the drift between days was small.
+  `REGRESSION_TOLERANCE`, the selection is unsafe, or the search is incomplete. A failure stops the change for a
+  person to look at; it does not prove the algorithm worse.
+- **The tolerance is 2% on every workload,** set by the maintainer. Replay adds no noise, since a record and the code
+  give one score, so an unchanged search never fails. The score moves only when a change selects another K/g, and a
+  selection more than 2% slower than today's is stopped.
+- **The recorded rates are less precise than 2% on RoboCasa.** `repeat_spread` shows how far a ratio can move by
+  noise alone, from the spread of each configuration's fixed-run elapsed rates over three or more runs:
+  `2.576 * sqrt(cv_selected**2 + cv_best**2)`, at 1% false alerts. It is not the gate; read it when a change fails.
+
+  | Workload | Selection vs best | `repeat_spread` |
+  |---|---|---:|
+  | RoboCasa, main | `K=8/g=1` vs `K=12/g=2` | 19.95% |
+  | RoboCasa, #81 | `K=16/g=2` vs `K=12/g=2` | 13.67% |
+  | LIBERO | `K=16/g=4` vs `K=12/g=4` | 0.69% |
+  | RoboTwin | `K=8/g=1` vs `K=10/g=1` | 2.29% |
+
+  On RoboCasa, `K=8/g=1` ran at 168.7, 149.1, and 147.8 steps/s, the first on 2026-11-05 and the others back to back
+  on 2026-11-06, so most of the spread is drift between days. A change there that selects a configuration a few
+  percent slower fails, though the records cannot tell the two apart; a person decides whether to lower the expected
+  value. LIBERO's six repeats ran within about 2.5 hours of one night and hold no such drift. RoboTwin's ran on an
+  evening and the next morning.
 - **Lowering an expected value** is allowed only in a PR that says why, and it needs maintainer review. Raise the
   value when a change improves it, so later changes cannot give the gain back.
 - **An incomplete search cannot be judged.** Measure the missing point on a GPU and add it to the record.
@@ -207,7 +207,7 @@ that run as a new record, so the algorithm is not fitted to the records alone.
 
 5. Check the file for anything that should not be public. Then score it, and add the expected search of every
    strategy to `EXPECTED` in `tests/test_autotune_testbed.py`; a workload or a strategy without an entry there
-   fails the test. Add a real workload to `JUDGED` with its tolerance, or say why not in `NOT_JUDGED`. A judged
+   fails the test. Add a real workload to `JUDGED` with its expected value, or say why not in `NOT_JUDGED`. A judged
    workload also goes in `REPRODUCED`, with the `autotune` name of its search of the current code.
 
 A new strategy needs only step 5. To record numbers from somewhere other than run outputs, such as a table in an

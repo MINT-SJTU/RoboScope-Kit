@@ -68,10 +68,12 @@ FAILED_OUTCOMES = (
     "worker_oom",
     "worker_shortfall",
 )
-# The starting tolerance of a workload, until repeated fixed runs give it its own.
-NOISE_TOLERANCE = 0.05
-# Fixed runs of each configuration that a workload's own tolerance needs, and the standard
-# deviations it allows for 1% false alerts on one side.
+# How far a judged workload's relative throughput may fall below its expected value, set by the
+# maintainer for every workload. A selection more than 2% slower than today stops the change for a
+# person to look at, even where the recorded rates drift more than that (see repeat_spread).
+REGRESSION_TOLERANCE = 0.02
+# Fixed runs of each configuration that repeat_spread needs, and the standard deviations it covers
+# for 1% false alerts on one side.
 TOLERANCE_REPEATS = 3
 TOLERANCE_Z = 2.576
 # How far a replay's search time may be from the recorded search's. The replay adds only probe
@@ -687,16 +689,16 @@ def fixed_default(record: dict[str, Any]) -> FixedDefault:
     return FixedDefault(*key, relative, evaluation_s, not _failed(record, *key) if measured else None)
 
 
-def repeat_tolerance(
+def repeat_spread(
     record: dict[str, Any], selected: tuple[int, int], best: tuple[int, int]
 ) -> float | None:
-    """The tolerance for ``selected`` against ``best``, from their repeated fixed runs.
+    """How far ``selected`` against ``best`` can move by noise alone, from their repeated fixed runs.
 
     Each configuration's spread is the sample standard deviation of its fixed-run elapsed rates
-    over their mean. A ratio of the two rates spreads by both, so the tolerance is
-    ``TOLERANCE_Z * sqrt(cv_selected**2 + cv_best**2)``, and never less than ``NOISE_TOLERANCE``:
-    repeats from one night hold no drift between days. ``None`` unless each has at least
-    ``TOLERANCE_REPEATS`` fixed runs; the workload then keeps ``NOISE_TOLERANCE``.
+    over their mean. A ratio of the two rates spreads by both, so this is
+    ``TOLERANCE_Z * sqrt(cv_selected**2 + cv_best**2)``. It is shown for people to weigh a failure
+    against ``REGRESSION_TOLERANCE`` and is not the gate. ``None`` unless each has at least
+    ``TOLERANCE_REPEATS`` fixed runs.
     """
 
     spreads = []
@@ -711,14 +713,14 @@ def repeat_tolerance(
         spreads.append(statistics.stdev(rates) / statistics.fmean(rates))
     if len(spreads) == 1:
         spreads *= 2
-    return max(NOISE_TOLERANCE, TOLERANCE_Z * math.sqrt(sum(spread**2 for spread in spreads)))
+    return TOLERANCE_Z * math.sqrt(sum(spread**2 for spread in spreads))
 
 
 def regression_failures(
     score: Score,
     expected_relative_throughput: float,
     *,
-    tolerance: float = NOISE_TOLERANCE,
+    tolerance: float = REGRESSION_TOLERANCE,
 ) -> tuple[str, ...]:
     """Why ``score`` fails the regression rule on its workload; empty when it passes.
 

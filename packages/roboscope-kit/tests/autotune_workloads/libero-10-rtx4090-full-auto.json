@@ -6,7 +6,7 @@
     "notes": [
       "observed_searches[0] ran the autotune code of main on d26a908; observed_searches[1] ran #81 on 81e3824. Both probed the same seven K/g and stopped on predicted GPU memory at K=20/g=5, so this workload does not separate them. Each probe names its search, and is the first repeat of its K/g in search 0 and the second in search 1.",
       "Fixed runs are full 500-episode evaluations of libero_10 on d26a908 (Kit 0.8.0b27), on one host with 20 CPU cores by cgroup. Every run completed 500 of 500 episodes, with 444 to 453 successes.",
-      "Fixed runs at 16/4 and 12/4 ran three times each, interleaved with others, within about 2.5 hours of one night. These repeats hold no drift between days; on RoboCasa that drift reached 13%, so the tolerance stays at the NOISE_TOLERANCE floor.",
+      "Fixed runs at 16/4 and 12/4 ran three times each, interleaved with others, within about 2.5 hours of one night. These repeats hold no drift between days; on RoboCasa that drift reached 13%, so their spread of 0.69% is not the drift a user sees.",
       "16/4 and 12/4 are tied: their medians differ by 0.1%, inside their spreads of 0.17% and 0.21%. The 12/4 is listed as best only because its median is higher.",
       "All probes are diagonal probes. Default two-phase runs a fixed-size probe, which this record does not cover, and it runs off the record at K=9/g=2 (K=8/g=5 with the steady estimator), so its score here only shows how it would decide on these rates.",
       "evaluation_steps is the 136783 steps of the full evaluation after the main search. Episodes stop on success, so full evaluations here took 134955 to 138232 steps."

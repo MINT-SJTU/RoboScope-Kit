@@ -22,7 +22,6 @@ from roboscope_kit.runtime.benchmark.autotune import (
     resolve_bounds,
 )
 from roboscope_kit.runtime.benchmark.autotune_testbed import (
-    NOISE_TOLERANCE,
     FixedDefault,
     Gap,
     fixed_default,
@@ -30,7 +29,7 @@ from roboscope_kit.runtime.benchmark.autotune_testbed import (
     main,
     record_runs,
     regression_failures,
-    repeat_tolerance,
+    repeat_spread,
     replay_strategy,
     search_mismatches,
     validate_record,
@@ -53,14 +52,13 @@ UNKNOWN_ON_REAL = (
     "wall_time_s",
 )
 
-# The regression rule, on the default strategy: workload -> (expected relative throughput, tolerance).
-# Lowering an expected value is allowed only in a PR that says why, and it needs maintainer review.
-# A tolerance comes from repeated fixed runs (repeat_tolerance) once the selection and the best
-# configuration have three each; until then it is NOISE_TOLERANCE.
+# The regression rule, on the default strategy: workload -> expected relative throughput, judged
+# with REGRESSION_TOLERANCE. Lowering an expected value is allowed only in a PR that says why, and
+# it needs maintainer review.
 JUDGED = {
-    FULL_AUTO: (0.6484, 0.1995),
-    LIBERO: (0.9994, NOISE_TOLERANCE),
-    ROBOTWIN: (0.9405, NOISE_TOLERANCE),
+    FULL_AUTO: 0.6484,
+    LIBERO: 0.9994,
+    ROBOTWIN: 0.9405,
 }
 # Judged workload -> the recorded real search that ran the autotune code of this branch. Its
 # replay must probe the same K/g in the same order, stop for the same reason, select the same K/g,
@@ -332,30 +330,18 @@ def test_strategy_on_workload(workload: str, strategy: str, estimator: str | Non
 @pytest.mark.parametrize("workload", sorted(JUDGED))
 def test_judged_workloads_pass_the_regression_rule(workload: str) -> None:
     score = replay_strategy(_load(workload), DEFAULT_AUTOTUNE_STRATEGY)
-    expected, tolerance = JUDGED[workload]
-    assert regression_failures(score, expected, tolerance=tolerance) == ()
+    assert regression_failures(score, JUDGED[workload]) == ()
 
 
-@pytest.mark.parametrize("workload", sorted(JUDGED))
-def test_a_judged_tolerance_comes_from_the_repeated_fixed_runs(workload: str) -> None:
-    record = _load(workload)
-    score = replay_strategy(record, DEFAULT_AUTOTUNE_STRATEGY)
-    measured = repeat_tolerance(record, score.selected, score.best_recorded)
-    _, tolerance = JUDGED[workload]
-    assert tolerance == pytest.approx(NOISE_TOLERANCE if measured is None else measured, abs=0.0001)
-
-
-def test_repeats_of_one_night_do_not_tighten_the_tolerance_below_the_floor() -> None:
-    assert repeat_tolerance(_load(LIBERO), (16, 4), (12, 4)) == NOISE_TOLERANCE
-
-
-def test_repeat_tolerance_needs_three_fixed_runs_of_each_configuration() -> None:
+def test_repeat_spread_needs_three_fixed_runs_of_each_configuration() -> None:
     record = _load(FULL_AUTO)
-    assert repeat_tolerance(record, (8, 1), (12, 2)) == pytest.approx(0.1995, abs=0.0001)
-    assert repeat_tolerance(record, (16, 2), (12, 2)) == pytest.approx(0.1367, abs=0.0001)
-    assert repeat_tolerance(record, (9, 1), (12, 2)) is None
+    assert repeat_spread(record, (8, 1), (12, 2)) == pytest.approx(0.1995, abs=0.0001)
+    assert repeat_spread(record, (16, 2), (12, 2)) == pytest.approx(0.1367, abs=0.0001)
+    assert repeat_spread(record, (9, 1), (12, 2)) is None
     # The best configuration selected is compared with itself across repeats.
-    assert repeat_tolerance(record, (12, 2), (12, 2)) == pytest.approx(0.0603, abs=0.0001)
+    assert repeat_spread(record, (12, 2), (12, 2)) == pytest.approx(0.0603, abs=0.0001)
+    assert repeat_spread(_load(LIBERO), (16, 4), (12, 4)) == pytest.approx(0.0069, abs=0.0001)
+    assert repeat_spread(_load(ROBOTWIN), (8, 1), (10, 1)) == pytest.approx(0.0229, abs=0.0001)
 
 
 def test_every_real_workload_is_judged_or_says_why_not() -> None:
@@ -366,7 +352,7 @@ def test_every_real_workload_is_judged_or_says_why_not() -> None:
 
 
 def test_the_regression_rule_allows_noise_and_fails_a_larger_drop() -> None:
-    score = replace(replay_strategy(_load(FULL_AUTO), "diagonal"), relative_throughput=0.76)
+    score = replace(replay_strategy(_load(FULL_AUTO), "diagonal"), relative_throughput=0.79)
     assert regression_failures(score, 0.8) == ()
     assert "below" in regression_failures(score, 0.81)[0]
     assert regression_failures(score, 0.81, tolerance=0.1) == ()
