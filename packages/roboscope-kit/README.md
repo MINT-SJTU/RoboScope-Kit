@@ -137,9 +137,11 @@ extrapolated from the measured replica footprint and the marginal memory per Wor
 compares steady-state throughput: each probe gives every Worker three work items, drops each Worker's first
 item, and stops measuring when the first Worker runs out of work. A probe grows with `K` by adding episodes,
 sequences, or tasks to a nested set, so it repeats every episode of a smaller probe. Where the catalog runs
-out (RoboCasa's 24 tasks, MetaWorld's 50), larger `K` cannot be measured and the search keeps the last
-accepted configuration. Probes it measures but does not keep are
-marked `rejected` in `selection.json`.
+out (RoboCasa's 24 tasks, MetaWorld's 50), a larger `K` has no steady-state window. That ends the doubling of
+`K`, not the search: the replica steps still run, and a step without a window is compared with the previous
+one on total probe steps over probe wall time, recorded as `"throughput_estimator": "elapsed"` in its
+`selection.json` metrics. That rate understates a larger `K`, so a step it keeps is a real gain. Probes it
+measures but does not keep are marked `rejected` in `selection.json`.
 
 To compare searches without a GPU, the
 [autotune testbed](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/autotune-testbed.md)

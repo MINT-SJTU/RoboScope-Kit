@@ -556,7 +556,7 @@ class WorkloadReplay:
 
         A finished probe had all K Workers, so health follows from its outcome. A signal the
         record does not hold reads as "no limit reached" and is reported in the score; the
-        elapsed rate reads as NaN, which only a search on the elapsed estimator would use.
+        elapsed rate reads as NaN, which :func:`replay_strategy` reports if a decision used it.
         Aggregate success is a constant that cannot regress: correctness is decided by
         ``record_success`` or by a recorded ``correctness_regression``.
         """
@@ -631,6 +631,12 @@ def replay_strategy(
             result = controller.run()
         except RuntimeError as exc:
             result = {"stop_reason": str(exc)}
+    if controller.elapsed_fallbacks:
+        replay.gaps += [
+            Gap(*key, "steps_per_s")
+            for key, rate in controller.elapsed_throughput.items()
+            if math.isnan(rate)
+        ]
     return _score(record, strategy, limits.throughput_estimator, limits.total_budget_s, result, replay)
 
 

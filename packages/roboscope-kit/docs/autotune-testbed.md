@@ -87,7 +87,9 @@ commands, paths, and error messages stay out, and validation rejects anything th
   failed probe would, so the search keeps its last accepted configuration. The score lists it under gaps and
   marks the search incomplete. What follows the gap is unknown: the search might have gone further.
 - **A needed rate the record does not hold** is treated the same way, with `unrecorded_steps_per_s`. A strategy
-  on the elapsed estimator cannot run where the record has no elapsed rates.
+  on the elapsed estimator cannot run where the record has no elapsed rates. On the steady estimator, a missing elapsed
+  rate reads as NaN. If any replica step fell back to elapsed rates, the score lists every accepted probe without
+  an elapsed rate under gaps and marks the search incomplete; the search itself is not stopped.
 - **Other signals the record does not hold** read as "no limit reached": 0 CPU cores, throttle, GPU utilization,
   and peak memory. The controller needs numbers here, so these values exist only inside the replay, never in
   the record, and the score names them under unknown signals. A search with unknown signals has not been
@@ -232,18 +234,18 @@ Scores on `robocasa-tabletop-rtx4090-full-auto.json`:
 
 | Strategy | Estimator | Selected | Relative to best recorded | Probes | Tuning time | End to end | Safe | Search |
 | --- | --- | --- | ---: | ---: | --- | --- | --- | --- |
-| `diagonal` | steady (default) | `K=8/g=1` | 0.648 of `K=12/g=2` | 5 | 852 s | 6649 s, 1.77x | yes | Complete: stops at `K=16` without a steady window, a known problem (#80) |
+| `diagonal` | steady (default) | `K=16/g=2` | 0.937 of `K=12/g=2` | 6 | 955 s | 4967 s, 1.32x | yes | Complete: stops on predicted GPU memory at `K=24/g=3` |
 | `two-phase` | elapsed (default) | `K=9/g=1` | 0.620 of `K=12/g=2` | 5 | unknown | unknown | yes | Complete, but the `K=9/g=1` probe is answered by a fixed run, which has no probe time |
 | `two-phase` | steady | `K=9/g=1` | 0.620 of `K=12/g=2` | 5 | unknown | unknown | yes | As above |
 
 Relative throughput uses the median of each configuration's fixed runs. The fixed default on this host is
 `K=9/g=1`, with no tuning: 0.620 of the best, about 6063 s for the full evaluation. `two-phase` selects the same
-configuration. `diagonal` selects a faster one, `K=8/g=1` at 0.648, but its tuning time makes it slower end to end.
+configuration. `diagonal` selects `K=16/g=2`, at 0.937 and about 4967 s end to end, faster on both counts.
 
-The record holds two real searches. `main 5f79ce2` stopped at `K=8/g=1` after `K=16/g=1` had no steady window, in
-818 s, and the code here reproduces it probe by probe. `#81 81e3824`, a candidate fix for #80, went on to `K=16/g=2`;
-the code here does not reproduce it, and the replay shows it stopping after `K=16/g=1`. The scores above use the
-first repeat of each K/g, which comes from the `#81` search. Relative throughput compares fixed runs, which ran the same 96 episodes. Default `two-phase` runs a fixed-size probe that this record
+The record holds two real searches. `#81 81e3824` went on to `K=16/g=2` in 955 s, and the code here reproduces it
+probe by probe. `main 5f79ce2`, from before the fix for #80, stopped at `K=8/g=1` after `K=16/g=1` had no steady
+window; the code here does not reproduce it, and the replay shows it going on to `K=16/g=2`. Relative throughput
+compares fixed runs, which ran the same 96 episodes. Default `two-phase` runs a fixed-size probe that this record
 does not cover, so its rows only show how it would decide on these rates.
 
 Scores on `libero-10-rtx4090-full-auto.json`:
