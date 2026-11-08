@@ -100,5 +100,8 @@ is not in the report, only the round-trip time of each request.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
+- [RoboDojo PyRUA-Lean](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#2026-11-08-pyrua-lean-with-shared-sam3):
+  sampled GPU use and model response-stream times for a four-task single-Worker versus shared-SAM3
+  four-Worker comparison (2026-11-08).
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).

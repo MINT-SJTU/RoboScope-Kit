@@ -213,6 +213,51 @@ streaming, can overlap simulator/tool work, and is not a measurement of model co
 intervals overlap; their union covered 88% of evaluation time in each run. These measurements motivate overlapping
 independent episodes without changing PyRUA's observations or actions.
 
+### 2026-11-08: PyRUA-Lean with shared SAM3
+
+On the 48 GiB RTX 4090, PyRUA-Lean `c686120` used GPT-6.1 Terra with max reasoning, Kit `e4e5682` and the
+`73078f7` Policy. Each run used seed 1 and layouts 0 and 1 for `align_blocks`, `deposit_coin`, `insert_key`
+and `solve_equation`: eight episodes. The order was baseline, optimized, optimized, baseline.
+
+The baseline used one Worker and a local SAM3 model. The optimized configuration used four Workers, four
+Policy replicas and one loopback SAM3 service from PyRUA-Lean `5238f76`; its `sam3_local.py` is byte-identical
+to the pinned local version. Both used the same checkpoint and storage path.
+
+| Run | Workers / SAM3 | Success | Steps | Kit wall | End-to-end | Peak GPU | Model requests |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| real-baseline-1 | 1 / local | 3/8 | 1,503 | 5830.0 s | 5832.2 s | 15,557 MiB | 195 |
+| real-optimized-1 | 4 / shared | 3/8 | 1,620 | 2013.3 s | 2032.3 s | 41,247 MiB | 192 |
+| real-optimized-2 | 4 / shared | 5/8 | 1,365 | 1426.2 s | 1446.3 s | 41,279 MiB | 170 |
+| real-baseline-2 | 1 / local | 5/8 | 1,455 | 5026.7 s | 5029.3 s | 15,685 MiB | 170 |
+
+The paired end-to-end speedups were 2.87× and 3.48×; the ratio of combined end-to-end times was 3.12×.
+End-to-end time starts after input checks and includes service startup and evaluator execution; it excludes
+post-run audit and cleanup.
+
+The success verdict differed on 2/8 and 2/8 paired layouts. Repeating the same configuration changed 2/8
+baseline and 2/8 optimized verdicts. These stochastic runs therefore do not establish episode-by-episode
+equivalence or a full-suite success rate.
+
+GPU samples below were taken approximately every 30 seconds; they are snapshots rather than time-weighted
+utilization. Request stream time includes network and streaming and can overlap across the four agents.
+
+| Run | Request stream total | GPU zero samples / samples | Sampled GPU p95 |
+| --- | ---: | ---: | ---: |
+| real-baseline-1 | 4117.3 s | 173/189 | 15.8% |
+| real-optimized-1 | 4018.0 s | 53/69 | 60.0% |
+| real-optimized-2 | 3019.9 s | 34/47 | 31.7% |
+| real-baseline-2 | 3387.2 s | 141/163 | 27.5% |
+
+The shared service matched local segmentation for 16 text/point queries on eight retained camera images,
+including local repeats and 16 concurrent shared queries. A separate four-task fake-provider run reconciled
+eight native/Kit/agent records before real calls. These checks do not establish equality for every possible
+image or trajectory.
+
+Frozen comparison SHA-256: `b72fd08b470ef2ed94020a15c22a430634057fda1eb3e1a4ec01275d2bb4ba87`. The measured
+wrapper SHA-256 was `0bb0ae6ed151578739a8ce6459e8185d337ee487e80ce071680e46f5f4fcc2c3`; the example wrapper
+SHA-256 is `b4959f29ec0a022f96c18ac84c252184fb349b5cabb2c07ad04d5509658c8920` and differs only in import
+ordering and whitespace (AST checked).
+
 ### 2026-11-07: latency-bound Policy (synthetic)
 
 [`examples/latency-policy/`](../../examples/latency-policy/README.md) sleeps 3 s per `act()` and returns 10
