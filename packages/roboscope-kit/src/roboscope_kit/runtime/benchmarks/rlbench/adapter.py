@@ -22,6 +22,7 @@ from .tasks import (
     IMAGE_SIZE,
     PLANNING_ERRORS,
     PROTOCOL_VERSION,
+    PYTHON_HASH_SEED,
     SUCCESS_CRITERION,
     SUITES,
     TASK_NAMES,
@@ -128,6 +129,7 @@ class RLBenchBenchmarkAdapter:
                 "MKL_NUM_THREADS": threads,
                 "OPENBLAS_NUM_THREADS": threads,
                 "NUMEXPR_NUM_THREADS": threads,
+                "PYTHONHASHSEED": str(PYTHON_HASH_SEED),
                 "PYTHONDONTWRITEBYTECODE": "1",
             },
         )
@@ -217,6 +219,14 @@ class RLBenchBenchmarkAdapter:
                     raise RuntimeError(f"RLBench record {record.record_id} is outside the work manifest")
                 if record.record_id != f"{task}-episode-{episode:02d}" or record.record_id in seen:
                     raise RuntimeError(f"duplicate or malformed RLBench record {record.record_id}")
+                if (
+                    record.metadata.get("protocol") != PROTOCOL_VERSION
+                    or type(record.metadata.get("python_hash_seed")) is not int
+                    or record.metadata.get("python_hash_seed") != PYTHON_HASH_SEED
+                ):
+                    raise RuntimeError(
+                        f"RLBench record {record.record_id} has an unexpected execution contract"
+                    )
                 if not 1 <= record.steps <= EPISODE_LENGTH:
                     raise RuntimeError(f"RLBench record {record.record_id} has invalid steps {record.steps}")
                 termination = record.metadata.get("termination")
@@ -236,6 +246,7 @@ class RLBenchBenchmarkAdapter:
             "benchmark": "rlbench",
             "suite": self.config.suite,
             "protocol": PROTOCOL_VERSION,
+            "python_hash_seed": PYTHON_HASH_SEED,
             "metric": "per_task_success_rate",
             "full_profile": self.config.formal,
             "task_order": list(self.config.tasks),

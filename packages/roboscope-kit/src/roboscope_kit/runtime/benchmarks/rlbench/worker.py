@@ -55,7 +55,9 @@ from .tasks import (
     IMAGE_SIZE,
     PLANNING_ERRORS,
     PROTOCOL_VERSION,
+    PYTHON_HASH_SEED,
     SUCCESS_CRITERION,
+    require_python_hash_seed,
 )
 from .test_set import TestEpisode, load_test_episode
 
@@ -386,6 +388,7 @@ def run_episode(
             task_id=episode.task,
             metadata={
                 "protocol": PROTOCOL_VERSION,
+                "python_hash_seed": PYTHON_HASH_SEED,
                 "episode": episode.episode,
                 "variation": episode.variation,
                 "episode_length": EPISODE_LENGTH,
@@ -450,6 +453,7 @@ def run_episode(
             "descriptions_moved_objects_m": diagnostics.descriptions_moved_objects_m,
             "actions": actions,
             "protocol": PROTOCOL_VERSION,
+            "python_hash_seed": PYTHON_HASH_SEED,
             "success_criterion": SUCCESS_CRITERION,
         },
     )
@@ -458,6 +462,7 @@ def run_episode(
 
 def main() -> None:
     args = parse_args()
+    require_python_hash_seed()
     if args.worker_id < 0 or args.poll_interval <= 0:
         raise ValueError("RLBench worker numeric arguments must be positive")
     # Runtimes may live on read-only or inode-limited storage; never write pyc.

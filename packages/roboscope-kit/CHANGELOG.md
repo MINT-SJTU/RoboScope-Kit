@@ -2,9 +2,9 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b34 - 2026-11-07
+## 0.8.0b35 - 2026-11-07
 
-- Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v1`): the PerAct 18-task
+- Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task
   reproduction profile, not all of RLBench. Each task replays PerAct's 25 released test episodes from their
   stored variation and random state, with PerAct's four 128x128 cameras (RGB, depth, point cloud, and
   calibration), low-dimensional state, the instruction, and key-frame end-effector actions executed by
@@ -25,6 +25,10 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - Preserve RLBench camera calibration precision and the collision-ignore observation so the PerAct Policy
   reproduces YARR's initial and subsequent input preparation.
 - Allow the native PerAct runner to report and verify YARR's statistics for a single completed episode.
+- Fix and record `PYTHONHASHSEED=0` in RLBench simulator and native evaluator processes. The pinned
+  `push_buttons` task constructs distractor colors from a set, whose order otherwise differs across Python
+  processes despite matching NumPy states. The v2 comparison rejects records without this execution contract;
+  earlier v1 results remain historical and require revalidation.
 
 ## 0.8.0b30 - 2026-11-06
 

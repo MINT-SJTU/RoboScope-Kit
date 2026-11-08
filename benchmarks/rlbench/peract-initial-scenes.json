@@ -1,5 +1,6 @@
 {
-  "protocol": "rlbench-peract-v1",
+  "protocol": "rlbench-peract-v2",
+  "python_hash_seed": 0,
   "tolerance_m": 0.01,
   "episodes_sha256": "cf53027453764a3935aa4372bff8b9290233aa2d43a809eabd424e5de2864c38",
   "episodes": [

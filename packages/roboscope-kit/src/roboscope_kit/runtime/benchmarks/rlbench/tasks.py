@@ -6,8 +6,9 @@
 The profile is the RLBench multi-task evaluation of PerAct (Shridhar et al., CoRL 2022) as its
 pinned ``eval.py`` runs it, not RLBench as a whole: 18 of RLBench's 100+ tasks, each with all of
 its variations, and the 25 released test episodes per task. Each test episode is replayed from
-the random state and variation stored with it, exactly as PerAct's ``reset_to_demo`` does, so the
-scenes are the ones PerAct was tested on. The episode digests below are computed from those
+the NumPy random state and variation stored with it, as PerAct's ``reset_to_demo`` does. The test
+set did not record Python's hash seed; this profile fixes it for repeatable task initialization,
+so distractor colors need not match the original evaluation. The episode digests below cover the
 stored states; the build and the formal aggregate reject a test set that differs.
 
 The observation and action settings are PerAct's: four 128x128 OpenGL cameras (front,
@@ -22,11 +23,16 @@ This module must import without the simulator: the kit, the CLI, and the build s
 from __future__ import annotations
 
 import hashlib
+import os
+import sys
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-PROTOCOL_VERSION = "rlbench-peract-v1"
+PROTOCOL_VERSION = "rlbench-peract-v2"
+# RLBench's push_buttons builds a list from a set of color-name tuples. NumPy's
+# saved state does not determine that set's iteration order across processes.
+PYTHON_HASH_SEED = 0
 SUITE = "peract_18"
 SUITES = (SUITE,)
 # PerAct ``framework.eval_episodes`` with ``eval_from_eps_number=0``: test episodes 0..24.
@@ -42,6 +48,16 @@ SUCCESS_CRITERION = "terminate_on_first_task_success"
 # The errors PerAct's CustomMultiTaskRLBenchEnv.step turns into a failed, terminal step.
 PLANNING_ERRORS = ("IKError", "ConfigurationPathError", "InvalidActionError")
 TEST_SET_SPLIT = "test"
+
+
+def require_python_hash_seed() -> None:
+    """Reject a simulator interpreter whose hash seed was not fixed at startup."""
+
+    if os.environ.get("PYTHONHASHSEED") != str(PYTHON_HASH_SEED) or sys.flags.hash_randomization:
+        raise RuntimeError(
+            f"RLBench {PROTOCOL_VERSION} requires PYTHONHASHSEED={PYTHON_HASH_SEED} "
+            "before the simulator Python process starts"
+        )
 
 
 @dataclass(frozen=True)
@@ -181,6 +197,7 @@ __all__ = [
     "IMAGE_SIZE",
     "PLANNING_ERRORS",
     "PROTOCOL_VERSION",
+    "PYTHON_HASH_SEED",
     "QUICK_TEST_TASK",
     "SUCCESS_CRITERION",
     "SUITE",
@@ -191,5 +208,6 @@ __all__ = [
     "TEST_SET_SPLIT",
     "RLBenchTask",
     "episode_state_sha256",
+    "require_python_hash_seed",
     "test_episodes_sha256",
 ]

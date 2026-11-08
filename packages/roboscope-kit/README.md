@@ -245,7 +245,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | RoboCasa | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa environment, simulator and task source, and dataset assets |
 | CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
-| RLBench | SDK-native adapter and persistent CoppeliaSim worker on a private Xvfb display | CoppeliaSim 4.1, pinned PyRep and the PerAct RLBench fork, and PerAct's released test split |
+| RLBench | SDK-native adapter and persistent CoppeliaSim worker on a private Xvfb display, with a fixed Python hash seed for paired evaluation | CoppeliaSim 4.1, pinned PyRep and the PerAct RLBench fork, and PerAct's released test split |
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
 
 LIBERO and CALVIN convert native observations to the canonical feature names and send native 7-dimensional

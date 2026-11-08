@@ -23,6 +23,8 @@ the released test split, ``eval_type=last``, the 600k weights, headless). ``eval
 - For a one-episode request, the hooks let YARR emit its normal statistics for that episode;
   the pinned accumulator otherwise emits no CSV until it has at least two returns.
 - CoppeliaSim runs on a private Xvfb display, like the Kit workers.
+- The evaluator restarts with ``PYTHONHASHSEED=0``, matching the Kit simulator workers. The
+  released NumPy state does not determine Python set iteration in ``push_buttons``.
 
 Writes ``<output>/native-episodes.jsonl`` (one line per episode), ``<output>/run.json`` (command,
 timings), PerAct's own ``eval_data.csv`` under ``<output>/logdir``, and its log.
@@ -44,6 +46,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from assets import CHECKPOINT_SEED_DIR, CHECKPOINT_WEIGHT, CLIP_RN50, verify  # noqa: E402
+
+from roboscope_kit.runtime.benchmarks.rlbench.tasks import (  # noqa: E402
+    PROTOCOL_VERSION,
+    PYTHON_HASH_SEED,
+    require_python_hash_seed,
+)
 
 TASKS = (
     "close_jar",
@@ -81,7 +89,11 @@ def reexec_with_runtime_environment(runtime: Path) -> None:
     """The dynamic loader reads LD_LIBRARY_PATH at start-up, so set it and restart once."""
 
     coppeliasim = str(runtime / "coppeliasim")
-    if os.environ.get("ROBOSCOPE_NATIVE_REEXEC") == "1":
+    if (
+        os.environ.get("ROBOSCOPE_NATIVE_REEXEC") == "1"
+        and os.environ.get("PYTHONHASHSEED") == str(PYTHON_HASH_SEED)
+        and not sys.flags.hash_randomization
+    ):
         return
     environment = {
         **os.environ,
@@ -89,6 +101,7 @@ def reexec_with_runtime_environment(runtime: Path) -> None:
         "COPPELIASIM_ROOT": coppeliasim,
         "LD_LIBRARY_PATH": ":".join((coppeliasim, os.environ.get("LD_LIBRARY_PATH", ""))),
         "QT_QPA_PLATFORM_PLUGIN_PATH": coppeliasim,
+        "PYTHONHASHSEED": str(PYTHON_HASH_SEED),
         "PYTHONDONTWRITEBYTECODE": "1",
     }
     os.execve(sys.executable, [sys.executable, *sys.argv], environment)
@@ -133,8 +146,11 @@ def validate_native_output(episodes_path: Path, logdir: Path, tasks: list[str], 
                     or not isinstance(digest, str)
                     or len(digest) != 64
                     or any(char not in "0123456789abcdef" for char in digest)
+                    or record.get("protocol") != PROTOCOL_VERSION
+                    or type(record.get("python_hash_seed")) is not int
+                    or record["python_hash_seed"] != PYTHON_HASH_SEED
                 ):
-                    raise ValueError("native episode has an invalid task, episode, state digest, or success")
+                    raise ValueError("native episode has invalid identity, success, or execution contract")
                 key = (task, episode)
                 if key not in expected or key in records:
                     raise ValueError(f"duplicate or unexpected native episode {key}")
@@ -169,6 +185,7 @@ def main() -> int:
         raise SystemExit("--task must not contain duplicates")
     runtime = args.runtime.resolve()
     reexec_with_runtime_environment(runtime)
+    require_python_hash_seed()
     started = time.time()
     checkpoint_source = args.checkpoint_source.resolve()
     verify(checkpoint_source)
@@ -212,7 +229,14 @@ def main() -> int:
     ]
     (output / "run.json").write_text(
         json.dumps(
-            {"eval.py": str(peract_root / "eval.py"), "overrides": overrides, "started": started}, indent=2
+            {
+                "eval.py": str(peract_root / "eval.py"),
+                "overrides": overrides,
+                "protocol": PROTOCOL_VERSION,
+                "python_hash_seed": PYTHON_HASH_SEED,
+                "started": started,
+            },
+            indent=2,
         )
         + "\n",
         encoding="utf-8",

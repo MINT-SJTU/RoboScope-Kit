@@ -10,7 +10,8 @@ unpickling it in the child imports this module, which installs the hooks there.
 
 The hooks wrap PerAct's ``CustomRLBenchEnv``/``CustomMultiTaskRLBenchEnv`` ``reset_to_demo``,
 ``step`` and the scene step callback, call the originals unchanged, and append one JSON line per
-episode to ``$ROBOSCOPE_NATIVE_EPISODES``: the task, test episode, variation, instruction, every
+episode to ``$ROBOSCOPE_NATIVE_EPISODES``: the task, test episode, protocol, Python hash seed,
+variation, instruction, every
 action passed to RLBench, the planning error if any, the outcome, executed actions, and
 simulation steps. They also hand PerAct's ``load_clip`` the pinned CLIP RN50 file in
 ``$ROBOSCOPE_PERACT_CLIP`` instead of downloading it, as the Kit Policy does.
@@ -34,7 +35,12 @@ from yarr.runners.independent_env_runner import IndependentEnvRunner
 from yarr.utils.process_str import change_case
 from yarr.utils.stat_accumulator import SimpleAccumulator
 
-from roboscope_kit.runtime.benchmarks.rlbench.tasks import episode_state_sha256
+from roboscope_kit.runtime.benchmarks.rlbench.tasks import (
+    PROTOCOL_VERSION,
+    PYTHON_HASH_SEED,
+    episode_state_sha256,
+    require_python_hash_seed,
+)
 from roboscope_kit.runtime.benchmarks.rlbench.test_set import load_test_episode
 from roboscope_kit.runtime.benchmarks.rlbench.worker import (
     LoadedTask,
@@ -104,6 +110,8 @@ class EpisodeLog:
             "task": current["task"],
             "episode": current["episode"],
             "episode_state_sha256": current["episode_state_sha256"],
+            "protocol": PROTOCOL_VERSION,
+            "python_hash_seed": PYTHON_HASH_SEED,
             "variation": current["variation"],
             "instruction": current["instruction"],
             "initial_scene_position_error_m": current["initial_scene_position_error_m"],
@@ -185,6 +193,7 @@ if _clip:
     peract_clip._download = lambda url, root=None: _clip
 _episodes = os.environ.get("ROBOSCOPE_NATIVE_EPISODES")
 if _episodes:
+    require_python_hash_seed()
     _install(EpisodeLog(Path(_episodes)))
 if os.environ.get("ROBOSCOPE_NATIVE_SINGLE_EPISODE") == "1":
     runner_module.SimpleAccumulator = SingleEpisodeAccumulator

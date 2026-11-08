@@ -7,11 +7,11 @@
         --native /runs/peract-native --output /runs/peract-compare.json
 
 Both sides replay the same test episodes (task, episode index, variation and stored random
-state), so every episode is paired by (task, episode). The comparison rejects missing,
-duplicate, unexpected or mismatched inputs. For each pair it reports how far each side's
-initial scene is from the recorded first frame, the largest first-action difference, the length
-of the common prefix of identical actions, and both outcomes and executed action counts. Per
-task it reports both success counts and executed action and simulation-step totals.
+state), so every episode is paired by (task, episode). The comparison rejects incomplete runs,
+missing, duplicate, unexpected or mismatched inputs, protocols or hash seeds. For each pair it
+reports how far each side's initial scene is from the recorded first frame, the largest first-action
+difference, the length of the common prefix of identical actions, and both outcomes and executed
+action counts. Per task it reports both success counts and executed action and simulation-step totals.
 
 RLBench's motion planner samples with CoppeliaSim's own random generator, which neither side
 seeds, so trajectories may diverge after the first planned motion; differing outcomes in single
@@ -22,11 +22,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 from run_native import TASKS
 
-from roboscope_kit.runtime.benchmarks.rlbench.tasks import TASKS_BY_NAME, test_episodes_sha256
+from roboscope_kit.runtime.benchmarks.rlbench.tasks import (
+    PROTOCOL_VERSION,
+    PYTHON_HASH_SEED,
+    TASKS_BY_NAME,
+    test_episodes_sha256,
+)
 
 ACTION_TOLERANCE = 1e-6
 # This is a diagnostic against the recorded vector, which may use another object order.
@@ -43,6 +49,9 @@ def expected_records(run_dir: Path) -> set[tuple[str, int]]:
     if (
         benchmark.get("benchmark") != "rlbench"
         or benchmark.get("suite") != "peract_18"
+        or benchmark.get("protocol") != PROTOCOL_VERSION
+        or type(benchmark.get("python_hash_seed")) is not int
+        or benchmark["python_hash_seed"] != PYTHON_HASH_SEED
         or not isinstance(tasks, list)
         or not tasks
         or len(tasks) != len(set(tasks))
@@ -107,6 +116,15 @@ def main() -> int:
     parser.add_argument("--native", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    native_run = json.loads((args.native / "run.json").read_text(encoding="utf-8"))
+    if (
+        native_run.get("protocol") != PROTOCOL_VERSION
+        or type(native_run.get("python_hash_seed")) is not int
+        or native_run["python_hash_seed"] != PYTHON_HASH_SEED
+        or type(native_run.get("finished")) not in (int, float)
+        or not math.isfinite(native_run["finished"])
+    ):
+        raise SystemExit("Native run is incomplete or has an unexpected RLBench execution contract")
     expected = expected_records(args.kit_run)
     kit = kit_records(args.kit_run)
     native = native_records(args.native)
@@ -131,11 +149,17 @@ def main() -> int:
         km = k["metadata"]
         if (
             not n.get("episode_state_sha256")
+            or km.get("protocol") != PROTOCOL_VERSION
+            or n.get("protocol") != PROTOCOL_VERSION
+            or type(km.get("python_hash_seed")) is not int
+            or type(n.get("python_hash_seed")) is not int
+            or km["python_hash_seed"] != PYTHON_HASH_SEED
+            or n["python_hash_seed"] != PYTHON_HASH_SEED
             or km.get("episode_state_sha256") != n["episode_state_sha256"]
             or km["variation"] != n["variation"]
             or km["instruction"] != n["instruction"]
         ):
-            raise SystemExit(f"Kit and native episode inputs differ or lack state digests: {key}")
+            raise SystemExit(f"Kit and native episode inputs or execution contracts differ: {key}")
         row = {
             "task": task,
             "episode": episode,

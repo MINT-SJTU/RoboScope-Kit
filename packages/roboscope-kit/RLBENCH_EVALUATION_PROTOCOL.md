@@ -9,13 +9,13 @@ postprocessing.
 the simulator workers. Python 3.8–3.10 are unsupported. See the
 [Python support policy](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/README.md#python-support).
 
-Status: code candidate for the PerAct 18-task profile, not all RLBench. Section 9 records the clean
-build and evaluation of the earlier Kit head `9434366`; the integration and fixes after that head require
-validation on the new head before acceptance.
+Status: code candidate for the PerAct 18-task profile, not all RLBench. Section 9 records historical
+v1 evaluations, which did not fix Python's hash seed. The v2 execution contract requires fresh validation
+before acceptance.
 
 ## 1. Benchmark scope
 
-The `benchmark` identifier is `rlbench`, the protocol version is `rlbench-peract-v1`, and the only suite is
+The `benchmark` identifier is `rlbench`, the protocol version is `rlbench-peract-v2`, and the only suite is
 `peract_18`: the **PerAct 18-task reproduction profile**. It is the RLBench multi-task evaluation of PerAct
 (Shridhar et al., CoRL 2022) as PerAct's pinned `eval.py` runs it on PerAct's released test split. It is
 not RLBench as a whole (RLBench has more than 100 tasks), not RLBench's own task sets, and not the
@@ -81,8 +81,9 @@ for the simulator). It installs a uv-managed CPython 3.11.15 under `<install-dir
 | Test split | PerAct's released `test` zips, one per task, from the Google Drive folder PerAct's README links, each with its pinned size and SHA-256 in [`peract-test-set.txt`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/rlbench/peract-test-set.txt) |
 
 The test episodes were generated in May 2022, and the RLBench fork's task and scene code has not changed
-since then (later commits only touch the dataset generator, the demo loader, and the README), so the pinned
-commit samples the same scenes (section 5).
+since then (later commits only touch the dataset generator, the demo loader, and the README). The stored
+NumPy state and variation do not include Python's hash seed, so they do not determine every distractor
+color seen in the original run (section 5).
 
 **Python 3.11.** PyRep, RLBench, YARR, and PerAct were written for Python 3.8 with torch 1.7. PyRep's CFFI
 bindings and the RLBench fork build and run unchanged on Python 3.11 with NumPy 1.26. PerAct needs one
@@ -221,6 +222,18 @@ Test episode `i` of a task is directory `episode<i>` of `<task>/all_variations/e
 2. `set_variation(variation)`, `np.random.set_state(random_seed)`, and one `TaskEnvironment.reset()`, which
    samples the scene, places it, and lets objects settle; whatever episode the worker ran before;
 3. take the first observation, then the instruction `get_task_descriptions()[0]`.
+
+**Python hash seed.** The pinned `push_buttons` task builds its spare-color list from a Python set before
+choosing a distractor with NumPy. The saved NumPy state does not fix that set's iteration order. With
+different Python hash seeds, two processes can replay the same episode digest and instruction but render
+different distractor colors. Protocol v2 starts each simulator worker and the native evaluator with
+`PYTHONHASHSEED=0`, before Python starts; the worker and native hook reject a process that did not start
+with that seed. The build's scene checks and self-test use it as well. The run manifest and each Kit and
+native episode record carry the protocol and hash seed, and the comparison rejects mismatches.
+
+This fixes the execution condition for this profile; it does not recover the unrecorded hash seeds used to
+generate the released demonstrations or PerAct's historical scores. Replaying the same NumPy state still
+does not guarantee equal observations because simulator state and rendering may vary between processes.
 
 The worker reads the two pickles with an unpickler that only resolves the RLBench `Demo` and
 `Observation` classes and NumPy arrays, and does not load the recorded images. A test episode's digest is
@@ -368,8 +381,9 @@ The two single-reset Kit evaluations below used commit
 [`9434366`](https://github.com/MINT-SJTU/RoboScope-Kit/commit/943436615a94866e509afff91ecbcd1baa1f0d97)
 on 2026-11-07. They do **not** test the current integrated head, its shard-reduction changes, or its native
 runner validation. The native run was recorded earlier with PerAct's pinned `eval.py`; it was not repeated
-for this comparison. Each run covers the same 450 `(task, episode)` identities with matching variation and
-instruction, and the two Kit runs have identical input-state digests.
+for this comparison. These were v1 runs without a recorded Python hash seed; they do not validate v2. Each
+run covers the same 450 `(task, episode)` identities with matching variation and instruction, and the two
+Kit runs have identical stored NumPy-state digests. Their separately rendered observations were not captured.
 
 The host had two Intel Xeon Silver 4214R CPUs (48 logical CPUs), 188 GB RAM and RTX 3080 10 GB GPUs. Kit
 used GPU 1 for one PerAct 600k + CLIP RN50 Policy replica and 12 simulator workers; CoppeliaSim rendered
@@ -461,8 +475,9 @@ python examples/peract/compare_native.py --kit-run /runs/rlbench-full --native /
     --output /runs/rlbench-compare.json
 ```
 
-The native runner records each test episode's state digest and checks the requested episode identities and
-native CSV success rates before it marks the run finished. The comparison checks both runs against the Kit
-manifest and rejects variation, instruction or episode-state digest mismatches. Older native logs without
-state digests cannot pass this check. Keep the original episode records, manifests, logs, configuration,
-comparison and timing along with any acceptance result.
+The native runner records each test episode's state digest, protocol and Python hash seed, and checks the
+requested episode identities and native CSV success rates before it marks the run finished. The comparison
+checks both runs against the Kit manifest and rejects mismatched execution contracts, variation, instruction
+or episode-state digests. Earlier v1 logs and native logs without these fields cannot pass the v2 comparison.
+Keep the original episode records, manifests, logs, configuration, comparison and timing along with any
+acceptance result.

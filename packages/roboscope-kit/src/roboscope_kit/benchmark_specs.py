@@ -334,7 +334,7 @@ class RLBenchBenchmarkDefinition(BenchmarkDefinition):
     """RLBench with PerAct's four 128x128 cameras, low-dimensional state, and key-frame actions."""
 
     name = BenchmarkName.RLBENCH
-    protocol_version = "rlbench-peract-v1"
+    protocol_version = "rlbench-peract-v2"
     supported_action_representations = ("rlbench.ee-pose-planning-v1",)
     default_action_representation = "rlbench.ee-pose-planning-v1"
 

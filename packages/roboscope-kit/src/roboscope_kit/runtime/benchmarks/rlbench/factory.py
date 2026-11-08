@@ -17,7 +17,7 @@ from roboscope_kit.runtime.benchmark.kit_path import kit_import_root
 from roboscope_kit.runtime.benchmark.manifest import BenchmarkManifest
 
 from .adapter import RLBenchBenchmarkAdapter, RLBenchRuntimeConfig
-from .tasks import EPISODES_PER_TASK, QUICK_TEST_TASK, SUITES, TASK_NAMES
+from .tasks import EPISODES_PER_TASK, PYTHON_HASH_SEED, QUICK_TEST_TASK, SUITES, TASK_NAMES
 
 
 class RLBenchBenchmarkFactory:
@@ -79,6 +79,7 @@ class RLBenchBenchmarkFactory:
                 "QT_QPA_PLATFORM_PLUGIN_PATH": coppeliasim,
                 "CUDA_VISIBLE_DEVICES": "",
                 "LP_NUM_THREADS": "2",
+                "PYTHONHASHSEED": str(PYTHON_HASH_SEED),
                 "PYTHONDONTWRITEBYTECODE": "1",
             },
             stdout=subprocess.DEVNULL,

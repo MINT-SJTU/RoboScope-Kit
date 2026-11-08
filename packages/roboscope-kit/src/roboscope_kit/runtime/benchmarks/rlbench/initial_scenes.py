@@ -5,7 +5,7 @@
 
 Runs in the RLBench runtime environment (``build-runtime.sh`` calls it)::
 
-    python -m roboscope_kit.runtime.benchmarks.rlbench.initial_scenes --test-set <root> \\
+    PYTHONHASHSEED=0 python -m roboscope_kit.runtime.benchmarks.rlbench.initial_scenes --test-set <root> \\
         --xvfb <Xvfb> --pins benchmarks/rlbench/peract-initial-scenes.json [--jobs N] \\
         [--report <file>] [--write-pins]
 
@@ -48,7 +48,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .tasks import EPISODES_PER_TASK, PROTOCOL_VERSION, TASK_NAMES
+from .tasks import EPISODES_PER_TASK, PROTOCOL_VERSION, PYTHON_HASH_SEED, TASK_NAMES, require_python_hash_seed
 
 # An object more than 1 cm from its recorded position: the episode does not start from its test scene.
 TOLERANCE_M = 0.01
@@ -260,6 +260,7 @@ def main() -> int:
     parser.add_argument("--write-pins", action="store_true", help="write the measured list to --pins")
     parser.add_argument("--rows", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
+    require_python_hash_seed()
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     tasks = args.task or list(TASK_NAMES)
     if args.rows is not None:
@@ -275,6 +276,7 @@ def main() -> int:
     differing = [_known_difference(row) for row in rows if row.get("max_error_m", 0.0) > TOLERANCE_M]
     report: dict = {
         "protocol": PROTOCOL_VERSION,
+        "python_hash_seed": PYTHON_HASH_SEED,
         "tolerance_m": TOLERANCE_M,
         "episodes": len(rows),
         "elapsed_s": round(elapsed, 1),
@@ -294,6 +296,7 @@ def main() -> int:
             parser.error("--write-pins needs all tasks and a check without failures")
         pins = {
             "protocol": PROTOCOL_VERSION,
+            "python_hash_seed": PYTHON_HASH_SEED,
             "tolerance_m": TOLERANCE_M,
             "episodes_sha256": pinned_sha256(differing),
             "episodes": differing,
@@ -303,6 +306,8 @@ def main() -> int:
         pins = json.loads(args.pins.read_text(encoding="utf-8"))
         if pins["protocol"] != PROTOCOL_VERSION or pins["tolerance_m"] != TOLERANCE_M:
             failures.append(f"{args.pins} is for {pins['protocol']} at {pins['tolerance_m']} m")
+        if type(pins.get("python_hash_seed")) is not int or pins["python_hash_seed"] != PYTHON_HASH_SEED:
+            failures.append(f"{args.pins} has an unexpected Python hash seed")
         if pinned_sha256(pins["episodes"]) != pins["episodes_sha256"]:
             failures.append(f"{args.pins} does not match its episodes_sha256")
         pinned = {(row["task"], int(row["episode"])): row for row in pins["episodes"]}

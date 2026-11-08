@@ -5,8 +5,8 @@
 
 Runs in the RLBench runtime environment (``build-runtime.sh`` and ``--self-test`` call it)::
 
-    python -m roboscope_kit.runtime.benchmarks.rlbench.check --test-set <root> --xvfb <Xvfb> \
-        [--task open_drawer ...]
+    PYTHONHASHSEED=0 python -m roboscope_kit.runtime.benchmarks.rlbench.check \
+        --test-set <root> --xvfb <Xvfb> [--task open_drawer ...]
 
 For every requested task it recomputes the test-episode digest and compares it with the
 frozen one, then launches CoppeliaSim on a private Xvfb display, loads every requested task and
@@ -28,7 +28,15 @@ from pathlib import Path
 
 import numpy as np
 
-from .tasks import CAMERAS, EPISODES_PER_TASK, IMAGE_SIZE, TASK_NAMES, TASKS_BY_NAME
+from .tasks import (
+    CAMERAS,
+    EPISODES_PER_TASK,
+    IMAGE_SIZE,
+    PYTHON_HASH_SEED,
+    TASK_NAMES,
+    TASKS_BY_NAME,
+    require_python_hash_seed,
+)
 from .test_set import load_test_episode, task_digest
 
 
@@ -39,9 +47,10 @@ def main() -> int:
     parser.add_argument("--task", action="append", choices=TASK_NAMES)
     parser.add_argument("--report", type=Path, help="also write the JSON report here")
     args = parser.parse_args()
+    require_python_hash_seed()
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     tasks = args.task or list(TASK_NAMES)
-    report: dict = {"test_episodes": {}}
+    report: dict = {"python_hash_seed": PYTHON_HASH_SEED, "test_episodes": {}}
     mismatched = []
     for task in tasks:
         actual = task_digest(args.test_set, task)
