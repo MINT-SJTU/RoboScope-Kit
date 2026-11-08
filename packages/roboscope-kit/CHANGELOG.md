@@ -4,38 +4,19 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 ## 0.8.0b37 - 2026-11-08
 
-- Disable the Albumentations update check by default in the StarVLA RoboCasa Policy launcher to avoid
-  network delays at startup. An explicitly supplied `NO_ALBUMENTATIONS_UPDATE` value is respected.
-
-## 0.8.0b36 - 2026-11-08
-
-- Allow RoboCasa manifests to specify a complete task priority order and worker recycling threshold.
-  These settings change scheduling and worker lifetime while retaining episode identities and seeds.
-
-## 0.8.0b35 - 2026-11-07
-
-- Prefer negotiated MessagePack for RoboCasa Policy requests and record the encoding used for each
-  episode. The StarVLA RoboCasa launcher limits inference CPU threads so simulators can run concurrently,
-  and hints that clean checkpoint cache pages can be reclaimed after loading.
-- Schedule RoboCasa task episodes in smaller groups so workers can share long evaluations more evenly,
-  while retaining each task's original episode indices and seeds. Recycle workers after a completed
-  group once they have handled at least ten episodes to bound simulator memory growth.
-
-- Speed up RoboCasa evaluation by skipping discarded intermediate observation conversions inside an
-  action chunk when video is off, while preserving the render cache. Camera sensors, physics, rewards,
-  and success checks still run on every step. The manifest's `defer_observations: false` restores every
-  conversion; video evaluation always uses the per-step path.
-- Make RoboCasa scenes reproducible under any `K`/`g`. The manifest's `seed` (42) seeds each task's
-  environment construction from the task name and each episode's reset from its index, seeds both
-  RoboCasa RNGs, and starts Workers with `PYTHONHASHSEED` set to it. Episode records add `seed`,
-  `python_hash_seed`, `reset_s`, `policy_s`, `simulator_s`, and `deferred_native_steps`; task results add
-  `initialize_s`. An episode's `steps` counts the native steps actually executed.
-- Rebuild the RoboCasa runtime: `build-runtime.sh` patches the pinned RoboCasa Tabletop base to deep-copy
-  its distractor configuration per environment (recorded in `roboscope-runtime-patches.json`), moves the
-  environment to CPython 3.11 with the simulator lock measured for this change, downloads the four
-  kitchen-asset archives from checksum-pinned replacements because the upstream Box links return 404,
-  and names the conda channel and pip index explicitly. Scores from earlier RoboCasa runtimes are not
-  comparable.
+- Speed up RoboCasa evaluation by skipping discarded intermediate observation conversions when video is
+  off while preserving camera sampling, physics, rewards, success checks, and the render cache. Set
+  `defer_observations: false` for per-step conversion, which video evaluation always uses.
+- Seed task construction and episode resets independently of Worker scheduling. Schedule episodes in
+  configurable groups, optionally order tasks by a complete priority list, and recycle Workers after a
+  configurable number of records. Episode and task results record seeds, encoding, and timing details;
+  episode steps count the native steps actually executed.
+- Prefer negotiated MessagePack for RoboCasa Policy requests. The StarVLA RoboCasa launcher limits CPU
+  threads, hints that clean checkpoint pages can be reclaimed, and disables the Albumentations update
+  check by default while respecting an explicitly supplied `NO_ALBUMENTATIONS_UPDATE` value.
+- Rebuild the RoboCasa runtime with CPython 3.11 and its pinned simulator packages. The builder records
+  a distractor-copy patch, uses checksum-pinned replacements for unavailable kitchen-asset archives,
+  and specifies the conda channel and pip index. Scores from earlier runtimes are not comparable.
 
 ## 0.8.0b33 - 2026-11-08
 
