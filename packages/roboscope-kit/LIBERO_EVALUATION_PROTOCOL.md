@@ -342,6 +342,11 @@ The remaining steps and the manifest layout match section 1, with `benchmark_roo
 
 ## 11. LIBERO-Pro
 
+An opt-in native batch may combine already-queued observations from different episodes into one Policy
+call. Each episode retains its own observation, returned action chunk and per-step simulation/termination
+behavior. A batch cap of one is the default. Model numerical agreement and closed-loop correctness must
+be evaluated separately; matching IDs does not guarantee identical initial images or trajectories.
+
 The opt-in environment variable `ROBOSCOPE_TIMING_DIR` writes diagnostic wall timings without
 modifying the wire contract or action sequence. In timing mode, RGB sensors are wrapped in both
 camera modes to measure the same stages; the camera-off arm still renders every sample. This also

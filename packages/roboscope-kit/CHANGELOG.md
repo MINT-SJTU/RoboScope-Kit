@@ -2,6 +2,15 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b37 - 2026-11-09
+
+- Support opt-in native batching of already-queued `act` requests from distinct episodes, preserving
+  each request ID, response encoding, action chunk and serialized Policy lifecycle. The default cap
+  of one is unchanged. Record optional per-batch Policy and model prediction wall times.
+- Allow the LIBERO-Pro StarVLA QwenOFT example to use `ROBOSCOPE_STARVLA_MAX_BATCH_SIZE` and perform
+  one native `predict_action` call per batch. Add observation capture, single-vs-batch comparison
+  and fixed-K/g MPS batch comparison tools. Real-model/full-suite acceptance remains separate.
+
 ## 0.8.0b36 - 2026-11-08
 
 - Add a LIBERO-Pro MPS comparison driver using the existing owned CUDA MPS lifecycle. Default arms

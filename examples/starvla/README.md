@@ -75,6 +75,12 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
 
 ## Files
 
+For the LIBERO-Pro QwenOFT example only, `ROBOSCOPE_STARVLA_MAX_BATCH_SIZE` selects the maximum number
+of observations passed to a single native `predict_action` call (default 1). The server only combines
+already-queued requests, and action unnormalization/transforms run independently for every batch row.
+The LIBERO-Long subclass and other benchmarks do not opt in. See the
+[batch experiment instructions](../../benchmarks/libero_pro/BATCH_EXPERIMENT.md).
+
 Set `ROBOSCOPE_TIMING_DIR` to an absolute directory to collect example construction, prediction and
 postprocessing timings inside Policy Server records. QwenOFT additionally instruments input building,
 VLM forward, action-token gathering and the action head using instance hooks in `starvla_timing.py`.
