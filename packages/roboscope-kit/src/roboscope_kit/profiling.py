@@ -161,6 +161,13 @@ def request(operation: str) -> AbstractContextManager[Any]:
     return _range(f"policy.{operation}")
 
 
+def environment(operation: str) -> AbstractContextManager[Any]:
+    """Mark a simulator operation in a profiled Worker."""
+    if _nvtx is None:
+        return nullcontext()
+    return _range(f"environment.{operation}")
+
+
 def episode_start() -> None:
     """Open the episode range; an unfinished earlier episode ends here."""
     global _episode
