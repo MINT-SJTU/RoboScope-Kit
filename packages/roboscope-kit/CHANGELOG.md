@@ -2,6 +2,18 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b44 - 2026-11-09
+
+- Integrate ManiSkill GPU vector evaluation with a complete inventory of 55 evaluation tasks,
+  source-backed helper exclusions, per-task robot/controller/observation settings and full horizons.
+- Add a pinned runtime builder, checksum-pinned asset sources and 11 official PPO checkpoint mappings.
+  Construct the native evaluator independently and compare expected records, inputs, actions and outcomes.
+- Add an isolated, pinned public Octo-small Bridge Policy, target-controller rotation mapping,
+  repeatable GPU inference and an independent native visual evaluator with per-step comparison.
+- Validate complete record coverage, preserve return-based scoring for tasks without success flags,
+  support task-default robots and Bridge RGB observations, and render a real frame in the GPU self-test.
+- Keep missing task policies, assets and native comparisons explicit while integration acceptance is partial.
+
 ## 0.8.0b33 - 2026-11-08
 
 - A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now

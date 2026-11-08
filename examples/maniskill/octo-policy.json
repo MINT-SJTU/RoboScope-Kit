@@ -1,0 +1,8 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/path/to/octo-policy-runtime/env/bin/python",
+    "/path/to/RoboScope-Kit/examples/maniskill/octo_policy.py"
+  ],
+  "cwd": "/path/to/RoboScope-Kit/examples/maniskill"
+}
