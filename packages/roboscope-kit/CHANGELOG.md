@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b34 - 2026-11-08
+
+- The StarVLA RoboTwin demo (`examples/starvla/robotwin/demo.yaml`) no longer sends joint state to the
+  Policy. The official StarVLA RoboTwin evaluator drops the state before calling the model, and the technical
+  report's RoboTwin results were produced without it. With the state, the demo scored 190/500 on the report's
+  500 episodes instead of 230/500, and disagreed with the official evaluator on 14 of 40 compared episodes (#108).
+
 ## 0.8.0b33 - 2026-11-08
 
 - A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now
