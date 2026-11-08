@@ -2,6 +2,14 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b44 - 2026-11-09
+
+- Retry a multi-environment RoboDojo shard's abandoned layouts at the same environment count, filling the
+  batch with layouts already evaluated and discarding their new results. Layouts still missing on the last of
+  the three passes run on their own, and each record keeps its `evaluator_num_envs`. `make_kong` layout 1
+  resets unstably with three environments every time but not with one, so the shard used to fail and stop
+  the run.
+
 ## 0.8.0b43 - 2026-11-08
 
 - Allow up to twelve minutes for a PyRUA agent to finish after the simulator verdict on slow image links.

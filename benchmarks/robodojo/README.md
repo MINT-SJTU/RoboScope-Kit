@@ -17,8 +17,11 @@ The `arx_x5` suite contains the 42 base simulation tasks at the pinned RoboDojo 
 upstream default of 25 or 50 layouts and uses seed 1. `--episodes` can request a smaller common prefix;
 requests above an upstream task limit are rejected. Work is divided into non-overlapping fixed-layout
 shards. A shard missing a layout or returning incomplete results fails rather than reporting a partial run.
-If retrying missing layouts would reduce the simulator's environment count, the shard fails rather than
-mixing results from different environment counts. Each episode records the evaluator's `--num_envs` argument.
+A layout the simulator abandons after a PhysX break or an unstable reset is evaluated again, up to three passes
+per shard. A retry with fewer missing layouts than environments is filled with layouts already evaluated, whose
+new results are discarded, so the simulator keeps the shard's environment count. Layouts still missing on the
+last pass run on their own: `make_kong` layout 1 resets unstably with three environments every time but not
+with one. Each episode records the `--num_envs` it ran with.
 
 The Policy receives `images.head`, `images.left_wrist`, and `images.right_wrist` as RGB uint8 arrays,
 `language.instruction` as a string, and `state.joints` as 14 float32 values ordered as six left-arm joints,
@@ -102,8 +105,7 @@ Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). The 2× t
 - **Workload:** the #17 scope, `arx_x5`, 42 tasks × 3 layouts = 126 episodes, the same layouts in every run.
 - **Configurations:** the baseline is the #17 Kit default (autotune chose K=2, G=1) on 0.8.0b26 with JSON
   Policy messages, run with K=2 fixed. The other runs use 0.8.0b31 with MessagePack and G=1; the run names are
-batches. `stride` is
-  `--observation-stride 10` ([XPolicyLab notes](../../examples/xpolicylab/README.md#skip-observations-the-model-never-reads));
+  batches. `stride` is `--observation-stride 10` ([XPolicyLab notes](../../examples/xpolicylab/README.md#skip-observations-the-model-never-reads));
   `4 threads` sets `OMP_NUM_THREADS=4 MKL_NUM_THREADS=4` for the Policy process.
 
 | Run | Configuration | Evaluation | Episodes/h | Steps/s | Successes | Gain (episodes/h) |
@@ -128,7 +130,7 @@ about 30 min in `auto` and in the baseline.
 - **MessagePack:** at K=2 it gains 7%; most of the gain comes from K=3.
 - **Stride:** `Simate_beta` reads the newest observation at the start of each 10-step chunk and history frames
   20 steps apart. Stride 10 gives identical actions and skips the other observations: 5% and 12% faster at K=3
-in the two repeats.
+  in the two repeats.
 - **Policy threads:** PyTorch opens one thread per reported core, 104 here, and the 20-CPU quota throttles the
   whole container (throttled fraction 0.26–0.44). Four threads remove the throttling.
 - **Limits:** each simulator takes 8.0–10.3 GB and the Policy 15.2 GB, so K=3 is the most that fits in 48 GB

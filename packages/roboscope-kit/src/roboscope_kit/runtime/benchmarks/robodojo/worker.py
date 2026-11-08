@@ -151,16 +151,20 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     expected = list(range(start, start + count))
     evaluator_envs = min(args.envs_per_worker, count)
     rows: dict[int, dict] = {}
+    envs_by_layout: dict[int, int] = {}
     result_paths = []
     # Append, so a Worker that retries this item keeps the failed attempt's log.
     with log_path.open("a", encoding="utf-8") as log:
-        for _ in range(LAYOUT_PASSES):
+        for attempt in range(LAYOUT_PASSES):
             missing = [layout for layout in expected if layout not in rows]
-            if len(missing) < evaluator_envs:
-                raise RuntimeError(
-                    f"RoboDojo cannot retry missing layouts {missing} without reducing environments "
-                    f"from {evaluator_envs} to {len(missing)}; see {result_paths}"
-                )
+            # Fill a short retry with layouts already evaluated, so the simulator keeps its environment
+            # count; their new rows are discarded. The missing layouts go first, into other env slots.
+            # Some layouts reset unstably only alongside others (make_kong layout 1 with three
+            # environments), so the last pass runs what is still missing on its own; each record keeps
+            # the environment count it ran with.
+            envs = evaluator_envs if attempt < LAYOUT_PASSES - 1 else min(evaluator_envs, len(missing))
+            done = [layout for layout in expected if layout in rows]
+            requested = missing + done[: max(0, envs - len(missing))]
             run_id = f"roboscope-{uuid.uuid4().hex}"
             result_path = (
                 root / "eval_result/RoboDojo" / task / "RoboScopeKit/arx_x5" / f"{seed}_roboscope" / run_id
@@ -168,15 +172,18 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
             )
             env.update({
                 "ROBODOJO_RUN_ID": run_id,
-                "ROBODOJO_LAYOUT_IDS": json.dumps(missing),
-                "EVAL_NUM": str(len(missing)),
+                "ROBODOJO_LAYOUT_IDS": json.dumps(requested),
+                "EVAL_NUM": str(len(requested)),
             })
-            command[command.index("--num_envs") + 1] = str(evaluator_envs)
+            command[command.index("--num_envs") + 1] = str(envs)
             _run_evaluator(command, root, env, log, log_path)
             if not result_path.is_file():
                 raise RuntimeError(f"RoboDojo did not write results; see {log_path}")
             result_paths.append(str(result_path))
-            rows.update(_layout_rows(result_path, missing))
+            new_rows = _layout_rows(result_path, requested)
+            for layout in missing:
+                if layout in new_rows:
+                    rows[layout], envs_by_layout[layout] = new_rows[layout], envs
             if len(rows) == count:
                 break
         else:
@@ -198,7 +205,7 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
             steps=steps,
             elapsed_s=float(elapsed),
             metadata={"task": task, "layout_id": layout, "score": float(score),
-                      "evaluator_num_envs": evaluator_envs},
+                      "evaluator_num_envs": envs_by_layout[layout]},
         ))
     return WorkResult(
         item_id=item.item_id,

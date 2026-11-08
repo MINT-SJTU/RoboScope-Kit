@@ -173,7 +173,7 @@ details = {
 '''
 
 
-def _run_shard(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, drops: list[int]):
+def _run_shard(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, drops: list[int], envs: int = 1):
     import argparse
     import sys
 
@@ -183,6 +183,8 @@ def _run_shard(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, drops: list[int]
     root = tmp_path / "RoboDojo"
     (root / "src/eval_client").mkdir(parents=True)
     (root / "src/eval_client/main.py").write_text(_FAKE_EVALUATOR)
+    (root / "XPolicyLab/policy/RoboScopeKit").mkdir(parents=True)
+    (root / "XPolicyLab/policy/RoboScopeKit/deploy.yml").write_text("eval_batch: true\n")
     calls = tmp_path / "calls"
     calls.write_text("")
     monkeypatch.setenv("OMNI_KIT_ACCEPT_EULA", "YES")
@@ -193,7 +195,7 @@ def _run_shard(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, drops: list[int]
         action_representation="robodojo.x5-joint-v1", benchmark_python=Path(sys.executable),
         benchmark_root=root, output_dir=tmp_path / "out", async_video=False, unpaced_render=False,
         control_state_reuse=False, physics_threads=None, step_observation_updates=True,
-        observation_stride=1, observation_queue_size=0, envs_per_worker=1,
+        observation_stride=1, observation_queue_size=0, envs_per_worker=envs,
     )
     item = WorkItem(
         ordinal=0, item_id="arx_x5-align_blocks-layouts-0000-0003", group_id="g",
@@ -218,3 +220,26 @@ def test_shard_fails_when_a_layout_keeps_breaking(monkeypatch: pytest.MonkeyPatc
     with pytest.raises(RuntimeError, match=r"incomplete shard after 3 passes; missing layouts \[2\]"):
         run()
     assert calls.read_text().splitlines() == ["[0, 1, 2]", "[2]", "[2]"]
+
+
+def test_multi_environment_retry_keeps_the_environment_count(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    run, calls = _run_shard(monkeypatch, tmp_path, drops=[1], envs=3)
+
+    result = run()
+
+    assert [record.metadata["layout_id"] for record in result.records] == [0, 1, 2]
+    assert calls.read_text().splitlines() == ["[0, 1, 2]", "[1, 0, 2]"]
+    assert {record.metadata["evaluator_num_envs"] for record in result.records} == {3}
+
+
+def test_multi_environment_retry_runs_a_stuck_layout_alone(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    run, calls = _run_shard(monkeypatch, tmp_path, drops=[1, 1], envs=3)
+
+    result = run()
+
+    assert calls.read_text().splitlines() == ["[0, 1, 2]", "[1, 0, 2]", "[1]"]
+    assert [record.metadata["evaluator_num_envs"] for record in result.records] == [3, 1, 3]
