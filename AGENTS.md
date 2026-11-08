@@ -60,8 +60,7 @@ to PyPI by hand.
 
 Write everything in the repository in English: code, comments, documentation, and commit messages.
 
-Keep READMEs brief and put protocol detail and caveats in the protocol documents. Use each benchmark's
-upstream official name. Do not commit scripts that only patch one run's data.
+Keep READMEs brief and put protocol detail in the protocol documents.
 
 Keep the package README, the protocol documents, and the example READMEs consistent whenever
 user-facing evaluation behavior changes. After a `--profile` run, add what it found (date, machine,
