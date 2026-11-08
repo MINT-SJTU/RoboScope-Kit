@@ -168,7 +168,8 @@ adds Worker and Policy coverage; see its [findings](../../../benchmarks/robotwin
 - The CLI supports `--quick-test` or fixed K/g, not autotune profiling. Custom low-level callers supplying
   an existing `server_pool` must create it with `profile_dir`; a pool cannot retroactively profile an
   already running Policy. Policy profiling requires a separate replica process with a Unix-domain readiness
-  socket; its peer credentials identify the actual Policy process group for profiling and cleanup.
+  socket; its peer credentials identify the process group used for profiling and cleanup. Custom adapters
+  must keep the readiness-socket owner and their Policy CUDA clients in the same process group.
 
 ## How it works
 

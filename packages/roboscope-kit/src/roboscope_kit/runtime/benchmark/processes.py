@@ -122,13 +122,30 @@ class ManagedProcess:
     def client_process_group(self) -> int:
         return self.target_process_group or self.process.pid
 
-    def identify_profiled_server(self) -> None:
+    def identify_profiled_server(self, *, timeout_s: float) -> None:
         """Nsight may launch the socket owner in a different session/process group."""
         if self.spec.ready_socket is None:
             return
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
-            connection.connect(str(self.spec.ready_socket))
-            credentials = connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12)
+        deadline = time.monotonic() + timeout_s
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("timed out identifying the profiled Policy process")
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+                connection.settimeout(remaining)
+                try:
+                    connection.connect(str(self.spec.ready_socket))
+                except BlockingIOError:
+                    if self.process.poll() is not None:
+                        raise RuntimeError(
+                            "profiled Policy exited before its process could be identified"
+                        ) from None
+                    time.sleep(min(0.05, remaining))
+                    continue
+                except TimeoutError as exc:
+                    raise TimeoutError("timed out identifying the profiled Policy process") from exc
+                credentials = connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12)
+                break
         pid, _, _ = struct.unpack("3i", credentials)
         self.target_process_group = os.getpgid(pid)
         self.log_file.write(
@@ -365,9 +382,10 @@ class InferencePool:
         if managed.spec.ready_port is not None:
             wait_port(managed.spec.ready_port, managed.process, ready_timeout_s)
         if managed.spec.ready_socket is not None:
+            deadline = time.monotonic() + ready_timeout_s
             wait_socket(managed.spec.ready_socket, managed.process, ready_timeout_s)
             if self.profile_dir is not None:
-                managed.identify_profiled_server()
+                managed.identify_profiled_server(timeout_s=deadline - time.monotonic())
         self.adapter.initialize_replica(context)
         if self.cuda_mps is not None:
             # The loaded Policy holds a CUDA context, so it must be an MPS client now.
@@ -399,6 +417,10 @@ class InferencePool:
                             managed.process.wait(timeout=30)
                     if self.cuda_mps is not None:
                         self.cuda_mps.terminate_clients(managed.client_process_group)
+            except Exception as exc:
+                errors.append(exc)
+            try:
+                if managed is not None:
                     managed.stop()
             except Exception as exc:
                 errors.append(exc)
