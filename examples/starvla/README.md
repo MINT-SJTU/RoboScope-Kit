@@ -86,7 +86,7 @@ again. The hint is optional and does not change the checkpoint or the Policy's a
 | --- | --- |
 | `starvla_policy.py` | The `Policy`: loads one StarVLA run snapshot, preprocesses observations, returns action chunks |
 | `starvla_libero_policy.py` | The LIBERO `Policy` of the technical report: follows the StarVLA `eaa51c4` LIBERO client |
-| `starvla_robocasa_policy.py` | Starts the same Policy with a CPU-thread budget for RoboCasa |
+| `starvla_robocasa_policy.py` | Starts the same Policy with a CPU-thread budget for RoboCasa and disables the Albumentations update check by default |
 | `starvla_full_checkpoint.py` | Builds the StarVLA framework from `config.yaml` and strictly loads one full checkpoint |
 | `starvla_base_assets.py` | Fetches the Qwen base-model metadata the framework needs to build, from Hugging Face |
 | `prepare_snapshot.py` | Builds a demo's run snapshot from its `demo.yaml` |

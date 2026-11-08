@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b37 - 2026-11-08
+
+- Disable the Albumentations update check by default in the StarVLA RoboCasa Policy launcher to avoid
+  network delays at startup. An explicitly supplied `NO_ALBUMENTATIONS_UPDATE` value is respected.
+
 ## 0.8.0b36 - 2026-11-08
 
 - Allow RoboCasa manifests to specify a complete task priority order and worker recycling threshold.

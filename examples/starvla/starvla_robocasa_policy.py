@@ -20,6 +20,8 @@ def release_checkpoint_cache(checkpoint: Path) -> None:
 
 
 def main() -> None:
+    # This network check does not affect inference and can delay offline startup.
+    os.environ.setdefault("NO_ALBUMENTATIONS_UPDATE", "1")
     threads = int(os.environ.get("ROBOSCOPE_POLICY_CPU_THREADS", "1"))
     if threads < 1:
         raise ValueError("ROBOSCOPE_POLICY_CPU_THREADS must be positive")
