@@ -10,16 +10,19 @@ import os
 import re
 import signal
 import socket
+import struct
 import subprocess
 import tempfile
 import time
 from collections.abc import Iterable, Sequence
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, TextIO
 
 from .adapters import InferenceAdapter, ProcessSpec, ReplicaContext
+from .nsys import profiled_process
 
 if TYPE_CHECKING:
     from .cuda_mps import CudaMpsSession
@@ -113,8 +116,53 @@ class ManagedProcess:
     log_file: TextIO
     log_path: Path
     spec: ProcessSpec
+    target_process_group: int | None = None
+
+    @property
+    def client_process_group(self) -> int:
+        return self.target_process_group or self.process.pid
+
+    def identify_profiled_server(self, *, timeout_s: float) -> None:
+        """Nsight may launch the socket owner in a different session/process group."""
+        if self.spec.ready_socket is None:
+            return
+        deadline = time.monotonic() + timeout_s
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError("timed out identifying the profiled Policy process")
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+                connection.settimeout(remaining)
+                try:
+                    connection.connect(str(self.spec.ready_socket))
+                except BlockingIOError:
+                    if self.process.poll() is not None:
+                        raise RuntimeError(
+                            "profiled Policy exited before its process could be identified"
+                        ) from None
+                    time.sleep(min(0.05, remaining))
+                    continue
+                except TimeoutError as exc:
+                    raise TimeoutError("timed out identifying the profiled Policy process") from exc
+                credentials = connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12)
+                break
+        pid, _, _ = struct.unpack("3i", credentials)
+        self.target_process_group = os.getpgid(pid)
+        self.log_file.write(
+            f"Profiling server pid={pid} pgid={self.target_process_group} launcher={self.process.pid}\n"
+        )
+        self.log_file.flush()
 
     def stop(self) -> None:
+        if (
+            self.spec.env.get("ROBOSCOPE_PROFILE_POLICY") == "1"
+            and self.target_process_group is not None
+            and self.target_process_group != self.process.pid
+        ):
+            with suppress(ProcessLookupError):
+                os.killpg(self.target_process_group, signal.SIGTERM)
+                if not _wait_process_group_exit(self.target_process_group, timeout_s=5):
+                    os.killpg(self.target_process_group, signal.SIGKILL)
         stop_process(self.process)
         self.log_file.close()
 
@@ -193,9 +241,12 @@ class InferencePool:
         output_dir: Path,
         ready_timeout_s: float,
         cuda_mps: CudaMpsSession | None = None,
+        profile_dir: Path | None = None,
     ) -> None:
         self.adapter = adapter
         self.cuda_mps = cuda_mps
+        self.profile_dir = profile_dir
+        self.profile_attempts: dict[int, int] = {}
         if not gpu_devices or len(gpu_devices) != len(set(gpu_devices)):
             raise ValueError("gpu_devices must contain unique device identifiers")
         self.gpu_devices = gpu_devices
@@ -301,14 +352,25 @@ class InferencePool:
             context.socket_path.unlink(missing_ok=True)
             raise
         if spec is None:
+            if self.profile_dir is not None:
+                self.contexts.pop(context.replica_id, None)
+                raise ValueError("profiling requires inference replicas that run as separate processes")
             if self.cuda_mps is not None:
                 self.contexts.pop(context.replica_id, None)
                 raise ValueError("CUDA MPS requires inference replicas that run as separate processes")
             self.processes[context.replica_id] = None
             self.adapter.initialize_replica(context)
             return
+        if self.profile_dir is not None and spec.ready_socket is None:
+            raise ValueError("Policy profiling requires a Unix-domain readiness socket")
         if self.cuda_mps is not None:
             spec = replace(spec, env={**spec.env, **self.cuda_mps.client_env(context.gpu_slot)})
+        if self.profile_dir is not None:
+            attempt = self.profile_attempts.get(context.replica_id, 0)
+            self.profile_attempts[context.replica_id] = attempt + 1
+            report = self.profile_dir / f"policy-{context.replica_id:03d}-attempt-{attempt:03d}"
+            spec = profiled_process(spec, report, capture_episode=False)
+            spec = replace(spec, env={**spec.env, "ROBOSCOPE_PROFILE_POLICY": "1"})
         log_path = self.output_dir / f"replica-{context.replica_id:03d}.log"
         self.processes[context.replica_id] = start_process(
             spec,
@@ -320,11 +382,14 @@ class InferencePool:
         if managed.spec.ready_port is not None:
             wait_port(managed.spec.ready_port, managed.process, ready_timeout_s)
         if managed.spec.ready_socket is not None:
+            deadline = time.monotonic() + ready_timeout_s
             wait_socket(managed.spec.ready_socket, managed.process, ready_timeout_s)
+            if self.profile_dir is not None:
+                managed.identify_profiled_server(timeout_s=deadline - time.monotonic())
         self.adapter.initialize_replica(context)
         if self.cuda_mps is not None:
             # The loaded Policy holds a CUDA context, so it must be an MPS client now.
-            self.cuda_mps.require_attached(managed.process.pid)
+            self.cuda_mps.require_attached(managed.client_process_group)
 
     def _healthcheck(self, replica_id: int) -> None:
         managed = self.processes[replica_id]
@@ -345,8 +410,17 @@ class InferencePool:
                 errors.append(exc)
             try:
                 if managed is not None:
+                    if self.profile_dir is not None:
+                        # Normal unload must finish CUDA/CUPTI teardown before MPS terminates
+                        # a remaining client. Waiting does not signal a client with GPU work.
+                        with suppress(subprocess.TimeoutExpired):
+                            managed.process.wait(timeout=30)
                     if self.cuda_mps is not None:
-                        self.cuda_mps.terminate_clients(managed.process.pid)
+                        self.cuda_mps.terminate_clients(managed.client_process_group)
+            except Exception as exc:
+                errors.append(exc)
+            try:
+                if managed is not None:
                     managed.stop()
             except Exception as exc:
                 errors.append(exc)

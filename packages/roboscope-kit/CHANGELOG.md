@@ -2,6 +2,25 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b36 - 2026-11-08
+
+- Complete RoboTwin first-episode NVTX capture and capture Policy Server processes with request queue,
+  service and inference spans. Preserve Policy reports during graceful shutdown and give restarted
+  replicas separate report names. Identify the profiled socket peer's process group for MPS attachment
+  and cleanup rather than targeting the Nsight launcher.
+  Let normal server exit flush CUPTI before terminating any remaining MPS clients. Policy profiling
+  requires a Unix-domain readiness socket; custom adapters should keep its owner and their Policy CUDA
+  clients in the same process group.
+- Bound Policy peer discovery by the readiness deadline and stop owned Policy processes even when
+  an MPS cleanup command fails.
+- Close SDK episode ranges on reset/end RPC errors and clarify CUDA-only, graphics and CALVIN-subtask
+  coverage in the profiling documentation.
+- Add opt-in `--profile-gpu-metrics METRIC_SET` and its sampling-frequency option. One device-wide
+  collector spans fixed or autotuned evaluation independently of Worker/Policy tracing and CUDA MPS.
+  Record commands, tool version, diagnostics and actual exported sample availability; denied counters
+  or unavailable tools warn without stopping evaluation or changing counter permissions. Mark metric
+  requests as diagnostic profiling in run manifests independently of CUDA/NVTX tracing.
+
 ## 0.8.0b33 - 2026-11-08
 
 - A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now

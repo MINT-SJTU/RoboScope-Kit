@@ -48,6 +48,7 @@ class RuntimeConfig:
     shard_episodes: int = DEFAULT_EPISODES_PER_SHARD
     shard_build: dict[str, str] | None = None
     profile: bool = False
+    gpu_metrics_config: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not self.gpu_devices or len(self.gpu_devices) != len(set(self.gpu_devices)):
@@ -122,6 +123,8 @@ class ParallelBenchmarkRuntime:
             raise ValueError("shared inference pool base port must match RuntimeConfig")
         if server_pool is not None and cuda_mps is not None and server_pool.cuda_mps is not cuda_mps:
             raise ValueError("shared inference pool must use the runtime CUDA MPS session")
+        if config.profile and server_pool is not None and server_pool.profile_dir is None:
+            raise ValueError("profiling requires a shared inference pool created with profile_dir")
         self.owns_server_pool = server_pool is None
         self.server_pool = server_pool or InferencePool(
             adapter=inference,
@@ -130,6 +133,7 @@ class ParallelBenchmarkRuntime:
             output_dir=config.output_dir / "servers",
             ready_timeout_s=config.ready_timeout_s,
             cuda_mps=cuda_mps,
+            profile_dir=config.output_dir / "profile" if config.profile else None,
         )
         self.workers: dict[int, ManagedProcess] = {}
         self.worker_contexts: dict[int, WorkerContext] = {}
@@ -253,6 +257,8 @@ class ParallelBenchmarkRuntime:
                 "items": [item.to_dict() for item in items],
                 "total_records": total_records,
                 **({"profile": True} if self.config.profile else {}),
+                **({"gpu_metrics": self.config.gpu_metrics_config, "diagnostic_profile": True}
+                   if self.config.gpu_metrics_config is not None else {}),
                 **({"shard": shard_metadata} if shard_metadata is not None else {}),
             },
         )
@@ -439,7 +445,8 @@ class ParallelBenchmarkRuntime:
         spec = self.benchmark.worker_process(context)
         if self.config.profile:
             report = self.config.output_dir / "profile" / f"worker-{worker_id:03d}-attempt-{attempt:03d}"
-            spec = profiled_process(spec, report)
+            domain = None if self.benchmark.metadata().get("benchmark") == "robotwin" else "roboscope"
+            spec = profiled_process(spec, report, domain=domain)
         log_path = self.config.output_dir / "workers" / f"worker-{worker_id:03d}-attempt-{attempt:03d}.log"
         self.workers[worker_id] = start_process(spec, log_path, self.config.ready_timeout_s)
         self.worker_attempts[worker_id] += 1

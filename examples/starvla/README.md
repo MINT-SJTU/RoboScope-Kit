@@ -31,6 +31,12 @@ Use a new or empty `--output-dir` for each quick test, self-test, or evaluation.
 containing `errors.jsonl` alone can be retried in place. Existing run artifacts are preserved, not resumed.
 Keep shell and scheduler logs outside the output directory.
 
+For a short performance diagnostic, add `--profile` to a quick test or a fixed
+`--concurrency K --replicas G` run. Nsight Systems must be on `PATH`. The Kit records each Worker's
+first episode and each Policy Server's lifetime separately; RoboTwin's standalone client is supported.
+These captures add overhead and are not throughput baselines. See the
+[profiling coverage and limits](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/profiling.md).
+
 The example directory, the StarVLA checkout, and every environment can live wherever you choose; the paths
 below are placeholders.
 

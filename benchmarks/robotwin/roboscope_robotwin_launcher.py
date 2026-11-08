@@ -13,6 +13,7 @@ import sys
 import time
 import types
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -22,6 +23,40 @@ PROTOCOL_VERSION = 1
 HEADER = struct.Struct(">I")
 TYPE_KEY = "__roboscope_type__"
 ACTIVE_MODELS = set()
+PROFILE_NVTX = None
+if os.environ.get("ROBOSCOPE_PROFILE") and os.environ.get("NVTX_INJECTION64_PATH"):
+    from torch.cuda import nvtx as PROFILE_NVTX
+
+
+@contextmanager
+def profile_range(name):
+    """Mark host spans in the simulator without importing the Kit or synchronizing CUDA."""
+    if PROFILE_NVTX is None:
+        yield
+        return
+    token = PROFILE_NVTX.range_start(name)
+    try:
+        yield
+    finally:
+        PROFILE_NVTX.range_end(token)
+
+
+def install_profile_hooks():
+    if PROFILE_NVTX is None:
+        return
+    from functools import wraps
+
+    from envs._base_task import Base_Task
+
+    def wrap(method, name):
+        @wraps(method)
+        def measured(self, *args, **kwargs):
+            with profile_range(name):
+                return method(self, *args, **kwargs)
+        return measured
+
+    for method, name in (("get_obs", "simulation.observation"), ("take_action", "simulation.action")):
+        setattr(Base_Task, method, wrap(getattr(Base_Task, method), name))
 # RoboTwin official qpos ordering applied by the reference model2robotwin_interface.
 ACTION_REMAP = [0, 1, 2, 3, 4, 5, 12, 6, 7, 8, 9, 10, 11, 13]
 ROBOTWIN_ACTION_TYPES = {"qpos", "ee"}
@@ -120,6 +155,12 @@ class PolicySocketClient:
         raise last_error
 
     def request(self, operation, payload):
+        if PROFILE_NVTX is not None:
+            with profile_range("policy." + operation):
+                return self._request(operation, payload)
+        return self._request(operation, payload)
+
+    def _request(self, operation, payload):
         request_id = str(uuid.uuid4())
         message = encode(
             {
@@ -167,6 +208,7 @@ class ModelClient:
         self.prev_action = None
         self.episode_id = ""
         self.task_description = ""
+        self.profile_episode = None
         ACTIVE_MODELS.add(self)
 
     def needs_inference(self, step):
@@ -194,16 +236,24 @@ class ModelClient:
         self.episode_id = f"robotwin-{uuid.uuid4()}"
         self.raw_actions = None
         self.prev_action = None
-        self.client.request(
-            "reset",
-            {
-                "context": {
-                    "episode_id": self.episode_id,
-                    "task_id": os.environ.get("ROBOSCOPE_ROBOTWIN_TASK", "robotwin"),
-                    "metadata": {"instruction": self.task_description},
-                }
-            },
-        )
+        if PROFILE_NVTX is not None:
+            self.profile_episode = PROFILE_NVTX.range_start("episode")
+        try:
+            self.client.request(
+                "reset",
+                {
+                    "context": {
+                        "episode_id": self.episode_id,
+                        "task_id": os.environ.get("ROBOSCOPE_ROBOTWIN_TASK", "robotwin"),
+                        "metadata": {"instruction": self.task_description},
+                    }
+                },
+            )
+        except BaseException:
+            if self.profile_episode is not None:
+                PROFILE_NVTX.range_end(self.profile_episode)
+                self.profile_episode = None
+            raise
 
     def end_episode(self):
         if not self.episode_id:
@@ -211,7 +261,12 @@ class ModelClient:
         episode_id = self.episode_id
         self.episode_id = ""
         self.raw_actions = None
-        self.client.request("end_episode", {"episode_id": episode_id})
+        try:
+            self.client.request("end_episode", {"episode_id": episode_id})
+        finally:
+            if self.profile_episode is not None:
+                PROFILE_NVTX.range_end(self.profile_episode)
+                self.profile_episode = None
 
     def close(self):
         try:
@@ -1136,6 +1191,7 @@ def main():
     if action_type == "ee" and seed_cache_enabled == "1":
         install_ee_eval_planner()
         install_shared_curobo_planner()
+    install_profile_hooks()
     if os.environ.get("ROBOTWIN_EVAL_SESSION") == "1":
         run_eval_session(args.script)
         return
