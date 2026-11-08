@@ -72,7 +72,7 @@ environment is required.
 Profiled with the Kit's `--profile`; how to run and read a capture is in the
 [profiling notes](../../packages/roboscope-kit/docs/profiling.md).
 
-### 2026-11-05: `arx_x5` keeps the GPU busy only about 11% of the time
+### 2026-11-05: simulator Worker with a placeholder Policy
 
 - **Machine:** AutoDL, RTX 4090 48 GB, driver 580.105.08, 208 cores; Nsight Systems 2026.5.1.
 - **Configuration:** RoboDojo `arx_x5` with a placeholder Policy that returns the same action every step
@@ -87,10 +87,10 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
 | K=3, g=1 | 001 | 19.7 s | 20 calls, 0.8 s | 2.2 s | 11% |
 | K=3, g=1 | 002 | 101.7 s | 105 calls, 3.9 s | 11.0 s | 11% |
 
-- **Conclusion:** GPU kernels take about 11% of an episode and Policy round trips about 4%. The rest is
-  spent outside the GPU: the simulator's CPU work and the synchronization and waiting between kernels. To
-  raise RoboDojo throughput, work on the simulator side; more GPU work will not help. This matches the
-  earlier manual `nsys` measurement of about 11%.
+- **Conclusion:** the captured Worker's GPU kernel intervals cover about 10–12% of its episode and Policy
+  round trips about 4%. The Worker capture excludes the separate Policy Server and GPU graphics pipeline;
+  it does not partition the remaining time among CPU work, synchronization and waiting. These figures
+  describe the placeholder workload, not full-device utilization with a real Policy.
 - **Next steps:** enable CPU sampling in the Kit's `nsys` arguments (currently `--sample=none`) to find where the
   CPU time goes, and profile again with a real Policy to include its cost.
 
@@ -98,8 +98,8 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
 
 Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). For `Simate_beta`, three environments
 per Worker with the observation stride and a thread cap reach 1.95× and 2.04× in two complete runs, but a third
-attempt ran out of GPU memory, so 2× is not yet reliable. The latency-bound workload has only been measured with
-a synthetic Policy.
+attempt ran out of GPU memory, so 2× is not yet reliable. A real-agent PyRUA comparison below measures four tasks;
+the full declared task scope and the 2× target remain open for that workload.
 
 ### 2026-11-07: `Simate_beta` (compute-bound VLA)
 
@@ -147,6 +147,11 @@ about 30 min in `auto` and in the baseline.
 - **Conclusion:** 1.57–1.60× in formal throughput, short of the 2× target for this workload. Raising it further
   needs more environments per GPU without another 8–10 GB simulator each, as `envs_per_worker` does.
 
+A separate same-version comparison on Kit `e4e5682` ran the same 126 task/layout pairs with one environment per
+Worker. K=1/G=1 took 24,002.5 s (24 successes) and K=3/G=1 took 12,295.1 s (31 successes), a 1.95× elapsed-time
+ratio. Eleven paired layouts had different verdicts. K=1 is not the autotuned K=2 baseline above, and one pair
+of runs does not establish outcome equivalence or variance.
+
 ### 2026-11-08: `Simate_beta` with three environments per Worker
 
 Same machine, scope and baseline as above. Kit 0.8.0b44 (measured as an earlier local build of the same retry
@@ -175,6 +180,34 @@ environments.
   one of three attempts lost to GPU memory. Reliable acceptance needs either GPU memory headroom, such as a
   smaller Policy footprint or two Workers with more environments each, or an OOM detector that requeues the
   shard.
+
+### 2026-11-08: PyRUA-Lean with a remote model
+
+On the same 48 GiB RTX 4090, [PyRUA-Lean](../../examples/pyrua/) at `c686120` used GPT-6.1 Terra with max
+reasoning, Kit `e4e5682` and the PyRUA example at `73078f7`. Each run evaluated `align_blocks`, `deposit_coin`,
+`insert_key` and `solve_equation`, layouts 0 and 1 at seed 1. K=G=1 and K=G=2 ran in the order shown, with one
+environment per Worker. These are 8-episode samples, not the 126-episode scope from #17.
+
+| Run | K/G | Evaluation | Episodes/h | Steps/s | Successes | Requests | Peak GPU (MiB) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| baseline 1 | 1/1 | 5,278.3 s | 5.46 | 0.274 | 4/8 | 182 | 15,557 |
+| optimized 1 | 2/2 | 2,971.3 s | 9.69 | 0.489 | 3/8 | 205 | 30,653 |
+| optimized 2 | 2/2 | 2,971.6 s | 9.69 | 0.578 | 3/8 | 172 | 30,609 |
+| baseline 2 | 1/1 | 5,976.1 s | 4.82 | 0.270 | 4/8 | 215 | 15,557 |
+
+Formal episode-throughput ratios for the two paired rounds are 1.78× and 2.01×; dividing the combined baseline
+time by the combined optimized time gives 1.89×. The 16 single-Worker episodes had 3,058 steps and 8 successes;
+the 16 two-Worker episodes had 3,172 steps and 6 successes. Four paired layouts changed verdict. Model-generated
+actions and trajectory lengths vary, so this sample neither establishes statistical equivalence nor attributes
+the verdict differences to concurrency. The first optimized-2 attempt stopped after two episodes on a model-stream
+failure and was repeated; the table excludes interrupted attempts and recovery time. Each completed run's native,
+Kit and agent records and tool receipts were independently checked.
+
+The model guard recorded a median 15.5–16.7 s per streamed request in the two single-Worker runs. Request
+intervals totaled 3,425 s and 4,207 s, or 65% and 70% of evaluation time. This includes network and response
+streaming, can overlap simulator/tool work, and is not a measurement of model compute alone. Two-Worker request
+intervals overlap; their union covered 88% of evaluation time in each run. These measurements motivate overlapping
+independent episodes without changing PyRUA's observations or actions.
 
 ### 2026-11-07: latency-bound Policy (synthetic)
 
