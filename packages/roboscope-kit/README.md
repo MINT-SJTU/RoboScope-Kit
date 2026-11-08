@@ -294,9 +294,9 @@ The exact contracts are in the protocol documents:
   also specify `task_priority_order` as an ordered list containing every tabletop task once; each episode
   window then schedules tasks in that order. A priority order can come from a prior representative run;
   report the cost of obtaining it separately from the evaluation. Changing grouping or scheduling should
-  be validated with paired observations and actions in the target environment. Since 0.8.0b12 the
-  runtime also uses replacement kitchen-asset archives, so compare RoboCasa scores only with runs on the
-  same version.
+  be validated with paired observations and actions in the target environment. The rebuilt runtime also
+  uses replacement kitchen-asset archives, so compare RoboCasa scores only with runs using the same
+  runtime and assets.
 
 After upgrading to 0.8.0b22 or later, build RoboTwin in a new, empty installation directory if the existing
 installation has a different runtime commit. The build script does not replace an existing mismatched
