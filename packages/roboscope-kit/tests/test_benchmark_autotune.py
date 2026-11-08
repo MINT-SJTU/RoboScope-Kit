@@ -439,6 +439,49 @@ def test_probe_runtime_rejects_oom_before_recovery(tmp_path: Path) -> None:
     assert event["stop_reason"] == "worker_oom"
 
 
+class _DeadReplicaPool:
+    @staticmethod
+    def check() -> None:
+        raise RuntimeError("inference replica 0 exited with -9")
+
+
+def _runtime_with_dead_replica(tmp_path: Path, probe_limits: ProbeLimits | None):
+    runtime = ParallelBenchmarkRuntime.__new__(ParallelBenchmarkRuntime)
+    runtime.config = RuntimeConfig(
+        output_dir=tmp_path,
+        gpu_devices=("0",),
+        replicas=2,
+        concurrency=1,
+        probe_limits=probe_limits,
+    )
+    runtime.server_pool = _DeadReplicaPool()
+    runtime.workers = {}
+    runtime.initial_workers_per_gpu = {"0": 1}
+    runtime.failure_events = []
+    runtime.queue = _FakeQueue()
+    return runtime
+
+
+def test_probe_runtime_rejects_a_dead_replica(tmp_path: Path) -> None:
+    runtime = _runtime_with_dead_replica(tmp_path, ProbeLimits(timeout_s=10.0))
+
+    with pytest.raises(ProbeCapacityReached, match="exited with -9") as raised:
+        runtime._check_processes(tmp_path / "events.jsonl", total_records=1)
+
+    assert raised.value.stop_reason == "policy_replica_failure"
+    error = json.loads((tmp_path / "errors.jsonl").read_text(encoding="utf-8"))
+    assert error["type"] == "policy-server-error"
+
+
+def test_evaluation_runtime_still_stops_on_a_dead_replica(tmp_path: Path) -> None:
+    runtime = _runtime_with_dead_replica(tmp_path, None)
+
+    with pytest.raises(RuntimeError, match="exited with -9") as raised:
+        runtime._check_processes(tmp_path / "events.jsonl", total_records=1)
+
+    assert not isinstance(raised.value, ProbeCapacityReached)
+
+
 def test_probe_runtime_reports_deadline_with_partial_health(tmp_path: Path) -> None:
     runtime = ParallelBenchmarkRuntime.__new__(ParallelBenchmarkRuntime)
     runtime.config = RuntimeConfig(

@@ -118,7 +118,7 @@ The runtime is built on three ideas:
 The runtime picks `K` and `g` for you by running real episodes with your Policy. Every candidate runs episodes
 from the same representative task set. The smallest safe `K` sets a success-rate baseline; a faster
 candidate is accepted only if it keeps at least 85% of that baseline and stays within resource limits.
-Candidates that lose Workers, run out of memory, or leave episodes unfinished are rejected.
+Candidates that lose Workers or a Policy replica, run out of memory, or leave episodes unfinished are rejected.
 
 Each candidate is limited to 15 minutes and the whole search to 30 minutes, after which the last healthy
 pair is used. Progress is written to `<output-dir>/autotune/selection.json` as candidates start,
