@@ -103,7 +103,7 @@ calvin and libero_plus work the same way (libero_plus uses `checkpoints/libero`)
   endpose; later chunks follow the recipe and use the last target pose of the previous chunk, updating the gripper from the current real joints.
   The seed cache still only skips the expert `play_once`, and EE execution keeps the native
   `CuroboPlanner`. StarVLA explicitly declares the qpos contract.
-- robocasa declares no capability (X-VLA has no RoboCasa weights; see the scope table).
+- robocasa declares no capability (X-VLA has no RoboCasa GR-1 Tabletop weights; see the scope table).
 
 ## Real-Run Validation
 

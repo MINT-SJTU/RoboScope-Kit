@@ -137,7 +137,7 @@ extrapolated from the measured replica footprint and the marginal memory per Wor
 compares steady-state throughput: each probe gives every Worker three work items, drops each Worker's first
 item, and stops measuring when the first Worker runs out of work. A probe grows with `K` by adding episodes,
 sequences, or tasks to a nested set, so it repeats every episode of a smaller probe. Where the catalog runs
-out (RoboCasa's 24 tasks, MetaWorld's 50), a larger `K` has no steady-state window. That ends the doubling of
+out (RoboCasa GR-1 Tabletop's 24 tasks, MetaWorld's 50), a larger `K` has no steady-state window. That ends the doubling of
 `K`, not the search: the replica steps still run, and a step without a window is compared with the previous
 one on total probe steps over probe wall time, recorded as `"throughput_estimator": "elapsed"` in its
 `selection.json` metrics. That rate understates a larger `K`, so a step it keeps is a real gain. Probes it
@@ -174,7 +174,7 @@ How to read the reports, which benchmarks are covered, and the findings so far a
 
 ### Progress and errors
 
-RoboTwin and RoboCasa report each finished episode as it completes, so progress moves while a long Work
+RoboTwin and RoboCasa GR-1 Tabletop report each finished episode as it completes, so progress moves while a long Work
 Item is still running; the official score still uses only each item's final result. Progress is written to
 `<output-dir>/progress.json` and `<output-dir>/events.jsonl`.
 
@@ -248,7 +248,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | LIBERO-Pro | SDK-native adapter reusing the LIBERO worker, with the perturbed BDDL instruction and the base suite's horizon | Pinned LIBERO-Pro environment (CPython 3.11), simulator source and assets, and the released perturbed BDDL and initial-state files |
 | RoboTwin | SDK-native adapter and worker calling the pinned RoboTwin launcher | RoboTwin environment and source, deploy policy, checkpoint assets, and validated seed cache |
 | RoboDojo | SDK-native adapter and worker calling the pinned RoboDojo simulator | Isaac Sim environment, RoboDojo source and evaluation assets |
-| RoboCasa | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa environment, simulator and task source, and dataset assets |
+| RoboCasa GR-1 Tabletop | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa GR-1 Tabletop environment, simulator and task source, and dataset assets |
 | CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
