@@ -13,7 +13,12 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   `benchmarks/simpler_env/build-runtime.sh` builds SimplerEnv and ManiSkill2_real2sim at pinned commits on
   CPython 3.11 with SAPIEN 2.2.2 and the TensorFlow stack of SimplerEnv's RT-1 inference.
 - Add `examples/rt1/`: an RT-1-X Policy built on SimplerEnv's `RT1Inference`, a runner for SimplerEnv's
-  official scripts, and an episode-by-episode comparison.
+  official scripts, and an episode-by-episode comparison. The runner binds its output directory to one run
+  identity and reuses a finished invocation only when its command line and episode records still match; the
+  comparison matches on the observation camera and policy configuration too, and `--strict` fails on missing,
+  duplicate, unknown, or unpaired episodes.
+- A SimplerEnv shard's `official_result` is `partial` and never `formal`; only a result holding every episode of
+  the full matrix is formal. `benchmark.formal_selection` replaces `benchmark.formal`.
 
 ## 0.8.0b33 - 2026-11-08
 

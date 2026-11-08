@@ -81,7 +81,7 @@ too, but reuses the SavedModel and encoder the first instance loaded. The return
        --suite google_robot_visual_matching --output /runs/native-vm --jobs 2
    PYTHONPATH=packages/roboscope-kit/src /sim/simpler-env/env/bin/python examples/rt1/compare_native.py \
        --suite google_robot_visual_matching --kit-run /runs/rt1x-vm --native-run /runs/native-vm \
-       --output /runs/compare-vm.json
+       --output /runs/compare-vm.json --strict
    ```
 
    `run_native.py` first executes the official scripts with a `python` shim that only records their
@@ -90,3 +90,13 @@ too, but reuses the SavedModel and encoder the first instance loaded. The return
    kept command line unchanged, `--jobs` at a time, from a directory that links the runtime's checkout so the
    scripts' relative paths resolve. Videos and per-episode action plots are skipped unless `--write-videos` is
    given; they do not feed back into the episode.
+
+   An output directory belongs to one native run: `run-identity.json` records the suite, runtime, SimplerEnv
+   commit, checkpoint digests, TensorFlow memory limit and planned invocations, and a re-run with a different
+   identity is refused. A finished invocation is reused only when its command line, output settings, and
+   episode records still match; otherwise it runs again.
+
+   `compare_native.py` exits 1 on protocol or integrity failures (duplicated or unknown episodes, native
+   records that contradict their invocation). `--strict` is the acceptance mode and also requires complete
+   coverage of the suite on both sides, every episode paired, and observation/policy fields on every native
+   record; without it a partial run is reported with status 0.

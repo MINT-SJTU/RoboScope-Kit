@@ -11,16 +11,24 @@ Usage (with the SimplerEnv runtime's Python and the kit source on ``PYTHONPATH``
 
 1. **Protocol.** Every RT-1-X invocation that the official scripts made (``plan.jsonl``) is
    parsed with upstream ``get_args`` and matched to exactly one frozen Kit variant with the
-   same environment, build keywords, overlay, frequencies, step limit, and episode list.
-2. **Episodes.** Native and Kit episodes are paired on (variant, robot pose, object pose or
-   episode id). For each pair it compares success, executed steps, how the episode ended,
-   the final ``episode_stats``, the instructions, a SHA-256 of the first policy image, and a
+   same environment, build keywords, overlay, frequencies, step limit, policy model, policy
+   setup, observation camera, and episode list.
+2. **Episodes.** Each native record belongs to the invocation of its ``episodes/NNNN.jsonl``
+   file; its own environment and observation/policy fields must agree with that invocation.
+   Native and Kit episodes are paired on (variant, robot pose, object pose or episode id).
+   For each pair it compares success, executed steps, how the episode ended, the final
+   ``episode_stats``, the instructions, a SHA-256 of the first policy image, and a
    SHA-256 over every float64 action passed to ``env.step``; with per-step action digests on
    both sides, also the first step whose action differs.
 3. **Metrics.** Per task: both sides' official success rate (mean of variant rates) and the
    paired agreement counts.
 
-Writes the full comparison to ``--output`` and prints the per-task table.
+Writes the full comparison to ``--output`` and prints the per-task table. The exit status is
+1 on any integrity failure: a protocol mismatch or unmatched Kit variant, a native record that
+contradicts its invocation or matches no Kit variant, or a duplicated Kit or native episode.
+A partial run is otherwise reported with status 0. ``--strict`` is the acceptance mode: it
+also fails unless both sides have exactly one record for every frozen episode of the suite,
+every episode is paired, and every native record carries its observation and policy fields.
 """
 
 from __future__ import annotations
@@ -59,11 +67,14 @@ def variant_key(
     rgb_overlay_path: str | None,
     enable_raytracing: bool,
     build_kwargs: dict[str, Any] | None,
+    policy_model: str,
+    policy_setup: str,
+    obs_camera_name: str | None,
 ) -> str:
     overlay = None if rgb_overlay_path is None else os.path.normpath(rgb_overlay_path)
     return json.dumps(
         [env_name, scene_name, robot, control_freq, sim_freq, max_episode_steps, overlay, enable_raytracing,
-         build_kwargs or {}],
+         build_kwargs or {}, policy_model, policy_setup, obs_camera_name],
         sort_keys=True,
     )  # fmt: skip
 
@@ -79,6 +90,31 @@ def args_key(args: argparse.Namespace) -> str:
         args.rgb_overlay_path,
         bool(args.enable_raytracing),
         dict(args.additional_env_build_kwargs or {}),
+        args.policy_model,
+        args.policy_setup,
+        args.obs_camera_name,
+    )
+
+
+CONFIG_FIELDS = ("policy_model", "policy_setup", "obs_camera_name")
+
+
+def record_key(entry: dict[str, Any]) -> str:
+    """The variant key a native record states for itself (it must carry ``CONFIG_FIELDS``)."""
+
+    return variant_key(
+        entry["env_name"],
+        entry["scene_name"],
+        entry["robot"],
+        entry["control_freq"],
+        entry["sim_freq"],
+        entry["max_episode_steps"],
+        entry["rgb_overlay_path"],
+        entry["enable_raytracing"],
+        entry["additional_env_build_kwargs"],
+        entry["policy_model"],
+        entry["policy_setup"],
+        entry["obs_camera_name"],
     )
 
 
@@ -115,10 +151,15 @@ def kit_records(run_dir: Path) -> dict[str, dict]:
     return records
 
 
-def native_entries(run_dir: Path) -> list[dict]:
+def native_entries(run_dir: Path) -> list[tuple[int | None, dict]]:
+    """(invocation index from the ``NNNN.jsonl`` file name, record) for every native record."""
+
     entries = []
     for path in sorted((run_dir / "episodes").glob("*.jsonl")):
-        entries += [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+        index = int(path.stem) if path.stem.isdigit() else None
+        entries += [
+            (index, json.loads(line)) for line in path.read_text(encoding="utf-8").splitlines() if line
+        ]
     return entries
 
 
@@ -128,6 +169,12 @@ def main() -> int:
     parser.add_argument("--kit-run", type=Path, required=True)
     parser.add_argument("--native-run", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="acceptance mode: also fail on incomplete coverage, unpaired episodes, or native records "
+        "without observation/policy fields",
+    )
     args = parser.parse_args()
 
     # 1. The native invocations against the frozen variants.
@@ -136,6 +183,11 @@ def main() -> int:
     episodes_by_variant: dict[str, list[dict]] = {}
     for variant in variants:
         parsed = upstream_args(variant)
+        if parsed.policy_setup != variant.policy_setup:
+            raise SystemExit(
+                f"Kit variant {variant.variant_id} parses to policy setup {parsed.policy_setup}, "
+                f"expected {variant.policy_setup}"
+            )
         key = args_key(parsed)
         if key in by_key:
             raise SystemExit(f"Kit variants {by_key[key].variant_id} and {variant.variant_id} share a key")
@@ -147,9 +199,11 @@ def main() -> int:
     kept = [entry for entry in plan if entry["kept"]]
     matched: set[str] = set()
     protocol_mismatches = []
+    invocation_keys: dict[int, str] = {}
     for entry in kept:
         parsed = _parse(entry["argv"])
-        variant = by_key.get(args_key(parsed))
+        invocation_keys[entry["index"]] = args_key(parsed)
+        variant = by_key.get(invocation_keys[entry["index"]])
         if variant is None:
             protocol_mismatches.append({"invocation": entry["index"], "reason": "no Kit variant"})
             continue
@@ -163,32 +217,45 @@ def main() -> int:
     unmatched_variants = sorted({variant.variant_id for variant in variants} - matched)
 
     # 2. Episode pairing.
+    expected = {
+        (variant_id, episode_key(episode))
+        for variant_id, episodes in episodes_by_variant.items()
+        for episode in episodes
+    }
     kit = kit_records(args.kit_run)
     kit_by_episode: dict[tuple[str, str], dict] = {}
+    kit_duplicates = 0
+    kit_unknown = 0
     for record in kit.values():
         metadata = record["metadata"]
-        kit_by_episode[(metadata["variant"], episode_key(metadata["episode"]))] = record
+        key = (metadata["variant"], episode_key(metadata["episode"]))
+        if key not in expected:
+            kit_unknown += 1
+            continue
+        if key in kit_by_episode:
+            kit_duplicates += 1
+        kit_by_episode[key] = record
     native_by_episode: dict[tuple[str, str], dict] = {}
     duplicates = 0
     unknown = 0
-    for entry in native_entries(args.native_run):
-        variant = by_key.get(
-            variant_key(
-                entry["env_name"],
-                entry["scene_name"],
-                entry["robot"],
-                entry["control_freq"],
-                entry["sim_freq"],
-                entry["max_episode_steps"],
-                entry["rgb_overlay_path"],
-                entry["enable_raytracing"],
-                entry["additional_env_build_kwargs"],
-            )
-        )
-        if variant is None:
+    config_mismatches = 0
+    without_config = 0
+    for index, entry in native_entries(args.native_run):
+        invocation_key = invocation_keys.get(index) if index is not None else None
+        if invocation_key is None:
             unknown += 1
             continue
-        key = (variant.variant_id, episode_key(entry))
+        if all(field in entry for field in CONFIG_FIELDS):
+            if record_key(entry) != invocation_key:
+                config_mismatches += 1
+                continue
+        else:
+            without_config += 1
+        variant = by_key.get(invocation_key)
+        key = None if variant is None else (variant.variant_id, episode_key(entry))
+        if key not in expected:
+            unknown += 1
+            continue
         if key in native_by_episode:
             duplicates += 1
         native_by_episode[key] = entry
@@ -266,8 +333,44 @@ def main() -> int:
             row[field] = sum(pair[field] for pair in members)
         tasks.append(row)
 
+    kit_keys, native_keys = set(kit_by_episode), set(native_by_episode)
+    coverage = {
+        "frozen_episodes": len(expected),
+        "kit_episodes": len(kit_keys),
+        "native_episodes": len(native_keys),
+        "paired": len(kit_keys & native_keys),
+        "kit_missing": len(expected - kit_keys),
+        "native_missing": len(expected - native_keys),
+    }
+    failures = []
+    if protocol_mismatches:
+        failures.append(f"{len(protocol_mismatches)} protocol mismatches")
+    if unmatched_variants:
+        failures.append(f"{len(unmatched_variants)} Kit variants matched no native invocation")
+    for count, what in (
+        (kit_unknown, "Kit records outside the frozen suite"),
+        (kit_duplicates, "duplicated Kit episodes"),
+        (unknown, "native records matching no planned invocation or frozen episode"),
+        (config_mismatches, "native records contradicting their invocation's configuration"),
+        (duplicates, "duplicated native episodes"),
+    ):
+        if count:
+            failures.append(f"{count} {what}")
+    if args.strict:
+        for count, what in (
+            (coverage["kit_missing"], "frozen episodes without a Kit record"),
+            (coverage["native_missing"], "frozen episodes without a native record"),
+            (len(kit_keys - native_keys), "unpaired Kit episodes"),
+            (len(native_keys - kit_keys), "unpaired native episodes"),
+            (without_config, "native records without observation/policy fields"),
+        ):
+            if count:
+                failures.append(f"{count} {what}")
+
     report = {
         "suite": args.suite,
+        "acceptance": {"strict": args.strict, "passed": not failures, "failures": failures},
+        "coverage": coverage,
         "kit_run": str(args.kit_run),
         "native_run": str(args.native_run),
         "protocol": {
@@ -277,17 +380,23 @@ def main() -> int:
             "unmatched_kit_variants": unmatched_variants,
             "mismatches": protocol_mismatches,
         },
+        "kit_unknown_episodes": kit_unknown,
+        "kit_duplicate_episodes": kit_duplicates,
         "native_unknown_episodes": unknown,
         "native_duplicate_episodes": duplicates,
-        "kit_unpaired": len(set(kit_by_episode) - set(native_by_episode)),
-        "native_unpaired": len(set(native_by_episode) - set(kit_by_episode)),
+        "native_config_mismatches": config_mismatches,
+        "native_records_without_config": without_config,
+        "kit_unpaired": len(kit_keys - native_keys),
+        "native_unpaired": len(native_keys - kit_keys),
         "tasks": tasks,
         "pairs": pairs,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({key: value for key, value in report.items() if key != "pairs"}, indent=2))
-    return 0 if not protocol_mismatches and not unmatched_variants else 1
+    for failure in failures:
+        print(f"FAIL: {failure}")
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

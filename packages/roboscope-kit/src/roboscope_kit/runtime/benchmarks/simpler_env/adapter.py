@@ -63,7 +63,11 @@ class SimplerEnvRuntimeConfig:
 
     @property
     def formal(self) -> bool:
-        """Only the suite's complete matrix is a formal SimplerEnv evaluation."""
+        """Whether the selection is the suite's complete matrix.
+
+        A result is formal only when it also holds a record for every selected episode; a shard
+        of a formal selection is partial until the shards are merged.
+        """
 
         return self.episodes == SUITE_EPISODES[self.suite]
 
@@ -129,7 +133,17 @@ class SimplerEnvBenchmarkAdapter:
         )
 
     def aggregate(self, results: Sequence[WorkResult]) -> dict[str, Any]:
+        return self._aggregate(results, shard=False)
+
+    def aggregate_partial(self, results: Sequence[WorkResult]) -> dict[str, Any]:
+        """One shard's records: never formal, whatever the selection; the merge decides."""
+
+        return self._aggregate(results, shard=True)
+
+    def _aggregate(self, results: Sequence[WorkResult], *, shard: bool) -> dict[str, Any]:
         records = self._collect(results)
+        recorded = sum(len(rows) for rows in records.values())
+        complete = not shard and recorded == self.config.episodes
         variant_rows = []
         for task in SUITE_TASKS[self.config.suite]:
             for variant in task.variants:
@@ -152,7 +166,11 @@ class SimplerEnvBenchmarkAdapter:
             "metric": "per_task_success_rate",
             "aggregation": "mean of variant success rates (calc_metrics_evaluation_videos.py)",
             "suite": self.config.suite,
-            "formal": self.config.formal,
+            # Formal only for the complete matrix with every episode recorded in this result.
+            "formal": self.config.formal and complete,
+            "partial": not complete,
+            "episodes": recorded,
+            "selected_episodes": self.config.episodes,
             "tasks": self._task_rows(variant_rows),
             "subtasks": self._subtask_rows(variant_rows),
             "variants": variant_rows,
@@ -265,7 +283,9 @@ class SimplerEnvBenchmarkAdapter:
             "suite": self.config.suite,
             "protocol": PROTOCOL_VERSION,
             "metric": "per_task_success_rate",
-            "formal": self.config.formal,
+            # The workload's selection, identical on every shard; whether a result is formal is
+            # official_result.formal, which also requires every selected episode's record.
+            "formal_selection": self.config.formal,
             "episodes": self.config.episodes,
             "suite_episodes": SUITE_EPISODES[self.config.suite],
             "tasks": [

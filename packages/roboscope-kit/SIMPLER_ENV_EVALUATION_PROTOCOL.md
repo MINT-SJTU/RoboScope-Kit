@@ -52,7 +52,10 @@ invocation the official scripts make against them (section 8).
 
 A formal run evaluates every episode of one suite. `--quick-test` runs the first episode of the suite's first
 variant; `--episodes N` takes at most `N` episodes from every variant, and any run short of the full matrix is
-reported with `formal: false`.
+reported with `formal: false`. `official_result.formal` is true only when the result holds a record for every
+episode of the full matrix: one `--shard-index` shard of a full run reports `formal: false` and `partial: true`,
+and only the merge of the complete shard set (`shard_merge`) is formal. `benchmark.formal_selection` records
+whether the requested workload is the full matrix; it is the same on every shard.
 
 ### What is not supported, and why
 
@@ -213,9 +216,12 @@ whole matrix.
 
 1. Build into a fresh directory with the committed script; the build's own check and `--self-test` must pass.
 2. Run `--quick-test` with the real Policy.
-3. Run the full suite and check that `formal` is true and every frozen episode has exactly one record.
-4. Run SimplerEnv's own scripts with `examples/rt1/run_native.py` and pair the runs with
-   `examples/rt1/compare_native.py`.
+3. Run the full suite and check that `official_result.formal` is true and every frozen episode has exactly one
+   record.
+4. Run SimplerEnv's own scripts with `examples/rt1/run_native.py` into a new output directory and pair the runs
+   with `examples/rt1/compare_native.py --strict`, which fails unless both sides cover every frozen episode
+   exactly once, every episode is paired, and every native record carries the observation camera, policy model
+   and policy setup of its invocation.
 
 ## 8. Correctness baseline
 

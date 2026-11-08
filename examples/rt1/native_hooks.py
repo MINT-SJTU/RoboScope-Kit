@@ -16,7 +16,10 @@ The hooks wrap, without changing their behavior:
   digest of each step's action, the last
   ``truncated`` and ``episode_stats``) and ``advance_to_next_subtask``;
 - ``maniskill2_evaluator.get_image_from_maniskill2_obs_dict``: a SHA-256 of the episode's
-  first policy image.
+  first policy image;
+- ``maniskill2_evaluator.maniskill2_evaluator``: the invocation's policy model, policy setup,
+  observation camera and checkpoint path, recorded with every episode so that a record
+  states the observation and policy configuration it ran with.
 
 Without ``--write-videos`` the evaluator's ``write_video`` and ``RT1Inference.visualize_epoch``
 (a matplotlib figure per episode) are skipped; they only write files and do not feed back
@@ -73,6 +76,19 @@ def install(record: Path, write_videos: bool) -> None:
     build_env = evaluator.build_maniskill2_env
     get_image = evaluator.get_image_from_maniskill2_obs_dict
     run_episode = evaluator.run_maniskill2_eval_single_episode
+    run_invocation = evaluator.maniskill2_evaluator
+    invocation: dict[str, Any] = {}
+
+    def maniskill2_evaluator(model, args):
+        invocation.clear()
+        invocation.update(
+            policy_model=args.policy_model,
+            policy_setup=args.policy_setup,
+            model_policy_setup=getattr(model, "policy_setup", None),
+            obs_camera_name=args.obs_camera_name,
+            ckpt_path=args.ckpt_path,
+        )
+        return run_invocation(model, args)
 
     def build_maniskill2_env(env_name, **kwargs):
         env = build_env(env_name, **kwargs)
@@ -113,6 +129,8 @@ def install(record: Path, write_videos: bool) -> None:
         return image
 
     def run_maniskill2_eval_single_episode(**kwargs):
+        if not invocation:
+            raise RuntimeError("an episode ran outside maniskill2_evaluator; its configuration is unknown")
         log.reset()
         started = time.perf_counter()
         success = run_episode(**kwargs)
@@ -133,6 +151,11 @@ def install(record: Path, write_videos: bool) -> None:
             "obj_init_x": None if kwargs.get("obj_init_x") is None else float(kwargs["obj_init_x"]),
             "obj_init_y": None if kwargs.get("obj_init_y") is None else float(kwargs["obj_init_y"]),
             "obj_episode_id": kwargs.get("obj_episode_id"),
+            "obs_camera_name": kwargs.get("obs_camera_name"),
+            "policy_model": invocation["policy_model"],
+            "policy_setup": invocation["policy_setup"],
+            "model_policy_setup": invocation["model_policy_setup"],
+            "ckpt_path": kwargs["ckpt_path"],
             "success": bool(success),
             "steps": log.steps,
             "terminated_at_last_step": log.terminated,
@@ -152,6 +175,8 @@ def install(record: Path, write_videos: bool) -> None:
     evaluator.build_maniskill2_env = build_maniskill2_env
     evaluator.get_image_from_maniskill2_obs_dict = get_image_from_maniskill2_obs_dict
     evaluator.run_maniskill2_eval_single_episode = run_maniskill2_eval_single_episode
+    # main_inference.py imports this name when runpy executes it, after install().
+    evaluator.maniskill2_evaluator = maniskill2_evaluator
     if not write_videos:
         evaluator.write_video = lambda *args, **kwargs: None
         rt1_model.RT1Inference.visualize_epoch = lambda self, *args, **kwargs: None
