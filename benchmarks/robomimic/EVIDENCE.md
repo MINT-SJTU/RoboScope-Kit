@@ -6,6 +6,7 @@ The evidence is hosted on the contributor fork as an evidence-only prerelease, n
 - [Evidence release and assets](https://github.com/OopsJoey/RoboScope-Kit/releases/tag/issue32-evidence-2026-11-08).
 - [Raw archive](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-evidence-2026-11-08/issue32-delivery-evidence-2026-11-08.tar.gz).
 - [SHA256SUMS](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-evidence-2026-11-08/SHA256SUMS).
+- [Final builder self-test result](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-evidence-2026-11-08/final-self-test.json).
 
 Raw archive: 23,956,565 bytes, SHA-256
 **3908e6022fca50a5ddf6d7a18c350c36a0b64c079dc724cb684e44d93b7c8747**.
@@ -30,7 +31,8 @@ candidate source tree and the complete remote helper set. Both archives are list
 | Worker/Policy CPU profiles | evidence/baseline-cpu-profile/ |
 | Nsight profile artifacts | runs/baseline-profile/profile/ |
 | Exact source snapshots and configurations | sources/, policy-*.json, tools/ |
-| Fresh build, 250 state digests and self-test | evidence/build-final-b43.log, runtime-final-b43/ |
+| Fresh build and all 250 state digests | evidence/build-final-b43.log, runtime-final-b43/ |
+| Final builder self-test result | Separate final-self-test.json release asset (runtime-final-b43/self-test/self-test.json) |
 | Existing checks, exit code 0 | evidence/final-checks.log, evidence/final-checks.exit |
 | Final full acceptance, exit code 0 | evidence/final-acceptance.exit, runs/final-b43-k20g8-mps-01/ |
 | Separate writing diagnostic | output-writing.json, evidence/final-output-profile-01/io/, tools/output-profile/ |

@@ -110,6 +110,11 @@ Final-build Worker instrumentation recorded 135.706 s of initialization, 551.447
 283.250 s of Policy round trips, and 0.170 s of Policy end calls. These are **overlapping Worker sums**,
 not additive wall-clock phases. The baseline had 1,717.823 s of Policy round trips; its existing timers
 combine reset and other item setup, so no retrospective isolated reset number is inferred.
+The retained five-Worker baseline cProfile diagnostic does separately identify seven environment
+creations (14.191 cumulative s), ten episode resets (31.006 s), 3,273 observation preparations
+(0.113 s), and 35 Worker queue/state JSON writes (0.013674 s). It covers ten diagnostic episodes and
+overlapped the native diagnostic; these overlapping profile sums are not full-run phase totals and are
+excluded from the performance comparison.
 
 A separate real 250-episode diagnostic timed existing serialization/write/rename calls with an external
 wrapper. Its 250 completion JSON writes totaled **0.071243 s**, both final result JSON writes
@@ -143,6 +148,8 @@ all accepted optimized runs also match those baseline records. Five upstream con
 batches were additionally run, but use a different RNG-stream protocol and are not paired with the
 independent-seed workload. Their combined elapsed time is not a speedup denominator. No advantage over
 an equivalently optimized native evaluator is claimed.
+Per-step action/state traces were not retained, so these comparisons establish the stated initial-state,
+terminal-outcome and executed-step agreement; they do not establish bitwise identity of every trajectory.
 
 Rejected variants remain visible: a one-entry model cache took 296.560412 s at K16/G1; skipping
 controller forward changed 35 episodes; forwardSkip reuse changed 38 episodes and produced 172 successes.
@@ -160,14 +167,18 @@ export NUMEXPR_NUM_THREADS=1 NUMBA_NUM_THREADS=1 PYTHONDONTWRITEBYTECODE=1
 export CUDA_VISIBLE_DEVICES=0
 export KIT_PYTHON=/path/to/kit-python
 export PYTHONPATH="$PWD/packages/roboscope-kit/src"
-ROBOSCOPE_ROBOMIMIC_MODEL_CACHE=1 benchmarks/robomimic/build-runtime.sh /new/runtime
-python -m roboscope_kit.runtime.benchmark --benchmark robomimic --suite ph_low_dim \
+export ROBOSCOPE_ROBOMIMIC_MODEL_CACHE=1
+bash benchmarks/robomimic/build-runtime.sh /new/runtime
+"$KIT_PYTHON" -m roboscope_kit.runtime.benchmark --benchmark robomimic --suite ph_low_dim \
   --checkpoint-source /path/to/checkpoints --benchmark-manifest /new/runtime/benchmark-manifest.json \
   --policy-config /path/to/policy.json --concurrency 20 --replicas 8 --cuda-mps \
   --output-dir /new/full-run
 ```
 
-Repeat with `ROBOSCOPE_ROBOMIMIC_MODEL_CACHE=0` for the cache ablation, retaining all other arguments.
+For the cache ablation, run `export ROBOSCOPE_ROBOMIMIC_MODEL_CACHE=0` in the same shell and repeat the
+evaluation in a new output directory, retaining all other arguments and the same built runtime. The
+switch must reach the evaluation process; an assignment scoped only to the build command does not
+configure a subsequent evaluation. The builder always installs the same hash-verified patch.
 The original-code comparison uses the base commit with only the MessagePack dependency repair; commands
 and source inventories for both sides are stored with the evidence. Existing pytest, Ruff, Python support,
 lockfile, bash syntax and ShellCheck results, the final fresh build, and final complete evaluation are
