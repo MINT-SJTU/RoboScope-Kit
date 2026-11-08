@@ -3,6 +3,7 @@
 This standard applies to a new benchmark integration and to a new suite or protocol for an existing
 benchmark. A draft can be reviewed at any point; acceptance requires all of the gates below. A
 partial run, an implementation-only PR, or a similar overall score does not by itself pass acceptance.
+The order of work is in the [`benchmark-integration` skill](../../.agents/skills/benchmark-integration/SKILL.md).
 
 ## 1. Freeze the scope and protocol
 
@@ -31,8 +32,9 @@ partial run, an implementation-only PR, or a similar overall score does not by i
 ## 3. Run every task
 
 - Run the full frozen matrix with a real policy: every task, variant and claimed observation profile,
-  using the prescribed episode counts and seeds. A quick test or representative subset is supporting
-  evidence only. Record expected and actual counts per task and profile.
+  using the prescribed episode counts and seeds. The maintainer may approve fewer episodes per task in
+  the issue or PR; every task is still run, and the native comparison uses the same reduced workload.
+  A quick test or representative subset is supporting evidence only. Record expected and actual counts per task and profile.
 - Require one terminal result for each expected episode, with no missing, duplicate, unknown or
   substituted records. Record failures and retries. A partial or individual shard must not be marked
   `formal`; a merged run is complete only after coverage and identity are checked across all shards.
