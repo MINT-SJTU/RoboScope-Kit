@@ -99,9 +99,9 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
 ## Throughput
 
 Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). For `Simate_beta`, three environments
-per Worker with the observation stride and a thread cap reach 1.95× and 2.04× in two complete runs, but a third
-attempt ran out of GPU memory, so 2× is not yet reliable. A real-agent PyRUA comparison below measures four tasks;
-the full declared task scope and the 2× target remain open for that workload.
+per Worker with the observation stride and a thread cap average 1.96× over four runs (1.89–2.04×), just short of
+the 2× target. A real-agent PyRUA comparison below measures four tasks; the full declared task scope and the 2×
+target remain open for that workload.
 
 ### 2026-11-07: `Simate_beta` (compute-bound VLA)
 
@@ -156,32 +156,33 @@ of runs does not establish outcome equivalence or variance.
 
 ### 2026-11-08: `Simate_beta` with three environments per Worker
 
-Same machine, scope and baseline as above. Kit 0.8.0b44 (measured as an earlier local build of the same retry
-change) with MessagePack, K=3, G=1 and `envs_per_worker: 3`
-(nine environments in three simulators). `make_kong` layout 1 resets unstably in every three-environment attempt,
-so in every run it was evaluated on its own on the last retry pass; the other 125 episodes ran with three
-environments.
+Same machine, scope and baseline as above. MessagePack, G=1 and `envs_per_worker: 3` (nine environments in three
+simulators); `m` runs used a local build of the 0.8.0b44 retry change, `o` runs 0.8.0b45, which adds the OOM
+handling. `make_kong` layout 1 resets unstably in every three-environment attempt, so in every run it was
+evaluated on its own on the last retry pass; the other 125 episodes ran with three environments.
 
 | Run | Configuration | Evaluation | Episodes/h | Steps/s | Successes | Gain (episodes/h) |
 |---|---|---:|---:|---:|---:|---:|
 | `g0` | K=2, one environment, JSON (baseline) | 15,810 s | 28.69 | 5.63 | 23/126 | 1.00× |
-| `m5` | 3 × 3 environments | 9,339 s | 48.57 | 9.30 | 29/126 | 1.69× |
-| `m5` | 3 × 3 environments, stride, 4 threads | 8,094 s | 56.04 | 10.61 | 29/126 | 1.95× |
-| `m7` | 3 × 3 environments, stride, 4 threads | 7,759 s | 58.46 | 11.20 | 28/126 | 2.04× |
+| `m5` | K=3 | 9,339 s | 48.57 | 9.30 | 29/126 | 1.69× |
+| `m5` | K=3, stride, 4 threads | 8,094 s | 56.04 | 10.61 | 29/126 | 1.95× |
+| `m7` | K=3, stride, 4 threads | 7,759 s | 58.46 | 11.20 | 28/126 | 2.04× |
+| `o2` | K=3, stride, 4 threads | 8,107 s | 55.95 | 10.65 | 31/126 | 1.95× |
+| `o3` | K=3, stride, 4 threads | 8,375 s | 54.16 | 10.50 | 26/126 | 1.89× |
+| `o1` | K=4 → 3 after an OOM, stride, 4 threads | 8,385 s | 54.09 | 10.40 | 29/126 | 1.89× |
 
-- **Completeness:** each run returned 126 unique episodes, and every head-camera video has one frame per step
-  plus one. A repeat between `m5` and `m7` stopped at 78 of 126 episodes when `play_tic_tac_toe` ran beside two
-  `pour_*` tasks and a simulator ran out of GPU memory (`ERROR_OUT_OF_DEVICE_MEMORY`); without an external
-  guard the run would have hung. Every run peaked at 48.5 GB of 48 GB, so this configuration has no headroom.
-- **Stride and threads:** on top of three environments they add 15–20%. Without them the 20-CPU quota throttles
+- **Completeness:** each listed run returned 126 unique episodes, and every head-camera video has one frame per
+  step plus one. Successes paired with the baseline give p ≥ 0.12 (exact McNemar).
+- **GPU memory:** every run peaked at 48.5 GB of 48 GB. A repeat before the OOM handling stopped at 78 of 126
+  episodes when `play_tic_tac_toe` ran beside two `pour_*` tasks, and the simulator waited in its error dialog.
+  With 0.8.0b45, `o1` started four Workers on purpose: two ran out of memory, the Kit retired one Worker,
+  requeued three shards and finished at K=3.
+- **Stride and threads:** on top of three environments they add 11–20%. Without them the 20-CPU quota throttles
   the container 38% of the time and GPU utilization is 0.59; with them throttling is 0 and utilization 0.75.
-- **Successes:** paired with the baseline, p = 0.21–0.27 (exact McNemar).
-- **End to end:** the #17 default's 17,576 s, including 30 min of autotuning, drops to 7,764–8,099 s
-  (2.17–2.26×); policy load takes 5 s.
-- **Conclusion:** formal throughput is 1.95× and 2.04× in two complete runs (steps/s 1.88× and 1.99×), with
-  one of three attempts lost to GPU memory. Reliable acceptance needs either GPU memory headroom, such as a
-  smaller Policy footprint or two Workers with more environments each, or an OOM detector that requeues the
-  shard.
+- **End to end:** the #17 default's 17,576 s, including 30 min of autotuning, drops to 7,764–8,380 s
+  (2.10–2.26×); policy load takes 5–6 s.
+- **Conclusion:** the four K=3 runs average 56.15 episodes/h, **1.96×** in formal throughput (1.89–2.04×; steps/s
+  1.91×). This is close to but below the 2× target, and the configuration leaves no GPU memory headroom.
 
 ### 2026-11-08: PyRUA-Lean with a remote model
 
