@@ -45,6 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--defer-observations", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--poll-interval", type=float, default=0.05)
+    parser.add_argument("--recycle-after-records", type=int, default=10)
     return parser.parse_args()
 
 
@@ -259,7 +260,12 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
 
 def main() -> None:
     args = parse_args()
-    if args.action_steps < 1 or args.max_episode_steps < 1 or args.poll_interval <= 0:
+    if (
+        args.action_steps < 1
+        or args.max_episode_steps < 1
+        or args.poll_interval <= 0
+        or args.recycle_after_records < 1
+    ):
         raise ValueError("RoboCasa worker numeric arguments must be positive")
     if not 0 <= args.seed < 2**32:
         raise ValueError("RoboCasa seed must be an unsigned 32-bit integer")
@@ -268,7 +274,7 @@ def main() -> None:
         queue_dir=args.queue_dir,
         state_dir=args.worker_state_dir,
         poll_interval_s=args.poll_interval,
-        recycle_after_records=10,
+        recycle_after_records=args.recycle_after_records,
     ).run(lambda item: run_task(args, item))
 
 

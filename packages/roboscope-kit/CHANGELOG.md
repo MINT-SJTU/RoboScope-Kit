@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b36 - 2026-11-08
+
+- Allow RoboCasa manifests to specify a complete task priority order and worker recycling threshold.
+  These settings change scheduling and worker lifetime while retaining episode identities and seeds.
+
 ## 0.8.0b35 - 2026-11-07
 
 - Prefer negotiated MessagePack for RoboCasa Policy requests and record the encoding used for each

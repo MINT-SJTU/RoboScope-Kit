@@ -112,6 +112,8 @@ class RoboCasaRuntimeConfig:
     render_backend: str = "egl"
     seed: int = 42
     defer_observations: bool = True
+    task_priority_order: tuple[str, ...] | None = None
+    recycle_after_records: int = 10
 
     def __post_init__(self) -> None:
         if self.suite != ROBOCASA_TABLETOP_SUITE:
@@ -127,6 +129,13 @@ class RoboCasaRuntimeConfig:
         names = [name for name, _ in self.tasks]
         if len(names) != len(set(names)):
             raise ValueError("RoboCasa task names must be unique")
+        if type(self.recycle_after_records) is not int or self.recycle_after_records < 1:
+            raise ValueError("RoboCasa recycle_after_records must be positive")
+        if self.task_priority_order is not None:
+            if len(self.task_priority_order) != len(set(self.task_priority_order)):
+                raise ValueError("RoboCasa task priority names must be unique")
+            if not set(names).issubset(self.task_priority_order):
+                raise ValueError("RoboCasa task priority must cover all selected tasks")
 
 
 class RoboCasaBenchmarkAdapter:
@@ -136,9 +145,13 @@ class RoboCasaBenchmarkAdapter:
     def work_items(self) -> Sequence[WorkItem]:
         items = []
         total = self.config.episodes_per_task
+        tasks = self.config.tasks
+        if self.config.task_priority_order is not None:
+            rank = {name: index for index, name in enumerate(self.config.task_priority_order)}
+            tasks = tuple(sorted(tasks, key=lambda task: rank[task[0]]))
         for start in range(0, total, self.config.episode_shard_size):
             count = min(self.config.episode_shard_size, total - start)
-            for task_name, env_name in self.config.tasks:
+            for task_name, env_name in tasks:
                 item_id = f"{self.config.suite}-{task_name}-episodes-{start:04d}-{start + count:04d}"
                 items.append(
                     WorkItem(
@@ -180,6 +193,8 @@ class RoboCasaBenchmarkAdapter:
             str(self.config.max_episode_steps),
             "--seed",
             str(self.config.seed),
+            "--recycle-after-records",
+            str(self.config.recycle_after_records),
             *(("--no-defer-observations",) if not self.config.defer_observations else ()),
             *(("--disable-video",) if not self.config.save_videos else ()),
         )
@@ -239,6 +254,10 @@ class RoboCasaBenchmarkAdapter:
             "video_logging": self.config.save_videos,
             "seed": self.config.seed,
             "defer_observations": self.config.defer_observations and not self.config.save_videos,
+            "task_priority_order": (
+                list(self.config.task_priority_order) if self.config.task_priority_order else None
+            ),
+            "recycle_after_records": self.config.recycle_after_records,
         }
 
 
