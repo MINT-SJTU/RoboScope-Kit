@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "kind": "synthetic",
+    "source": "Written by hand for the testbed tests. No number here was measured.",
+    "notes": [
+      "Covers what no real record covers yet: replica probes, probes without a window, a failing configuration, wall times, repeats, and a fixed-run point no search visits."
+    ]
+  },
+  "workload": {
+    "benchmark": "synthetic",
+    "suite": "replica-limits",
+    "policy": "none",
+    "kit_version": "none",
+    "date": "none",
+    "host": {
+      "gpu_model": "none",
+      "gpu_count": 1,
+      "vram_per_gpu_bytes": 25769803776,
+      "cpu_cores": 32
+    }
+  },
+  "bound_hint": "gpu_infer",
+  "replica_vram_bytes": 5368709120,
+  "manifest_defaults": {
+    "maximum_workers": 8,
+    "autotune_total_budget_s": 1800.0
+  },
+  "unknown_fields": [
+    "health",
+    "probe_items",
+    "record_success",
+    "steady_window",
+    "wall_time_s"
+  ],
+  "unmeasured": "Every other K/g. This workload is made up.",
+  "measurements": [
+    {
+      "k": 1,
+      "g": 1,
+      "source": "probe",
+      "outcome": "completed",
+      "wall_time_s": 100.0,
+      "steps_per_s": 8.0,
+      "steady_steps_per_s": 10.0,
+      "cpu_cores": 2.0,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.1,
+      "peak_memory_bytes": 5905580032,
+      "queue_wait_p95_ms": 1.0
+    },
+    {
+      "k": 2,
+      "g": 1,
+      "source": "probe",
+      "outcome": "completed",
+      "wall_time_s": 100.0,
+      "steps_per_s": 16.0,
+      "steady_steps_per_s": 20.0,
+      "cpu_cores": 4.0,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.2,
+      "peak_memory_bytes": 6012954214,
+      "queue_wait_p95_ms": 1.0
+    },
+    {
+      "k": 4,
+      "g": 1,
+      "source": "probe",
+      "outcome": "completed",
+      "wall_time_s": 100.0,
+      "steps_per_s": 32.0,
+      "steady_steps_per_s": 40.0,
+      "cpu_cores": 8.0,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.45,
+      "peak_memory_bytes": 6227702579,
+      "queue_wait_p95_ms": 2.0
+    },
+    {
+      "k": 4,
+      "g": 1,
+      "source": "probe",
+      "outcome": "completed",
+      "wall_time_s": 110.0,
+      "steps_per_s": 30.0,
+      "steady_steps_per_s": 38.0,
+      "cpu_cores": 8.0,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.45,
+      "peak_memory_bytes": 6227702579,
+      "queue_wait_p95_ms": 2.0
+    },
+    {
+      "k": 8,
+      "g": 1,
+      "source": "probe",
+      "outcome": "no_steady_window",
+      "wall_time_s": 100.0,
+      "steps_per_s": 50.0,
+      "cpu_cores": 16.0,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.5,
+      "peak_memory_bytes": 6656727040,
+      "queue_wait_p95_ms": 4.0
+    },
+    {
+      "k": 8,
+      "g": 2,
+      "source": "probe",
+      "outcome": "no_steady_window",
+      "wall_time_s": 120.0,
+      "steps_per_s": 60.0,
+      "cpu_cores": 16.0,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.6,
+      "peak_memory_bytes": 12025436160,
+      "queue_wait_p95_ms": 3.0
+    },
+    {
+      "k": 8,
+      "g": 3,
+      "source": "probe",
+      "outcome": "worker_oom",
+      "wall_time_s": 60.0
+    },
+    {
+      "k": 8,
+      "g": 4,
+      "source": "probe",
+      "outcome": "policy_replica_failure",
+      "wall_time_s": 60.0
+    },
+    {
+      "k": 4,
+      "g": 2,
+      "source": "fixed-run",
+      "outcome": "completed",
+      "steps_per_s": 65.0,
+      "steady_steps_per_s": 70.0,
+      "cpu_cores": 8.0,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.7,
+      "peak_memory_bytes": 11811160064,
+      "queue_wait_p95_ms": 2.0
+    }
+  ]
+}

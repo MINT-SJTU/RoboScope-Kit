@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b35 - 2026-11-07
+## 0.8.0b35 - 2026-11-08
 
 - Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task
   reproduction profile, not all of RLBench. Each task replays PerAct's 25 released test episodes from their
@@ -29,6 +29,30 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   `push_buttons` task constructs distractor colors from a set, whose order otherwise differs across Python
   processes despite matching NumPy states. The v2 comparison rejects records without this execution contract;
   earlier v1 results remain historical and require revalidation.
+
+## 0.8.0b33 - 2026-11-08
+
+- A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now
+  rejects that candidate as `policy_replica_failure`, and the search keeps the last accepted configuration.
+  It used to abort the whole evaluation. Outside a probe, a dead replica still stops the evaluation.
+
+## 0.8.0b32 - 2026-11-08
+
+- The `diagonal` autotune no longer ends the whole search when a `K` probe has no steady-state window, which
+  means only that the probe was too small for `K` Workers. Only the doubling of `K` ends; the replica steps
+  still run, and a replica step without a window is compared with the previous step on elapsed rates. On
+  RoboCasa, whose 24 tasks give `K=16` no window, the search used to stop at `g=1`.
+
+## 0.8.0b31 - 2026-11-08
+
+- Add an offline testbed for autotune strategies. `python -m roboscope_kit.runtime.benchmark.autotune_testbed`
+  builds a versioned workload record from an evaluation's `autotune/` outputs and replays it through the
+  unchanged controller, so any registered strategy runs and is scored without a GPU. A K/g the record does not
+  hold stops the search and is reported, never interpolated. The real workloads are the RoboCasa runs from #80,
+  as the table and as a record of two searches and a fixed-K/g sweep, and such records for LIBERO
+  and a 500-episode RoboTwin subset. Scores include an end-to-end estimate and a
+  no-tuning baseline, and tests apply a per-workload regression rule. It is a development tool: evaluations do
+  not import it, and search behavior does not change. See `docs/autotune-testbed.md`.
 
 ## 0.8.0b30 - 2026-11-06
 

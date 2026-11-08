@@ -22,6 +22,7 @@ from roboscope_kit.runtime.benchmark.autotune import (
     BenchmarkAutotuneController,
     ProbeCapacityReached,
     ProbeLimits,
+    ProbeStopped,
     ProbeTimedOut,
 )
 from roboscope_kit.runtime.benchmark.orchestrator import (
@@ -74,11 +75,18 @@ def _health(k: int, *, final: int | None = None, failures: int = 0, oom: int = 0
     }
 
 
-def _output(k: int, throughput: float, *, gpu_utilization: float = 0.6) -> dict:
+def _output(
+    k: int,
+    throughput: float,
+    *,
+    gpu_utilization: float = 0.6,
+    steady: float | None = None,
+) -> dict:
     return {
         "benchmark": {"bound_hint": "gpu_infer"},
         "result": {
             "steps_per_s": throughput,
+            **({} if steady is None else {"steady_steps_per_s": steady}),
             "episodes": k,
             "successes": k,
             "success_rate": 1.0,
@@ -226,6 +234,127 @@ def test_controller_keeps_failed_audit_when_first_candidate_is_unhealthy(tmp_pat
     assert selection["candidates"][0]["health"]["final_workers"] == 3
 
 
+def _diagonal_tune(
+    tmp_path: Path,
+    rates: dict[tuple[int, int], tuple[float, float | None]],
+    *,
+    stopped: dict[tuple[int, int], ProbeStopped] | None = None,
+) -> tuple[dict, list[tuple[int, int]]]:
+    """Run the diagonal search on one GPU; ``rates`` holds (elapsed, steady) per K/g."""
+
+    calls = []
+
+    def measure(k: int, g: int, _limits: ProbeLimits, _progress):
+        calls.append((k, g))
+        if stopped and (k, g) in stopped:
+            raise stopped[k, g]
+        elapsed, steady = rates[k, g]
+        return _output(k, elapsed, steady=steady), 9 * 1024**3
+
+    result = BenchmarkAutotuneController(
+        measure=measure,
+        output_dir=tmp_path,
+        bounds=AutotuneBounds(
+            gpu_count=1,
+            cpu_cores=80.0,
+            max_workers=64,
+            max_replicas=8,
+            worker_cpu_cores=2.0,
+            vram_per_gpu_bytes=48 * 1024**3,
+        ),
+        limits=AutotuneLimits(candidate_timeout_s=30.0, total_budget_s=120.0),
+    ).run()
+    return result, calls
+
+
+# The K ramp of the RoboCasa run that found the bug: K=16 has no steady-state window.
+_K_RAMP = {
+    (1, 1): (20.0, 24.8),
+    (2, 1): (38.0, 47.3),
+    (4, 1): (70.0, 91.6),
+    (8, 1): (100.0, 147.7),
+    (16, 1): (110.0, None),
+}
+
+
+def test_diagonal_k_probe_without_steady_window_still_runs_the_replica_phase(tmp_path: Path) -> None:
+    result, calls = _diagonal_tune(
+        tmp_path,
+        {**_K_RAMP, (16, 2): (150.0, 240.0), (24, 3): (160.0, 245.0)},
+    )
+
+    assert calls == [(1, 1), (2, 1), (4, 1), (8, 1), (16, 1), (16, 2), (24, 3)]
+    assert (result["k"], result["g"]) == (16, 2)
+    assert result["workers_per_replica"] == 8
+    assert [(trial["k"], trial["g"]) for trial in result["g_trials"]] == [(16, 2)]
+    assert result["stop_reason"].startswith("no_steady_window: probe K=16")
+    assert "replica gain 2.1% at K=24, g=3" in result["stop_reason"]
+    candidates = _selection(tmp_path)["candidates"]
+    assert candidates[4]["status"] == "rejected"
+    assert candidates[4]["stop_reason"] == "no_steady_window"
+    assert candidates[5]["metrics"]["throughput_estimator"] == "steady"
+
+
+def test_diagonal_replica_probe_without_steady_window_compares_elapsed_rates(tmp_path: Path) -> None:
+    # 125 elapsed is below the incumbent's 147.7 steady, but 25% above its 100 elapsed.
+    result, calls = _diagonal_tune(
+        tmp_path,
+        {**_K_RAMP, (16, 2): (125.0, None), (24, 3): (126.0, None)},
+    )
+
+    assert calls[-2:] == [(16, 2), (24, 3)]
+    assert (result["k"], result["g"]) == (16, 2)
+    assert result["path"][-2]["gain"] == pytest.approx(0.25)
+    assert "replica gain 0.8% at K=24, g=3" in result["stop_reason"]
+    candidates = _selection(tmp_path)["candidates"]
+    assert candidates[5]["status"] == "accepted"
+    assert candidates[5]["metrics"]["throughput_estimator"] == "elapsed"
+    assert candidates[5]["metrics"]["throughput"] == 125.0
+    assert candidates[6]["status"] == "rejected"
+
+
+def test_diagonal_steady_replica_probe_after_elapsed_one_compares_elapsed_rates(tmp_path: Path) -> None:
+    result, _calls = _diagonal_tune(
+        tmp_path,
+        {**_K_RAMP, (16, 2): (125.0, None), (24, 3): (126.0, 300.0)},
+    )
+
+    assert (result["k"], result["g"]) == (16, 2)
+    assert result["path"][-1]["gain"] == pytest.approx(126.0 / 125.0 - 1)
+
+
+def test_diagonal_replica_killed_in_the_replica_phase_keeps_the_last_accepted(tmp_path: Path) -> None:
+    stop = ProbeCapacityReached("replica exited with -9", stop_reason="policy_replica_failure")
+
+    result, calls = _diagonal_tune(
+        tmp_path,
+        {**_K_RAMP, (16, 2): (125.0, None)},
+        stopped={(24, 3): stop},
+    )
+
+    assert calls[-1] == (24, 3)
+    assert (result["k"], result["g"]) == (16, 2)
+    assert "policy_replica_failure" in result["stop_reason"]
+
+
+@pytest.mark.parametrize(
+    "stop",
+    (
+        ProbeCapacityReached("cannot create buffer", stop_reason="worker_oom"),
+        ProbeCapacityReached("worker exited", stop_reason="worker_failure"),
+        ProbeTimedOut("out of time", stop_reason="total_budget_exhausted"),
+    ),
+    ids=lambda stop: stop.stop_reason,
+)
+def test_diagonal_real_limit_in_the_k_phase_ends_the_search(tmp_path: Path, stop: ProbeStopped) -> None:
+    result, calls = _diagonal_tune(tmp_path, _K_RAMP, stopped={(16, 1): stop})
+
+    assert calls[-1] == (16, 1)
+    assert (result["k"], result["g"]) == (8, 1)
+    assert result["g_trials"] == []
+    assert result["stop_reason"] == f"{stop.stop_reason}: {stop}"
+
+
 class _FakeProcess:
     returncode = 1
 
@@ -308,6 +437,49 @@ def test_probe_runtime_rejects_oom_before_recovery(tmp_path: Path) -> None:
     event = json.loads((tmp_path / "events.jsonl").read_text(encoding="utf-8"))
     assert event["action"] == "abort-probe"
     assert event["stop_reason"] == "worker_oom"
+
+
+class _DeadReplicaPool:
+    @staticmethod
+    def check() -> None:
+        raise RuntimeError("inference replica 0 exited with -9")
+
+
+def _runtime_with_dead_replica(tmp_path: Path, probe_limits: ProbeLimits | None):
+    runtime = ParallelBenchmarkRuntime.__new__(ParallelBenchmarkRuntime)
+    runtime.config = RuntimeConfig(
+        output_dir=tmp_path,
+        gpu_devices=("0",),
+        replicas=2,
+        concurrency=1,
+        probe_limits=probe_limits,
+    )
+    runtime.server_pool = _DeadReplicaPool()
+    runtime.workers = {}
+    runtime.initial_workers_per_gpu = {"0": 1}
+    runtime.failure_events = []
+    runtime.queue = _FakeQueue()
+    return runtime
+
+
+def test_probe_runtime_rejects_a_dead_replica(tmp_path: Path) -> None:
+    runtime = _runtime_with_dead_replica(tmp_path, ProbeLimits(timeout_s=10.0))
+
+    with pytest.raises(ProbeCapacityReached, match="exited with -9") as raised:
+        runtime._check_processes(tmp_path / "events.jsonl", total_records=1)
+
+    assert raised.value.stop_reason == "policy_replica_failure"
+    error = json.loads((tmp_path / "errors.jsonl").read_text(encoding="utf-8"))
+    assert error["type"] == "policy-server-error"
+
+
+def test_evaluation_runtime_still_stops_on_a_dead_replica(tmp_path: Path) -> None:
+    runtime = _runtime_with_dead_replica(tmp_path, None)
+
+    with pytest.raises(RuntimeError, match="exited with -9") as raised:
+        runtime._check_processes(tmp_path / "events.jsonl", total_records=1)
+
+    assert not isinstance(raised.value, ProbeCapacityReached)
 
 
 def test_probe_runtime_reports_deadline_with_partial_health(tmp_path: Path) -> None:
