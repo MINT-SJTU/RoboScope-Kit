@@ -102,7 +102,7 @@ again. The hint is optional and does not change the checkpoint or the Policy's a
   action-chunk size equal to the checkpoint's `action_horizon`, and an observation stride equal to that
   horizon. On RoboTwin the stride lets the runtime render only at chunk boundaries.
 - `act` resizes each camera image to the 224x224 model input the same way the pinned StarVLA client of that
-  benchmark does: OpenCV `INTER_AREA` for RoboTwin, RoboCasa, LIBERO-Plus, and MetaWorld; PIL bilinear for
+  benchmark does: OpenCV `INTER_AREA` for RoboTwin, RoboCasa GR-1 Tabletop, LIBERO-Plus, and MetaWorld; PIL bilinear for
   LIBERO and LIBERO-Pro; StarVLA's resize-and-pad for CALVIN. It then unnormalizes the predicted actions with
   the training statistics and applies the configured action transforms.
 - `starvla_libero_policy.py` instead resizes LIBERO images with OpenCV `INTER_AREA`, clips the normalized
