@@ -155,6 +155,11 @@ and neither can be combined with `--quick-test` or `--autotune-strategy`.
 
 ### Profiling
 
+For LIBERO-Pro and the StarVLA example, set `ROBOSCOPE_TIMING_DIR` to a fresh absolute directory
+to collect diagnostic stage timings in per-process JSONL files. See the
+[timing guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/README.md#stage-timing).
+These instrumented runs are separate from clean throughput measurements.
+
 Add `--profile` to `--quick-test` or to a fixed `--concurrency K --replicas G` run to see where a Worker's
 time goes. Each Worker then runs under Nsight Systems, and its first episode is written to
 `<output-dir>/profile/worker-<id>-attempt-<n>.nsys-rep`. The report holds the CUDA kernels and API calls of the

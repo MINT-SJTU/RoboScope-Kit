@@ -112,6 +112,39 @@ early termination, a horizon ending inside a chunk, and video fallback with iden
 steps and video frames. These checks use synthetic camera pixels with the real Observable clock;
 they are not measurements of GPU throughput.
 
+## Stage timing
+
+Set `ROBOSCOPE_TIMING_DIR` to a fresh absolute directory before launching the controller, and ensure
+the Policy environment inherits it. Install the same Kit revision in controller and model environments.
+Use separate directories for warmup and formal execution. `worker-<pid>.jsonl` records each Work Item;
+`server-<pid>.jsonl` records each decoded request and its request ID/operation. Payloads are not logged.
+Summarize a formal timing directory with
+`python benchmarks/libero_pro/analyze_timings.py /runs/formal-timing --output /runs/timing-summary.json`.
+Failed captures have `ok: false`; a successful transport capture does not imply a successful policy
+response, so also inspect normal evaluation error/recovery outputs.
+
+| Span | Includes |
+| --- | --- |
+| `worker.reset`, `worker.set_init_state`, `worker.settle_step` | Initialization and settling, including their normal rendering |
+| `worker.action_step` | Full native physics step, observable updates and RGB rendering |
+| `worker.rgb_render` | Original RGB sensor call, nested inside action_step; excludes reset, settle and sensor restoration |
+| `worker.build_observation` | Worker observation construction |
+| `client.act.connect/send/receive` | Connect, serialize/send, or wait/receive/decode respectively; receive includes remote execution |
+| `server.lock_wait` | Time after request decoding, waiting for the replica's request lock |
+| `server.dispatch`, `server.policy_act`, `server.send` | Dispatch, nested Policy act, and response serialization/send |
+| `policy.example_build`, `policy.postprocess` | Image/example preparation and action unnormalization/transforms |
+| `policy.predict_total` | Framework prediction including input processing, transfer, GPU work and return-to-CPU synchronization |
+| `policy.input_build.wall` | Qwen input preprocessing and upload together |
+| `policy.vlm/gather/action_head.wall` | Host-call durations, potentially asynchronous or synchronizing |
+| `policy.vlm/gather/action_head.cuda_interval` | Same-stream event intervals, including scheduling/host gaps, not exclusive kernel time |
+
+Each span contains seconds and count. Filter server records to `operation=act` when comparing inference
+requests. Never add nested durations (RGB is inside action_step; model stages are inside policy_act)
+or treat sums across workers/replicas as elapsed time. Input upload and output copy are not isolated
+transfer benchmarks. The framework's prediction residual must not be labelled pure D2H time.
+The code does not reset sensor clocks, modify source installations, replay RPCs or change actions.
+Timed camera-off runs wrap RGB sensors for measurement, so their render counts are nonzero.
+
 ## CPU transport reproduction
 
 From the repository root, in Python 3.11 or newer:

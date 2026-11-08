@@ -14,6 +14,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from roboscope_kit import timing
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -92,12 +93,23 @@ class PolicyServer:
                 if received is None:
                     return
                 request, encoding = received
-                with self._request_lock:
-                    response = self._handle(request)
             except Exception as exc:
-                request_id = str(request.get("request_id") or "") if request is not None else ""
-                response = self._error_response(exc, request_id=request_id)
-            send_message(connection, response, encoding)
+                send_message(connection, self._error_response(exc, request_id=""), encoding)
+                continue
+            with timing.capture("server", operation=request.get("operation"),
+                                request_id=request.get("request_id")):
+                try:
+                    with timing.span("server.lock_wait"):
+                        self._request_lock.acquire()
+                    try:
+                        with timing.span("server.dispatch"):
+                            response = self._handle(request)
+                    finally:
+                        self._request_lock.release()
+                except Exception as exc:
+                    response = self._error_response(exc, request_id=str(request.get("request_id") or ""))
+                with timing.span("server.send"):
+                    send_message(connection, response, encoding)
 
     def _handle(self, request: dict[str, Any]) -> dict[str, Any]:
         request_id = str(request.get("request_id") or uuid.uuid4())
@@ -143,7 +155,8 @@ class PolicyServer:
             context, capabilities = self._loaded_contract()
             observation = Observation.from_dict(payload["observation"])
             validate_observation(observation, context.benchmark, capabilities)
-            action = self.policy.act(observation)
+            with timing.span("server.policy_act"):
+                action = self.policy.act(observation)
             if not isinstance(action, ActionChunk):
                 raise TypeError("Policy.act() must return ActionChunk")
             validate_action_chunk(action, context.benchmark)

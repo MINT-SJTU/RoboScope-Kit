@@ -16,7 +16,7 @@ from pathlib import Path
 import imageio
 import numpy as np
 
-from roboscope_kit import EpisodeContext, Observation, PolicyClient
+from roboscope_kit import EpisodeContext, Observation, PolicyClient, timing
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 
 from .camera import ChunkCameraGate
@@ -77,7 +77,8 @@ class PolicyActionQueue:
 
     def step(self, observation: dict, task_description: str, step: int) -> np.ndarray:
         if not self.actions.size:
-            request = build_observation(self.episode_id, step, observation, task_description)
+            with timing.span("worker.build_observation"):
+                request = build_observation(self.episode_id, step, observation, task_description)
             started = time.perf_counter()
             with self._connection() as client:
                 chunk = client.act(request).actions
@@ -231,13 +232,16 @@ def run_episode(
         )
     )
     try:
-        runtime.env.reset()
-        observation = runtime.env.set_init_state(runtime.initial_states[episode_index])
+        with timing.span("worker.reset"):
+            runtime.env.reset()
+        with timing.span("worker.set_init_state"):
+            observation = runtime.env.set_init_state(runtime.initial_states[episode_index])
         frames: list[np.ndarray] = []
         started = time.perf_counter()
 
         for _ in range(settle_steps):
-            observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
+            with timing.span("worker.settle_step"):
+                observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
             if task_done or runtime.env.env.done:
                 return bool(task_done), 0, time.perf_counter() - started, frames
 
@@ -258,8 +262,9 @@ def run_episode(
                 # step() has popped one action. If that exhausted the actual returned
                 # chunk, the next request needs this step's native camera samples.
                 # Keep every physics step, state observable and terminal check intact.
-                cameras.required = not policy.actions.size
-                observation, _reward, task_done, _info = runtime.env.step(action)
+                cameras.required = save_frames or not chunk_camera_rendering or not policy.actions.size
+                with timing.span("worker.action_step"):
+                    observation, _reward, task_done, _info = runtime.env.step(action)
                 if task_done or runtime.env.env.done:
                     return bool(task_done), action_step + 1, time.perf_counter() - started, frames
 
@@ -350,12 +355,13 @@ def main() -> None:
 
     def evaluate(item: WorkItem) -> WorkResult:
         nonlocal runtime
-        task_id = int(item.payload["task_id"])
-        if runtime is None or runtime.task_id != task_id:
-            if runtime is not None:
-                runtime.env.close()
-            runtime = create_task_runtime(task_suite, task_id, args.seed, args.instruction_source)
-        return run_chunk(args, item, runtime, policy)
+        with timing.capture("worker", item_id=item.item_id, worker_id=args.worker_id):
+            task_id = int(item.payload["task_id"])
+            if runtime is None or runtime.task_id != task_id:
+                if runtime is not None:
+                    runtime.env.close()
+                runtime = create_task_runtime(task_suite, task_id, args.seed, args.instruction_source)
+            return run_chunk(args, item, runtime, policy)
 
     try:
         WorkerLoop(

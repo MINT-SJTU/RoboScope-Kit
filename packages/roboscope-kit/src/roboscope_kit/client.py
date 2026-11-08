@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from roboscope_kit import profiling
+from roboscope_kit import profiling, timing
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -168,21 +168,24 @@ class PolicyClient:
 
     def _exchange(self, operation: str, payload: dict[str, Any], encoding: Encoding) -> Any:
         if self._connection is None:
-            self.connect()
+            with timing.span(f"client.{operation}.connect"):
+                self.connect()
         if self._connection is None:
             raise RuntimeError("policy connection is unavailable")
         request_id = str(uuid.uuid4())
-        send_message(
-            self._connection,
-            {
-                "version": PROTOCOL_VERSION,
-                "request_id": request_id,
-                "operation": operation,
-                "payload": payload,
-            },
-            encoding,
-        )
-        response = receive_message(self._connection)
+        with timing.span(f"client.{operation}.send"):
+            send_message(
+                self._connection,
+                {
+                    "version": PROTOCOL_VERSION,
+                    "request_id": request_id,
+                    "operation": operation,
+                    "payload": payload,
+                },
+                encoding,
+            )
+        with timing.span(f"client.{operation}.receive"):
+            response = receive_message(self._connection)
         if response is None:
             raise ProtocolError("policy server closed the connection without a response")
         validate_version(response)

@@ -6,12 +6,15 @@ import gc
 import math
 import os
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import cv2 as cv
 import numpy as np
+from PIL import Image
+from roboscope_kit import timing
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -21,7 +24,6 @@ from roboscope_kit.policy import (
     SessionContext,
 )
 from roboscope_kit.server import run
-from PIL import Image
 from starvla_base_assets import ensure_starvla_base_model
 from starvla_full_checkpoint import (
     CHECKPOINT_SUFFIXES,
@@ -79,6 +81,7 @@ class InferenceConfig:
 class StarVLAPolicy(Policy):
     def __init__(self) -> None:
         self.framework = None
+        self.model_timing = None
         self.norm_processor = None
         self.config: InferenceConfig | None = None
         self.image_preprocessor: ImagePreprocessor | None = None
@@ -133,6 +136,10 @@ class StarVLAPolicy(Policy):
         self.framework = loaded.framework.to(dtype=getattr(torch, config.dtype), device="cuda").eval()
         self.norm_processor = PolicyNormProcessor(str(checkpoint), unnorm_key=config.unnorm_key)
         self.config = config
+        if timing.ENABLED:
+            from starvla_timing import ModelTiming
+
+            self.model_timing = ModelTiming(self.framework)
 
     def reset(self, _context: EpisodeContext) -> None:
         return None
@@ -147,35 +154,44 @@ class StarVLAPolicy(Policy):
             raise RuntimeError("StarVLA Policy is not loaded")
         import torch
 
-        example = _build_example(
-            observation.features,
-            self.config.inputs,
-            self.norm_processor,
-            self.image_preprocessor,
-        )
-        with torch.inference_mode():
+        with timing.span("policy.example_build"):
+            example = _build_example(
+                observation.features,
+                self.config.inputs,
+                self.norm_processor,
+                self.image_preprocessor,
+            )
+        with (
+            self.model_timing.request() if self.model_timing else nullcontext(),
+            timing.span("policy.predict_total"),
+            torch.inference_mode(),
+        ):
             output = self.framework.predict_action(examples=[example], **self.config.kwargs)
-        if not isinstance(output, Mapping) or "normalized_actions" not in output:
-            raise TypeError("StarVLA predict_action() must return normalized_actions")
-        normalized = np.asarray(output["normalized_actions"])
-        expected = (1, self.config.action_horizon, self.config.action_dim)
-        if normalized.shape != expected:
-            raise ValueError(
-                f"StarVLA returned normalized action shape {normalized.shape}; expected {expected}"
-            )
-        actions = np.asarray(self.norm_processor.unapply_actions(normalized[0]), dtype=np.float32)
-        if actions.shape != expected[1:]:
-            raise ValueError(
-                f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected[1:]}"
-            )
-        actions = np.array(actions, dtype=np.float32, copy=True, order="C")
-        for transform in self.config.transforms:
-            transform.apply(actions)
-        if not np.isfinite(actions).all():
-            raise ValueError("StarVLA returned non-finite actions")
-        return ActionChunk(actions)
+        with timing.span("policy.postprocess"):
+            if not isinstance(output, Mapping) or "normalized_actions" not in output:
+                raise TypeError("StarVLA predict_action() must return normalized_actions")
+            normalized = np.asarray(output["normalized_actions"])
+            expected = (1, self.config.action_horizon, self.config.action_dim)
+            if normalized.shape != expected:
+                raise ValueError(
+                    f"StarVLA returned normalized action shape {normalized.shape}; expected {expected}"
+                )
+            actions = np.asarray(self.norm_processor.unapply_actions(normalized[0]), dtype=np.float32)
+            if actions.shape != expected[1:]:
+                raise ValueError(
+                    f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected[1:]}"
+                )
+            actions = np.array(actions, dtype=np.float32, copy=True, order="C")
+            for transform in self.config.transforms:
+                transform.apply(actions)
+            if not np.isfinite(actions).all():
+                raise ValueError("StarVLA returned non-finite actions")
+            return ActionChunk(actions)
 
     def unload(self) -> None:
+        if self.model_timing is not None:
+            self.model_timing.close()
+            self.model_timing = None
         self.framework = None
         self.norm_processor = None
         self.config = None

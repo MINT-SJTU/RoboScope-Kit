@@ -12,6 +12,8 @@ from importlib.metadata import version
 
 import numpy as np
 
+from roboscope_kit import timing
+
 CAMERA_OBSERVATIONS = ("agentview_image", "robot0_eye_in_hand_image")
 
 
@@ -37,7 +39,8 @@ class ChunkCameraGate:
             if self._installing:
                 return cached
             if self.required:
-                cached = original(obs_cache)
+                with timing.span("worker.rgb_render"):
+                    cached = original(obs_cache)
                 self.counters["camera_renders"] += 1
             else:
                 self.counters["camera_renders_skipped"] += 1
@@ -47,7 +50,7 @@ class ChunkCameraGate:
 
     @contextmanager
     def install(self, env: object, observation: dict, *, enabled: bool) -> Iterator[None]:
-        if not enabled:
+        if not enabled and not timing.ENABLED:
             yield
             return
         if version("robosuite") != "1.4.0":

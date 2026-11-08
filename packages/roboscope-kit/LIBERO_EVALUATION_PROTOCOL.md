@@ -342,6 +342,13 @@ The remaining steps and the manifest layout match section 1, with `benchmark_roo
 
 ## 11. LIBERO-Pro
 
+The opt-in environment variable `ROBOSCOPE_TIMING_DIR` writes diagnostic wall timings without
+modifying the wire contract or action sequence. In timing mode, RGB sensors are wrapped in both
+camera modes to measure the same stages; the camera-off arm still renders every sample. This also
+means its render counters become populated. Reset and settle rendering are included only in their
+outer stage timings. Use separate directories for warmup and formal runs. Timed runs incur logging
+and instrumentation overhead and are not interchangeable with clean throughput baselines.
+
 LIBERO-Pro Workers prefer MessagePack, with JSON fallback when the Policy Server does not advertise
 support. The manifest defaults `policy_encoding` (`json` or `msgpack`) and
 `persistent_policy_connection` (boolean, default `false`) independently control transport and optional

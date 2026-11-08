@@ -75,6 +75,15 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
 
 ## Files
 
+Set `ROBOSCOPE_TIMING_DIR` to an absolute directory to collect example construction, prediction and
+postprocessing timings inside Policy Server records. QwenOFT additionally instruments input building,
+VLM forward, action-token gathering and the action head using instance hooks in `starvla_timing.py`.
+CUDA event intervals are read after prediction returns; no per-stage synchronization is inserted.
+Intervals include scheduling and host gaps and must not be described as pure kernel time. Input
+building includes processor work and upload; prediction's remaining time includes output transfer
+and synchronization. Other framework types retain the coarse timings. See the
+[stage timing guide](../../benchmarks/libero_pro/README.md#stage-timing).
+
 For LIBERO-Pro, the simulator manifest now prefers MessagePack with JSON fallback. Optional
 `persistent_policy_connection` reuses a socket within an episode and defaults to `false`. The same
 StarVLA Policy and checkpoint work with either transport. Follow the

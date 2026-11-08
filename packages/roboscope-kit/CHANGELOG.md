@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b35 - 2026-11-08
+
+- Add opt-in `ROBOSCOPE_TIMING_DIR` diagnostic JSONL records for client exchanges, server lock wait
+  and dispatch, LIBERO reset/settle/step/render work, and StarVLA preprocessing and model stages.
+  QwenOFT hooks record wall times and CUDA event intervals without changing installed model sources.
+  Timed runs are diagnostic; nested and parallel durations are not additive wall time.
+
 ## 0.8.0b34 - 2026-11-08
 
 - Add opt-in LIBERO-Pro `chunk_camera_rendering`: skip unused RGB renders inside an action chunk
