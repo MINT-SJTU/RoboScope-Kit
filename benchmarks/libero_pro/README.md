@@ -24,11 +24,93 @@ frozen task semantics, [the issue audit](ISSUE_21_AUDIT.md) for completed and ou
   in `queue/completed/*.json` to detect JSON fallback.
 - The shared Worker preserves BDDL instructions, initial-state selection, seed-once task environments,
   observation contents, action chunks, physics steps, settle steps, terminal checks and official scores.
-  Plain LIBERO and LIBERO-Plus retain their defaults. Rendering and native model batching are unchanged.
+  Plain LIBERO and LIBERO-Plus retain their defaults. Native model batching is unchanged.
+- `defaults.chunk_camera_rendering` is an independent boolean, default `false`. It skips RGB sensor
+  rendering inside action chunks, preserving native sampling clocks. Video runs use full rendering.
 
 The implementation is in `runtime/benchmarks/libero_pro/{factory,adapter}.py` and the shared
 `runtime/benchmarks/libero/worker.py` inside the package. The existing automatic K/g search remains in
 `runtime/benchmark/autotune.py`; there is no benchmark-specific replacement search.
+
+## Chunk camera rendering
+
+`defaults.chunk_camera_rendering: true` enables the experimental camera optimization independently
+of transport and K/g. The shipped default is `false` until real-simulator and closed-loop acceptance.
+The Worker consumes the actual returned action queue, so eight actions are not hardcoded. After
+popping the final action, it restores RGB sampling for that action's `env.step()`, producing the next
+Policy input at the same native physics substep as full rendering. Intermediate steps return cached
+images that are never sent to the Policy. State observables and success checks still run every step.
+
+The implementation in `runtime/benchmarks/libero/camera.py` uses robosuite's public
+`modify_observable(..., "sensor", ...)` API. Observable clocks continue to advance normally. It does
+not toggle sensor enablement, alter sampling rates, skip physics, extend action chunks, or force a
+new image after stepping. No simulator source or installed package is patched. The optimization
+rejects versions other than pinned robosuite 1.4.0, additional image sensors, or RGB sensors with
+corruption, filtering or delay. Reset/settle steps keep full rendering, and video recording disables
+the gate automatically. Original sensors are restored on normal completion and exceptions, before
+the next episode reset. Restoring via the public API incurs two validation renders per episode.
+
+Create separate manifests without modifying the built runtime; use absolute runtime paths so that
+the copies remain valid outside the installation directory:
+
+```bash
+python - /sim/libero-pro/benchmark-manifest.json /runs/camera-configs <<'PY'
+import json
+import sys
+from pathlib import Path
+
+source, destination = map(Path, sys.argv[1:])
+destination.mkdir(parents=True, exist_ok=True)
+config = json.loads(source.read_text())
+config['runtime'] = {
+    key: str((source.parent / value).resolve())
+    for key, value in config['runtime'].items()
+}
+config['defaults'].update(policy_encoding='msgpack', persistent_policy_connection=False,
+                          save_videos=False)
+for enabled in (False, True):
+    config['defaults']['chunk_camera_rendering'] = enabled
+    with (destination / f'camera-{int(enabled)}.json').open('x') as output:
+        json.dump(config, output, indent=2)
+PY
+```
+
+Use the **same new Kit commit** for both arms. The old b30/b31 code does not implement this flag.
+After image/state replay validation and a small closed-loop check, run each arm sequentially:
+
+```bash
+python -m roboscope_kit.runtime.benchmark \
+  --benchmark libero_pro --suite libero_goal_object --episodes 50 \
+  --checkpoint-source /models/starvla-libero-pro \
+  --policy-config /path/to/policy.json \
+  --benchmark-manifest /runs/camera-configs/camera-0.json \
+  --concurrency 12 --replicas 3 --output-dir /runs/camera-off
+
+python -m roboscope_kit.runtime.benchmark \
+  --benchmark libero_pro --suite libero_goal_object --episodes 50 \
+  --checkpoint-source /models/starvla-libero-pro \
+  --policy-config /path/to/policy.json \
+  --benchmark-manifest /runs/camera-configs/camera-1.json \
+  --concurrency 12 --replicas 3 --output-dir /runs/camera-on
+```
+
+Each completed WorkResult records effective `chunk_camera_rendering`, `camera_renders` and
+`camera_renders_skipped`. The counters count RGB sensor calls during policy action steps only;
+installation/cleanup, reset/settle rendering and video/full-render runs are excluded. Both counters
+are zero when the gate is inactive, not a claim that the simulator rendered nothing. For full
+eight-action chunks, 7/8 of those RGB renders can be skipped; this is not an overall speedup estimate.
+Evaluation wall time includes the extra cleanup validation renders. Check both 500-episode coverage
+and paired outcomes, steps, inputs and timing. Then repeat with independently tuned K/g if needed.
+
+Local verification uses the existing regression suite plus ad hoc execution of the upstream 1.4.0
+Observable implementation: chunk lengths 1/2/8/16 retain identical sample clocks and consumed images;
+normal and exceptional exits restore sensors, and delayed camera sensors are rejected. This does not
+replace fixed-action image/state replay in the real simulator or StarVLA closed-loop validation.
+On 2026-11-08 (Python 3.12.3), all 187 existing regressions, the required Ruff scope and the official
+CPython lifecycle check passed. An additional 24 paired Worker checks covered variable chunk lengths,
+early termination, a horizon ending inside a chunk, and video fallback with identical consumed images,
+steps and video frames. These checks use synthetic camera pixels with the real Observable clock;
+they are not measurements of GPU throughput.
 
 ## CPU transport reproduction
 

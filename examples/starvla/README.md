@@ -81,6 +81,12 @@ StarVLA Policy and checkpoint work with either transport. Follow the
 [LIBERO-Pro throughput guide](../../benchmarks/libero_pro/README.md) to compare all four transport modes
 at fixed K/g; CPU transport measurements do not demonstrate real-model evaluation speedup.
 
+LIBERO-Pro also offers `defaults.chunk_camera_rendering` (boolean, default `false`) in the simulator
+manifest. It skips intermediate RGB rendering while consuming the returned action chunk, without
+changing the checkpoint's eight-action horizon or inference observations' sampling schedule. Video
+runs use full rendering. This is independent of encoding, socket reuse and K/g; validate it separately
+using the [camera rendering instructions](../../benchmarks/libero_pro/README.md#chunk-camera-rendering).
+
 | File | Purpose |
 | --- | --- |
 | `starvla_policy.py` | The `Policy`: loads one StarVLA run snapshot, preprocesses observations, returns action chunks |

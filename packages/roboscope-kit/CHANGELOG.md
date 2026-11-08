@@ -2,6 +2,17 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b34 - 2026-11-08
+
+- Add opt-in LIBERO-Pro `chunk_camera_rendering`: skip unused RGB renders inside an action chunk
+  while preserving native sensor clocks, physics steps, state observations and per-step termination.
+  The actual returned action queue determines observation demand; no chunk length is hardcoded.
+  Video runs keep full rendering. Work results record the effective mode and render/skip counters.
+- Restrict the optimization to the pinned robosuite 1.4.0 standard, unfiltered RGB sensors. Unsupported
+  configurations fail explicitly. Use the public sensor replacement API; no simulator installation
+  or source patch is required. Keep the option off pending real-simulator equivalence and throughput
+  validation; this version does not include the upstream b32/b33 changes.
+
 ## 0.8.0b31 - 2026-11-08
 
 - LIBERO-Pro Workers prefer the existing MessagePack transport and optionally reuse one Policy connection

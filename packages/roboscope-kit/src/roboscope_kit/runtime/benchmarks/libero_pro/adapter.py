@@ -57,6 +57,7 @@ LIBERO_PRO_SUITES = {
 class LiberoProRuntimeConfig(LiberoRuntimeConfig):
     policy_encoding: str = "msgpack"
     persistent_policy_connection: bool = False
+    chunk_camera_rendering: bool = False
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -66,6 +67,8 @@ class LiberoProRuntimeConfig(LiberoRuntimeConfig):
             raise ValueError(f"LIBERO-Pro policy_encoding must be one of {ENCODINGS}")
         if type(self.persistent_policy_connection) is not bool:
             raise ValueError("LIBERO-Pro persistent_policy_connection must be a boolean")
+        if type(self.chunk_camera_rendering) is not bool:
+            raise ValueError("LIBERO-Pro chunk_camera_rendering must be a boolean")
 
 
 class LiberoProBenchmarkAdapter(LiberoBenchmarkAdapter):
@@ -88,6 +91,7 @@ class LiberoProBenchmarkAdapter(LiberoBenchmarkAdapter):
                 "--instruction-source",
                 "bddl",
                 *(("--persistent-policy-connection",) if self.config.persistent_policy_connection else ()),
+                *(("--chunk-camera-rendering",) if self.config.chunk_camera_rendering else ()),
             ),
             env={**spec.env, "ROBOSCOPE_POLICY_ENCODING": self.config.policy_encoding},
         )
@@ -103,6 +107,7 @@ class LiberoProBenchmarkAdapter(LiberoBenchmarkAdapter):
             "instruction_source": "bddl",
             "policy_encoding": self.config.policy_encoding,
             "persistent_policy_connection": self.config.persistent_policy_connection,
+            "chunk_camera_rendering": self.config.chunk_camera_rendering,
         }
 
 

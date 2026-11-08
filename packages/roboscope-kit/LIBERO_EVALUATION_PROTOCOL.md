@@ -351,6 +351,20 @@ do not change task seeding, reset history, observations or action execution. See
 [throughput reproduction guide](../../benchmarks/libero_pro/README.md) for matched ablations and the
 outstanding full-evaluation acceptance.
 
+The opt-in manifest default `chunk_camera_rendering` (boolean, default `false`) suppresses RGB sensor
+rendering on steps whose images will not reach the Policy. The Worker checks the actual action queue
+after popping each action and enables native rendering for the step that exhausts the chunk. It keeps
+the native Observable clock running on every physics substep; it does not toggle sensor enablement,
+change sampling rates, or force a later sample at the end of a control step. Reset and settle rendering,
+state observables, per-step success/termination and action execution remain unchanged. Video runs always
+use full rendering. The option requires the pinned robosuite 1.4.0 two-camera RGB configuration with no
+sensor filtering, delay or corruption; unsupported configurations fail. WorkResult metadata reports
+the effective mode plus `camera_renders` and `camera_renders_skipped` during policy action steps
+(both zero when disabled). The public sensor API performs two extra validation renders when restoring
+the original sensors after an optimized episode; those are included in evaluation wall time, not in
+these step counters. Real-simulator image/state equivalence and closed-loop validation are required
+before making correctness or performance claims.
+
 LIBERO-Pro (`--benchmark libero_pro`, protocol `libero-pro-v1`) runs the LIBERO worker above against the
 released single-perturbation suites of [LIBERO-Pro](https://github.com/Zxy-MLlab/LIBERO-PRO). Sections 2–9
 apply, with the differences below.

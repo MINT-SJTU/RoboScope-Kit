@@ -19,6 +19,8 @@ import numpy as np
 from roboscope_kit import EpisodeContext, Observation, PolicyClient
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 
+from .camera import ChunkCameraGate
+
 LIBERO_DUMMY_ACTION = np.asarray([0.0] * 6 + [-1.0], dtype=np.float32)
 LIBERO_ENV_RESOLUTION = 256
 MAX_STEPS = {
@@ -124,6 +126,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--queue-dir", type=Path, required=True)
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--video-dir", type=Path)
+    parser.add_argument(
+        "--chunk-camera-rendering",
+        action="store_true",
+        help="skip unused RGB renders inside action chunks (disabled when saving video)",
+    )
     parser.add_argument("--poll-interval", type=float, default=0.05)
     args = parser.parse_args()
     if args.max_steps is None:
@@ -212,6 +219,8 @@ def run_episode(
     max_steps: int,
     settle_steps: int,
     save_frames: bool,
+    chunk_camera_rendering: bool = False,
+    camera_counters: dict[str, int] | None = None,
 ) -> tuple[bool, int, float, list[np.ndarray]]:
     episode_id = f"task-{runtime.task_id:04d}-episode-{episode_index:04d}"
     policy.reset(
@@ -232,15 +241,27 @@ def run_episode(
             if task_done or runtime.env.env.done:
                 return bool(task_done), 0, time.perf_counter() - started, frames
 
-        for action_step in range(max_steps):
-            if save_frames:
-                frames.append(
-                    np.ascontiguousarray(observation["agentview_image"][::-1, ::-1], dtype=np.uint8)
-                )
-            action = policy.step(observation, runtime.task_description, action_step)
-            observation, _reward, task_done, _info = runtime.env.step(action)
-            if task_done or runtime.env.env.done:
-                return bool(task_done), action_step + 1, time.perf_counter() - started, frames
+        cameras = ChunkCameraGate(
+            camera_counters
+            if camera_counters is not None
+            else {"camera_renders": 0, "camera_renders_skipped": 0}
+        )
+        with cameras.install(
+            runtime.env, observation, enabled=chunk_camera_rendering and not save_frames,
+        ):
+            for action_step in range(max_steps):
+                if save_frames:
+                    frames.append(
+                        np.ascontiguousarray(observation["agentview_image"][::-1, ::-1], dtype=np.uint8)
+                    )
+                action = policy.step(observation, runtime.task_description, action_step)
+                # step() has popped one action. If that exhausted the actual returned
+                # chunk, the next request needs this step's native camera samples.
+                # Keep every physics step, state observable and terminal check intact.
+                cameras.required = not policy.actions.size
+                observation, _reward, task_done, _info = runtime.env.step(action)
+                if task_done or runtime.env.env.done:
+                    return bool(task_done), action_step + 1, time.perf_counter() - started, frames
 
         return False, max_steps, time.perf_counter() - started, frames
     finally:
@@ -271,6 +292,7 @@ def run_chunk(
     records: list[EvaluationRecord] = []
     started = time.perf_counter()
     inference_wait_before = policy.inference_wait_s
+    camera_counters = {"camera_renders": 0, "camera_renders_skipped": 0}
     start_episode = int(item.payload["start_episode"])
     num_trials = int(item.payload["num_trials"])
     for episode_index in range(start_episode, start_episode + num_trials):
@@ -281,6 +303,8 @@ def run_chunk(
             max_steps=args.max_steps,
             settle_steps=args.settle_steps,
             save_frames=args.video_dir is not None,
+            chunk_camera_rendering=args.chunk_camera_rendering,
+            camera_counters=camera_counters,
         )
         save_video(args.video_dir, runtime.task_id, episode_index, success, frames)
         records.append(
@@ -305,6 +329,8 @@ def run_chunk(
             "inference_wait_s": policy.inference_wait_s - inference_wait_before,
             "policy_encoding": policy.encoding,
             "persistent_policy_connection": policy.persistent_connection,
+            "chunk_camera_rendering": args.chunk_camera_rendering and args.video_dir is None,
+            **camera_counters,
         },
     )
 

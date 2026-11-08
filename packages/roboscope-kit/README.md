@@ -116,7 +116,9 @@ The runtime is built on three ideas:
 ### Automatic tuning (K/g)
 
 LIBERO-Pro transport can be measured independently of K/g: its manifest prefers MessagePack with JSON
-fallback and offers opt-in within-episode connection reuse. See the
+fallback and offers opt-in within-episode connection reuse. The independent manifest default
+`chunk_camera_rendering` (boolean, default `false`) skips unused RGB renders inside action chunks;
+video runs retain full rendering. See the
 [LIBERO-Pro throughput guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/README.md)
 for the switches, CPU measurements and real-model reproduction. The >=2x evaluation target remains unverified.
 
