@@ -10,6 +10,12 @@ The evidence is hosted on the contributor fork as an evidence-only prerelease, n
 Raw archive: 23,956,565 bytes, SHA-256
 **3908e6022fca50a5ddf6d7a18c350c36a0b64c079dc724cb684e44d93b7c8747**.
 
+The [complete original remote archive](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-evidence-2026-11-08/issue32-raw-evidence-2026-11-08.tar.gz)
+was subsequently resumed and verified: 38,072,005 bytes, SHA-256
+**c5462864420d0ee345a110ce26c95a11880ba322578ded20da8b4705f5750207**.
+Its entire 9,415-file hash inventory passed verification. It additionally preserves every historical
+candidate source tree and the complete remote helper set. Both archives are listed in SHA256SUMS.
+
 ## Archive map
 
 | Requirement | Path inside the archive |
@@ -57,6 +63,7 @@ plus the final measured source and v6 fallback from previously SHA-256-verified 
 new archive with the checksum above, not a claim that the interrupted transfer completed. All 22 full-run
 record counts and steps, final repeated per-record comparisons, native results, final check exit codes,
 and non-documentation source correspondence to the Git commit were verified before packaging.
-Exact source trees included are baseline-fixed, candidate-v1/v2/v6, and final-b43; other historical trees
-are not claimed complete. The recovery procedure and file hashes are recorded in delivery-validation.json
+Exact source trees in the compact delivery archive are baseline-fixed, candidate-v1/v2/v6, and final-b43.
+The complete original archive linked above additionally contains the other historical source trees.
+The recovery procedure and file hashes are recorded in delivery-validation.json
 and inventory.json. No episode, resource sample, build/check log, or native result was edited.
