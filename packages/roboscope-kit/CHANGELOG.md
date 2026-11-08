@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b31 - 2026-11-06
+## 0.8.0b31 - 2026-11-08
 
 - Add an offline testbed for autotune strategies. `python -m roboscope_kit.runtime.benchmark.autotune_testbed`
   builds a versioned workload record from an evaluation's `autotune/` outputs and replays it through the

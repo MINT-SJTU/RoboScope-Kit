@@ -1,6 +1,6 @@
 # Autotune Testbed
 
-Updated: 2026-11-05
+Updated: 2026-11-08
 
 A real autotune run takes up to 30 minutes on a GPU host, costs money, and gives noisy results, so a search
 cannot be judged by rerunning it. The testbed records what real probes returned, once, and replays those
@@ -57,7 +57,7 @@ a record that fails it. A test checks the file name of synthetic workloads.
 | `replica_vram_bytes` | The replica VRAM footprint `measure` returns. Absent means unknown. |
 | `manifest_defaults` | The bounds and limits inputs, with the names of the manifest's `defaults`. With `host`, they go through the real `resolve_bounds` and `resolve_limits`, never through this machine's CPU quota. |
 | `observed_searches` | Optional: one entry per recorded search, in `--run` order: `autotune`, the autotune code it ran (such as `main 5f79ce2`); `strategy`; `throughput_estimator`; `path`, every K/g it probed, in order; `selected`; `stop_reason`, with each probe message cut to its code; and `elapsed_s`. |
-| `unknown_fields` | Every field below that a finished measurement lacks. A field that is left out must be listed here. |
+| `unknown_fields` | Every tracked field that a finished measurement lacks: `cpu_cores`, `gpu_utilization`, `health`, `peak_memory_bytes`, `probe_items`, `queue_wait_p95_ms`, `record_success`, `steady_window` (not required for `no_steady_window`), `steps_per_s`, `throttle_time_ratio`, and `wall_time_s`. A tracked field that is left out must be listed here. |
 | `unmeasured` | In words, which K/g nobody measured. |
 | `measurements` | One entry per probe. Several entries at one K/g are repeats. |
 
@@ -102,8 +102,9 @@ commands, paths, and error messages stay out, and validation rejects anything th
   repeat.
 - **Scores do not mix probes and fixed runs.** When the selection has a fixed run, relative throughput compares
   the elapsed rates of fixed runs, which ran one workload. Otherwise it compares probes only.
-- **Search probes take precedence over fixed runs** at the same K/g. A fixed run has the full workload, so its work
-  items, its window, and its share of start-up and drain can differ from a probe's. A fixed run answers a probe only
+- **Search probes take precedence over fixed runs** at the same K/g. A fixed run runs more episodes than a probe (the
+  full 500-episode evaluation on LIBERO, the probe's 24 work items with 96 episodes on RoboCasa), so its window and
+  its share of start-up and drain can differ from a probe's. A fixed run answers a probe only
   where no search probed, and the score lists it as a stand-in.
 
 Wall times also depend on history: a replica probe in a real search reuses the replicas already running, so its
@@ -127,21 +128,23 @@ the default strategy. `regression_failures` applies the rule:
 - **The tolerance is 2% on every workload,** set by the maintainer. Replay adds no noise, since a record and the code
   give one score, so an unchanged search never fails. The score moves only when a change selects another K/g, and a
   selection more than 2% slower than today's is stopped.
-- **The recorded rates are less precise than 2% on RoboCasa.** `repeat_spread` shows how far a ratio can move by
-  noise alone, from the spread of each configuration's fixed-run elapsed rates over three or more runs:
-  `2.576 * sqrt(cv_selected**2 + cv_best**2)`, at 1% false alerts. It is not the gate; read it when a change fails.
+- **The recorded rates are less precise than 2% on RoboCasa.** Repeated fixed runs of one configuration spread
+  by (sample standard deviation over mean of their elapsed rates):
 
-  | Workload | Selection vs best | `repeat_spread` |
-  |---|---|---:|
-  | RoboCasa, main | `K=8/g=1` vs `K=12/g=2` | 19.95% |
-  | RoboCasa, #81 | `K=16/g=2` vs `K=12/g=2` | 13.67% |
-  | LIBERO | `K=16/g=4` vs `K=12/g=4` | 0.69% |
-  | RoboTwin | `K=8/g=1` vs `K=10/g=1` | 2.29% |
+  | Workload | K/g | Elapsed rates (steps/s) | Spread |
+  |---|---|---|---:|
+  | RoboCasa | `K=8/g=1` | 168.7 (2026-11-05), 149.0, 147.8 (2026-11-06) | 7.6% |
+  | RoboCasa | `K=12/g=2` | 233.9 (2026-11-05), 226.3, 229.9 (2026-11-06) | 1.7% |
+  | RoboCasa | `K=16/g=2` | 223.6 (2026-11-05), 202.2, 215.4 (2026-11-06) | 5.0% |
+  | LIBERO | `K=16/g=4` | 209.0, 209.0, 208.4 | 0.17% |
+  | LIBERO | `K=12/g=4` | 209.1, 209.7, 208.9 | 0.21% |
+  | RoboTwin | `K=8/g=1` | 108.7, 108.9, 109.7 | 0.49% |
+  | RoboTwin | `K=10/g=1` | 115.2, 115.8, 116.9 | 0.74% |
 
-  On RoboCasa, `K=8/g=1` ran at 168.7, 149.1, and 147.8 steps/s, the first on 2026-11-05 and the others back to back
-  on 2026-11-06, so most of the spread is drift between days. A change there that selects a configuration a few
-  percent slower fails, though the records cannot tell the two apart; a person decides whether to lower the expected
-  value. LIBERO's six repeats ran within about 2.5 hours of one night and hold no such drift. RoboTwin's ran on an
+  On RoboCasa, `K=8/g=1` is 13% faster on 2026-11-05 than on the next day, when its two runs agree within 1%; `K=16/g=2`
+  differs by 6.5% between its two runs on 2026-11-06. A change there that selects a configuration a few percent
+  slower fails, though the records cannot tell the two apart; a person decides whether to lower the expected value.
+  LIBERO's six repeats ran within about 2.5 hours of one night and hold no drift between days. RoboTwin's ran on an
   evening and the next morning.
 - **Lowering an expected value** is allowed only in a PR that says why, and it needs maintainer review. Raise the
   value when a change improves it, so later changes cannot give the gain back.
@@ -219,10 +222,10 @@ is for edge cases only, and must say so in `provenance.kind` and in its file nam
 
 | File | Kind | Covers | Missing |
 | --- | --- | --- | --- |
-| `robocasa-tabletop-rtx4090-issue80.json` | real | `K=1, 2, 4, 8` at `g=1`: steady rate and GPU utilization. `K=16` at `g=1`: no steady window. | Every `g > 1` point; elapsed rates, per-probe wall times, CPU, throttle, peak memory, queue wait, health, per-episode success, and probe sizes for every point. |
-| `robocasa-tabletop-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host: probes at `K=1, 2, 4, 8, 16` with `g=1` and `K=16/g=2`; fixed runs at 8/1, 12/2, and 16/2 three times each, 9/1, 16/1, 16/3, 20/2, and three that failed (16/4, 20/3, 24/2). | Queue wait; fixed-run wall times; fixed runs with CUDA MPS, listed in its notes; `K=32/g=2`, stopped by hand. |
-| `libero-10-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host: probes at `K=1, 2, 4, 8` with `g=1`, 8/2, 12/3, and 16/4, in both searches; full 500-episode fixed runs at 16/4 and 12/4 three times each, 8/2, 8/4, 9/1, 12/3, 16/3, 20/4, 24/1, and 24/4. | Queue wait; fixed-run wall times; repeats on another day; the K/g `two-phase` asks for next (9/2, 8/5). |
-| `robotwin-demo-clean-subset-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host, all on a 500-episode subset of `demo_clean` (episodes 0-9 of each of the 50 tasks) run by a wrapper outside the repository, not Kit's official RoboTwin entry point: probes at `K=1, 2, 4, 8` with `g=1` and `K=16/g=1` (`worker_oom`), in both searches; fixed runs at 8/1 and 10/1 three times each, 6/1, 7/1, 7/2, 8/2, 9/1, 11/1, and two that failed (12/1, 16/1). 8/2 and 11/1 lost one Worker to GPU memory and finished with one fewer, which a fixed run cannot record. | Queue wait; fixed-run wall times; the full 5000-episode evaluation; the K/g `two-phase` asks for next (9/2). |
+| `robocasa-tabletop-rtx4090-issue80.json` | real | `K=1, 2, 4, 8` at `g=1`: steady rate and GPU utilization. `K=16` at `g=1`: no steady window. | Every `g > 1` point; elapsed rates, per-probe wall times, CPU, throttle, peak memory, queue wait, health, per-episode success, steady windows, and probe sizes for every point. |
+| `robocasa-tabletop-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host: probes at `K=1, 2, 4, 8, 16` with `g=1` and `K=16/g=2`; fixed runs at 8/1, 12/2, and 16/2 three times each, 9/1, 16/1, 16/3, 20/2, and three that failed (16/4, 20/3, 24/2). | Queue wait; fixed-run health and wall times; fixed runs with CUDA MPS, listed in its notes; `K=32/g=2`, stopped by hand. |
+| `libero-10-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host: probes at `K=1, 2, 4, 8` with `g=1`, 8/2, 12/3, and 16/4, in both searches; full 500-episode fixed runs at 16/4 and 12/4 three times each, 8/2, 8/4, 9/1, 12/3, 16/3, 20/4, 24/1, and 24/4. | Queue wait; fixed-run health and wall times; repeats on another day; the K/g `two-phase` asks for next (9/2, 8/5). |
+| `robotwin-demo-clean-subset-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host, all on a 500-episode subset of `demo_clean` (episodes 0-9 of each of the 50 tasks) run by a wrapper outside the repository, not Kit's official RoboTwin entry point: probes at `K=1, 2, 4, 8` with `g=1` and `K=16/g=1` (`worker_oom`), in both searches; fixed runs at 8/1 and 10/1 three times each, 6/1, 7/1, 7/2, 8/2, 9/1, 11/1, and two that failed (12/1, 16/1). 8/2 and 11/1 lost one Worker to GPU memory and finished with one fewer, which a fixed run cannot record. | Queue wait; fixed-run health and wall times; the full 5000-episode evaluation; the K/g `two-phase` asks for next (9/2). |
 | `synthetic-replica-limits.json` | synthetic | Replica probes, probes without a window, a failing configuration, wall times, repeats, a fixed-run point. | Everything: no number in it was measured. |
 
 Scores on `robocasa-tabletop-rtx4090-full-auto.json`:
@@ -234,8 +237,8 @@ Scores on `robocasa-tabletop-rtx4090-full-auto.json`:
 | `two-phase` | steady | `K=9/g=1` | 0.620 of `K=12/g=2` | 5 | unknown | unknown | yes | As above |
 
 Relative throughput uses the median of each configuration's fixed runs. The fixed default on this host is
-`K=9/g=1`, with no tuning: 0.620 of the best, about 6063 s for the full evaluation, slower than any search's
-selection.
+`K=9/g=1`, with no tuning: 0.620 of the best, about 6063 s for the full evaluation. `two-phase` selects the same
+configuration. `diagonal` selects a faster one, `K=8/g=1` at 0.648, but its tuning time makes it slower end to end.
 
 The record holds two real searches. `main 5f79ce2` stopped at `K=8/g=1` after `K=16/g=1` had no steady window, in
 818 s, and the code here reproduces it probe by probe. `#81 81e3824`, a candidate fix for #80, went on to `K=16/g=2`;

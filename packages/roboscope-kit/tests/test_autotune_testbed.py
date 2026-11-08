@@ -29,7 +29,6 @@ from roboscope_kit.runtime.benchmark.autotune_testbed import (
     main,
     record_runs,
     regression_failures,
-    repeat_spread,
     replay_strategy,
     search_mismatches,
     validate_record,
@@ -331,17 +330,6 @@ def test_strategy_on_workload(workload: str, strategy: str, estimator: str | Non
 def test_judged_workloads_pass_the_regression_rule(workload: str) -> None:
     score = replay_strategy(_load(workload), DEFAULT_AUTOTUNE_STRATEGY)
     assert regression_failures(score, JUDGED[workload]) == ()
-
-
-def test_repeat_spread_needs_three_fixed_runs_of_each_configuration() -> None:
-    record = _load(FULL_AUTO)
-    assert repeat_spread(record, (8, 1), (12, 2)) == pytest.approx(0.1995, abs=0.0001)
-    assert repeat_spread(record, (16, 2), (12, 2)) == pytest.approx(0.1367, abs=0.0001)
-    assert repeat_spread(record, (9, 1), (12, 2)) is None
-    # The best configuration selected is compared with itself across repeats.
-    assert repeat_spread(record, (12, 2), (12, 2)) == pytest.approx(0.0603, abs=0.0001)
-    assert repeat_spread(_load(LIBERO), (16, 4), (12, 4)) == pytest.approx(0.0069, abs=0.0001)
-    assert repeat_spread(_load(ROBOTWIN), (8, 1), (10, 1)) == pytest.approx(0.0229, abs=0.0001)
 
 
 def test_every_real_workload_is_judged_or_says_why_not() -> None:

@@ -70,12 +70,8 @@ FAILED_OUTCOMES = (
 )
 # How far a judged workload's relative throughput may fall below its expected value, set by the
 # maintainer for every workload. A selection more than 2% slower than today stops the change for a
-# person to look at, even where the recorded rates drift more than that (see repeat_spread).
+# person to look at, even where repeated runs of one configuration vary more than that.
 REGRESSION_TOLERANCE = 0.02
-# Fixed runs of each configuration that repeat_spread needs, and the standard deviations it covers
-# for 1% false alerts on one side.
-TOLERANCE_REPEATS = 3
-TOLERANCE_Z = 2.576
 # How far a replay's search time may be from the recorded search's. The replay adds only probe
 # wall times, so the rest is what the real search spent between probes.
 SEARCH_TIME_TOLERANCE = 0.02
@@ -687,33 +683,6 @@ def fixed_default(record: dict[str, Any]) -> FixedDefault:
             evaluation_s = record["evaluation_steps"] / rates[key]
     measured = any((item["k"], item["g"]) == key for item in record["measurements"])
     return FixedDefault(*key, relative, evaluation_s, not _failed(record, *key) if measured else None)
-
-
-def repeat_spread(
-    record: dict[str, Any], selected: tuple[int, int], best: tuple[int, int]
-) -> float | None:
-    """How far ``selected`` against ``best`` can move by noise alone, from their repeated fixed runs.
-
-    Each configuration's spread is the sample standard deviation of its fixed-run elapsed rates
-    over their mean. A ratio of the two rates spreads by both, so this is
-    ``TOLERANCE_Z * sqrt(cv_selected**2 + cv_best**2)``. It is shown for people to weigh a failure
-    against ``REGRESSION_TOLERANCE`` and is not the gate. ``None`` unless each has at least
-    ``TOLERANCE_REPEATS`` fixed runs.
-    """
-
-    spreads = []
-    for key in {selected, best}:
-        rates = [
-            item["steps_per_s"]
-            for item in record["measurements"]
-            if (item["k"], item["g"]) == key and item["source"] == "fixed-run" and "steps_per_s" in item
-        ]
-        if len(rates) < TOLERANCE_REPEATS:
-            return None
-        spreads.append(statistics.stdev(rates) / statistics.fmean(rates))
-    if len(spreads) == 1:
-        spreads *= 2
-    return TOLERANCE_Z * math.sqrt(sum(spread**2 for spread in spreads))
 
 
 def regression_failures(
