@@ -263,6 +263,10 @@ def test_group_success_keeps_slots_stepping_and_uses_first_retained_value(
     class Environment:
         def __init__(self, slot: int) -> None:
             self.steps = 0
+            context = SimpleNamespace(_roboscope_owning_context_cleanup=2)
+            self.unwrapped = SimpleNamespace(env=SimpleNamespace(sim=SimpleNamespace(
+                _render_context_offscreen=context,
+            )))
             # Individual successes happen early. The group barrier still waits
             # for all slots' penultimate physical-step success values.
             self.success_steps = {slot + 1, stop_step - 1}
@@ -276,6 +280,9 @@ def test_group_success_keeps_slots_stepping_and_uses_first_retained_value(
             assert action.shape == (12,)
             self.steps += 1
             return {}, 0.0, False, False, {"success": self.steps in self.success_steps}
+
+        def close(self):
+            pass
 
     class Client:
         def __init__(self) -> None:
@@ -300,7 +307,12 @@ def test_group_success_keeps_slots_stepping_and_uses_first_retained_value(
     client = Client()
     args = SimpleNamespace(save_videos=False, output_dir=tmp_path, worker_id=0)
     task = replace(TASKS_BY_NAME[TASKS[0]], horizon=24)
-    records, _ = worker.run_group(args, task, environments, 0, client)
+    monkeypatch.setattr(worker, "create_environment", lambda task, slot: environments[slot])
+    slots = worker.LocalSlots(task, NATIVE_ENVS)
+    try:
+        records, _ = worker.run_group(args, task, slots, NATIVE_ENVS, 0, client)
+    finally:
+        slots.close()
     assert [environment.steps for environment in environments] == [stop_step] * NATIVE_ENVS
     assert client.batch_steps == [[step] * NATIVE_ENVS for step in range(0, stop_step, 8)]
     assert client.reset_ids == client.end_ids == [record.record_id for record in records]
