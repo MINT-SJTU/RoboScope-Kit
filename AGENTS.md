@@ -38,7 +38,8 @@ script copies the manifest into `<install-dir>`, where those paths resolve. Keep
 script consistent, and never change frozen protocol values (such as the RoboTwin seed protocol and
 generation digests) without regenerating what depends on them.
 
-Benchmark integrations and new suites follow `packages/roboscope-kit/BENCHMARK_ACCEPTANCE.md`.
+Benchmark integrations and new suites follow `packages/roboscope-kit/BENCHMARK_ACCEPTANCE.md`;
+work through them with the `.agents/skills/benchmark-integration` skill.
 Inventory the complete requested upstream task scope and validate every task; label partial work as
 partial and do not claim full acceptance while tasks or native comparisons are missing.
 
@@ -58,6 +59,9 @@ to PyPI by hand.
 ## Documentation
 
 Write everything in the repository in English: code, comments, documentation, and commit messages.
+
+Keep READMEs brief and put protocol detail and caveats in the protocol documents. Use each benchmark's
+upstream official name. Do not commit scripts that only patch one run's data.
 
 Keep the package README, the protocol documents, and the example READMEs consistent whenever
 user-facing evaluation behavior changes. After a `--profile` run, add what it found (date, machine,
