@@ -11,6 +11,11 @@ frozen task semantics, [the issue audit](ISSUE_21_AUDIT.md) for completed and ou
 
 ## Implementation
 
+For a matched MPS off/on experiment at fixed K=12/g=3, use
+[`run_mps_comparison.py`](run_mps_comparison.py). The [MPS experiment guide](MPS_EXPERIMENT.md)
+documents preview, warmup, timing, attachment checks and outputs. It reuses the existing Kit MPS
+lifecycle and retains chunk camera rendering in both arms; no MPS performance claim is made yet.
+
 - `benchmark-manifest.json` prefers the existing MessagePack transport. A JSON health exchange
   negotiates support; a server without MessagePack support falls back to JSON.
 - `defaults.policy_encoding` accepts `json` or `msgpack`. The adapter sets the Worker process's

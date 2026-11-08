@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b36 - 2026-11-08
+
+- Add a LIBERO-Pro MPS comparison driver using the existing owned CUDA MPS lifecycle. Default arms
+  hold K12/g3, MessagePack and chunk camera rendering fixed; support read-only preview, reverse order
+  and separate diagnostic timing. Validate episode coverage, aggregate totals and MPS client attachment,
+  and record formal/CLI timing, scores, steps and recovery. No MPS benchmark result is claimed yet.
+
 ## 0.8.0b35 - 2026-11-08
 
 - Add opt-in `ROBOSCOPE_TIMING_DIR` diagnostic JSONL records for client exchanges, server lock wait

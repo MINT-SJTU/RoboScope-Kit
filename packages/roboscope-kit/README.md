@@ -297,6 +297,9 @@ Integration, autotune, and throughput measurements are in the
 
 ## CUDA MPS (opt-in)
 
+The [LIBERO-Pro MPS comparison driver](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/MPS_EXPERIMENT.md)
+runs matched sequential off/on arms at fixed K/g, with separate warmup and optional diagnostic timing.
+
 `--cuda-mps` runs the Policy replicas under NVIDIA CUDA MPS, so replicas sharing a GPU run their kernels
 concurrently instead of taking turns. It is off by default. With it, the runtime:
 
