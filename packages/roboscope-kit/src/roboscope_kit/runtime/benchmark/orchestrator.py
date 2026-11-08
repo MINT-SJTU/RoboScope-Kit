@@ -497,8 +497,21 @@ class ParallelBenchmarkRuntime:
         for item_id in item_ids:
             self.item_completion_s.setdefault(item_id, seen_s)
 
+    def _check_replicas(self, events_path: Path, total_records: int) -> None:
+        try:
+            self.server_pool.check()
+        except RuntimeError as exc:
+            if self.config.probe_limits is None:
+                raise
+            self._record_policy_server_error(events_path, exc)
+            raise ProbeCapacityReached(
+                f"probe g={self.config.replicas} lost a policy replica: {exc}",
+                stop_reason="policy_replica_failure",
+                health=self._probe_health(total_records),
+            ) from exc
+
     def _check_processes(self, events_path: Path, total_records: int) -> None:
-        self.server_pool.check()
+        self._check_replicas(events_path, total_records)
         exited = [
             (worker_id, managed)
             for worker_id, managed in self.workers.items()

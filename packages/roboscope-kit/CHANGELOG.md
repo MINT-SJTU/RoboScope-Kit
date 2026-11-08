@@ -2,6 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b33 - 2026-11-08
+
+- A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now
+  rejects that candidate as `policy_replica_failure`, and the search keeps the last accepted configuration.
+  It used to abort the whole evaluation. Outside a probe, a dead replica still stops the evaluation.
+
 ## 0.8.0b32 - 2026-11-08
 
 - The `diagonal` autotune no longer ends the whole search when a `K` probe has no steady-state window, which
