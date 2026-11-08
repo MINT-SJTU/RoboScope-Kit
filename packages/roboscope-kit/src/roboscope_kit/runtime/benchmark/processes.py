@@ -344,6 +344,8 @@ class InferencePool:
             self.processes[context.replica_id] = None
             self.adapter.initialize_replica(context)
             return
+        if self.profile_dir is not None and spec.ready_socket is None:
+            raise ValueError("Policy profiling requires a Unix-domain readiness socket")
         if self.cuda_mps is not None:
             spec = replace(spec, env={**spec.env, **self.cuda_mps.client_env(context.gpu_slot)})
         if self.profile_dir is not None:

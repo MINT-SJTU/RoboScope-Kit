@@ -238,16 +238,22 @@ class ModelClient:
         self.prev_action = None
         if PROFILE_NVTX is not None:
             self.profile_episode = PROFILE_NVTX.range_start("episode")
-        self.client.request(
-            "reset",
-            {
-                "context": {
-                    "episode_id": self.episode_id,
-                    "task_id": os.environ.get("ROBOSCOPE_ROBOTWIN_TASK", "robotwin"),
-                    "metadata": {"instruction": self.task_description},
-                }
-            },
-        )
+        try:
+            self.client.request(
+                "reset",
+                {
+                    "context": {
+                        "episode_id": self.episode_id,
+                        "task_id": os.environ.get("ROBOSCOPE_ROBOTWIN_TASK", "robotwin"),
+                        "metadata": {"instruction": self.task_description},
+                    }
+                },
+            )
+        except BaseException:
+            if self.profile_episode is not None:
+                PROFILE_NVTX.range_end(self.profile_episode)
+                self.profile_episode = None
+            raise
 
     def end_episode(self):
         if not self.episode_id:

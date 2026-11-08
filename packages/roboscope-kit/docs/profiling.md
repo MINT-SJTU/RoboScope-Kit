@@ -143,7 +143,7 @@ different: do not infer that an untested simulator or graphics backend was valid
 | LIBERO-Pro | Same Worker module as LIBERO | Code path checked; not yet hardware-verified |
 | MetaWorld | SDK `PolicyClient`, first episode | Code path checked; not yet hardware-verified |
 | robomimic | SDK `PolicyClient`, first episode | Code path checked; not yet hardware-verified |
-| RoboCasa | SDK `PolicyClient`, first episode | Code path checked; not yet hardware-verified |
+| RoboCasa GR-1 Tabletop | SDK `PolicyClient`, first episode | Code path checked; not yet hardware-verified |
 | CALVIN | SDK `PolicyClient`, first subtask | Code path checked; not yet hardware-verified; capture is not the complete five-task sequence |
 | RoboTwin | Independent client, first episode | Real StarVLA, K4/g2, paired 20 episodes plus CLI QuickTest, MPS off/on (2026-11-06); Worker/Policy reports verified. Native RTX 4090 counter QuickTest and renderer hardware/CPU profiles verified (2026-11-07) |
 
@@ -167,8 +167,8 @@ adds Worker and Policy coverage; see its [findings](../../../benchmarks/robotwin
   baseline for unprofiled evaluation.
 - The CLI supports `--quick-test` or fixed K/g, not autotune profiling. Custom low-level callers supplying
   an existing `server_pool` must create it with `profile_dir`; a pool cannot retroactively profile an
-  already running Policy. Inference adapters without a separate process cannot supply a Policy report
-  and are rejected in profiling mode.
+  already running Policy. Policy profiling requires a separate replica process with a Unix-domain readiness
+  socket; its peer credentials identify the actual Policy process group for profiling and cleanup.
 
 ## How it works
 
