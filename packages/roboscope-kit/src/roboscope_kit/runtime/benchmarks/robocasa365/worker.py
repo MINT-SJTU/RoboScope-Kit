@@ -39,6 +39,7 @@ from .protocol import (
     Task,
     validate_upstream,
 )
+from .slots import LocalSlots, SpawnedSlots
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--save-videos", action="store_true")
+    parser.add_argument("--parallel-slots", action="store_true")
     parser.add_argument("--poll-interval", type=float, default=0.05)
     return parser.parse_args()
 
@@ -155,32 +157,17 @@ def save_first_batch(args: argparse.Namespace, task: str, observations: tuple, c
 
 
 def run_group(
-    args: argparse.Namespace, task: Task, environments: list,
+    args: argparse.Namespace, task: Task, slots: LocalSlots | SpawnedSlots, count: int,
     stream_episode: int, client: PolicyClient,
 ) -> tuple[list[EvaluationRecord], dict[str, float]]:
-    from robocasa.utils.env_utils import convert_action
-
-    count = len(environments)
     indices = [stream_episode * count + slot for slot in range(count)]
     identifiers = [episode_id(task.name, index) for index in indices]
-    histories: list[deque] = []
-    fingerprints = []
     reset_started = time.perf_counter()
     with environment_range("environment.reset"):
-        for slot, environment in enumerate(environments):
-            # Native labels are not reset seeds: continue the constructor stream.
-            native, _ = environment.reset()
-            history = deque((native, native), maxlen=OBSERVATION_STEPS)
-            histories.append(history)
-            fingerprints.append(reset_fingerprint(
-                environment, build_observation(identifiers[slot], 0, history)
-            ))
+        # Native labels are not reset seeds: continue the constructor stream.
+        states = slots.reset(identifiers)
     reset_s = time.perf_counter() - reset_started
     started = time.perf_counter()
-    steps = [0] * count
-    successes = [False] * count
-    dones = [False] * count
-    recent_success = [deque(maxlen=OBSERVATION_STEPS) for _ in environments]
     inference_s = 0.0
     stepping_s = 0.0
     video_s = 0.0
@@ -211,10 +198,10 @@ def run_group(
                 })
                 client.reset(context)
                 reset_ids.append(identifier)
-            while not all(dones):
+            while not all(state.done for state in states):
                 observations = tuple(
-                    build_observation(identifier, steps[slot], histories[slot])
-                    for slot, identifier in enumerate(identifiers)
+                    build_observation(identifier, state.steps, state.history)
+                    for identifier, state in zip(identifiers, states, strict=True)
                 )
                 inference_started = time.perf_counter()
                 # Native inference includes done slots; their wrapper ignores actions.
@@ -222,36 +209,18 @@ def run_group(
                 inference_s += time.perf_counter() - inference_started
                 if len(chunks) != count:
                     raise RuntimeError("RoboCasa365 Policy returned an incomplete action batch")
-                if stream_episode == 0 and not any(steps):
+                if stream_episode == 0 and not any(state.steps for state in states):
                     save_first_batch(args, task.name, observations, chunks)
-                for slot, chunk in enumerate(chunks):
-                    actions = validate_actions(chunk.actions)
-                    for action in actions:
-                        if dones[slot]:
-                            break
-                        step_started = time.perf_counter()
-                        with environment_range("environment.step"):
-                            native, _, terminated, truncated, info = environments[slot].step(
-                                convert_action(action)
-                            )
-                        stepping_s += time.perf_counter() - step_started
-                        histories[slot].append(native)
-                        steps[slot] += 1
-                        success = bool(info["success"])
-                        recent_success[slot].append(success)
-                        successes[slot] |= success
-                        dones[slot] = bool(terminated or truncated or steps[slot] >= task.horizon)
-                        # Native VideoRecordingWrapper starts its counter at 1
-                        # after reset, so a 20 Hz / 10 fps run records steps 1, 3, ...
-                        if writers[slot] is not None and steps[slot] % 2 == 1:
-                            video_started = time.perf_counter()
-                            writers[slot].append_data(native["video.robot0_agentview_right"])
-                            video_s += time.perf_counter() - video_started
+                states, chunk_step_s, chunk_video_s = slots.advance(
+                    [validate_actions(chunk.actions) for chunk in chunks], writers,
+                )
+                stepping_s += chunk_step_s
+                video_s += chunk_video_s
                 # Native info['success'][0] is FIRST of its latest two step values.
-                if all(values and values[0] for values in recent_success):
+                if all(state.recent_success and state.recent_success[0] for state in states):
                     termination = "native_group_success"
                     break
-            if termination != "native_group_success" and any(step < task.horizon for step in steps):
+            if termination != "native_group_success" and any(state.steps < task.horizon for state in states):
                 termination = "simulator_done"
         finally:
             for identifier in reset_ids:
@@ -259,7 +228,7 @@ def run_group(
     elapsed_s = time.perf_counter() - started
     records = [
         EvaluationRecord(
-            identifiers[slot], successes[slot], steps[slot], elapsed_s,
+            identifiers[slot], state.success, state.steps, elapsed_s,
             {
                 "task": task.name, "split": task.split, "scene_split": SCENE_SPLIT,
                 "episode_index": indices[slot], "rollout_label": ROLLOUT_LABEL_BASE + indices[slot],
@@ -267,10 +236,10 @@ def run_group(
                 "constructor_seed": CONSTRUCTOR_SEED + slot,
                 "horizon": task.horizon, "termination": termination,
                 "group_elapsed_s": elapsed_s, "group_reset_s": reset_s,
-                **fingerprints[slot],
+                **state.initial,
             },
         )
-        for slot in range(count)
+        for slot, state in enumerate(states)
     ]
     return records, {
         "reset_s": reset_s, "inference_wait_s": inference_s,
@@ -284,43 +253,41 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     count = int(item.payload["native_envs"])
     if count not in (1, NATIVE_ENVS) or not 1 <= episodes <= EPISODES_PER_TASK or episodes % count:
         raise ValueError("invalid RoboCasa365 task workload")
-    environments = []
+    slots = None
     records = []
     timings = {
         "reset_s": 0.0, "inference_wait_s": 0.0, "environment_step_s": 0.0, "video_write_s": 0.0,
     }
     started = time.perf_counter()
+    parallel = args.parallel_slots and count == NATIVE_ENVS and not args.save_videos and not profiling.ENABLED
+    slot_execution = "spawned" if parallel else "serial"
     try:
         from robocasa.models.fixtures.counter import Counter
 
         if getattr(Counter, "_roboscope_reset_region_order", None) != "xml-insertion-v1":
             raise RuntimeError("rebuild RoboCasa365 runtime with the pinned sampling corrections")
         with environment_range("environment.create"):
-            for slot in range(count):
-                environments.append(create_environment(task, slot))
-                context = environments[-1].unwrapped.env.sim._render_context_offscreen
-                if getattr(context, "_roboscope_owning_context_cleanup", None) != 2:
-                    raise RuntimeError("rebuild RoboCasa365 runtime with the owning-context cleanup patches")
+            slots = SpawnedSlots(task, count) if parallel else LocalSlots(task, count)
         timings["environment_create_s"] = time.perf_counter() - started
         with PolicyClient(args.policy_socket, timeout_s=300) as client:
             for group in range(episodes // count):
-                group_records, group_timing = run_group(args, task, environments, group, client)
+                group_records, group_timing = run_group(args, task, slots, count, group, client)
                 records.extend(group_records)
                 for key, value in group_timing.items():
                     timings[key] += value
                 WorkQueue(args.queue_dir).publish_partial(item, WorkResult(
                     item.item_id, item.group_id, args.worker_id, tuple(records),
-                    {"task": task.name, "timings": dict(timings)},
+                    {"task": task.name, "slot_execution": slot_execution, "timings": dict(timings)},
                 ))
     finally:
         close_started = time.perf_counter()
-        for environment in environments:
-            environment.close()
+        if slots is not None:
+            slots.close()
         timings["environment_close_s"] = time.perf_counter() - close_started
     timings["task_elapsed_s"] = time.perf_counter() - started
     return WorkResult(
         item.item_id, item.group_id, args.worker_id, tuple(records),
-        {"task": task.name, "native_envs": count, "timings": timings},
+        {"task": task.name, "native_envs": count, "slot_execution": slot_execution, "timings": timings},
     )
 
 

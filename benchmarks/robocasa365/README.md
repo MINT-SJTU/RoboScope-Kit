@@ -84,6 +84,13 @@ The self-test verifies the frozen registry and validates RGB and state across tw
 environment resets. The real Quick Test runs one native five-slot group of the
 first task with the official horizon.
 For the full matrix remove `--quick-test` and set `--concurrency K --replicas G`.
+
+Set `defaults.parallel_slots` to `true` in a run's benchmark manifest to
+execute each native five-slot group with five simulator subprocesses. Each
+Worker still sends one ordered Policy batch at the existing chunk boundary.
+The default is serial. Runs with video or profiling use the serial path.
+The subprocess mode raises host and GPU memory use, so measure it on the
+target machine with a matched Worker and Policy replica configuration.
 Each formal worker manages **five** native environments. Use fresh output
 directories, verify all records and compare with the pinned native evaluator.
 The Policy README provides a captured-input native action comparison helper.

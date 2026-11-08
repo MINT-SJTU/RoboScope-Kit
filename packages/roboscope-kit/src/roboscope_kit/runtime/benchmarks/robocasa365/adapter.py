@@ -43,6 +43,7 @@ class RoboCasa365RuntimeConfig:
     native_envs: int = NATIVE_ENVS
     cpu_threads: int = 1
     save_videos: bool = False
+    parallel_slots: bool = False
 
     def __post_init__(self) -> None:
         if self.suite not in SUITES:
@@ -59,6 +60,8 @@ class RoboCasa365RuntimeConfig:
             raise ValueError("RoboCasa365 episodes must be divisible by native_envs; no padded records")
         if self.cpu_threads < 1:
             raise ValueError("RoboCasa365 cpu_threads must be positive")
+        if not isinstance(self.parallel_slots, bool):
+            raise ValueError("RoboCasa365 parallel_slots must be a boolean")
 
     @property
     def full_suite(self) -> bool:
@@ -99,6 +102,7 @@ class RoboCasa365BenchmarkAdapter:
                 "--worker-state-dir", str(context.state_dir),
                 "--output-dir", str(context.output_dir),
                 *(("--save-videos",) if self.config.save_videos else ()),
+                *(("--parallel-slots",) if self.config.parallel_slots else ()),
             ),
             cwd=self.config.benchmark_root,
             env={
@@ -177,6 +181,7 @@ class RoboCasa365BenchmarkAdapter:
             "scene_split": SCENE_SPLIT, "full_suite": self.config.full_suite,
             "native_equivalence_verified": False,
             "native_envs_per_worker": self.config.native_envs,
+            "parallel_slots_requested": self.config.parallel_slots,
             "task_order": list(self.config.tasks),
             "horizons": {name: TASKS_BY_NAME[name].horizon for name in self.config.tasks},
             "episodes_per_task": self.config.episodes_per_task,

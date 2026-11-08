@@ -2,6 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b37 - 2026-11-11
+
+- Add opt-in concurrent execution of RoboCasa365's five native simulator slots. Persistent child
+  processes keep the per-slot reset stream and join at every existing action-chunk boundary.
+  Retain serial execution for video and profiling, bound IPC waits, and clean up on parent death.
+
 ## 0.8.0b36 - 2026-11-11
 
 - Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,

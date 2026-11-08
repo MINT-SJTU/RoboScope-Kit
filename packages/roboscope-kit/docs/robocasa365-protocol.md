@@ -44,6 +44,12 @@ not the formal 50-rollout default or task horizons. The
 records the separately approved cap and completes every task on native and Kit
 paths. It does not establish native-horizon accuracy or full trajectory equality.
 
+An opt-in manifest setting, `defaults.parallel_slots`, runs the five native
+slots in separate processes. Each slot keeps its environment and constructor
+RNG stream across groups. The Worker waits for all slots at the same chunk
+boundary, preserves their order in the Policy batch, and applies the same
+group success check. Profiling and video runs use serial slots.
+
 Each task is one work item. Its five simulator slots and Policy RNG stream
 persist across groups. At 50 episodes, a long task can occupy one Worker
 for ten groups. Recovery replays the entire item, and task-length variation
