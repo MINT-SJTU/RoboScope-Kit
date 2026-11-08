@@ -6,9 +6,11 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import math
 import os
+import signal
 import subprocess
 import uuid
 from pathlib import Path
@@ -16,6 +18,10 @@ from pathlib import Path
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 
 LAYOUT_PASSES = 3
+# Isaac reports a Vulkan allocation failure with this marker and then waits in an error dialog instead of
+# exiting, so the Worker watches the native log for it.
+OOM_MARKER = b"ERROR_OUT_OF_DEVICE_MEMORY"
+OOM_POLL_S = 5.0
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,20 +59,61 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def _descendants(pid: int) -> list[int]:
+    children: dict[int, list[int]] = {}
+    for stat in Path("/proc").glob("[0-9]*/stat"):
+        try:
+            parent = int(stat.read_text().rsplit(")", 1)[1].split()[1])
+        except (OSError, IndexError, ValueError):
+            continue
+        children.setdefault(parent, []).append(int(stat.parent.name))
+    found, stack = [], [pid]
+    while stack:
+        for child in children.get(stack.pop(), []):
+            found.append(child)
+            stack.append(child)
+    return found
+
+
+def _run_once(command: list[str], root: Path, env: dict, log, log_path: Path) -> int:
+    log.flush()
+    position = log_path.stat().st_size
+    process = subprocess.Popen(command, cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT)
+    while True:
+        try:
+            return process.wait(timeout=OOM_POLL_S)
+        except subprocess.TimeoutExpired:
+            pass
+        with log_path.open("rb") as handle:
+            handle.seek(max(0, position - len(OOM_MARKER)))
+            chunk = handle.read()
+            position = handle.tell()
+        if OOM_MARKER in chunk:
+            for pid in [*_descendants(process.pid), process.pid]:
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(pid, signal.SIGKILL)
+            process.wait()
+            # The marker text makes the Kit classify this Worker failure as an OOM, which lowers the GPU's
+            # concurrency and requeues the shard instead of retrying it at the same concurrency.
+            raise RuntimeError(
+                f"RoboDojo simulator ran out of GPU memory: {OOM_MARKER.decode()}; see {log_path}"
+            )
+
+
 def _run_evaluator(command: list[str], root: Path, env: dict, log, log_path: Path) -> None:
     # RoboDojo's resume manifest is keyed by run_id; preserve it across bounded
     # restarts for the upstream PhysX fatal-restart exit codes.
     for attempt in range(4):
-        completed = subprocess.run(command, cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT)
-        if completed.returncode == 0:
+        returncode = _run_once(command, root, env, log, log_path)
+        if returncode == 0:
             return
-        if completed.returncode not in (99, 134, 139, -6, -11) or attempt == 3:
+        if returncode not in (99, 134, 139, -6, -11) or attempt == 3:
             log.flush()
             with log_path.open("rb") as handle:
                 handle.seek(0, os.SEEK_END)
                 handle.seek(max(0, handle.tell() - 8192))
                 tail = handle.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"RoboDojo evaluator exited {completed.returncode}; see {log_path}\n{tail}")
+            raise RuntimeError(f"RoboDojo evaluator exited {returncode}; see {log_path}\n{tail}")
 
 
 def _layout_rows(result_path: Path, layouts: list[int]) -> dict[int, dict]:

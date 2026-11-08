@@ -39,6 +39,8 @@ OOM_PATTERNS = (
     re.compile(r"(?im)^.*runtimeerror:\s*cannot create buffer\s*$"),
     re.compile(r"(?im)^.*failed to allocate device memory.*$"),
     re.compile(r"(?im)^.*mps backend out of memory.*$"),
+    # Vulkan, as Isaac Sim reports it.
+    re.compile(r"(?im)^.*error_out_of_device_memory.*$"),
 )
 
 FAILURE_LOG_READ_BYTES = 1024 * 1024

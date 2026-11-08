@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b45 - 2026-11-09
+
+- Stop a RoboDojo simulator that reports a Vulkan `ERROR_OUT_OF_DEVICE_MEMORY`, which otherwise waits in an
+  error dialog and hangs the run, and classify the Worker failure as an OOM, so the GPU's concurrency is
+  lowered and the shard requeued. Autotune now rejects such a probe as `worker_oom` instead of waiting for
+  its timeout.
+
 ## 0.8.0b44 - 2026-11-09
 
 - Retry a multi-environment RoboDojo shard's abandoned layouts at the same environment count, filling the

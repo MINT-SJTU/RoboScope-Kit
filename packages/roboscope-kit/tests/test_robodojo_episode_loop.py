@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import time
 from pathlib import Path
 from types import ModuleType
 
@@ -243,3 +245,31 @@ def test_multi_environment_retry_runs_a_stuck_layout_alone(
 
     assert calls.read_text().splitlines() == ["[0, 1, 2]", "[1, 0, 2]", "[1]"]
     assert [record.metadata["evaluator_num_envs"] for record in result.records] == [3, 1, 3]
+
+
+def test_shard_stops_a_simulator_that_reports_a_vulkan_oom(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from roboscope_kit.runtime.benchmark.processes import OOM_PATTERNS
+    from roboscope_kit.runtime.benchmarks.robodojo import worker
+
+    run, _calls = _run_shard(monkeypatch, tmp_path, drops=[])
+    child = tmp_path / "child.pid"
+    # Like Isaac, report the failure, open a dialog in a child process and wait for it.
+    (tmp_path / "RoboDojo/src/eval_client/main.py").write_text(
+        "import subprocess, sys, time\n"
+        "print('[Error] [gpu.foundation] VkResult: ERROR_OUT_OF_DEVICE_MEMORY', flush=True)\n"
+        f"open({str(child)!r}, 'w').write(str(subprocess.Popen(['sleep', '60']).pid))\n"
+        "time.sleep(60)\n"
+    )
+    monkeypatch.setattr(worker, "OOM_POLL_S", 0.1)
+
+    with pytest.raises(RuntimeError, match="ran out of GPU memory") as raised:
+        run()
+
+    assert any(pattern.search(str(raised.value).lower()) for pattern in OOM_PATTERNS)
+    pid = int(child.read_text())
+    with pytest.raises(ProcessLookupError):
+        for _ in range(50):
+            os.kill(pid, 0)
+            time.sleep(0.05)

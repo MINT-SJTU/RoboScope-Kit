@@ -21,7 +21,9 @@ A layout the simulator abandons after a PhysX break or an unstable reset is eval
 per shard. A retry with fewer missing layouts than environments is filled with layouts already evaluated, whose
 new results are discarded, so the simulator keeps the shard's environment count. Layouts still missing on the
 last pass run on their own: `make_kong` layout 1 resets unstably with three environments every time but not
-with one. Each episode records the `--num_envs` it ran with.
+with one. Each episode records the `--num_envs` it ran with. Isaac Sim does not exit when Vulkan runs out of
+GPU memory; it waits in an error dialog. The Worker watches the native log for `ERROR_OUT_OF_DEVICE_MEMORY`,
+stops the simulator and reports an OOM, so the Kit lowers the GPU's concurrency and requeues the shard.
 
 The Policy receives `images.head`, `images.left_wrist`, and `images.right_wrist` as RGB uint8 arrays,
 `language.instruction` as a string, and `state.joints` as 14 float32 values ordered as six left-arm joints,

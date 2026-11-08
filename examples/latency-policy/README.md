@@ -28,6 +28,5 @@ actions, which is 0.3 s of Policy time per control step.
 ## Choosing K
 
 Set `K` by GPU memory. Each simulator process needs 8.0 to 10.3 GB depending on the task, and nothing limits
-how many start. A Worker that runs out of GPU memory does not fail: it stops in a Kit error dialog and the run
-hangs, with `oom_events` still 0. Look for `ERROR_OUT_OF_DEVICE_MEMORY` in `native-logs/` if a run stops
-progressing. Results are in [RoboDojo's throughput notes](../../benchmarks/robodojo/README.md#throughput).
+how many start. A simulator that runs out of GPU memory is stopped and counted in `oom_events`, and the Kit
+continues with one Worker fewer on that GPU. Results are in [RoboDojo's throughput notes](../../benchmarks/robodojo/README.md#throughput).
