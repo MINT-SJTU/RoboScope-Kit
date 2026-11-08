@@ -93,36 +93,55 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
 
 ## Throughput
 
-Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18); repeats, the autotune comparison and the
-MessagePack-only ablation are still running, and the numbers below may change.
+Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). The 2× target is not met for
+`Simate_beta`, and the latency-bound workload has only been measured with a synthetic Policy.
 
 ### 2026-11-07: `Simate_beta` (compute-bound VLA)
 
 - **Machine:** AutoDL, RTX 4090 48 GB, a 20-CPU cgroup quota on a host that reports 208 cores.
 - **Workload:** the #17 scope, `arx_x5`, 42 tasks × 3 layouts = 126 episodes, the same layouts in every run.
 - **Configurations:** the baseline is the #17 Kit default (autotune chose K=2, G=1) on 0.8.0b26 with JSON
-  Policy messages. The other runs use 0.8.0b31 with MessagePack, K=3, G=1. `stride` is
+  Policy messages, run with K=2 fixed. The other runs use 0.8.0b31 with MessagePack and G=1; the run names are
+batches. `stride` is
   `--observation-stride 10` ([XPolicyLab notes](../../examples/xpolicylab/README.md#skip-observations-the-model-never-reads));
   `4 threads` sets `OMP_NUM_THREADS=4 MKL_NUM_THREADS=4` for the Policy process.
 
 | Run | Configuration | Evaluation | Episodes/h | Steps/s | Successes | Gain (episodes/h) |
 |---|---|---:|---:|---:|---:|---:|
 | `g0` | K=2, JSON (baseline) | 15,810 s | 28.69 | 5.63 | 23/126 | 1.00× |
+| `g1` | K=2 | 14,837 s | 30.57 | 5.93 | 28/126 | 1.07× |
 | `g1` | K=3, stride | 11,216 s | 40.44 | 7.71 | 32/126 | 1.41× |
 | `h1` | K=3, 4 threads | 11,054 s | 41.03 | 8.05 | 28/126 | 1.43× |
+| `h2` | K=3, 4 threads | 10,597 s | 42.80 | 8.19 | 27/126 | 1.49× |
 | `h1` | K=3, stride, 4 threads | 9,897 s | 45.83 | 8.84 | 28/126 | 1.60× |
+| `h2` | K=3, stride, 4 threads | 10,075 s | 45.02 | 8.60 | 29/126 | 1.57× |
+| `auto` | autotune (chose K=2), stride, 4 threads | 12,409 s | 36.55 | 6.83 | 30/126 | 1.27× |
 
-Every run returned 126 unique episodes with no OOM; `g1` and the first `h1` re-evaluated one layout after a PhysX
-break. Evaluation excludes setup and the baseline's 30 min of autotuning.
+Every run returned 126 unique episodes with no OOM; four runs re-evaluated one layout each after a PhysX break.
+Head-camera videos have one frame per step plus one in every episode. Evaluation excludes setup and autotuning,
+about 30 min in `auto` and in the baseline.
 
+- **Successes:** every later run succeeded more often than the baseline (27–32 against 23). Paired by task
+  and layout, the largest difference has p = 0.022 (exact McNemar, `g1` K=3), which is not significant after
+  correcting for the seven comparisons; the others have p ≥ 0.19. #17 found the same layout can succeed in
+  one run and fail in the next.
+- **MessagePack:** at K=2 it gains 7%; most of the gain comes from K=3.
 - **Stride:** `Simate_beta` reads the newest observation at the start of each 10-step chunk and history frames
-  20 steps apart. Stride 10 gives identical actions and skips the other observations, about 12% at K=3.
+  20 steps apart. Stride 10 gives identical actions and skips the other observations: 5% and 12% faster at K=3
+in the two repeats.
 - **Policy threads:** PyTorch opens one thread per reported core, 104 here, and the 20-CPU quota throttles the
-  whole container (throttled fraction 0.35–0.44). Four threads remove the throttling.
+  whole container (throttled fraction 0.26–0.44). Four threads remove the throttling.
 - **Limits:** each simulator takes 8.0–10.3 GB and the Policy 15.2 GB, so K=3 is the most that fits in 48 GB
   (peak 42.8 GB); K=4 would need up to 56 GB on the larger tasks. GPU utilization is already 0.77 at K=3, and
   the simulator's CPU side dominates each step (see [Profiling](#profiling)).
-- **Conclusion so far:** about 1.6× in formal throughput, short of the 2× target for this workload.
+- **Autotune:** it measured K=1 and K=2, then doubled to K=4, where two simulators ran out of GPU memory. A
+  simulator that runs out of memory waits in an error dialog instead of exiting, so the probe hit its 900 s
+  timeout, the 30 min budget ran out, and autotune kept K=2 without trying K=3, about 20% slower than fixed K=3.
+- **End to end:** policy load takes 6 s in every run. A fixed K=3 run needs no autotuning, so the #17 default's
+  17,576 s, including its 30 min of autotuning, drops to about 9,900–10,100 s (1.74–1.77×). With autotune
+  (`auto`), it takes 14,213 s (1.24×).
+- **Conclusion:** 1.57–1.60× in formal throughput, short of the 2× target for this workload. Raising it further
+  needs more environments per GPU without another 8–10 GB simulator each, as `envs_per_worker` does.
 
 ### 2026-11-07: latency-bound Policy (synthetic)
 
@@ -137,5 +156,11 @@ actions. It characterizes scheduling only; acceptance for #18 needs a real agent
 | 6 | 214.9 | 5.60× | 48.4 GB |
 
 Six step-limited episodes per Worker on one task. Across all 42 tasks at K=5, two runs each completed 42/42
-episodes (43.6 episodes/h) with a 44.6 GB peak. With 0.5 s, 1 s and 10 s per call, K=5 gains 4.22×, 4.48×
+episodes (43.6 and 44.1 episodes/h) with a 44.6 GB peak. With 0.5 s, 1 s and 10 s per call, K=5 gains 4.22×, 4.48×
 and 4.88× over K=1.
+
+Autotune chose K=1, G=1 for this Policy. It adds Workers before replicas (`bound_hint` is `gpu_infer`), and K=2
+sharing one replica serves the same number of requests per second as K=1, so its probe took twice as long and
+timed out at 900 s. It never tried K=G. Its K=1 evaluation of the 42 tasks reached 33 episodes in about 12,400 s
+(about 9.6 episodes/h) before a 4 h guard stopped it. Those are not all 42 tasks, so K=5's gain on the full mix,
+about 4.6×, is approximate.
