@@ -214,18 +214,25 @@ class AutotuneBounds:
     max_workers_hard: int = ABSOLUTE_MAX_WORKERS
 
 
-def resolve_bounds(gpu_count: int, manifest_defaults: dict[str, Any]) -> AutotuneBounds:
+def resolve_bounds(
+    gpu_count: int,
+    manifest_defaults: dict[str, Any],
+    *,
+    cpu_cores: float | None = None,
+) -> AutotuneBounds:
     """Derive resource-aware K/g ceilings from the actual machine.
 
     ``max_workers`` is estimated from the CPU budget and the per-worker core
     cost (``worker_cpu_cores``) rather than a fixed constant, so a single-GPU
     heavy-simulator host does not get a meaningless 64-worker ramp. The
     estimate is refined once a real single-worker probe reports actual usage.
+    ``cpu_cores`` replaces this machine's quota when replaying a recorded host.
     """
 
     if gpu_count < 1:
         raise ValueError("autotune requires at least one visible GPU")
-    cpu_cores = cpu_quota()
+    if cpu_cores is None:
+        cpu_cores = cpu_quota()
     worker_cpu_cores = float(manifest_defaults.get("worker_cpu_cores", DEFAULT_WORKER_CPU_CORES))
     if worker_cpu_cores <= 0:
         raise ValueError("worker_cpu_cores must be positive")
