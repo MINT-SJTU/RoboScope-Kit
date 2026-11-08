@@ -115,6 +115,11 @@ The runtime is built on three ideas:
 
 ### Automatic tuning (K/g)
 
+LIBERO-Pro transport can be measured independently of K/g: its manifest prefers MessagePack with JSON
+fallback and offers opt-in within-episode connection reuse. See the
+[LIBERO-Pro throughput guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/README.md)
+for the switches, CPU measurements and real-model reproduction. The >=2x evaluation target remains unverified.
+
 The runtime picks `K` and `g` for you by running real episodes with your Policy. Every candidate runs episodes
 from the same representative task set. The smallest safe `K` sets a success-rate baseline; a faster
 candidate is accepted only if it keeps at least 85% of that baseline and stays within resource limits.

@@ -1,0 +1,152 @@
+{
+  "kind": "cpu_policy_transport_only",
+  "real_model": false,
+  "simulator": false,
+  "timestamp": "2026-11-08T03:44:50.758564+00:00",
+  "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "kit_version": "0.8.0b31",
+  "cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "numpy_version": "2.5.4",
+  "msgpack_version": "1.2.4",
+  "json_only_server": true,
+  "warmup_requests": 3,
+  "chunk_size": 8,
+  "rows": [
+    {
+      "repeat": 1,
+      "requested_encoding": "json",
+      "negotiated_encoding": "json",
+      "persistent_connection": false,
+      "requests": 20,
+      "mean_ms": 9.017109201158746,
+      "median_ms": 8.76702849927824,
+      "p95_ms": 11.354329747700831,
+      "payloads_equal": true
+    },
+    {
+      "repeat": 1,
+      "requested_encoding": "json",
+      "negotiated_encoding": "json",
+      "persistent_connection": true,
+      "requests": 20,
+      "mean_ms": 8.837887599656824,
+      "median_ms": 8.703469498868799,
+      "p95_ms": 9.851201604760718,
+      "payloads_equal": true
+    },
+    {
+      "repeat": 1,
+      "requested_encoding": "msgpack",
+      "negotiated_encoding": "json",
+      "persistent_connection": false,
+      "requests": 20,
+      "mean_ms": 8.806928550620796,
+      "median_ms": 8.684093500050949,
+      "p95_ms": 9.680645451953751,
+      "payloads_equal": true
+    },
+    {
+      "repeat": 1,
+      "requested_encoding": "msgpack",
+      "negotiated_encoding": "json",
+      "persistent_connection": true,
+      "requests": 20,
+      "mean_ms": 8.523084099942935,
+      "median_ms": 8.569994504796341,
+      "p95_ms": 9.546392653646762,
+      "payloads_equal": true
+    },
+    {
+      "repeat": 2,
+      "requested_encoding": "msgpack",
+      "negotiated_encoding": "json",
+      "persistent_connection": true,
+      "requests": 20,
+      "mean_ms": 8.363695399748394,
+      "median_ms": 8.297659500385635,
+      "p95_ms": 9.306213751915493,
+      "payloads_equal": true
+    },
+    {
+      "repeat": 2,
+      "requested_encoding": "msgpack",
+      "negotiated_encoding": "json",
+      "persistent_connection": false,
+      "requests": 20,
+      "mean_ms": 8.405151150509482,
+      "median_ms": 8.527779002179159,
+      "p95_ms": 9.17074494973349,
+      "payloads_equal": true
+    },
+    {
+      "repeat": 2,
+      "requested_encoding": "json",
+      "negotiated_encoding": "json",
+      "persistent_connection": true,
+      "requests": 20,
+      "mean_ms": 8.749391400488093,
+      "median_ms": 8.615196504251799,
+      "p95_ms": 10.051325797758182,
+      "payloads_equal": true
+    },
+    {
+      "repeat": 2,
+      "requested_encoding": "json",
+      "negotiated_encoding": "json",
+      "persistent_connection": false,
+      "requests": 20,
+      "mean_ms": 9.785554550035158,
+      "median_ms": 9.715501502796542,
+      "p95_ms": 10.88558604969876,
+      "payloads_equal": true
+    }
+  ],
+  "summary": [
+    {
+      "requested_encoding": "json",
+      "persistent_connection": false,
+      "mean_ms": 9.401331875596952,
+      "stdev_ms": 0.5433729171617733
+    },
+    {
+      "requested_encoding": "json",
+      "persistent_connection": true,
+      "mean_ms": 8.793639500072459,
+      "stdev_ms": 0.06257626254144466
+    },
+    {
+      "requested_encoding": "msgpack",
+      "persistent_connection": false,
+      "mean_ms": 8.60603985056514,
+      "stdev_ms": 0.2840995241462108
+    },
+    {
+      "requested_encoding": "msgpack",
+      "persistent_connection": true,
+      "mean_ms": 8.443389749845664,
+      "stdev_ms": 0.11270483075206912
+    }
+  ]
+}

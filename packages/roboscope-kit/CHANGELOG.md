@@ -2,6 +2,15 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b31 - 2026-11-08
+
+- LIBERO-Pro Workers prefer the existing MessagePack transport and optionally reuse one Policy connection
+  within each episode (off by default). The manifest selects encoding and connection reuse independently;
+  work results record the negotiated encoding. Episode boundaries close the connection, and failed
+  requests are never replayed. Plain LIBERO and LIBERO-Plus retain their transport defaults.
+- Document the LIBERO-Pro throughput experiment, its CPU transport measurement, and the outstanding
+  real-model acceptance. A transport speedup is not a full-evaluation or end-to-end speedup.
+
 ## 0.8.0b30 - 2026-11-06
 
 - Add `examples/xpolicylab/compare_native.py`, which runs a Kit RoboDojo run's tasks and layouts through the

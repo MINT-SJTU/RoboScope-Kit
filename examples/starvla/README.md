@@ -75,6 +75,12 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
 
 ## Files
 
+For LIBERO-Pro, the simulator manifest now prefers MessagePack with JSON fallback. Optional
+`persistent_policy_connection` reuses a socket within an episode and defaults to `false`. The same
+StarVLA Policy and checkpoint work with either transport. Follow the
+[LIBERO-Pro throughput guide](../../benchmarks/libero_pro/README.md) to compare all four transport modes
+at fixed K/g; CPU transport measurements do not demonstrate real-model evaluation speedup.
+
 | File | Purpose |
 | --- | --- |
 | `starvla_policy.py` | The `Policy`: loads one StarVLA run snapshot, preprocesses observations, returns action chunks |

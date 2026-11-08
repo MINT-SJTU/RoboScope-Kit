@@ -8,6 +8,8 @@ from __future__ import annotations
 import argparse
 import os
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,23 +39,45 @@ class TaskRuntime:
 
 
 class PolicyActionQueue:
-    def __init__(self, socket_path: Path) -> None:
+    def __init__(self, socket_path: Path, *, persistent_connection: bool = False) -> None:
         self.socket_path = socket_path
+        self.persistent_connection = persistent_connection
+        self._client = PolicyClient(socket_path) if persistent_connection else None
+        self.encoding: str | None = None
         self.episode_id = ""
         self.actions = np.empty((0, 7), dtype=np.float32)
         self.inference_wait_s = 0.0
 
+    @contextmanager
+    def _connection(self) -> Iterator[PolicyClient]:
+        client = self._client if self._client is not None else PolicyClient(self.socket_path)
+        try:
+            yield client
+        except BaseException:
+            # Never replay a request: the Policy may already have changed episode state.
+            client.close()
+            raise
+        finally:
+            self.encoding = client.encoding
+            if self._client is None:
+                client.close()
+
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+
     def reset(self, context: EpisodeContext) -> None:
+        self.close()
         self.episode_id = context.episode_id
         self.actions = np.empty((0, 7), dtype=np.float32)
-        with PolicyClient(self.socket_path) as client:
+        with self._connection() as client:
             client.reset(context)
 
     def step(self, observation: dict, task_description: str, step: int) -> np.ndarray:
         if not self.actions.size:
             request = build_observation(self.episode_id, step, observation, task_description)
             started = time.perf_counter()
-            with PolicyClient(self.socket_path) as client:
+            with self._connection() as client:
                 chunk = client.act(request).actions
             self.inference_wait_s += time.perf_counter() - started
             self.actions = chunk.reshape(1, -1) if chunk.ndim == 1 else chunk
@@ -67,14 +91,22 @@ class PolicyActionQueue:
         episode_id = self.episode_id
         self.episode_id = ""
         self.actions = np.empty((0, 7), dtype=np.float32)
-        with PolicyClient(self.socket_path) as client:
-            client.end_episode(episode_id)
+        try:
+            with self._connection() as client:
+                client.end_episode(episode_id)
+        finally:
+            self.close()
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--policy-socket", type=Path, required=True)
+    parser.add_argument(
+        "--persistent-policy-connection",
+        action="store_true",
+        help="reuse one Policy socket within each episode; close it at the episode boundary",
+    )
     parser.add_argument("--suite", required=True)
     parser.add_argument(
         "--max-steps",
@@ -271,6 +303,8 @@ def run_chunk(
             "task_description": runtime.task_description,
             "elapsed_s": time.perf_counter() - started,
             "inference_wait_s": policy.inference_wait_s - inference_wait_before,
+            "policy_encoding": policy.encoding,
+            "persistent_policy_connection": policy.persistent_connection,
         },
     )
 
@@ -283,7 +317,9 @@ def main() -> None:
     from libero.libero import benchmark
 
     task_suite = benchmark.get_benchmark_dict()[args.suite]()
-    policy = PolicyActionQueue(args.policy_socket)
+    policy = PolicyActionQueue(
+        args.policy_socket, persistent_connection=args.persistent_policy_connection,
+    )
     runtime: TaskRuntime | None = None
 
     def evaluate(item: WorkItem) -> WorkResult:
@@ -303,6 +339,7 @@ def main() -> None:
             poll_interval_s=args.poll_interval,
         ).run(evaluate)
     finally:
+        policy.close()
         if runtime is not None:
             runtime.env.close()
 

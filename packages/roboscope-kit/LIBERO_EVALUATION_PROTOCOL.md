@@ -342,6 +342,15 @@ The remaining steps and the manifest layout match section 1, with `benchmark_roo
 
 ## 11. LIBERO-Pro
 
+LIBERO-Pro Workers prefer MessagePack, with JSON fallback when the Policy Server does not advertise
+support. The manifest defaults `policy_encoding` (`json` or `msgpack`) and
+`persistent_policy_connection` (boolean, default `false`) independently control transport and optional
+within-episode socket reuse. Connections close at episode boundaries; failed requests are not replayed.
+WorkResult metadata records the negotiated encoding. These options preserve the protocol below; they
+do not change task seeding, reset history, observations or action execution. See the
+[throughput reproduction guide](../../benchmarks/libero_pro/README.md) for matched ablations and the
+outstanding full-evaluation acceptance.
+
 LIBERO-Pro (`--benchmark libero_pro`, protocol `libero-pro-v1`) runs the LIBERO worker above against the
 released single-perturbation suites of [LIBERO-Pro](https://github.com/Zxy-MLlab/LIBERO-PRO). Sections 2–9
 apply, with the differences below.
