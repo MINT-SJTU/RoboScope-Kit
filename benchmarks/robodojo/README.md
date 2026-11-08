@@ -48,7 +48,8 @@ tested revisions.
 Model code and checkpoints are supplied separately through the standard Kit Policy configuration;
 [`examples/xpolicylab/`](../../examples/xpolicylab/README.md) serves XPolicyLab policies this way.
 The experimental [`examples/pyrua/`](../../examples/pyrua/README.md) uses the interactive Policy
-contract to preserve PyRUA-Lean's waiting, early finish and native verdict on one environment per Worker.
+contract to preserve PyRUA-Lean's waiting, early finish and native verdict on one environment per Worker;
+it also provides an optional local SAM3 service shared across Policy replicas.
 The layout-sharding patch is adapted from @QLL-CCDD's RoboDojo work.
 
 The asset downloader verifies the pinned inventory and each file's hash. `HF_ENDPOINT` selects the metadata

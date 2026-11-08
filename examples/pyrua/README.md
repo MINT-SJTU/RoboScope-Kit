@@ -40,3 +40,22 @@ example itself does not enforce an upstream request budget. Record model, reason
 layout, seed, Tool and simulator versions when comparing runs. The published PyRUA-Lean leaderboard
 entry used a different model from the example's Terra configuration; a result with another model is
 not a reproduction of that leaderboard score. A completed run may still fail its robot task.
+
+## Optional shared SAM3
+
+On a trusted single host, Policy replicas can use one local SAM3 service to reduce the memory used
+by multiple model copies. Start the service in the Policy environment and wait for its ready message:
+
+```bash
+/path/to/pyrua-policy-env/bin/python \
+    /path/to/RoboScope-Kit/examples/pyrua/pyrua-shared-sam3/sam3_http.py \
+    --checkpoint /path/to/sam3.pt --port 8790
+```
+
+Copy [`roboscope-policy-shared-sam3.json`](roboscope-policy-shared-sam3.json), replace the paths,
+and use it as the Policy config. Keep the service running until evaluation finishes. Its HTTP server
+listens on loopback by default and has no authentication. The wrapper requires the pinned PyRUA
+local SAM3 and this exact `pyrua_policy.py`, and fails the Policy if the service is unavailable.
+The service serializes SAM3 requests, so replica throughput and memory headroom depend on the workload.
+The vendored service and its attribution are described in
+[`pyrua-shared-sam3/README.md`](pyrua-shared-sam3/README.md).

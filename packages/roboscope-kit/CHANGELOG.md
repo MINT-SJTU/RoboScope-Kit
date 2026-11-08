@@ -2,6 +2,10 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b46 - 2026-11-09
+
+- Add an optional local shared SAM3 service for the PyRUA-Lean Policy example.
+
 ## 0.8.0b45 - 2026-11-09
 
 - Stop a RoboDojo simulator that reports a Vulkan `ERROR_OUT_OF_DEVICE_MEMORY`, which otherwise waits in an

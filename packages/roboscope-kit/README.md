@@ -242,7 +242,8 @@ passes its verdict to `episode_outcome(episode_id, outcome)` before `end_episode
 camera metadata accompany the canonical image features in `Observation.metadata["robodojo_native"]`.
 Interactive policies use `act()` and `poll()`, not `act_batch()`. They currently require one environment
 per Worker and cannot use step-observation overlap. See the experimental
-[PyRUA-Lean example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/pyrua).
+[PyRUA-Lean example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/pyrua), which can
+share one local SAM3 service across Policy replicas.
 Policies can also set `max_workers_per_replica` to bound the number of Workers sharing one replica;
 this is separate from the maximum inference batch size.
 
