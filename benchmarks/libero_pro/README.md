@@ -1,13 +1,13 @@
 # LIBERO-Pro throughput work
 
 This directory owns the frozen simulator build and the transport candidate for
-[issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21). The implementation and CPU checks are
-available; the **2x full-evaluation target has not been demonstrated**. The local 6 GiB GPU cannot load
-the pinned bf16 baseline with the simulator. Do not close the issue from the transport measurements.
+[issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21). CPU checks and a real-GPU single-suite
+comparison have been completed; the **2x full-evaluation target has not been demonstrated**. The local
+6 GiB GPU cannot load the pinned bf16 baseline with the simulator.
 
 See [the protocol](../../packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro) for the
-frozen task semantics, and [the performance review](PERFORMANCE_REVIEW.md) for earlier optimizations,
-negative results, and priorities for real-model experiments.
+frozen task semantics, [the issue audit](ISSUE_21_AUDIT.md) for completed and outstanding work, and
+[the performance review](PERFORMANCE_REVIEW.md) for earlier optimizations and negative results.
 
 ## Implementation
 
@@ -65,7 +65,11 @@ means, not a confidence interval.
 All measured payloads/actions matched. The default candidate reduces this local request cost by about
 5.2x; enabling connection reuse reduces it further. Neither number establishes full-evaluation speedup.
 Raw measurements are in [measurements/policy-io-2026-11-07.json](measurements/policy-io-2026-11-07.json).
-Connection reuse stays opt-in pending real-model ablation evidence.
+Connection reuse stays opt-in pending real-model ablation evidence. A subsequent real-model fixed-K12/g3
+pair on an AutoDL RTX 4090 covered 500 `libero_goal_object` episodes per arm: JSON baseline 431.742 s,
+MessagePack candidate 424.384 s (1.0173x formal episodes/s), with 84,212 versus 82,948 policy steps.
+Nineteen paired successes and 46 step counts differed. See [the issue audit](ISSUE_21_AUDIT.md) for
+the experimental settings, data locations and limitations.
 
 Validation on 2026-11-08, Python 3.12.3:
 
@@ -194,8 +198,8 @@ document and the central profiling index; measure performance again without prof
   baseline used mixed GPUs and K/g settings and cannot establish a fair 2x denominator. Record both Git
   revisions, runtime pins, checkpoint/config hashes, CPU/GPU model, driver, memory, co-tenant load and
   run order. Use repeated paired matrices and report uncertainty.
-- Local existing regression tests, lint, CPU transport and negotiation checks are supported. Clean GPU
-  runtime builds, real-model Quick Test, full matrix repeats, success-rate equivalence and >=2x formal
-  throughput remain pending. No simulator build script is changed by this candidate.
+- The clean AutoDL runtime build and real-model Quick Test passed. One 500-episode suite was evaluated
+  in both arms. Full-matrix repeats, analysis of score differences and >=2x formal throughput remain
+  pending. No simulator build script is changed by this candidate.
 - The candidate version is 0.8.0b31. Reconcile the version and dated changelog against main before merge;
   merging publishes through CI. The performance issue must remain open until its acceptance is met.

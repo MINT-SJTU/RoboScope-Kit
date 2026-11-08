@@ -1,7 +1,9 @@
 # Performance work reviewed for LIBERO-Pro
 
-Reviewed: 2026-11-07. Target: [issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21).
-The local main baseline is `44fa1ad`. PR states below were checked on GitHub on the review date.
+Reviewed: 2026-11-07; PR states and our own results updated 2026-11-08. Target:
+[issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21). The candidate and its tested baseline
+are based on `44fa1ad`, not the latest upstream main. See [the issue audit](ISSUE_21_AUDIT.md) for current
+implementation and experiment status.
 This is a review of existing evidence and candidate priorities, not acceptance of LIBERO-Pro's 2x target.
 
 ## Evidence overview
@@ -9,9 +11,9 @@ This is a review of existing evidence and candidate priorities, not acceptance o
 | Work | Mechanism | Relevant measured result | Delivery and limitation |
 | --- | --- | --- | --- |
 | [RoboDojo #93](https://github.com/MINT-SJTU/RoboScope-Kit/pull/93) | MessagePack arrays instead of base64 JSON | CPU/socket round trip 52.6 to 3.0 ms; a three-episode real run 637 to 577 s, about 1.10x | Merged. The real run is one task and three layouts, not a full benchmark acceptance. |
-| [RoboCasa #39](https://github.com/MINT-SJTU/RoboScope-Kit/pull/39) | Defer unconsumed intermediate RGB observations | On current PR head, 48 episodes at K=8/g=1: evaluation 254.2 to 236.8 s, about 1.07x; summed simulator time 1077.9 to 890.1 s, about 1.21x | Open, unmerged. Outcomes, seeds and executed steps pair up on all 48 episodes. |
+| [RoboCasa #39](https://github.com/MINT-SJTU/RoboScope-Kit/pull/39) | Defer unconsumed intermediate RGB observations | On the reported PR head, 48 episodes at K=8/g=1: evaluation 254.2 to 236.8 s, about 1.07x; summed simulator time 1077.9 to 890.1 s, about 1.21x | Draft, unmerged. Outcomes, seeds and executed steps pair up on all 48 episodes. |
 | [CALVIN #22](https://github.com/MINT-SJTU/RoboScope-Kit/pull/22) | Native batching of queued requests from distinct episodes | Historical concurrent/batched run: 4344.8 to 1860.8 s, 2.33x | Draft, unmerged. Historical comparison changes concurrency and model source; 2.33x cannot be attributed to batching. No real-model validation on the new Kit. |
-| [Autotune #81](https://github.com/MINT-SJTU/RoboScope-Kit/pull/81) | Continue replica search after a probe has no steady window | RoboCasa, 1200 episodes: K=8/g=1 at 5457.1 s to K=16/g=2 at 3750.0 s, 1.455x formal throughput | Open, stacked on #83. No guarantee of a gain on LIBERO-Pro. |
+| [Autotune #81](https://github.com/MINT-SJTU/RoboScope-Kit/pull/81) | Continue replica search after a probe has no steady window | RoboCasa, 1200 episodes: K=8/g=1 at 5457.1 s to K=16/g=2 at 3750.0 s, 1.455x formal throughput | Merged upstream after our tested baseline; absent from `44fa1ad` and `8ca22d1`. No guarantee of a gain on LIBERO-Pro. |
 | [Historical MetaWorld #9](https://github.com/suica/evostudio-evaluation-kit/pull/9) | Joint K/g tuning, then optional CUDA MPS | Autotune: 2.202x formal, 1.486x including tuning. Separate fixed-K3/g3 MPS experiment: 1.308x including loading/preparation/cleanup | Merged in the former repository. Different historical environments; not current Kit acceptance. These ratios must not be multiplied. |
 
 K is the number of simulation Workers; g is the number of Policy replicas. Replica conventions must also
@@ -83,12 +85,13 @@ preserving the newer framing and encoding negotiation; copying its old server fi
 ### Autotune: distinguish lack of measurement from lack of capacity
 
 #81 addresses a search failure on RoboCasa. A task-sized work catalog can stop supplying enough work
-for a steady-state window at larger K. Main treated this as a resource ceiling and skipped replica
+for a steady-state window at larger K. The earlier main treated this as a resource ceiling and skipped replica
 exploration. The patch ends only the K phase for `no_steady_window`, continues replica probes, and
 compares both candidates using elapsed rates whenever either lacks a steady window. OOM, failures,
 timeouts and budget exhaustion still stop unsafe exploration.
 
-This changed the real run's selection from 8/1 to 16/2. A fixed sweep still found 12/2 slightly faster,
+This is now merged upstream, along with the separate [dead-replica probe fix #104](https://github.com/MINT-SJTU/RoboScope-Kit/pull/104);
+neither is in our tested branch. This changed the RoboCasa real run's selection from 8/1 to 16/2. A fixed sweep still found 12/2 slightly faster,
 so autotune is a measured heuristic, not proof of the global optimum. Its replay evidence does not
 change the search result on the recorded plain LIBERO workload. Do not assume that LIBERO-Pro has
 RoboCasa's work-item limitation; its factory already grows per-task probe episodes with K.
@@ -162,7 +165,6 @@ the full pipeline are required to establish a 2x target.
   Current PR #39 explicitly notes uncommitted mirror edits in its measured build; clean reproduction is
   a separate acceptance item and must not be inferred from those results.
 
-The current machine's 6 GiB GPU cannot run the pinned bf16 baseline at the required memory footprint.
-Real-model Quick Test, clean simulator build, repeated full-matrix runs and the 2x result remain
-outstanding. The user's current delivery scope is code, existing tests and reproduction documentation;
-this review does not mark issue #21 complete.
+The local machine's 6 GiB GPU cannot run the pinned bf16 baseline. An AutoDL 48 GiB GPU was subsequently
+used for a clean simulator build, real-model Quick Test and one 500-episode suite per comparison arm.
+Repeated full-matrix runs and the 2x result remain outstanding. See [the issue audit](ISSUE_21_AUDIT.md).
