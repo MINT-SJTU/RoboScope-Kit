@@ -1,0 +1,50 @@
+# Issue 32 delivery evidence
+
+The [throughput report](THROUGHPUT.md) defines the comparisons, timing boundaries and limitations.
+The evidence is hosted on the contributor fork as an evidence-only prerelease, not a Kit release:
+
+- [Evidence release and assets](https://github.com/OopsJoey/RoboScope-Kit/releases/tag/issue32-evidence-2026-11-08).
+- [Raw archive](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-evidence-2026-11-08/issue32-raw-evidence-2026-11-08.tar.gz).
+- [SHA256SUMS](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-evidence-2026-11-08/SHA256SUMS).
+
+Raw archive: 38,072,005 bytes, SHA-256
+**c5462864420d0ee345a110ce26c95a11880ba322578ded20da8b4705f5750207**.
+
+## Archive map
+
+| Requirement | Path inside the archive |
+| --- | --- |
+| Hardware, checkpoints, package provenance | evidence/host.json, evidence/checkpoints.json, evidence/wheel-cache.json |
+| Exact CLI, environment, process interval, exit status | evidence/&lt;label&gt;/command.json and execution.json |
+| One-second CPU/RAM/GPU/VRAM samples | evidence/&lt;label&gt;/resources.jsonl |
+| Complete task/seed coverage, aggregate outcomes, resource summaries | evidence/&lt;label&gt;/summary.json |
+| Raw episode results, work manifest, logs, metadata | runs/&lt;label&gt;/ |
+| Record-by-record comparison | evidence/&lt;label&gt;-pairing.json |
+| Upstream native comparisons and original logs | runs/baseline-native/ |
+| Worker/Policy CPU profiles | evidence/baseline-cpu-profile/ |
+| Nsight profile artifacts | runs/baseline-profile/profile/ |
+| Exact source snapshots and configurations | sources/, policy-*.json, tools/ |
+| Fresh build, 250 state digests and self-test | evidence/build-final-b43.log, runtime-final-b43/ |
+| Existing checks, exit code 0 | evidence/final-checks.log, evidence/final-checks.exit |
+| Final full acceptance, exit code 0 | evidence/final-acceptance.exit, runs/final-b43-k20g8-mps-01/ |
+| Separate writing diagnostic | output-writing.json, evidence/final-output-profile-01/io/, tools/output-profile/ |
+| Hash inventory | inventory.json |
+
+Accepted performance labels are baseline-full-01/02; baseline-k16g4-01;
+baseline-k20g8-mps-01; baseline-k32g8-mps-01; candidate-v4/v6/v7 labels listed in the report;
+and final-b43-k20g8-mps-01. The output profile is a separate real evaluation, not another timing repeat.
+Rejected forward variants and preparation failures are retained and explicitly excluded from accepted gains.
+
+The original-code control is the base commit plus the MessagePack runtime dependency repair.
+Candidate v4 and v6 used runtime-baseline-fixed; use their recorded command/runtime, not old unused
+builder experiments in their source snapshots. Candidate v7 and final-b43 use their own fresh builds.
+The final code matches the measured final-b43 source; subsequent changes are documentation only.
+
+The full final build and self-test passed, 264 existing pytest cases passed, and Ruff, Python support,
+uv lock consistency, bash syntax and ShellCheck passed. The final run has 250 unique records,
+81,289 steps, 176 successes, all initial-state checks, and no missing/extra records, pairing mismatches,
+Worker failures, retries or OOM events. No new tests were added.
+
+Absolute paths record the measurement host and should be adjusted for reproduction. Checkpoints,
+datasets, wheelhouse, Git source bundles, SSH session state and credentials are excluded from the archive.
+The preserved 1.940x fallback is a separate release asset with its own checksum and source/runtime notes.

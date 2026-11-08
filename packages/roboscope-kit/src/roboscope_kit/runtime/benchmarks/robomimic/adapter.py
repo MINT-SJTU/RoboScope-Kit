@@ -68,9 +68,17 @@ class RobomimicBenchmarkAdapter:
     def work_items(self) -> Sequence[WorkItem]:
         items: list[WorkItem] = []
         episodes = self.config.episodes_per_task
-        for start in range(0, episodes, self.config.chunk_size):
-            seeds = list(range(start, min(start + self.config.chunk_size, episodes)))
-            for task in self.config.tasks:
+        # Start the longest, multi-arm workloads first. The queue retains task
+        # affinity after each claim; short tasks can fill the tail instead of
+        # leaving a few long Transport rollouts after the other workers finish.
+        tasks = sorted(
+            self.config.tasks,
+            key=lambda name: TASKS_BY_NAME[name].horizon * len(TASKS_BY_NAME[name].robots),
+            reverse=True,
+        )
+        for task in tasks:
+            for start in range(0, episodes, self.config.chunk_size):
+                seeds = list(range(start, min(start + self.config.chunk_size, episodes)))
                 items.append(
                     WorkItem(
                         ordinal=len(items),
@@ -112,6 +120,9 @@ class RobomimicBenchmarkAdapter:
                 "NUMEXPR_NUM_THREADS": threads,
                 "NUMBA_NUM_THREADS": threads,
                 "PYTHONDONTWRITEBYTECODE": "1",
+                "ROBOSCOPE_ROBOMIMIC_MODEL_CACHE": os.environ.get(
+                    "ROBOSCOPE_ROBOMIMIC_MODEL_CACHE", "1"
+                ),
             },
         )
 

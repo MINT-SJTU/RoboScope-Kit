@@ -79,7 +79,7 @@ is not in the report, only the round-trip time of each request.
 | RoboDojo | Yes | Yes (2026-11-05, K=1 and K=3) |
 | LIBERO, LIBERO-Plus | Yes | Not yet |
 | MetaWorld | Yes | Not yet |
-| robomimic | Yes | Not yet |
+| robomimic | Yes | Yes (2026-11-08, real BC-RNN, K=5/G=1 diagnostic) |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |
@@ -99,6 +99,9 @@ is not in the report, only the round-trip time of each request.
 
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
+
+- [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/README.md#profiling):
+  repeated model compilation and Policy waits motivate cache and fixed-K/G ablations (2026-11-08).
 
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).
