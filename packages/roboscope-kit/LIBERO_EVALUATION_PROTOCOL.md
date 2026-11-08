@@ -572,7 +572,7 @@ On the shared RTX 4090 48 GB (2 × Xeon Platinum 8470Q host, Kit and Policy pinn
 
 ## 12. Other benchmarks
 
-CALVIN, MetaWorld, and robomimic have their own protocol documents. RoboTwin, RoboCasa, CALVIN, MetaWorld,
+CALVIN, MetaWorld, and robomimic have their own protocol documents. RoboTwin, RoboCasa GR-1 Tabletop, CALVIN, MetaWorld,
 and robomimic use the
 same Policy boundary, but have benchmark-specific workers, manifests, and simulator environments. See the
 README's
