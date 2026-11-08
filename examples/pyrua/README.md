@@ -12,7 +12,7 @@ The actual simulator verdict is reported back to PyRUA. Each Worker uses one env
 lockstep batches and asynchronous observation overlap are not supported for this Policy.
 Interactive Policies use `act` and `poll`; `act_batch` is not supported.
 The adapter records the Kit episode and native run IDs in `kit_episode.json`, alongside the agent result.
-After the simulator reports its verdict, the adapter waits up to five minutes for the agent to finish.
+After the simulator reports its verdict, the adapter waits up to twelve minutes for the agent to finish.
 PyRUA changes process-wide working directory and output streams, so each Policy replica accepts
 one active episode. Use `--concurrency K --replicas K`; all replicas may be assigned to the same GPU
 if its memory permits. Compare configurations with replica count and memory usage explicitly reported.

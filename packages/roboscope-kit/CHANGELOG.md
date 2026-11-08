@@ -2,6 +2,10 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b43 - 2026-11-08
+
+- Allow up to twelve minutes for a PyRUA agent to finish after the simulator verdict on slow image links.
+
 ## 0.8.0b42 - 2026-11-07
 
 - Reject interactive Policy batches before invoking the Policy, while keeping the server ready.

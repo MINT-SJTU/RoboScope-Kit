@@ -34,8 +34,9 @@ ACTION_KEYS = ("left_arm_joint_state", "left_ee_joint_state",
                "right_arm_joint_state", "right_ee_joint_state")
 # Once the simulator sends its verdict, the agent may still be completing a
 # tool call and shutting down its model session. Keep that cleanup bounded but
-# allow enough time for a slow model response before rejecting the episode.
-OUTCOME_JOIN_TIMEOUT_S = 300.0
+# allow time for slow image-bearing responses before rejecting the episode.
+# This remains below the RoboDojo PolicyClient's 900-second socket timeout.
+OUTCOME_JOIN_TIMEOUT_S = 720.0
 
 
 def native_observation(observation: Observation) -> dict[str, Any]:
