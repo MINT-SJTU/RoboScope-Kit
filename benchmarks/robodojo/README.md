@@ -96,8 +96,10 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
 
 ## Throughput
 
-Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). The 2× target is not met for
-`Simate_beta`, and the latency-bound workload has only been measured with a synthetic Policy.
+Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). For `Simate_beta`, three environments
+per Worker with the observation stride and a thread cap reach 1.95× and 2.04× in two complete runs, but a third
+attempt ran out of GPU memory, so 2× is not yet reliable. The latency-bound workload has only been measured with
+a synthetic Policy.
 
 ### 2026-11-07: `Simate_beta` (compute-bound VLA)
 
@@ -144,6 +146,35 @@ about 30 min in `auto` and in the baseline.
   (`auto`), it takes 14,213 s (1.24×).
 - **Conclusion:** 1.57–1.60× in formal throughput, short of the 2× target for this workload. Raising it further
   needs more environments per GPU without another 8–10 GB simulator each, as `envs_per_worker` does.
+
+### 2026-11-08: `Simate_beta` with three environments per Worker
+
+Same machine, scope and baseline as above. Kit 0.8.0b44 (measured as an earlier local build of the same retry
+change) with MessagePack, K=3, G=1 and `envs_per_worker: 3`
+(nine environments in three simulators). `make_kong` layout 1 resets unstably in every three-environment attempt,
+so in every run it was evaluated on its own on the last retry pass; the other 125 episodes ran with three
+environments.
+
+| Run | Configuration | Evaluation | Episodes/h | Steps/s | Successes | Gain (episodes/h) |
+|---|---|---:|---:|---:|---:|---:|
+| `g0` | K=2, one environment, JSON (baseline) | 15,810 s | 28.69 | 5.63 | 23/126 | 1.00× |
+| `m5` | 3 × 3 environments | 9,339 s | 48.57 | 9.30 | 29/126 | 1.69× |
+| `m5` | 3 × 3 environments, stride, 4 threads | 8,094 s | 56.04 | 10.61 | 29/126 | 1.95× |
+| `m7` | 3 × 3 environments, stride, 4 threads | 7,759 s | 58.46 | 11.20 | 28/126 | 2.04× |
+
+- **Completeness:** each run returned 126 unique episodes, and every head-camera video has one frame per step
+  plus one. A repeat between `m5` and `m7` stopped at 78 of 126 episodes when `play_tic_tac_toe` ran beside two
+  `pour_*` tasks and a simulator ran out of GPU memory (`ERROR_OUT_OF_DEVICE_MEMORY`); without an external
+  guard the run would have hung. Every run peaked at 48.5 GB of 48 GB, so this configuration has no headroom.
+- **Stride and threads:** on top of three environments they add 15–20%. Without them the 20-CPU quota throttles
+  the container 38% of the time and GPU utilization is 0.59; with them throttling is 0 and utilization 0.75.
+- **Successes:** paired with the baseline, p = 0.21–0.27 (exact McNemar).
+- **End to end:** the #17 default's 17,576 s, including 30 min of autotuning, drops to 7,764–8,099 s
+  (2.17–2.26×); policy load takes 5 s.
+- **Conclusion:** formal throughput is 1.95× and 2.04× in two complete runs (steps/s 1.88× and 1.99×), with
+  one of three attempts lost to GPU memory. Reliable acceptance needs either GPU memory headroom, such as a
+  smaller Policy footprint or two Workers with more environments each, or an OOM detector that requeues the
+  shard.
 
 ### 2026-11-07: latency-bound Policy (synthetic)
 
