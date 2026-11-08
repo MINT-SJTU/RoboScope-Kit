@@ -140,6 +140,9 @@ tolerance, on the default strategy. `regression_failures` applies the rule:
 - **LIBERO's tolerance is the 5% floor.** Its repeats give 0.69%: `K=16/g=4` ran at 209.0, 209.0, and 208.4 steps/s
   (0.17%), `K=12/g=4` at 209.1, 209.7, and 208.9 (0.21%). All six ran within about 2.5 hours of one night, so they hold
   no drift between days, which reached 13% on RoboCasa.
+- **RoboTwin's tolerance is the 5% floor.** Its repeats give 2.29%: `K=8/g=1` ran at 108.7, 108.9, and 109.7 steps/s
+  (0.49%), `K=10/g=1` at 115.2, 115.8, and 116.9 (0.74%). The first run of each is from one evening and the other two
+  from the next morning, so here the drift between days was small.
 - **Lowering an expected value** is allowed only in a PR that says why, and it needs maintainer review. Raise the
   value when a change improves it, so later changes cannot give the gain back.
 - **An incomplete search cannot be judged.** Measure the missing point on a GPU and add it to the record.
@@ -219,6 +222,7 @@ is for edge cases only, and must say so in `provenance.kind` and in its file nam
 | `robocasa-tabletop-rtx4090-issue80.json` | real | `K=1, 2, 4, 8` at `g=1`: steady rate and GPU utilization. `K=16` at `g=1`: no steady window. | Every `g > 1` point; elapsed rates, per-probe wall times, CPU, throttle, peak memory, queue wait, health, per-episode success, and probe sizes for every point. |
 | `robocasa-tabletop-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host: probes at `K=1, 2, 4, 8, 16` with `g=1` and `K=16/g=2`; fixed runs at 8/1, 12/2, and 16/2 three times each, 9/1, 16/1, 16/3, 20/2, and three that failed (16/4, 20/3, 24/2). | Queue wait; fixed-run wall times; fixed runs with CUDA MPS, listed in its notes; `K=32/g=2`, stopped by hand. |
 | `libero-10-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host: probes at `K=1, 2, 4, 8` with `g=1`, 8/2, 12/3, and 16/4, in both searches; full 500-episode fixed runs at 16/4 and 12/4 three times each, 8/2, 8/4, 9/1, 12/3, 16/3, 20/4, 24/1, and 24/4. | Queue wait; fixed-run wall times; repeats on another day; the K/g `two-phase` asks for next (9/2, 8/5). |
+| `robotwin-demo-clean-subset-rtx4090-full-auto.json` | real | Built by `record` from two searches and a fixed-K/g sweep on one host, all on a 500-episode subset of `demo_clean` (episodes 0-9 of each of the 50 tasks) run by a wrapper outside the repository, not Kit's official RoboTwin entry point: probes at `K=1, 2, 4, 8` with `g=1` and `K=16/g=1` (`worker_oom`), in both searches; fixed runs at 8/1 and 10/1 three times each, 6/1, 7/1, 7/2, 8/2, 9/1, 11/1, and two that failed (12/1, 16/1). 8/2 and 11/1 lost one Worker to GPU memory and finished with one fewer, which a fixed run cannot record. | Queue wait; fixed-run wall times; the full 5000-episode evaluation; the K/g `two-phase` asks for next (9/2). |
 | `synthetic-replica-limits.json` | synthetic | Replica probes, probes without a window, a failing configuration, wall times, repeats, a fixed-run point. | Everything: no number in it was measured. |
 
 Scores on `robocasa-tabletop-rtx4090-full-auto.json`:
@@ -250,3 +254,16 @@ Scores on `libero-10-rtx4090-full-auto.json`:
 `K=16/g=4` and `K=12/g=4` are tied, within the spread of their repeats. The two searches in this record, `main d26a908`
 and `#81 81e3824`, probed the same K/g and selected the same one, and the code here reproduces both, so LIBERO guards
 against a regression but does not tell them apart. The fixed default is `K=9/g=1`: 0.549 of the best, about 1191 s.
+
+Scores on `robotwin-demo-clean-subset-rtx4090-full-auto.json`:
+
+| Strategy | Estimator | Selected | Relative to best recorded | Probes | Tuning time | End to end | Safe | Search |
+| --- | --- | --- | ---: | ---: | --- | --- | --- | --- |
+| `diagonal` | steady (default) | `K=8/g=1` | 0.940 of `K=10/g=1` | 5 | 608 s | 2729 s, 1.37x | yes | Complete: stops when `K=16/g=1` hits `worker_oom` |
+| `two-phase` | elapsed (default) | `K=9/g=1` | 0.976 of `K=10/g=1` | 5 | unknown | unknown | yes | Incomplete: asks for `K=9/g=2`, unrecorded |
+| `two-phase` | steady | `K=8/g=1` | 0.940 of `K=10/g=1` | 6 | unknown | unknown | yes | Complete, with fixed-run stand-ins at 9/1 and 8/2 |
+
+`diagonal` doubles K, so after `K=8` it probes `K=16`, which runs out of GPU memory, and it stops without trying
+`K=10`. The two searches in this record, `main 44fa1ad` and `#81 5538408`, probed the same K/g and selected the same
+one, and the code here reproduces both, so RoboTwin records this gap and guards against a regression but does not tell
+them apart. The fixed default is `K=9/g=1`, 0.976 of the best from one run, faster than the tuned selection.

@@ -40,6 +40,7 @@ WORKLOADS = Path(__file__).parent / "autotune_workloads"
 REAL = "robocasa-tabletop-rtx4090-issue80"
 FULL_AUTO = "robocasa-tabletop-rtx4090-full-auto"
 LIBERO = "libero-10-rtx4090-full-auto"
+ROBOTWIN = "robotwin-demo-clean-subset-rtx4090-full-auto"
 SYNTHETIC = "synthetic-replica-limits"
 UNKNOWN_ON_REAL = (
     "cpu_cores",
@@ -56,12 +57,16 @@ UNKNOWN_ON_REAL = (
 # Lowering an expected value is allowed only in a PR that says why, and it needs maintainer review.
 # A tolerance comes from repeated fixed runs (repeat_tolerance) once the selection and the best
 # configuration have three each; until then it is NOISE_TOLERANCE.
-JUDGED = {FULL_AUTO: (0.6484, 0.1995), LIBERO: (0.9994, NOISE_TOLERANCE)}
+JUDGED = {
+    FULL_AUTO: (0.6484, 0.1995),
+    LIBERO: (0.9994, NOISE_TOLERANCE),
+    ROBOTWIN: (0.9405, NOISE_TOLERANCE),
+}
 # Judged workload -> the recorded real search that ran the autotune code of this branch. Its
 # replay must probe the same K/g in the same order, stop for the same reason, select the same K/g,
 # and take the same time. A change to the search names here the searches it still reproduces; a
 # new workload needs a real search of the current code.
-REPRODUCED = {FULL_AUTO: "main 5f79ce2", LIBERO: "main d26a908"}
+REPRODUCED = {FULL_AUTO: "main 5f79ce2", LIBERO: "main d26a908", ROBOTWIN: "main 44fa1ad"}
 # Real workloads the rule does not judge, and why.
 NOT_JUDGED = {REAL: "the same workload as FULL_AUTO, without fixed runs or replica probes"}
 
@@ -208,6 +213,54 @@ EXPECTED = {
         "gaps": (Gap(8, 5, "configuration"),),
         "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
         "stand_ins": ((9, 1), (8, 4)),
+    },
+    # Built by the record command from real runs. K=16/g=1 runs out of GPU memory, so the search
+    # stops at K=8/g=1 and never tries K=10, the best fixed run.
+    (ROBOTWIN, "diagonal", None): {
+        "selected": (8, 1),
+        "best_recorded": (10, 1),
+        "relative_throughput": pytest.approx(0.9405, abs=0.0001),
+        "probes": 5,
+        "tuning_s": pytest.approx(608.20, abs=0.01),
+        "end_to_end_s": pytest.approx(2728.7, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.368, abs=0.001),
+        "safe": True,
+        "gaps": (),
+        "unknown_signals": ("queue_wait_p95_ms",),
+    },
+    (ROBOTWIN, "diagonal", "steady"): {
+        "selected": (8, 1),
+        "best_recorded": (10, 1),
+        "relative_throughput": pytest.approx(0.9405, abs=0.0001),
+        "probes": 5,
+        "tuning_s": pytest.approx(608.20, abs=0.01),
+        "end_to_end_s": pytest.approx(2728.7, abs=0.1),
+        "end_to_end_vs_best": pytest.approx(1.368, abs=0.001),
+        "safe": True,
+        "gaps": (),
+        "unknown_signals": ("queue_wait_p95_ms",),
+    },
+    (ROBOTWIN, "two-phase", None): {
+        "selected": (9, 1),
+        "best_recorded": (10, 1),
+        "relative_throughput": pytest.approx(0.9762, abs=0.0001),
+        "probes": 5,
+        "tuning_s": None,
+        "safe": True,
+        "gaps": (Gap(9, 2, "configuration"),),
+        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "stand_ins": ((9, 1),),
+    },
+    (ROBOTWIN, "two-phase", "steady"): {
+        "selected": (8, 1),
+        "best_recorded": (10, 1),
+        "relative_throughput": pytest.approx(0.9405, abs=0.0001),
+        "probes": 6,
+        "tuning_s": None,
+        "safe": True,
+        "gaps": (),
+        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "stand_ins": ((9, 1), (8, 2)),
     },
     (SYNTHETIC, "diagonal", None): {
         "selected": (4, 1),

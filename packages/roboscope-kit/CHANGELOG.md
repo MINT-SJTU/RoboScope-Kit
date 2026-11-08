@@ -8,7 +8,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   builds a versioned workload record from an evaluation's `autotune/` outputs and replays it through the
   unchanged controller, so any registered strategy runs and is scored without a GPU. A K/g the record does not
   hold stops the search and is reported, never interpolated. The real workloads are the RoboCasa runs from #80,
-  as the table and as a record of two searches and a fixed-K/g sweep, and such a record for LIBERO. Scores include an end-to-end estimate and a
+  as the table and as a record of two searches and a fixed-K/g sweep, and such records for LIBERO
+  and a 500-episode RoboTwin subset. Scores include an end-to-end estimate and a
   no-tuning baseline, and tests apply a per-workload regression rule. It is a development tool: evaluations do
   not import it, and search behavior does not change. See `docs/autotune-testbed.md`.
 
