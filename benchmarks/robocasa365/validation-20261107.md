@@ -1,12 +1,18 @@
 # RoboCasa365 startup validation — 2026-11-07
 
+This historical startup record retains its original source attribution. The
+[2026-11-09 review update](#review-update--2026-11-09) records the reviewed build,
+tests and real five-slot Quick Test; the separate
+[reduced native comparison](native-comparison-20261109.md) reports later paired
+rollouts across all 50 tasks.
+
 **Result: all 50 official target tasks passed the startup integration check.**
 This pass covers 18 Atomic-Seen, 16 Composite-Seen and 16 Composite-Unseen tasks
 in `pretrain` scenes. Its scope was explicitly reduced to startup validation:
 one environment and evaluated reset per task, followed by two real-policy
 8-action chunks. The formal 50-rollout-per-task protocol is unchanged.
 
-The longer Kit/native collection and automatic repeats were stopped; their
+For that startup pass, the longer Kit/native collection and automatic repeats were stopped; their
 partial records are retained for diagnosis. This record does not claim a
 benchmark success rate, full native equivalence, support for all 365 tasks, or
 a throughput improvement. [Issue #97](https://github.com/MINT-SJTU/RoboScope-Kit/issues/97)
@@ -31,7 +37,7 @@ and scoring. The tables and hashes are not duplicated here. The SDK Policy loads
 verified real weights through `SessionContext.checkpoint_path`; no inference or
 runtime optimization was enabled for this check.
 
-## Current results
+## Startup results
 
 The external startup harness uses the unchanged Kit environment, observation and
 action helpers, plus `PolicyProcessAdapter` and the real SDK client/server path.
@@ -83,12 +89,55 @@ modules listed in the external source proof. The later main `9174d1b` sync and
 report update change documentation only. The original 50-task run is not relabeled
 as a new-head run.
 
-This remains a draft under the current integration skill. Beyond native comparison,
-the CLI self-test still checks imports/registry rather than creating an environment;
-Quick Test uses one slot rather than the formal five-slot group; profiling still
-uses a private client request to keep a group capture open. These follow-ups are
-not established by the external startup harness. No new tests were added, as
-required by `AGENTS.md`.
+At that refresh, the CLI self-test checked imports/registry rather than creating
+an environment; Quick Test used one slot rather than the formal five-slot group;
+profiling used a private client request to keep a group capture open. The external
+startup harness did not establish those follow-ups. The review update below
+records their subsequent fixes and additional tests requested by the maintainer.
+
+### Review update — 2026-11-09
+
+Reviewed integration source `04cdd858a548aba13ef63a21f06f6301a58a0a2d`
+uses version `0.8.0b34` on main `9174d1b6fb557c0285deb4b3d7d28cc66e2f4ba4`.
+The version was reset to the next free release after rebasing; the b36 and b40
+labels elsewhere identify historical experiments, not the current release order.
+The fresh builder produced a new pinned source/runtime prefix, verified all six
+asset archive hashes and reused the verified extracted asset content.
+
+| Reviewed-source check | Result |
+| --- | --- |
+| Build and self-test | Passed; one real environment reset and rendered twice, with RGB/state validation |
+| pytest / Ruff | 298 passed; Ruff passed, including simulator-free config, aggregation, shard and grouped lifecycle checks |
+| Build/install shell checks | Bash syntax and ShellCheck passed |
+| Normal CLI real-model Quick Test | Five native CloseBlenderLid slots, 900 steps each, 4,500 steps total, 0/5 task successes; execution passed |
+| Public SDK integration | Grouped Policy lifecycle and environment profiling use public hooks |
+
+The maintainer requested additional simulator-free tests in the
+[PR review](https://github.com/MINT-SJTU/RoboScope-Kit/pull/100#pullrequestreview-5816939401).
+Frozen task horizons are now included in the manifest, and EGL cleanup handles
+missing or already-freed contexts while preserving an original exception.
+
+The all-task comparison collected 250 paired episodes on historical
+b40 source `97de6073c737c15446121519342159189f69e4e2`, using a shared 128-step cap.
+Native and Kit each scored 3/250 and executed 32,000 steps, with zero paired
+outcome or terminal-step disagreements. Initial integration state and scenario
+matched in 250/250; initial observations matched in 245/250 and full recorded
+traces in 172/250. One Kit Worker exit with signal 9 required a successful retry.
+These results remain attributed to that earlier source.
+
+On the reviewed runtime, targeted Kit/native checks of three tasks covered 15
+pairs with zero outcome or terminal-step differences and eight exact traces.
+Independent native A/A repeats on those tasks covered another 15 pairs with
+zero outcome or terminal-step differences and nine exact traces. Native pixel
+variation was reproduced, but attribution of all Kit/native trajectory differences
+remains unresolved. The [native report](native-comparison-20261109.md) owns the
+per-task table, exact scope, reproduction command and durable evidence link.
+
+The maintainer approved 250 paired rollouts instead of 2,500; the user also
+allowed a shorter diagnostic horizon. These checks do not establish full
+native-horizon success rates or full trajectory equivalence. Passing CI on the
+final PR head remains a separate acceptance requirement; the integration remains
+labelled partial.
 
 ## Corrections and comparison limits
 
@@ -140,4 +189,5 @@ The same evidence root retains `build36.log`, `pytest36-final.log`,
 comparisons under `full50x50-v36-original-rendering/first-batch-comparisons/`.
 `native-blender-repeatability.json` and `render-repeat-*` retain the rendering diagnosis.
 The cancelled full run records its cancellation separately and is not merged into
-startup coverage. No full-run or automatic-repeat process remains active.
+startup coverage. That collection was not resumed; later reduced runs have
+separate source and evidence records.

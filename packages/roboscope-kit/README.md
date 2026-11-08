@@ -169,6 +169,10 @@ package, and without `--profile` nothing is loaded. Capture starts when the Work
 episode, so benchmarks with their own client, such as RoboTwin, record nothing yet. Tracing slows the run, so
 `manifest.json` records `"profile": true`, and such a run is not a throughput measurement.
 
+Native batched evaluators can wrap their ordinary `reset` and `end_episode` calls
+in `with client.episode_group():` to capture the complete group as one episode.
+`profiling.environment("step")` marks a simulator operation within that capture.
+
 How to read the reports, which benchmarks are covered, and the findings so far are in the
 [profiling notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/profiling.md).
 

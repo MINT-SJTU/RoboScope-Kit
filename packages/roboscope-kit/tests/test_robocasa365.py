@@ -5,12 +5,17 @@
 
 from __future__ import annotations
 
+import sys
+from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
+import numpy as np
 import pytest
 
+from roboscope_kit import ActionChunk
 from roboscope_kit.benchmark_specs import BenchmarkName
 from roboscope_kit.runtime.benchmark.factories import BenchmarkRunRequest
 from roboscope_kit.runtime.benchmark.manifest import load_benchmark_manifest
@@ -237,3 +242,67 @@ def test_shard_merge_rejects_different_expected_workloads() -> None:
     documents[1]["official_result"]["coverage"]["expected"] += NATIVE_ENVS
     with pytest.raises(ValueError, match="disagree on the expected workload"):
         merge_shard_results(documents)
+
+
+@pytest.mark.parametrize("stop_step", [8, 16])
+def test_group_success_keeps_slots_stepping_and_uses_first_retained_value(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, stop_step: int,
+) -> None:
+    from roboscope_kit.runtime.benchmarks.robocasa365 import worker
+
+    for name in ("robocasa", "robocasa.utils", "robocasa.utils.env_utils"):
+        monkeypatch.setitem(sys.modules, name, ModuleType(name))
+    monkeypatch.setattr(sys.modules["robocasa.utils.env_utils"], "convert_action", lambda action: action,
+                        raising=False)
+    monkeypatch.setattr(worker, "build_observation", lambda identifier, step, history: SimpleNamespace(
+        episode_id=identifier, step=step,
+    ))
+    monkeypatch.setattr(worker, "reset_fingerprint", lambda environment, observation: {})
+    monkeypatch.setattr(worker, "save_first_batch", lambda *args: None)
+
+    class Environment:
+        def __init__(self, slot: int) -> None:
+            self.steps = 0
+            # Individual successes happen early. The group barrier still waits
+            # for all slots' penultimate physical-step success values.
+            self.success_steps = {slot + 1, stop_step - 1}
+            if stop_step == 16:
+                self.success_steps.add(8)
+
+        def reset(self):
+            return {}, {}
+
+        def step(self, action):
+            assert action.shape == (12,)
+            self.steps += 1
+            return {}, 0.0, False, False, {"success": self.steps in self.success_steps}
+
+    class Client:
+        def __init__(self) -> None:
+            self.reset_ids = []
+            self.end_ids = []
+            self.batch_steps = []
+
+        def episode_group(self):
+            return nullcontext()
+
+        def reset(self, context):
+            self.reset_ids.append(context.episode_id)
+
+        def act_batch(self, observations):
+            self.batch_steps.append([observation.step for observation in observations])
+            return tuple(ActionChunk(np.zeros((8, 12), dtype=np.float32)) for _ in observations)
+
+        def end_episode(self, identifier):
+            self.end_ids.append(identifier)
+
+    environments = [Environment(slot) for slot in range(NATIVE_ENVS)]
+    client = Client()
+    args = SimpleNamespace(save_videos=False, output_dir=tmp_path, worker_id=0)
+    task = replace(TASKS_BY_NAME[TASKS[0]], horizon=24)
+    records, _ = worker.run_group(args, task, environments, 0, client)
+    assert [environment.steps for environment in environments] == [stop_step] * NATIVE_ENVS
+    assert client.batch_steps == [[step] * NATIVE_ENVS for step in range(0, stop_step, 8)]
+    assert client.reset_ids == client.end_ids == [record.record_id for record in records]
+    assert all(record.success and record.steps == stop_step for record in records)
+    assert all(record.metadata["termination"] == "native_group_success" for record in records)

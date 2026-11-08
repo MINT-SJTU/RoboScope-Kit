@@ -6,12 +6,15 @@ the 50-task multi-task workload in **pretrain scenes**, with 50 rollouts per
 task (2,500 records), updated task horizons and native five-slot groups.
 
 This integration contributes to
-[issue #97](https://github.com/MINT-SJTU/RoboScope-Kit/issues/97). This validation
-pass checks startup and short real-policy execution across all 50 tasks; see the
-[validation record](validation-20261107.md). The complete 2,500-rollout matrix
-and matched native evaluator comparison are deferred, not marked as passed.
-[Issue #16](https://github.com/MINT-SJTU/RoboScope-Kit/issues/16) concerns the
-separate GR1 runtime. Performance work is outside this integration.
+[issue #97](https://github.com/MINT-SJTU/RoboScope-Kit/issues/97). A
+[reduced native comparison](native-comparison-20261109.md) covers all 50 tasks,
+five paired episodes per task, with a shared 128-step diagnostic cap. It records
+the collection source separately from targeted checks of the reviewed integration.
+The [historical startup record and review update](validation-20261107.md) record
+build and real-policy checks. Native-horizon success rates, full trajectory parity
+and the complete 2,500-rollout matrix remain unverified. Performance work under
+[issue #16](https://github.com/MINT-SJTU/RoboScope-Kit/issues/16) is kept in a
+separate dependent change.
 
 ## Build and run
 
@@ -45,14 +48,15 @@ checked. Self-test and workers reject runtimes lacking the marker-2 correction.
 Seeds, reset rules and observation frequency remain native; every physical step
 generates its observations.
 
-Version 0.8.0b36 also pins two upstream sampling corrections for paired evaluation:
+The builder also pins two upstream sampling corrections for paired evaluation:
 counter regions retain XML insertion order instead of object-identity set order,
 and fixture stack bases receive the environment's seeded generator. Uncorrected
 native runs can produce different initial scenes for the same constructor seeds.
 The corrected runtime therefore changes those formerly nondeterministic scene
 realizations. Run the pinned official evaluator against the same corrected runtime;
 do not describe this as an unmodified-upstream comparison or mix its evidence with
-0.8.0b35 results. These are reproducibility corrections, not performance changes.
+earlier runs lacking those corrections. These are reproducibility corrections,
+not performance changes.
 
 Configure the example with absolute interpreter and source paths, and a model
 directory containing `model.ckpt` and `clip/`. In an adaptation container the
@@ -72,8 +76,8 @@ python -m roboscope_kit.runtime.benchmark \
   --quick-test --output-dir /results/robocasa365-quick-test
 ```
 
-The self-test verifies the frozen registry and validates RGB and state from an
-environment reset. The real Quick Test runs one native five-slot group of the
+The self-test verifies the frozen registry and validates RGB and state across two
+environment resets. The real Quick Test runs one native five-slot group of the
 first task with the official horizon.
 For the full matrix remove `--quick-test` and set `--concurrency K --replicas G`.
 Each formal worker manages **five** native environments. Use fresh output
@@ -94,9 +98,11 @@ full native equivalence. A self-test, smoke group or exact first action chunk is
 insufficient. Keep model/task/scenario streams, horizons, native slot count, K/G
 and outputs fixed in later comparisons.
 
-## Validation record
+## Validation records
 
-[2026-11-07 integration validation](validation-20261107.md) is the single record
-for the tested Kit revision, build/check results, task coverage, native comparison
-limits, reproducible commands and external evidence paths. Startup checks do not
-replace full-horizon evaluation or establish a benchmark success rate.
+The [2026-11-07 startup record and 2026-11-09 review update](validation-20261107.md)
+attribute build, self-test, real five-slot Quick Test and 298 passing pytest checks
+to their tested revisions. The [2026-11-09 native comparison](native-comparison-20261109.md)
+reports all 250 reduced-horizon pairs, later native repeatability and targeted
+reviewed-source checks. Equal capped outcomes do not establish full-horizon
+success rates or full trajectory parity.
