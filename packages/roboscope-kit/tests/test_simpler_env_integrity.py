@@ -397,3 +397,50 @@ def test_native_records_without_configuration_fail_strict(comparison: SimpleName
     assert code == 0 and report["native_records_without_config"] == EPISODES_PER_VARIANT
     code, _ = comparison.run("--strict")
     assert code == 1
+
+
+# ---- shard identity and the Vulkan check ------------------------------------------------------
+
+
+def _factory_adapter(monkeypatch: pytest.MonkeyPatch, suite: str = BRIDGE) -> SimplerEnvBenchmarkAdapter:
+    from roboscope_kit.benchmark_specs import BenchmarkName
+    from roboscope_kit.runtime.benchmark.factories import BenchmarkRunRequest
+    from roboscope_kit.runtime.benchmarks.simpler_env import factory
+
+    def refuse() -> None:
+        raise RuntimeError("Vulkan ICDs besides the NVIDIA one are installed")
+
+    monkeypatch.setattr(factory, "vulkan_preflight", refuse)
+    manifest = SimpleNamespace(defaults={}, runtime_path=lambda name: Path(f"/host-a/{name}"))
+    request = BenchmarkRunRequest(
+        benchmark=BenchmarkName.SIMPLER_ENV,
+        suite=suite,
+        checkpoint_path=Path("/unused"),
+        output_dir=Path("/unused"),
+        episodes=None,
+        quick_test=False,
+    )
+    return factory.SimplerEnvBenchmarkFactory().create(request, manifest)
+
+
+def test_adapter_builds_without_the_vulkan_check_but_workers_do_not_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    adapter = _factory_adapter(monkeypatch)  # what shard_merge does
+    assert adapter.metadata()["benchmark"] == "simpler_env"
+    with pytest.raises(RuntimeError, match="Vulkan"):
+        adapter.worker_process(SimpleNamespace())
+
+
+def test_benchmark_identity_does_not_depend_on_the_host() -> None:
+    adapter = _adapter(BRIDGE)
+    other = SimplerEnvBenchmarkAdapter(
+        SimplerEnvRuntimeConfig(
+            python=Path("/host-b/py"),
+            simpler_env_root=Path("/host-b/se"),
+            suite=BRIDGE,
+            selection=adapter.config.selection,
+        )
+    )
+    assert json.dumps(adapter.metadata(), sort_keys=True) == json.dumps(other.metadata(), sort_keys=True)
+    assert "/py" not in json.dumps(adapter.metadata()) and "/se" not in json.dumps(adapter.metadata())

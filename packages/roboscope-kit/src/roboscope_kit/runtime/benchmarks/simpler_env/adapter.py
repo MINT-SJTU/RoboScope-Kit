@@ -98,6 +98,10 @@ class SimplerEnvBenchmarkAdapter:
         return items
 
     def worker_process(self, context: WorkerContext) -> ProcessSpec:
+        from .factory import vulkan_preflight
+
+        # Checked where a worker renders, not when the adapter is built: shard_merge builds one too.
+        vulkan_preflight()
         threads = str(self.config.cpu_threads)
         command = [
             str(self.config.python),
@@ -294,7 +298,6 @@ class SimplerEnvBenchmarkAdapter:
             ],
             "action_representation": ACTION_REPRESENTATION,
             "success_criterion": SUCCESS_CRITERION,
-            "simpler_env_root": str(self.config.simpler_env_root),
         }
 
 

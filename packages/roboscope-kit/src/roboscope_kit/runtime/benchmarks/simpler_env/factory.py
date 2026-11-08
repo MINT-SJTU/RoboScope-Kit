@@ -161,7 +161,6 @@ class SimplerEnvBenchmarkFactory:
         manifest: BenchmarkManifest,
         selection: tuple[tuple[str, tuple[int, ...]], ...],
     ) -> SimplerEnvBenchmarkAdapter:
-        vulkan_preflight()
         recycle = manifest.defaults.get("recycle_after_records")
         return SimplerEnvBenchmarkAdapter(
             SimplerEnvRuntimeConfig(

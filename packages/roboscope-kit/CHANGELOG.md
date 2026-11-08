@@ -18,7 +18,10 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   comparison matches on the observation camera and policy configuration too, and `--strict` fails on missing,
   duplicate, unknown, or unpaired episodes.
 - A SimplerEnv shard's `official_result` is `partial` and never `formal`; only a result holding every episode of
-  the full matrix is formal. `benchmark.formal_selection` replaces `benchmark.formal`.
+  the full matrix is formal. `benchmark.formal_selection` replaces `benchmark.formal`, and `benchmark` no longer
+  carries the host's SimplerEnv path, so shards from different hosts or install directories merge. The Vulkan ICD
+  check runs before workers start instead of when the adapter is built, so `shard_merge` works on hosts without
+  the NVIDIA ICD. `build-runtime.sh` fails when the venv holds anything other than the lock and the two checkouts.
 
 ## 0.8.0b33 - 2026-11-08
 

@@ -155,6 +155,49 @@ fi
   --editable "${SOURCE}/ManiSkill2_real2sim" \
   --editable "${SOURCE}"
 "${UV_BIN}" pip freeze --python "${PYTHON}" > "${INSTALL_DIR}/pip-freeze.txt"
+# The venv must hold exactly the lock plus the two editable checkouts: nothing left over from an
+# earlier build in the same <install-dir>, and nothing the lock leaves unpinned.
+"${PYTHON}" -I - "${LOCK}" "${INSTALL_DIR}/pip-freeze.txt" "${SOURCE}" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+lock, freeze, source = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
+
+
+def pins(path):
+    found, other = {}, []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if "==" not in line:
+            other.append(line)
+            continue
+        name, version = line.split("==", 1)
+        found[re.sub(r"[-_.]+", "-", name.split("[", 1)[0].strip()).lower()] = version.strip()
+    return found, other
+
+
+expected, unpinned = pins(lock)
+if unpinned:
+    sys.exit(f"{lock} has unpinned lines: {unpinned}")
+installed, editables = pins(freeze)
+roots = {source, source.resolve()}
+allowed = {f"-e file://{root / sub}".rstrip("/.") for root in roots for sub in ("", "ManiSkill2_real2sim")}
+problems = [f"{name}=={installed[name]} is not in the lock" for name in sorted(installed.keys() - expected.keys())]
+problems += [f"{name} from the lock is not installed" for name in sorted(expected.keys() - installed.keys())]
+problems += [
+    f"{name} is {installed[name]}, the lock pins {expected[name]}"
+    for name in sorted(expected.keys() & installed.keys())
+    if installed[name] != expected[name]
+]
+problems += [f"unexpected install {line}" for line in editables if line not in allowed]
+if len(set(editables)) != 2:
+    problems.append(f"editable installs {editables}, expected SimplerEnv and ManiSkill2_real2sim")
+if problems:
+    sys.exit("the runtime venv differs from the lock; remove <install-dir> and rebuild:\n  " + "\n  ".join(problems))
+PY
 
 env -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES="" TF_CPP_MIN_LOG_LEVEL=3 \
   "${PYTHON}" -I - "${SOURCE}" <<'PY'

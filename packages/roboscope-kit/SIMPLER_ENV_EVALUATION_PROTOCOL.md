@@ -109,8 +109,9 @@ NVIDIA one. Two hosts showed two failures: with NVIDIA's Vulkan SC ICD (`nvidia_
 renderer teardown segfaulted inside `libnvidia-vksc-core.so` (also in upstream's own evaluator, which drops one
 environment per episode); with Mesa's ICDs installed next to the NVIDIA one, creating the renderer failed with
 `ErrorExtensionNotPresent`. Export `VK_ICD_FILENAMES=<dir>/nvidia_icd.json` (`/usr/share/vulkan/icd.d` or
-`/etc/vulkan/icd.d`) for the build and every run; the build, `--self-test`, and every run refuse to start without
-it while another ICD is installed.
+`/etc/vulkan/icd.d`) for the build and every run; the build, `--self-test`, and every run (before it starts its
+workers) refuse to go on without it while another ICD is installed. Merging shard results renders nothing and
+does not check it.
 
 ```bash
 export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json   # or /etc/vulkan/icd.d/; see above
