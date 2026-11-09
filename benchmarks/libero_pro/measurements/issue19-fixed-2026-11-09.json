@@ -137,9 +137,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 1081.869200680405,
-      "historical_successes": 351,
-      "success_difference_vs_historical": -12
+      "CLI_wall_s": 1081.869200680405
     },
     "libero_goal_swap": {
       "episodes": 500,
@@ -270,9 +268,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 1832.8477746732533,
-      "historical_successes": 6,
-      "success_difference_vs_historical": -2
+      "CLI_wall_s": 1832.8477746732533
     },
     "libero_goal_lan": {
       "episodes": 500,
@@ -403,9 +399,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 883.3525869362056,
-      "historical_successes": 443,
-      "success_difference_vs_historical": 1
+      "CLI_wall_s": 883.3525869362056
     },
     "libero_goal_task": {
       "episodes": 500,
@@ -536,9 +530,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 1701.5632511340082,
-      "historical_successes": 47,
-      "success_difference_vs_historical": -2
+      "CLI_wall_s": 1701.5632511340082
     },
     "libero_spatial_object": {
       "episodes": 500,
@@ -669,9 +661,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 851.5929889269173,
-      "historical_successes": 476,
-      "success_difference_vs_historical": 1
+      "CLI_wall_s": 851.5929889269173
     },
     "libero_spatial_swap": {
       "episodes": 500,
@@ -802,9 +792,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 1734.6652945317328,
-      "historical_successes": 0,
-      "success_difference_vs_historical": 0
+      "CLI_wall_s": 1734.6652945317328
     },
     "libero_spatial_lan": {
       "episodes": 500,
@@ -935,9 +923,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 946.1475575603545,
-      "historical_successes": 467,
-      "success_difference_vs_historical": 3
+      "CLI_wall_s": 946.1475575603545
     },
     "libero_spatial_task": {
       "episodes": 500,
@@ -1068,9 +1054,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 1281.0897774659097,
-      "historical_successes": 275,
-      "success_difference_vs_historical": 3
+      "CLI_wall_s": 1281.0897774659097
     },
     "libero_10_object": {
       "episodes": 500,
@@ -1201,9 +1185,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 2230.9124359041452,
-      "historical_successes": 237,
-      "success_difference_vs_historical": 2
+      "CLI_wall_s": 2230.9124359041452
     },
     "libero_10_swap": {
       "episodes": 500,
@@ -1334,9 +1316,7 @@
           "0": 8
         }
       },
-      "CLI_wall_s": 1411.044364977628,
-      "historical_successes": 0,
-      "success_difference_vs_historical": 0
+      "CLI_wall_s": 1411.044364977628
     },
     "libero_10_lan": {
       "episodes": 500,
@@ -1467,9 +1447,7 @@
           "0": 8
         }
       },
-      "CLI_wall_s": 779.8054191358387,
-      "historical_successes": 459,
-      "success_difference_vs_historical": -1
+      "CLI_wall_s": 779.8054191358387
     },
     "libero_10_task": {
       "episodes": 500,
@@ -1600,9 +1578,7 @@
           "0": 8
         }
       },
-      "CLI_wall_s": 1380.1553766541183,
-      "historical_successes": 53,
-      "success_difference_vs_historical": -2
+      "CLI_wall_s": 1380.1553766541183
     },
     "libero_object_object": {
       "episodes": 500,
@@ -1733,9 +1709,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 956.2560126073658,
-      "historical_successes": 451,
-      "success_difference_vs_historical": 2
+      "CLI_wall_s": 956.2560126073658
     },
     "libero_object_swap": {
       "episodes": 500,
@@ -1866,9 +1840,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 1629.9211881421506,
-      "historical_successes": 0,
-      "success_difference_vs_historical": 0
+      "CLI_wall_s": 1629.9211881421506
     },
     "libero_object_lan": {
       "episodes": 500,
@@ -1999,9 +1971,7 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 929.1234883777797,
-      "historical_successes": 482,
-      "success_difference_vs_historical": 2
+      "CLI_wall_s": 929.1234883777797
     },
     "libero_object_task": {
       "episodes": 500,
@@ -2132,11 +2102,15 @@
           "0": 2
         }
       },
-      "CLI_wall_s": 1544.186184141785,
-      "historical_successes": 48,
-      "success_difference_vs_historical": 0
+      "CLI_wall_s": 1544.186184141785
     }
   },
   "plan": "plan.json",
-  "note": "Different hardware from #19; no equality or speedup claim."
+  "note": "Different hardware from #19; no equality or speedup claim.",
+  "provenance": {
+    "source_commit": "e817d18",
+    "source_file": "issue19-fixed-2026-11-09.json",
+    "source_sha256": "8bd8063dd6be7b653f4289586f721e14aea66a0b54940276b3c84e21f9a758d5",
+    "transformation": "Remove historical-reference score/difference fields from each suite; retain measured fixed-run records."
+  }
 }

@@ -1,16 +1,16 @@
 # LIBERO-Pro throughput work
 
 This directory owns the frozen simulator build and throughput work for
-[issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21). One real-GPU full-matrix pair
-measured 1.3791x formal throughput; the **2x full-evaluation target has not been demonstrated**.
-The local 6 GiB GPU cannot load the pinned bf16 baseline with the simulator.
+[issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21). The selected draft result is
+**2.9141x formal throughput against the historical fixed configuration**, with 8,000 episodes per side
+on the available dedicated RTX 4090. See the [fixed-baseline report](FIXED_BASELINE_2026-11-09.md) for
+the exact configurations, per-suite scores and remaining validation.
 
-See [the protocol](../../packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro) for the
-frozen task semantics, [the issue audit](ISSUE_21_AUDIT.md) for completed and outstanding work, and
-[the performance review](PERFORMANCE_REVIEW.md) for earlier optimizations and negative results, and
-[the full-matrix report](FULL_AUTO_2026-11-09.md) for the results and remaining correctness questions.
-The [fixed-baseline report](FIXED_BASELINE_2026-11-09.md) compares a later #19-style fixed-K/g run
-against the full optimized matrix and the fastest measured single-suite configuration.
+Start code review with the [draft review guide](DRAFT_REVIEW.md). The
+[evaluation protocol](../../packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro)
+defines the frozen task semantics; the [evidence inventory](measurements/README.md) identifies the
+committed results and raw archives. This draft comparison changes K/g and other execution settings;
+it is not an isolated batching gain or a claim that all issue acceptance criteria are complete.
 
 ## Implementation
 
@@ -21,8 +21,7 @@ formal episode and action-step throughput, scores and paired differences at fixe
 For a matched MPS off/on experiment at fixed K=12/g=3, use
 [`run_mps_comparison.py`](run_mps_comparison.py). The [MPS experiment guide](MPS_EXPERIMENT.md)
 documents preview, warmup, timing, attachment checks and outputs. It reuses the existing Kit MPS
-lifecycle and retains chunk camera rendering in both arms. The optimization summary records the
-single-suite result and its limitations.
+lifecycle and retains chunk camera rendering in both arms. The driver is an ablation tool; the selected draft result is documented separately above.
 
 - `benchmark-manifest.json` prefers the existing MessagePack transport. A JSON health exchange
   negotiates support; a server without MessagePack support falls back to JSON.
@@ -177,43 +176,11 @@ encoding negotiation. Both episodes end mid-chunk to check that unused actions d
 episode. It compares JSON/MessagePack with per-request/persistent sockets in alternating order. This is
 a measurement utility, not a simulator, a model-quality check, or a replacement for Quick Test.
 
-Recorded on 2026-11-07: Intel Core i7-12700H, WSL2 Linux x86_64, Python 3.12.3, Kit 0.8.0b31 working tree,
-NumPy 2.5.4 and MessagePack 1.2.4. Each mode has five repeats of 300 measured requests, with 20 warmup
-requests and eight actions per chunk. The last chunk of each episode consumes only five actions.
-Times include Worker observation construction, transport, server payload verification and action-queue
-consumption; they exclude model inference, simulation and startup. Standard deviation is across repeat
-means, not a confidence interval.
+Connection reuse remains opt-in. CPU/socket microbenchmarks do not measure simulator or model
+throughput and are not included in this draft's result set. The retained result is the complete
+fixed-baseline comparison linked above.
 
-| Encoding | Connection | Mean ms/request | Standard deviation |
-| --- | --- | ---: | ---: |
-| JSON | Per request | 7.890 | 0.225 |
-| JSON | Per episode | 7.371 | 0.244 |
-| MessagePack | Per request | 1.512 | 0.089 |
-| MessagePack | Per episode | 1.158 | 0.192 |
-
-All measured payloads/actions matched. The default candidate reduces this local request cost by about
-5.2x; enabling connection reuse reduces it further. Neither number establishes full-evaluation speedup.
-Raw measurements are in [measurements/policy-io-2026-11-07.json](measurements/policy-io-2026-11-07.json).
-Connection reuse stays opt-in pending real-model ablation evidence. A subsequent real-model fixed-K12/g3
-pair on an AutoDL RTX 4090 covered 500 `libero_goal_object` episodes per arm: JSON baseline 431.742 s,
-MessagePack candidate 424.384 s (1.0173x formal episodes/s), with 84,212 versus 82,948 policy steps.
-Nineteen paired successes and 46 step counts differed. See [the issue audit](ISSUE_21_AUDIT.md) for
-the experimental settings, data locations and limitations.
-
-Validation on 2026-11-08, Python 3.12.3:
-
-- Existing regression suite: **187 passed**; no new test cases added.
-- Required Ruff scope and the measurement utility: passed.
-- Package wheel build/install, dependency consistency and import of all 78 installed SDK modules: passed.
-- Official CPython lifecycle policy check: passed for declared Python 3.11 through 3.15. Only Python 3.12
-  executed locally; the other interpreters and the full distribution matrix require CI.
-- JSON-only advertisement: all eight mode/repeat combinations negotiated JSON and preserved payloads,
-  action ordering and episode boundaries. See [raw fallback evidence](measurements/json-fallback-2026-11-08.json).
-- Ad hoc failure injection: reset, act and end-episode failures, with reuse both off and on, each
-  propagated once, closed the client and did not replay the request.
-- Ad hoc adapter checks: all 16 suites x four modes produced the same 8000-episode matrix and retained
-  BDDL instructions. Worker flags/environment matched each mode; string, integer and null values were
-  rejected for the boolean connection setting. This checks task construction, not executed episodes.
+## Local validation
 
 The repository's regression commands are:
 
@@ -311,24 +278,21 @@ For bottleneck diagnosis, add `--profile` to a separate fixed-K/g or Quick Test 
 available. Worker profiling does not capture Policy Server GPU kernels. Record profile findings in this
 document and the central profiling index; measure performance again without profiling.
 
-## Acceptance and delivery status
+## Draft status and follow-up
 
-- Each complete matrix must contain 16 suites x 10 tasks x 50 states = 8000 terminal episode records.
-  Match suite/task/episode identities, successes and actual executed steps, and retain failed runs.
-  Report per-suite official metrics and paired differences. Aggregate success equality alone is not
-  evidence of identical trajectories. Task reset history matters; do not reseed episodes to hide it.
-- Formal throughput is total completed episodes divided by the sum of `evaluation_s` in each run's
-  `metrics.json` (require the `evaluation_s` completed stage). Do not substitute `result.episodes_per_s`,
-  which uses a different wall interval,
-  or average suite speedup ratios. Also report total actual steps divided by formal time.
-- Report checkpoint preparation, tuning, model loading, runtime preparation and external process wall
-  time separately. Fixed-K/g runs measure zero tuning cost; they cannot establish tuning-inclusive gain.
-- Compare a frozen baseline and candidate on the same host/resource allocation. The earlier correctness
-  baseline used mixed GPUs and K/g settings and cannot establish a fair 2x denominator. Record both Git
-  revisions, runtime pins, checkpoint/config hashes, CPU/GPU model, driver, memory, co-tenant load and
-  run order. Use repeated paired matrices and report uncertainty.
-- The clean AutoDL runtime build, Quick Tests and one pair of complete 8,000-episode matrices passed
-  coverage checks. Formal throughput was 1.3791x; full-matrix repeats, analysis of score differences
-  and >=2x formal throughput remain pending. No simulator build script is changed by this candidate.
-- The tested candidate version is 0.8.0b37. Reconcile the version and dated changelog against main before merge;
-  merging publishes through CI. The performance issue must remain open until its acceptance is met.
+- The draft presents one fixed-baseline comparison: 16 suites × 10 tasks × 50 states per side,
+  complete unique episode coverage, 2.9141x formal throughput and 2.9178x actual steps/s.
+- Keep per-suite/task scores and paired differences visible. The 288 differing success flags and
+  2,899 differing step counts need repeat analysis; aggregate score similarity is insufficient.
+- Formal throughput uses total completed episodes divided by summed `evaluation_s`, not
+  `result.episodes_per_s` or an average of suite ratios. Report loading, preparation, tuning,
+  result writing and end-to-end time separately; fixed runs have no tuning search.
+- The public issue additionally requires main's best existing configuration, measured using diagonal
+  autotune and a fixed K/g sweep on the same dedicated GPU/CPU/memory budget, plus three runs per side
+  on `libero_goal_task`, `libero_spatial_lan`, `libero_object_swap` and `libero_10_object`.
+  These remain follow-up work; the historical fixed denominator is stated explicitly in this draft.
+- Record reviewed Worker and Policy profiling findings in this README and the central profiling index.
+  Instrumentation is available, but no completed profiling acceptance is claimed here.
+- The measured implementation is Kit 0.8.0b37 at `e63260e`. Before merge, reconcile upstream/version
+  changes, use the actual merge date in the changelog, run required checks and clean-build self-test,
+  measure the exact head being merged, and publish durable raw-log/reproduction links.

@@ -1,12 +1,14 @@
 {
+  "baseline": "issue19-fixed-2026-11-09.json",
+  "optimized": "optimized-2026-11-09.json",
+  "formal_speedup": 2.91409628878505,
+  "steps_per_s_ratio": 2.9178475297230357,
   "per_suite": [
     {
       "suite": "libero_goal_object",
       "fixed_s": 1067.2036174722016,
-      "auto_baseline_s": 416.4728071503341,
       "optimized_s": 408.6681965775788,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "8/1",
       "fixed_successes": 339,
       "optimized_successes": 343,
@@ -15,17 +17,13 @@
       "success_differences": 42,
       "step_differences": 239,
       "fixed_only_success": 19,
-      "opt_only_success": 23,
-      "fixed_vs_auto_baseline_success_differences": 37,
-      "fixed_vs_auto_baseline_step_differences": 114
+      "opt_only_success": 23
     },
     {
       "suite": "libero_goal_swap",
       "fixed_s": 1817.454813875258,
-      "auto_baseline_s": 723.8862095028162,
       "optimized_s": 415.4325580112636,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "16/4",
       "optimized_kg": "24/3",
       "fixed_successes": 4,
       "optimized_successes": 6,
@@ -34,17 +32,13 @@
       "success_differences": 8,
       "step_differences": 9,
       "fixed_only_success": 3,
-      "opt_only_success": 5,
-      "fixed_vs_auto_baseline_success_differences": 7,
-      "fixed_vs_auto_baseline_step_differences": 8
+      "opt_only_success": 5
     },
     {
       "suite": "libero_goal_lan",
       "fixed_s": 869.3026566654444,
-      "auto_baseline_s": 329.48358856514096,
       "optimized_s": 324.62275575473905,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "8/1",
       "fixed_successes": 444,
       "optimized_successes": 445,
@@ -53,17 +47,13 @@
       "success_differences": 23,
       "step_differences": 293,
       "fixed_only_success": 11,
-      "opt_only_success": 12,
-      "fixed_vs_auto_baseline_success_differences": 12,
-      "fixed_vs_auto_baseline_step_differences": 166
+      "opt_only_success": 12
     },
     {
       "suite": "libero_goal_task",
       "fixed_s": 1677.9333550855517,
-      "auto_baseline_s": 694.1321610249579,
       "optimized_s": 389.2788217291236,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "24/3",
       "fixed_successes": 45,
       "optimized_successes": 52,
@@ -72,17 +62,13 @@
       "success_differences": 13,
       "step_differences": 49,
       "fixed_only_success": 3,
-      "opt_only_success": 10,
-      "fixed_vs_auto_baseline_success_differences": 2,
-      "fixed_vs_auto_baseline_step_differences": 2
+      "opt_only_success": 10
     },
     {
       "suite": "libero_spatial_object",
       "fixed_s": 837.0636541731656,
-      "auto_baseline_s": 284.99826630949974,
       "optimized_s": 274.50166773051023,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "8/1",
       "fixed_successes": 477,
       "optimized_successes": 484,
@@ -91,17 +77,13 @@
       "success_differences": 15,
       "step_differences": 325,
       "fixed_only_success": 4,
-      "opt_only_success": 11,
-      "fixed_vs_auto_baseline_success_differences": 14,
-      "fixed_vs_auto_baseline_step_differences": 189
+      "opt_only_success": 11
     },
     {
       "suite": "libero_spatial_swap",
       "fixed_s": 1720.6196727864444,
-      "auto_baseline_s": 565.3060018345714,
       "optimized_s": 377.20820980519056,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "16/4",
       "optimized_kg": "16/2",
       "fixed_successes": 0,
       "optimized_successes": 0,
@@ -110,17 +92,13 @@
       "success_differences": 0,
       "step_differences": 0,
       "fixed_only_success": 0,
-      "opt_only_success": 0,
-      "fixed_vs_auto_baseline_success_differences": 0,
-      "fixed_vs_auto_baseline_step_differences": 0
+      "opt_only_success": 0
     },
     {
       "suite": "libero_spatial_lan",
       "fixed_s": 926.112890701741,
-      "auto_baseline_s": 299.1360624656081,
       "optimized_s": 298.9779860675335,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "8/1",
       "fixed_successes": 470,
       "optimized_successes": 464,
@@ -129,17 +107,13 @@
       "success_differences": 16,
       "step_differences": 332,
       "fixed_only_success": 11,
-      "opt_only_success": 5,
-      "fixed_vs_auto_baseline_success_differences": 19,
-      "fixed_vs_auto_baseline_step_differences": 195
+      "opt_only_success": 5
     },
     {
       "suite": "libero_spatial_task",
       "fixed_s": 1257.8131768256426,
-      "auto_baseline_s": 420.7762713506818,
       "optimized_s": 280.58103707432747,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "16/2",
       "fixed_successes": 278,
       "optimized_successes": 275,
@@ -148,17 +122,13 @@
       "success_differences": 17,
       "step_differences": 237,
       "fixed_only_success": 10,
-      "opt_only_success": 7,
-      "fixed_vs_auto_baseline_success_differences": 4,
-      "fixed_vs_auto_baseline_step_differences": 46
+      "opt_only_success": 7
     },
     {
       "suite": "libero_10_object",
       "fixed_s": 2216.159534960985,
-      "auto_baseline_s": 977.8732415921986,
       "optimized_s": 556.6898463368416,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "24/3",
       "fixed_successes": 239,
       "optimized_successes": 232,
@@ -167,17 +137,13 @@
       "success_differences": 53,
       "step_differences": 245,
       "fixed_only_success": 30,
-      "opt_only_success": 23,
-      "fixed_vs_auto_baseline_success_differences": 18,
-      "fixed_vs_auto_baseline_step_differences": 59
+      "opt_only_success": 23
     },
     {
       "suite": "libero_10_swap",
       "fixed_s": 1382.0422416478395,
-      "auto_baseline_s": 1210.4715918190777,
       "optimized_s": 690.1267832331359,
       "fixed_kg": "8/2",
-      "auto_baseline_kg": "16/4",
       "optimized_kg": "24/3",
       "fixed_successes": 0,
       "optimized_successes": 0,
@@ -186,17 +152,13 @@
       "success_differences": 0,
       "step_differences": 0,
       "fixed_only_success": 0,
-      "opt_only_success": 0,
-      "fixed_vs_auto_baseline_success_differences": 0,
-      "fixed_vs_auto_baseline_step_differences": 0
+      "opt_only_success": 0
     },
     {
       "suite": "libero_10_lan",
       "fixed_s": 747.6528877317905,
-      "auto_baseline_s": 676.3751571662724,
       "optimized_s": 396.1690715737641,
       "fixed_kg": "8/2",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "24/3",
       "fixed_successes": 458,
       "optimized_successes": 447,
@@ -205,17 +167,13 @@
       "success_differences": 47,
       "step_differences": 434,
       "fixed_only_success": 29,
-      "opt_only_success": 18,
-      "fixed_vs_auto_baseline_success_differences": 16,
-      "fixed_vs_auto_baseline_step_differences": 173
+      "opt_only_success": 18
     },
     {
       "suite": "libero_10_task",
       "fixed_s": 1352.511067058891,
-      "auto_baseline_s": 1209.1488449908793,
       "optimized_s": 1171.043308198452,
       "fixed_kg": "8/2",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "8/1",
       "fixed_successes": 51,
       "optimized_successes": 44,
@@ -224,17 +182,13 @@
       "success_differences": 21,
       "step_differences": 55,
       "fixed_only_success": 14,
-      "opt_only_success": 7,
-      "fixed_vs_auto_baseline_success_differences": 26,
-      "fixed_vs_auto_baseline_step_differences": 62
+      "opt_only_success": 7
     },
     {
       "suite": "libero_object_object",
       "fixed_s": 936.3386584185064,
-      "auto_baseline_s": 379.26902800425887,
       "optimized_s": 365.9719490520656,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "8/1",
       "fixed_successes": 453,
       "optimized_successes": 450,
@@ -243,17 +197,13 @@
       "success_differences": 15,
       "step_differences": 312,
       "fixed_only_success": 9,
-      "opt_only_success": 6,
-      "fixed_vs_auto_baseline_success_differences": 5,
-      "fixed_vs_auto_baseline_step_differences": 35
+      "opt_only_success": 6
     },
     {
       "suite": "libero_object_swap",
       "fixed_s": 1602.9686850868165,
-      "auto_baseline_s": 686.5740648023784,
       "optimized_s": 433.999401088804,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "12/3",
       "optimized_kg": "16/2",
       "fixed_successes": 0,
       "optimized_successes": 0,
@@ -262,17 +212,13 @@
       "success_differences": 0,
       "step_differences": 0,
       "fixed_only_success": 0,
-      "opt_only_success": 0,
-      "fixed_vs_auto_baseline_success_differences": 0,
-      "fixed_vs_auto_baseline_step_differences": 0
+      "opt_only_success": 0
     },
     {
       "suite": "libero_object_lan",
       "fixed_s": 912.8662741817534,
-      "auto_baseline_s": 353.8737111836672,
       "optimized_s": 355.44927505403757,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "16/4",
       "optimized_kg": "8/1",
       "fixed_successes": 484,
       "optimized_successes": 481,
@@ -281,17 +227,13 @@
       "success_differences": 17,
       "step_differences": 344,
       "fixed_only_success": 10,
-      "opt_only_success": 7,
-      "fixed_vs_auto_baseline_success_differences": 1,
-      "fixed_vs_auto_baseline_step_differences": 72
+      "opt_only_success": 7
     },
     {
       "suite": "libero_object_task",
       "fixed_s": 1529.6675410158932,
-      "auto_baseline_s": 641.2665379866958,
       "optimized_s": 417.4293285533786,
       "fixed_kg": "2/1",
-      "auto_baseline_kg": "16/4",
       "optimized_kg": "16/2",
       "fixed_successes": 48,
       "optimized_successes": 49,
@@ -300,19 +242,19 @@
       "success_differences": 1,
       "step_differences": 25,
       "fixed_only_success": 0,
-      "opt_only_success": 1,
-      "fixed_vs_auto_baseline_success_differences": 0,
-      "fixed_vs_auto_baseline_step_differences": 5
+      "opt_only_success": 1
     }
   ],
-  "fixed_to_optimized": {
+  "paired": {
     "success_disagree": 288,
     "steps_disagree": 2899,
     "fixed_only_success": 153,
     "opt_only_success": 135
   },
-  "fixed_to_auto_baseline": {
-    "success_disagree": 161,
-    "steps_disagree": 1126
+  "provenance": {
+    "source_commit": "e817d18",
+    "source_file": "issue19-fixed-vs-auto-2026-11-09.json",
+    "source_sha256": "dc4fb0a5696323763c0882542bcffab1833cc57fe96ea311c7584dc90995c648",
+    "transformation": "Retain fixed-versus-optimized fields; derive throughput ratios from source totals."
   }
 }

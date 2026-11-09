@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-05
+Updated: 2026-11-09
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -78,6 +78,7 @@ is not in the report, only the round-trip time of each request.
 |---|---|---|
 | RoboDojo | Yes | Yes (2026-11-05, K=1 and K=3) |
 | LIBERO, LIBERO-Plus | Yes | Not yet |
+| LIBERO-Pro | Yes | Nsight capture not yet documented; opt-in stage timing is available |
 | MetaWorld | Yes | Not yet |
 | robomimic | Yes | Not yet |
 | RoboCasa | Yes | Not yet |
@@ -96,6 +97,11 @@ is not in the report, only the round-trip time of each request.
 - Ranges are written only when `ROBOSCOPE_PROFILE` is set and the process actually runs under `nsys`.
 
 ## Findings
+
+LIBERO-Pro has [stage-timing instructions](../../../benchmarks/libero_pro/README.md#stage-timing)
+for Worker, RPC and Policy/model phases. Its [draft comparison](../../../benchmarks/libero_pro/FIXED_BASELINE_2026-11-09.md)
+was unprofiled; throughput and device-wide utilization do not establish a bottleneck. Reviewed
+Worker/Policy trace findings remain pending and must include date, machine, configuration and Kit version.
 
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
