@@ -7,9 +7,13 @@ Diffusion Policy through the RoboScope Kit lifecycle. It serves the independent
 
 The checkpoint was trained on RoboCasa365 human demonstrations across 300 tasks.
 It is linked in the [official multi-task documentation](https://github.com/robocasa/robocasa/blob/3443cdf3dd20f9ae8ed41adba442059b506891d0/docs/benchmarking/multitask_learning.md).
-This example performs no training or model inference optimization. Integration
-acceptance for issue #97 still requires all 2,500 rollouts and a matched native
-comparison. Smoke evidence does not establish native-equivalent accuracy.
+This example performs no training or model inference optimization. The formal
+protocol defaults to 2,500 rollouts. For PR #100, the maintainer
+[approved 50 tasks with five paired rollouts each](https://github.com/MINT-SJTU/RoboScope-Kit/pull/100#issuecomment-6718404495),
+or 250 pairs, for the integration comparison. A matched native comparison is
+still required over that approved scope. The current shorter-horizon
+[diagnostic evidence](../../benchmarks/robocasa365/native-comparison-20261109.md)
+does not establish native-horizon accuracy or full trajectory equivalence.
 
 ## Pinned inputs
 
@@ -152,10 +156,13 @@ limits. Smoke results do not establish full-suite accuracy.
 
 ## Native comparison
 
-Run the pinned upstream `eval_robocasa.py` with the same simulator, checkpoint,
+For the full formal matrix, run the pinned upstream `eval_robocasa.py` with the
+same simulator, checkpoint,
 `--task_set atomic_seen composite_seen composite_unseen`, `--split pretrain`,
 `--num_rollouts 50` and `--num_envs 5`. This covers 50 tasks and 2,500 rollouts.
-Smaller subsets must be labelled smoke/partial evaluations.
+The approved reduced integration collection uses five rollouts per task on both
+paths. Record its actual horizon and label any shortened-horizon run as a
+diagnostic; the default formal task horizons remain unchanged.
 
 The Kit formal and Quick Test factories preserve five native slots per task
 group. Batch size and ordering affect diffusion noise. The native evaluator's

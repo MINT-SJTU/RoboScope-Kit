@@ -36,6 +36,14 @@ for the first task of the selected suite at its official horizon.
 50 for reduced runs with the native five-slot grouping. No dummy or padded
 episodes are counted.
 
+For PR #100's integration comparison, the maintainer
+[approved five rollouts per task](https://github.com/MINT-SJTU/RoboScope-Kit/pull/100#issuecomment-6718404495)
+across all 50 tasks (250 pairs). This changes the approved collection count,
+not the formal 50-rollout default or task horizons. The
+[128-step diagnostic comparison](../../../benchmarks/robocasa365/native-comparison-20261109.md)
+records its reduced horizon separately and does not establish native-horizon
+accuracy or full trajectory equivalence.
+
 Each task is one work item. Its five simulator slots and Policy RNG stream
 persist across groups. At 50 episodes, a long task can occupy one Worker
 for ten groups. Recovery replays the entire item, and task-length variation
@@ -83,7 +91,7 @@ frequency or success rules. Earlier uncorrected multi-slot scores/timings are
 superseded; see the
 [integration validation](../../../benchmarks/robocasa365/validation-20261107.md).
 
-Starting with 0.8.0b36, two additional source-locked sampling corrections preserve
+The 0.8.0b34 integration pins two source-locked sampling corrections that preserve
 counter-region insertion order and pass the seeded generator to fixture stack bases.
 The uncorrected native evaluator is not repeatable across fresh processes at the
 same constructor seeds. These corrections change previously nondeterministic scene
@@ -196,8 +204,8 @@ that range and use separate wall timers. Nsight's report covers the worker;
 the independent Policy Server's GPU work requires separate capture. Profiled
 runs are diagnostic and are not formal speed measurements.
 
-The real smoke test, full matrix and matched native comparison are separate
-evidence requirements. A passing
+Startup checks, native pairing over the approved collection scope, and full-matrix
+benchmark scoring are distinct evidence scopes. A passing
 reset and render self-test does not establish a simulator rollout, a successful task,
 native score equivalence or unchanged success rate. In
 particular, the released diffusion model uses random sampling: match the
