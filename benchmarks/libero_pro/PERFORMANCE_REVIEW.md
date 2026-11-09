@@ -166,5 +166,6 @@ the full pipeline are required to establish a 2x target.
   a separate acceptance item and must not be inferred from those results.
 
 The local machine's 6 GiB GPU cannot run the pinned bf16 baseline. An AutoDL 48 GiB GPU was subsequently
-used for a clean simulator build, real-model Quick Test and one 500-episode suite per comparison arm.
-Repeated full-matrix runs and the 2x result remain outstanding. See [the issue audit](ISSUE_21_AUDIT.md).
+used for a clean simulator build, real-model Quick Tests and a full matrix per comparison arm. The
+[full-matrix report](FULL_AUTO_2026-11-09.md) records 1.3791x formal throughput and the observed
+correctness differences. Repeated runs and the 2x result remain outstanding.

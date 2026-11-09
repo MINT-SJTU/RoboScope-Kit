@@ -39,12 +39,14 @@ MPS enabled. These are separate experiments; do not multiply their gains. The la
 Existing local regressions passed (187 tests), as did Ruff and real-observation batch checks. The
 cap-2 versus cap-1 suite still had 53 differing success flags and 255 differing step counts. Similar
 aggregate scores and four numerical observation checks do not establish closed-loop equivalence.
-The full matrix, paired task scores and reset-history/batch-numerics differences need review. The
-changes have been committed and pushed to the fork; they have not been merged upstream.
+The full matrix subsequently completed: formal throughput was 1.3791x with 331 differing success flags
+and 3,051 differing step counts across matched episode IDs. See the
+[full-matrix report](FULL_AUTO_2026-11-09.md) for suite/task evidence, timing and correctness limits.
+The changes have been committed and pushed to the fork; they have not been merged upstream.
 
-## Full comparison launch
+## Full comparison execution
 
-Run both revisions sequentially on the same host, each across all 16 released suites with 10 tasks
+The completed run evaluated both revisions sequentially on the same host, each across all 16 released suites with 10 tasks
 x 50 episodes: **8,000 episodes per arm, 16,000 total**, excluding Quick Tests and tuning probes.
 Each suite independently uses the existing `diagonal` heuristic with unchanged search budgets.
 
@@ -95,6 +97,5 @@ cat "$EVAL_OUT/status.json"
 tail -n 30 "$EVAL_OUT/launcher.log"
 ```
 
-Once detached execution is confirmed, closing SSH or shutting down the local computer does not stop
-the run. The AutoDL instance itself must stay running. Completing one full pair does not by itself
-prove the issue's 2x target or correctness acceptance; inspect results and repeat key measurements.
+The run finished on 2026-11-09 at 10:03 China Standard Time. One full pair does not prove correctness
+acceptance; repeat key measurements and investigate the recorded outcome differences.

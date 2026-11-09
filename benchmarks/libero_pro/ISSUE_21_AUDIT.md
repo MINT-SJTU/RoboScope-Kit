@@ -3,7 +3,9 @@
 Reviewed 2026-11-08 against [issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21), its
 [integration baseline #19](https://github.com/MINT-SJTU/RoboScope-Kit/pull/85), the local candidate
 `8ca22d139827916d440673029bc213cb2a0773ff`, and the recorded AutoDL experiment. This is an audit and a
-prioritized investigation plan; issue #21 remains open and the 2x target is not met.
+prioritized investigation plan; issue #21 remains open and the 2x target is not met. The later
+[full-matrix report](FULL_AUTO_2026-11-09.md) records the 2026-11-09 results and supersedes the
+single-suite status below where noted.
 
 ## Acceptance boundary
 
@@ -73,29 +75,30 @@ the communication path, not full model or simulator speed.
 
 ## Still required or only partially done
 
-1. **Full matrix:** reproduce #19's full 16-suite correctness baseline on a controlled resource budget;
-   run candidate and baseline across all 8,000 episodes each. Verify every task and initial-state index,
-   output, actual step and official per-task/per-suite score, including failures and retries.
+1. **Full matrix:** one baseline/candidate pair of 8,000 episodes per arm is complete with episode and
+   score coverage verified. Repeat it on a controlled resource budget and investigate its correctness
+   differences against matched starts and the historical #19 baseline.
 2. **Repeated evidence:** repeat paired same-hardware comparisons, alternate run order, report spread,
-   and investigate 19 success/46 step differences in this pair. Include per-task results and the
+   and investigate 19 success/46 step differences in the original pair and the later full-matrix
+   differences. Include per-task results and the
    difference from the historical #19 correctness baseline. Match caches, output settings and mode.
 3. **Bottleneck breakdown:** measure environment construction, reset/settle, physics, image render and
    postprocessing, Worker-side communication, server queue/lock wait, actual inference, output and
    GPU memory. The current `inference_wait_s` combines socket/queue/server/model waiting and is not
    pure GPU inference. Sums across concurrent Workers are not elapsed wall time. Profile Worker and
    Policy Server separately, then time unprofiled runs.
-4. **Tuning and end-to-end:** the completed pair fixed K/g, so it measures no autotune benefit. Compare
+4. **Tuning and end-to-end:** the original transport pair fixed K/g, so it measures no autotune benefit. Compare
    representative fixed K/g settings against actual `diagonal` choices under the same host budget;
    measure tuning and cold preparation separately. CLI wall covers the evaluation process, not the
    original runtime build/download and warmup. Do not mix those timing boundaries.
 5. **Optimization and correctness:** no evidence yet demonstrates >=2x. Real-GPU MessagePack versus
-   JSON was not isolated within the same candidate commit; connection reuse, native inference batching,
-   render deferral, MPS and simulator vectorization have not been compared in this workload.
-6. **Delivery:** real paired results and manual launch scripts are currently on AutoDL, not in the
-   repository. Preserve the raw evidence and supply a reviewable report; no raw result upload is
-   implied. Run the full supported-Python build/install/import/CI matrix before merging. Upstream main
-   is now 0.8.0b33, so our 0.8.0b31 is already used on upstream main and the version and
-   merge-date changelog must be reconciled against main. No upstream merge has occurred.
+   JSON was not isolated within the same candidate commit. Separate single-suite comparisons of
+   render deferral, MPS and native batching exist, but their correctness differences need review;
+   connection reuse and simulator vectorization still need matched real-workload evidence.
+6. **Delivery:** the full-matrix report and machine-readable scores are in the repository; complete
+   raw logs and the launcher remain on AutoDL. Preserve them and run the full supported-Python
+   build/install/import/CI matrix before merging. Reconcile the tested 0.8.0b37 version and
+   merge-date changelog against main. No upstream merge has occurred.
 
 The #19 reference included a 200-episode, four-suite native correctness comparison, not a matched native
 throughput claim. A new native comparison at equivalent concurrency is needed only for a new claim

@@ -1,13 +1,14 @@
 # LIBERO-Pro throughput work
 
-This directory owns the frozen simulator build and the transport candidate for
-[issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21). CPU checks and a real-GPU single-suite
-comparison have been completed; the **2x full-evaluation target has not been demonstrated**. The local
-6 GiB GPU cannot load the pinned bf16 baseline with the simulator.
+This directory owns the frozen simulator build and throughput work for
+[issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21). One real-GPU full-matrix pair
+measured 1.3791x formal throughput; the **2x full-evaluation target has not been demonstrated**.
+The local 6 GiB GPU cannot load the pinned bf16 baseline with the simulator.
 
 See [the protocol](../../packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro) for the
 frozen task semantics, [the issue audit](ISSUE_21_AUDIT.md) for completed and outstanding work, and
-[the performance review](PERFORMANCE_REVIEW.md) for earlier optimizations and negative results.
+[the performance review](PERFORMANCE_REVIEW.md) for earlier optimizations and negative results, and
+[the full-matrix report](FULL_AUTO_2026-11-09.md) for the results and remaining correctness questions.
 
 ## Implementation
 
@@ -18,7 +19,8 @@ formal episode and action-step throughput, scores and paired differences at fixe
 For a matched MPS off/on experiment at fixed K=12/g=3, use
 [`run_mps_comparison.py`](run_mps_comparison.py). The [MPS experiment guide](MPS_EXPERIMENT.md)
 documents preview, warmup, timing, attachment checks and outputs. It reuses the existing Kit MPS
-lifecycle and retains chunk camera rendering in both arms; no MPS performance claim is made yet.
+lifecycle and retains chunk camera rendering in both arms. The optimization summary records the
+single-suite result and its limitations.
 
 - `benchmark-manifest.json` prefers the existing MessagePack transport. A JSON health exchange
   negotiates support; a server without MessagePack support falls back to JSON.
@@ -33,7 +35,8 @@ lifecycle and retains chunk camera rendering in both arms; no MPS performance cl
   in `queue/completed/*.json` to detect JSON fallback.
 - The shared Worker preserves BDDL instructions, initial-state selection, seed-once task environments,
   observation contents, action chunks, physics steps, settle steps, terminal checks and official scores.
-  Plain LIBERO and LIBERO-Plus retain their defaults. Native model batching is unchanged.
+  Plain LIBERO and LIBERO-Plus retain their defaults. Native model batching defaults to a cap of one;
+  the full-matrix optimized arm used a cap of two.
 - `defaults.chunk_camera_rendering` is an independent boolean, default `false`. It skips RGB sensor
   rendering inside action chunks, preserving native sampling clocks. Video runs use full rendering.
 
@@ -322,8 +325,8 @@ document and the central profiling index; measure performance again without prof
   baseline used mixed GPUs and K/g settings and cannot establish a fair 2x denominator. Record both Git
   revisions, runtime pins, checkpoint/config hashes, CPU/GPU model, driver, memory, co-tenant load and
   run order. Use repeated paired matrices and report uncertainty.
-- The clean AutoDL runtime build and real-model Quick Test passed. One 500-episode suite was evaluated
-  in both arms. Full-matrix repeats, analysis of score differences and >=2x formal throughput remain
-  pending. No simulator build script is changed by this candidate.
-- The candidate version is 0.8.0b31. Reconcile the version and dated changelog against main before merge;
+- The clean AutoDL runtime build, Quick Tests and one pair of complete 8,000-episode matrices passed
+  coverage checks. Formal throughput was 1.3791x; full-matrix repeats, analysis of score differences
+  and >=2x formal throughput remain pending. No simulator build script is changed by this candidate.
+- The tested candidate version is 0.8.0b37. Reconcile the version and dated changelog against main before merge;
   merging publishes through CI. The performance issue must remain open until its acceptance is met.
