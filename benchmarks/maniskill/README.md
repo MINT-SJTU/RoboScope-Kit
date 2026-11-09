@@ -31,6 +31,7 @@ Task declarations and simulator checks alone do not establish real-policy accept
 | `humanoid_control_transfer_state_v1` | 3 | 100 | Explicit root observations for TD-MPC2 actor transfer |
 | `panda_visual_rgb_v1` | 19 | 100 | Tabletop and FMB visual/control transfers using ManiSkill-finetuned Octo |
 | `g1_visual_rgb_v1` | 2 | 100 | Explicit head-camera and root-observation G1 visual transfers |
+| `fetch_mshab_depth_v1` | 2 | 100 | Native Fetch depth/contact inputs for MS-HAB transfer; original assets required |
 
 These are versioned Kit suites. ManiSkill is an environment platform without one unified official
 full benchmark. The original profile IDs remain selectable.

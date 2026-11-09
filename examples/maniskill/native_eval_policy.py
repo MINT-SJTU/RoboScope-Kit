@@ -58,6 +58,29 @@ def native_features(observation, environment, profile: dict, count: int) -> list
             values = numpy(value).astype(np.float32, copy=False)
             for lane, row in enumerate(rows):
                 row[name] = np.ascontiguousarray(values[lane])
+    if profile.get("include_cabinet_contact_state", False):
+        native = environment.unwrapped
+        robot = native.agent
+        for name, value in (
+            ("state.robot_base_pose", robot.base_link.pose.raw_pose),
+            ("state.robot_tcp_pose", robot.tcp.pose.raw_pose),
+            ("state.target_handle_position", native.handle_link_positions()),
+            ("state.left_finger_pose", robot.finger1_link.pose.raw_pose),
+            ("state.right_finger_pose", robot.finger2_link.pose.raw_pose),
+            ("state.left_target_contact_force",
+             native.scene.get_pairwise_contact_forces(robot.finger1_link, native.handle_link)),
+            ("state.right_target_contact_force",
+             native.scene.get_pairwise_contact_forces(robot.finger2_link, native.handle_link)),
+        ):
+            values = numpy(value).astype(np.float32, copy=False)
+            for lane, row in enumerate(rows):
+                row[name] = np.ascontiguousarray(values[lane])
+    for name, camera in profile.get("depth_cameras", {}).items():
+        depths = numpy(observation["sensor_data"][camera]["depth"])
+        if depths.ndim != 4 or depths.shape[0] != count or depths.shape[-1] != 1:
+            raise ValueError(f"Invalid native depth camera {camera}")
+        for lane, row in enumerate(rows):
+            row[name] = np.ascontiguousarray(depths[lane], dtype=np.float32)
     if profile.get("instruction"):
         for row in rows:
             row["language.instruction"] = profile["instruction"]
@@ -112,7 +135,8 @@ def episode_metadata(environment, profile: dict, suite: str, index: int, seed: i
         suite=suite,
         action_dimension=int(environment.single_action_space.shape[0]),
     )
-    if profile.get("include_root_kinematics", False):
+    if (profile.get("include_root_kinematics", False)
+            or profile.get("include_cabinet_contact_state", False)):
         agent = environment.unwrapped.agent
         configs = getattr(agent.controller, "configs", None)
         configs = configs.values() if configs is not None else (agent.controller.config,)

@@ -164,3 +164,14 @@ profiles and a separate FMB RGB profile. `g1_visual_rgb_v1` adds two head-camera
 root observations. All retain the target task's native horizon, controller, reset and score; model-side
 transfer does not import source-task evaluation rules. The [remaining-compatibility report](REMAINING_COMPATIBILITY.md)
 separates validated profiles, model limitations and original-asset blockers.
+
+`fetch_mshab_depth_v1` selects separate cabinet profiles with the native Fetch head/hand depth
+cameras. `depth_cameras` maps their unnormalized millimeter depth to float32 HWC1 features
+`state.depth_head` and `state.depth_hand`, preserving signed native encoded/sentinel values.
+`include_cabinet_contact_state` exports the live base-link,
+TCP and finger XYZ/WXYZ poses, handle position, and pairwise finger/handle contact forces in the
+scene frame. It also supplies actual active/controller joint names in episode metadata. These are
+raw physical measurements; base-relative transforms, source-specific state ordering and absent-object
+sentinel, grasp classification, depth normalization and frame history belong to the Fetch Policy.
+The original cabinet state profiles and all native reset, horizon and success rules are unchanged.
+The original processed PartNet assets remain necessary for task acceptance.

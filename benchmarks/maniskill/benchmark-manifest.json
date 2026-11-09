@@ -19,7 +19,8 @@
       "transfer_reference_state_v1",
       "humanoid_control_transfer_state_v1",
       "panda_visual_rgb_v1",
-      "g1_visual_rgb_v1"
+      "g1_visual_rgb_v1",
+      "fetch_mshab_depth_v1"
     ]
   },
   "runtime": {
@@ -433,6 +434,10 @@
         "g1_visual_rgb_v1": [
           "unitree_g1_place_apple_in_bowl_rgb",
           "unitree_g1_transport_box_rgb"
+        ],
+        "fetch_mshab_depth_v1": [
+          "open_cabinet_door_mshab_depth",
+          "open_cabinet_drawer_mshab_depth"
         ]
       },
       "profiles": {
@@ -2254,6 +2259,58 @@
           },
           "include_root_kinematics": true,
           "action_dimension": 25
+        },
+        "open_cabinet_door_mshab_depth": {
+          "task_id": "OpenCabinetDoor-v1",
+          "robot_uid": "fetch",
+          "obs_mode": "depth",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "partnet_mobility_cabinet"
+          ],
+          "instruction": "OpenCabinetDoor-v1",
+          "include_cabinet_contact_state": true,
+          "depth_cameras": {
+            "state.depth_head": "fetch_head",
+            "state.depth_hand": "fetch_hand"
+          },
+          "action_dimension": 13
+        },
+        "open_cabinet_drawer_mshab_depth": {
+          "task_id": "OpenCabinetDrawer-v1",
+          "robot_uid": "fetch",
+          "obs_mode": "depth",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "partnet_mobility_cabinet"
+          ],
+          "instruction": "OpenCabinetDrawer-v1",
+          "include_cabinet_contact_state": true,
+          "depth_cameras": {
+            "state.depth_head": "fetch_head",
+            "state.depth_hand": "fetch_hand"
+          },
+          "action_dimension": 13
         }
       },
       "upstream_inventory": {

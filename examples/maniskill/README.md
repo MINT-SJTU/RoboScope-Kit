@@ -189,6 +189,11 @@ separate PullCubeTool pose profile. Explicit transfer references are available f
 robot/controller contracts and cross-simulator differences are documented separately; executing
 these models does not reproduce their original expert success rates.
 
+Further references cover [Humanoid control](HUMANOID.md), the
+[ManiSkill-finetuned Octo visual policy](PANDA_OCTO.md), [G1 visual transfer](G1_VISUAL.md) and
+[MS-HAB Fetch depth transfer](FETCH_MSHAB.md). Each records its exact source model/input/control
+contract and separates interface validation from task competence and original-asset blockers.
+
 The generic `native_eval_policy.py` compares a public Policy with independently constructed native
 Gym observations and actions. Specify `--policy-module /absolute/path/policy.py`, `--policy-class`,
 `--policy-python`, `--checkpoint`, `--benchmark-manifest`, `--suite` and `--output`. Add matched

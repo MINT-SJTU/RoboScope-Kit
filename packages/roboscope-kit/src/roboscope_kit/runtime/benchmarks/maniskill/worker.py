@@ -151,6 +151,26 @@ def observation_rows(
                 raise ValueError(f"Invalid native root kinematics {name}: {array.shape}")
             for lane, row in enumerate(rows):
                 row[name] = np.ascontiguousarray(array[lane])
+    if profile.get("include_cabinet_contact_state", False):
+        native = environment.unwrapped
+        agent = native.agent
+        contact_values = {
+            "state.robot_base_pose": (agent.base_link.pose.raw_pose, 7),
+            "state.robot_tcp_pose": (agent.tcp.pose.raw_pose, 7),
+            "state.target_handle_position": (native.handle_link_positions(), 3),
+            "state.left_finger_pose": (agent.finger1_link.pose.raw_pose, 7),
+            "state.right_finger_pose": (agent.finger2_link.pose.raw_pose, 7),
+            "state.left_target_contact_force": (
+                native.scene.get_pairwise_contact_forces(agent.finger1_link, native.handle_link), 3),
+            "state.right_target_contact_force": (
+                native.scene.get_pairwise_contact_forces(agent.finger2_link, native.handle_link), 3),
+        }
+        for name, (value, dimension) in contact_values.items():
+            array = as_numpy(value).astype(np.float32, copy=False)
+            if array.shape != (count, dimension) or not np.isfinite(array).all():
+                raise ValueError(f"Invalid native cabinet state {name}: {array.shape}")
+            for lane, row in enumerate(rows):
+                row[name] = np.ascontiguousarray(array[lane])
     for feature, camera in profile.get("cameras", {}).items():
         images = as_numpy(observation["sensor_data"][camera]["rgb"])
         if images.ndim != 4 or images.shape[0] != count or images.shape[-1] != 3:
@@ -164,6 +184,13 @@ def observation_rows(
             images = images.astype(np.uint8)
         for lane in range(count):
             rows[lane][feature] = np.ascontiguousarray(images[lane])
+    for feature, camera in profile.get("depth_cameras", {}).items():
+        depth = as_numpy(observation["sensor_data"][camera]["depth"]).astype(np.float32, copy=False)
+        if (depth.ndim != 4 or depth.shape[0] != count or depth.shape[-1] != 1
+                or not np.isfinite(depth).all()):
+            raise ValueError(f"Camera {camera!r} returned invalid native depth {depth.shape}")
+        for lane, row in enumerate(rows):
+            row[feature] = np.ascontiguousarray(depth[lane])
     if profile.get("instruction"):
         for row in rows:
             row["language.instruction"] = profile["instruction"]
@@ -171,7 +198,8 @@ def observation_rows(
 
 
 def root_joint_metadata(environment: Any, profile: dict[str, Any]) -> dict[str, Any]:
-    if not profile.get("include_root_kinematics", False):
+    if not (profile.get("include_root_kinematics", False)
+            or profile.get("include_cabinet_contact_state", False)):
         return {}
     agent = environment.unwrapped.agent
     configs = getattr(agent.controller, "configs", None)

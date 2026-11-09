@@ -432,6 +432,10 @@ full-horizon evaluation results. The
 raises real-policy/native five-step coverage to 51 of 55 task IDs and 16 of the original 18 tabletop
 RGB profiles; four tasks retain original-asset blockers. Additional examples provide ManiSkill-finetuned
 Octo, Humanoid actor transfer and G1 visual transfer with explicit observation/control contracts.
+The separate
+[Fetch depth example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/FETCH_MSHAB.md)
+provides pinned MS-HAB Open models and optional raw depth/contact observations. Original processed
+PartNet assets are still required before counting either cabinet task as validated.
 
 Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and select asset suites with
 `MANISKILL_ASSET_SUITES`. See the

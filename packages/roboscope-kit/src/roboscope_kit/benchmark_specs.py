@@ -148,6 +148,24 @@ class ManiSkillBenchmarkDefinition(BenchmarkDefinition):
                 "Optional articulation root angular velocity in the scene world frame.",
                 required=False, shape=(3,),
             ),
+            *(_feature(name, FeatureKind.STATE, description, required=False, shape=(dimension,))
+              for name, description, dimension in (
+                  ("state.robot_base_pose", "Optional scene-frame robot base-link XYZ/WXYZ pose.", 7),
+                  ("state.robot_tcp_pose", "Optional scene-frame measured TCP XYZ/WXYZ pose.", 7),
+                  ("state.target_handle_position", "Optional scene-frame cabinet handle position.", 3),
+                  ("state.left_finger_pose", "Optional scene-frame left finger XYZ/WXYZ pose.", 7),
+                  ("state.right_finger_pose", "Optional scene-frame right finger XYZ/WXYZ pose.", 7),
+                  ("state.left_target_contact_force", "Optional left finger/target contact force in N.", 3),
+                  ("state.right_target_contact_force", "Optional right finger/target contact force in N.", 3),
+              )),
+            _feature(
+                "state.depth_head", FeatureKind.STATE, "Optional native head-camera depth in millimeters.",
+                required=False, shape=(None, None, 1),
+            ),
+            _feature(
+                "state.depth_hand", FeatureKind.STATE, "Optional native hand-camera depth in millimeters.",
+                required=False, shape=(None, None, 1),
+            ),
             _feature(
                 "images.primary", FeatureKind.IMAGE, "Configured primary camera RGB image.",
                 required=False, shape=(None, None, 3),

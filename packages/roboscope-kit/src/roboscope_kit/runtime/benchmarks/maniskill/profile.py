@@ -18,13 +18,16 @@ _DEFAULTS: dict[str, Any] = {
     "enhanced_determinism": False,
     "use_default_robot": False,
     "include_root_kinematics": False,
+    "include_cabinet_contact_state": False,
     "sim_freq": 100,
     "control_freq": 20,
     "env_kwargs": {},
     "sensor_configs": {},
     "cameras": {},
+    "depth_cameras": {},
 }
 _CAMERA_FEATURES = {"images.primary", "images.wrist", "images.auxiliary"}
+_DEPTH_FEATURES = {"state.depth_head", "state.depth_hand"}
 
 
 def _profiles(protocol: dict[str, Any]) -> dict[str, Any]:
@@ -56,14 +59,15 @@ def _resolve(protocol: dict[str, Any], profile_id: str) -> dict[str, Any]:
         or len(profile["control_mode"]) != len(profile["robot_uid"])
     ):
         raise ValueError(f"ManiSkill {profile_id} must pair each robot with one controller")
-    for key in ("enhanced_determinism", "use_default_robot", "include_root_kinematics"):
+    for key in ("enhanced_determinism", "use_default_robot", "include_root_kinematics",
+                "include_cabinet_contact_state"):
         if type(profile[key]) is not bool:
             raise ValueError(f"ManiSkill {profile_id}.{key} must be a boolean")
     if profile["use_default_robot"] and not isinstance(profile["robot_uid"], str):
         raise ValueError(f"ManiSkill {profile_id}.use_default_robot requires one robot UID")
     if type(profile["reconfiguration_freq"]) is not int or profile["reconfiguration_freq"] < 0:
         raise ValueError(f"ManiSkill {profile_id}.reconfiguration_freq must be non-negative")
-    if profile["obs_mode"] not in {"state", "state_dict", "rgb", "rgb+segmentation"}:
+    if profile["obs_mode"] not in {"state", "state_dict", "rgb", "rgb+segmentation", "depth", "rgb+depth"}:
         raise ValueError(f"Unsupported ManiSkill observation mode {profile['obs_mode']!r}")
     if profile["ignore_terminations"] is not True or profile["action_chunk_size"] != 1:
         raise ValueError("ManiSkill v1 requires full-horizon episodes and one-step action chunks")
@@ -82,13 +86,19 @@ def _resolve(protocol: dict[str, Any], profile_id: str) -> dict[str, Any]:
     dimension = profile.get("action_dimension")
     if dimension is not None and (type(dimension) is not int or dimension < 1):
         raise ValueError(f"ManiSkill {profile_id}.action_dimension must be positive when specified")
-    for key in ("env_kwargs", "sensor_configs", "cameras"):
+    for key in ("env_kwargs", "sensor_configs", "cameras", "depth_cameras"):
         if not isinstance(profile[key], dict):
             raise ValueError(f"ManiSkill {profile_id}.{key} must be an object")
     if set(profile["cameras"]) - _CAMERA_FEATURES or any(
         not isinstance(camera, str) or not camera for camera in profile["cameras"].values()
     ):
         raise ValueError(f"ManiSkill {profile_id}.cameras must map declared image features to cameras")
+    if set(profile["depth_cameras"]) - _DEPTH_FEATURES or any(
+        not isinstance(camera, str) or not camera for camera in profile["depth_cameras"].values()
+    ):
+        raise ValueError(f"ManiSkill {profile_id}.depth_cameras must map declared depth features to cameras")
+    if profile["depth_cameras"] and "depth" not in profile["obs_mode"]:
+        raise ValueError(f"ManiSkill {profile_id}.depth_cameras requires native depth observations")
     profile.setdefault("instruction", profile["task_id"])
     if not isinstance(profile["instruction"], str):
         raise ValueError(f"ManiSkill {profile_id}.instruction must be a string")
