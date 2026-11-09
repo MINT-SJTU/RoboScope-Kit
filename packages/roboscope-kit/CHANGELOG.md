@@ -2,6 +2,19 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b34 - 2026-11-09
+
+- Policy replicas on different GPUs now start in parallel; replicas on the same GPU still start one at a time.
+  With two replicas on each of four RTX PRO 5000 GPUs, Workers used to wait about 100 s for eight serial loads.
+- RoboTwin draws each episode's language instruction with the suite's `instruction_seed_limit` instead of the
+  number of episodes per task in this run. A run or autotune probe with fewer episodes per task than the
+  protocol used to draw different instructions for the same seeds, so its episodes differed from the formal run
+  (99 of 250 at five episodes per task).
+- RoboTwin work items hold one episode instead of ten (`episode_shard_size: 1`). On four RTX PRO 5000 GPUs at
+  `K16/g4`, steady-state throughput is the same for 5-, 2- and 1-episode items, while the end-of-run tail
+  shrinks: the whole-run rate rises from 81% (5-episode) to 91% (1-episode) of steady state. Ten-episode items
+  also left too few items for autotune to measure `K32`.
+
 ## 0.8.0b33 - 2026-11-08
 
 - A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now

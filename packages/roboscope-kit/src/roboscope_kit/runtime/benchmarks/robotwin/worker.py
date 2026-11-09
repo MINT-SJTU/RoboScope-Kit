@@ -82,7 +82,9 @@ def _task_spec(args: argparse.Namespace, item: WorkItem, deploy_policy: Path) ->
         "ROBOSCOPE_ROBOTWIN_TASK": task,
         "ROBOTWIN_EPISODE_START": str(episode_start),
         "ROBOTWIN_TEST_NUM": str(episodes),
-        "ROBOTWIN_INSTRUCTION_SEED_LIMIT": str(total_episodes),
+        "ROBOTWIN_INSTRUCTION_SEED_LIMIT": str(
+            int(item.payload.get("instruction_seed_limit", total_episodes))
+        ),
         "ROBOTWIN_VIDEO_ROOT": str(videos_dir),
         "ROBOTWIN_DISABLE_VIDEO": "1" if args.disable_video else "0",
     }

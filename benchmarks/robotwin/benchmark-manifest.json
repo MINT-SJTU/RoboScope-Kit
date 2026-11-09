@@ -20,7 +20,7 @@
   },
   "defaults": {
     "episodes": 100,
-    "episode_shard_size": 10,
+    "episode_shard_size": 1,
     "seed": 0,
     "client_cpu_threads": 1,
     "autotune_candidate_timeout_s": 1800,
