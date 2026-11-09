@@ -67,10 +67,10 @@ The report spells out OMP threads, K/g, controller Python, timing boundaries and
 The public issue's best-configuration baseline, four-suite repeats and final-head checks remain
 follow-up items. Keep this historical-fixed comparison distinct from those acceptance requirements.
 
-Reviewed Worker and Policy profiling findings still need to be recorded with date, machine,
-configuration and version in the benchmark docs and central index. Existing instrumentation does not
-by itself establish a bottleneck. Before merge, reconcile upstream/version changes, complete required
-checks and clean-build self-test, and provide final-head measurements and durable raw-log links.
+Earlier Worker and Policy stage-timing findings are recorded in the benchmark docs and profiling index;
+Nsight traces remain outstanding. The draft incorporates upstream `a831109` and `054a271`, which change
+autotune and were absent from the measured snapshots. Before merge, complete required checks and
+clean-build self-test, and provide final-head measurements and durable raw-log links.
 The b38 refactor removes Policy-owned request timing, groups loaded components and processes action
 transforms/validation across the batch. The LIBERO-Long subclass is updated directly to use the same
 runtime state while retaining its separate decoding rules. The selected measurements remain attributed
@@ -87,5 +87,5 @@ git diff origin/main...HEAD -- packages/roboscope-kit/src/roboscope_kit/runtime/
 git status --short --ignored
 ```
 
-`origin/main...HEAD` uses the locally fetched main merge base. This cleanup does not fetch/rebase main,
-launch GPU experiments, push, open a PR or merge. Review the local branch before publishing the draft.
+`origin/main...HEAD` uses the locally fetched main merge base. Review the local branch and the exact
+measurement provenance before publishing the draft.

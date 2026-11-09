@@ -306,8 +306,9 @@ document and the central profiling index; measure performance again without prof
   autotune and a fixed K/g sweep on the same dedicated GPU/CPU/memory budget, plus three runs per side
   on `libero_goal_task`, `libero_spatial_lan`, `libero_object_swap` and `libero_10_object`.
   These remain follow-up work; the historical fixed denominator is stated explicitly in this draft.
-- Record reviewed Worker and Policy profiling findings in this README and the central profiling index.
-  Instrumentation is available, but no completed profiling acceptance is claimed here.
-- The measured implementation is Kit 0.8.0b37 at `e63260e`. Before merge, reconcile upstream/version
-  changes, use the actual merge date in the changelog, run required checks and clean-build self-test,
+- The earlier stage-timing findings are recorded above; Worker and Policy Server Nsight traces remain
+  outstanding.
+- The selected comparison used Kit 0.8.0b37 at `e63260e`. A later full run used b38 plus the camera
+  patch. The current draft also incorporates upstream autotune fixes absent from those runs. Before
+  merge, use the actual merge date in the changelog, run required checks and clean-build self-test,
   measure the exact head being merged, and publish durable raw-log/reproduction links.
