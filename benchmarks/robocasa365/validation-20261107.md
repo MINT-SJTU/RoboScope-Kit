@@ -139,6 +139,45 @@ native-horizon success rates or full trajectory equivalence. Passing CI on the
 final PR head remains a separate acceptance requirement; the integration remains
 labelled partial.
 
+### Focused correctness follow-up — 2026-11-09
+
+The external follow-up runs source `43df866a3c23e83ee6edade8f68615f3eae1be6c`,
+adding a second Kit pass and Composite-Seen `KettleBoiling` /
+Composite-Unseen `WeighIngredients` to the three reviewed atomic tasks.
+The executable-file proof supports reuse of
+the earlier final-runtime atomic Native A/A and Kit A records; 55 additional
+episodes complete the focused collection. Both paths retain original RGB/MSAA,
+the real FP32/100-step Diffusion Policy, five constructor-seeded slots and the
+same 128-step diagnostic cap. These instrumented runs are not speed data.
+
+| Comparison | Pairs | Left / right successes | Outcome / step differences | Initial physics / scenarios exact | Exact traces |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Native A/A | 25 | 2 / 2 | 0 / 0 | 25 / 25 | 19 |
+| Kit A/A | 25 | 2 / 2 | 0 / 0 | 25 / 25 | 19 |
+| Native / Kit, pass A | 25 | 2 / 2 | 0 / 0 | 25 / 25 | 16 |
+| Native / Kit, pass B | 25 | 2 / 2 | 0 / 0 | 25 / 25 | 16 |
+
+The initial numerical differences are confined to RGB, with a maximum of one
+integer intensity level in all four comparisons. Initial state/language inputs
+remain exact. Every action/physics divergence follows an image difference at
+an earlier retained boundary; same-boundary ordering would be ambiguous and is
+not assigned image-first causality. In Kit A/A, all 22 slots with identical
+initial inputs have identical first action chunks. Two changed first action
+chunks accompany different Blender pixels; one further changed input yields
+identical actions. No action/physics error tolerance is adopted. The
+[focused report](correctness-followup-20261109.md) records per-slot outcomes,
+phase/step attribution, numerical deltas, commands and the new evidence archive.
+These five-task checks do not individually explain all historical 78 trace
+differences or establish native-horizon accuracy equivalence.
+
+The current-runtime fixed-state Blender wrist control also reproduces the
+rendering variation. Thirty redraws with original four-sample MSAA produce 15
+distinct images with maximum intensity difference 1; repeated framebuffer reads
+are exact. A separate diagnostic with MSAA disabled produces one identical image
+across all redraws. Both conditions have the same initial integration-state hash
+and preserve integration state after every draw/read. MSAA remains enabled in
+every evaluation and performance run; disabling it is only a rendering diagnosis.
+
 ## Corrections and comparison limits
 
 The builder's EGL patches free resources in their owning context and preserve an

@@ -11,10 +11,14 @@ This integration contributes to
 five paired episodes per task, with a shared 128-step diagnostic cap. It records
 the collection source separately from targeted checks of the reviewed integration.
 The [historical startup record and review update](validation-20261107.md) record
-build and real-policy checks. Native-horizon success rates, full trajectory parity
-and the complete 2,500-rollout matrix remain unverified. Performance work under
-[issue #16](https://github.com/MINT-SJTU/RoboScope-Kit/issues/16) is kept in a
-separate dependent change.
+build and real-policy checks. The maintainer approved 50×5=250 paired rollouts;
+that count was completed on the recorded historical source. The formal default
+remains 2,500, while native-horizon accuracy, trajectory parity and the scope of
+current-source evidence remain explicitly qualified. A
+[focused repeatability follow-up](correctness-followup-20261109.md) covers five
+atomic/composite tasks on the reviewed executable files. Performance is kept in a
+separate dependent change. [Issue #16](https://github.com/MINT-SJTU/RoboScope-Kit/issues/16)
+tracks GR1 Tabletop and supplies measurement guidance; issue #97 owns RoboCasa365.
 
 ## Build and run
 
