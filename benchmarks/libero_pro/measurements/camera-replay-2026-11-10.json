@@ -1,0 +1,196 @@
+{
+  "date": "2026-11-10",
+  "environment": "AutoDL RTX 4090, pinned LIBERO-Pro simulator and robosuite 1.4.0",
+  "kit_version": "0.8.0b38",
+  "base_commit": "dfebac72a124c2d439707ddd728fc7b92512e6b0",
+  "camera_sha256": "77419b8f4ff5aa2d8237f0d0b34f25321f8dea233ca3866eebc2cb6898e0dd01",
+  "script_sha256": "7f9120555726e372df0631a2c8c2d6613c6790249379aaeb853170262fc033c8",
+  "validation": "Fixed-action replay comparing camera gate off/on: consumed image hashes, physics states, actions, rewards, terminal flags, RNG state and video frame hashes.",
+  "scope": "12 paired 19-step episodes; no StarVLA inference and not a complete correctness proof.",
+  "cases": [
+    {
+      "task": 0,
+      "sizes": [
+        8
+      ],
+      "video": false,
+      "episode": 0,
+      "steps": 19,
+      "requests": 3,
+      "counters": {
+        "camera_renders": 4,
+        "camera_renders_skipped": 34
+      },
+      "matched": true
+    },
+    {
+      "task": 0,
+      "sizes": [
+        8
+      ],
+      "video": false,
+      "episode": 1,
+      "steps": 19,
+      "requests": 3,
+      "counters": {
+        "camera_renders": 4,
+        "camera_renders_skipped": 34
+      },
+      "matched": true
+    },
+    {
+      "task": 4,
+      "sizes": [
+        8
+      ],
+      "video": false,
+      "episode": 0,
+      "steps": 19,
+      "requests": 3,
+      "counters": {
+        "camera_renders": 4,
+        "camera_renders_skipped": 34
+      },
+      "matched": true
+    },
+    {
+      "task": 4,
+      "sizes": [
+        8
+      ],
+      "video": false,
+      "episode": 1,
+      "steps": 19,
+      "requests": 3,
+      "counters": {
+        "camera_renders": 4,
+        "camera_renders_skipped": 34
+      },
+      "matched": true
+    },
+    {
+      "task": 8,
+      "sizes": [
+        8
+      ],
+      "video": false,
+      "episode": 0,
+      "steps": 19,
+      "requests": 3,
+      "counters": {
+        "camera_renders": 4,
+        "camera_renders_skipped": 34
+      },
+      "matched": true
+    },
+    {
+      "task": 8,
+      "sizes": [
+        8
+      ],
+      "video": false,
+      "episode": 1,
+      "steps": 19,
+      "requests": 3,
+      "counters": {
+        "camera_renders": 4,
+        "camera_renders_skipped": 34
+      },
+      "matched": true
+    },
+    {
+      "task": 0,
+      "sizes": [
+        1
+      ],
+      "video": false,
+      "episode": 0,
+      "steps": 19,
+      "requests": 19,
+      "counters": {
+        "camera_renders": 38,
+        "camera_renders_skipped": 0
+      },
+      "matched": true
+    },
+    {
+      "task": 0,
+      "sizes": [
+        1
+      ],
+      "video": false,
+      "episode": 1,
+      "steps": 19,
+      "requests": 19,
+      "counters": {
+        "camera_renders": 38,
+        "camera_renders_skipped": 0
+      },
+      "matched": true
+    },
+    {
+      "task": 0,
+      "sizes": [
+        8,
+        2,
+        1
+      ],
+      "video": false,
+      "episode": 0,
+      "steps": 19,
+      "requests": 4,
+      "counters": {
+        "camera_renders": 8,
+        "camera_renders_skipped": 30
+      },
+      "matched": true
+    },
+    {
+      "task": 0,
+      "sizes": [
+        8,
+        2,
+        1
+      ],
+      "video": false,
+      "episode": 1,
+      "steps": 19,
+      "requests": 4,
+      "counters": {
+        "camera_renders": 8,
+        "camera_renders_skipped": 30
+      },
+      "matched": true
+    },
+    {
+      "task": 0,
+      "sizes": [
+        8
+      ],
+      "video": true,
+      "episode": 0,
+      "steps": 19,
+      "requests": 3,
+      "counters": {
+        "camera_renders": 0,
+        "camera_renders_skipped": 0
+      },
+      "matched": true
+    },
+    {
+      "task": 0,
+      "sizes": [
+        8
+      ],
+      "video": true,
+      "episode": 1,
+      "steps": 19,
+      "requests": 3,
+      "counters": {
+        "camera_renders": 0,
+        "camera_renders_skipped": 0
+      },
+      "matched": true
+    }
+  ]
+}

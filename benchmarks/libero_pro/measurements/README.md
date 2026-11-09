@@ -12,6 +12,7 @@ The [report](../FIXED_BASELINE_2026-11-09.md) defines its configurations and lim
 | [Optimized summary](optimized-2026-11-09.json) | Formal totals, per-suite/task scores, selected K/g and probes, timing and recovery/resources. |
 | [Comparison](fixed-vs-optimized-2026-11-09.json) | Per-suite two-arm comparison, paired discrepancy counts and overall throughput ratios. |
 | [Paired CSV](fixed-vs-optimized-2026-11-09-paired.csv) | Exactly 8,000 rows keyed by suite/task/episode; fixed and optimized success flags and actual action steps. |
+| [Camera replay](camera-replay-2026-11-10.json) | Fixed-action camera-on/off image/state comparison using the later direct-sensor implementation. |
 
 ## Extraction provenance
 

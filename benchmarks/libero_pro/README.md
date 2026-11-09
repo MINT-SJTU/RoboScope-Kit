@@ -54,14 +54,13 @@ popping the final action, it restores RGB sampling for that action's `env.step()
 Policy input at the same native physics substep as full rendering. Intermediate steps return cached
 images that are never sent to the Policy. State observables and success checks still run every step.
 
-The implementation in `runtime/benchmarks/libero/camera.py` uses robosuite's public
-`modify_observable(..., "sensor", ...)` API. Observable clocks continue to advance normally. It does
-not toggle sensor enablement, alter sampling rates, skip physics, extend action chunks, or force a
-new image after stepping. No simulator source or installed package is patched. The optimization
-rejects versions other than pinned robosuite 1.4.0, additional image sensors, or RGB sensors with
-corruption, filtering or delay. Reset/settle steps keep full rendering, and video recording disables
-the gate automatically. Original sensors are restored on normal completion and exceptions, before
-the next episode reset. Restoring via the public API incurs two validation renders per episode.
+The implementation in `runtime/benchmarks/libero/camera.py` temporarily replaces the two private
+robosuite Observable `_sensor` functions and restores them after the episode. The Observable clocks
+continue to advance normally; no installed simulator source is patched. The gate assumes the pinned
+robosuite 1.4.0 standard two-camera RGB setup without filtering, delay or corruption. It does not
+validate these assumptions or other image sensors at runtime; changing the configuration requires
+new equivalence checks. Reset/settle steps keep full rendering, and video recording disables the gate.
+The original functions are restored on normal completion and exceptions, before the next episode reset.
 
 Create separate manifests without modifying the built runtime; use absolute runtime paths so that
 the copies remain valid outside the installation directory:
@@ -112,18 +111,15 @@ Each completed WorkResult records effective `chunk_camera_rendering`, `camera_re
 installation/cleanup, reset/settle rendering and video/full-render runs are excluded. Both counters
 are zero when the gate is inactive, not a claim that the simulator rendered nothing. For full
 eight-action chunks, 7/8 of those RGB renders can be skipped; this is not an overall speedup estimate.
-Evaluation wall time includes the extra cleanup validation renders. Check both 500-episode coverage
-and paired outcomes, steps, inputs and timing. Then repeat with independently tuned K/g if needed.
+Check both 500-episode coverage and paired outcomes, steps, inputs and timing. Then repeat with
+independently tuned K/g if needed.
 
-Local verification uses the existing regression suite plus ad hoc execution of the upstream 1.4.0
-Observable implementation: chunk lengths 1/2/8/16 retain identical sample clocks and consumed images;
-normal and exceptional exits restore sensors, and delayed camera sensors are rejected. This does not
-replace fixed-action image/state replay in the real simulator or StarVLA closed-loop validation.
-On 2026-11-08 (Python 3.12.3), all 187 existing regressions, the required Ruff scope and the official
-CPython lifecycle check passed. An additional 24 paired Worker checks covered variable chunk lengths,
-early termination, a horizon ending inside a chunk, and video fallback with identical consumed images,
-steps and video frames. These checks use synthetic camera pixels with the real Observable clock;
-they are not measurements of GPU throughput.
+For the current direct-sensor implementation, a 2026-11-10 fixed-action replay on the pinned AutoDL
+RTX 4090 runtime compared 12 paired short episodes with camera gating on and off. Consumed RGB images,
+physics states, actions, termination, RNG state and video frames matched in the tested cases, including
+chunk lengths 1 and 8, mixed lengths 8/2/1 and video fallback. The
+[case summary](measurements/camera-replay-2026-11-10.json) records the exact measured camera hash and
+scope. This is not a proof for all episodes, sensor configurations or closed-loop model execution.
 
 ## Stage timing
 
@@ -161,6 +157,21 @@ or treat sums across workers/replicas as elapsed time. Input upload and output c
 transfer benchmarks. The framework's prediction residual must not be labelled pure D2H time.
 The code does not reset sensor clocks, modify source installations, replay RPCs or change actions.
 Timed camera-off runs wrap RGB sensors for measurement, so their render counts are nonzero.
+
+## Stage timing findings, 2026-11-08
+
+On an AutoDL RTX 4090 with a 12-core CPU quota and 96 GiB memory limit, Kit 0.8.0b35 at `d701fc6`
+ran `libero_goal_object` at fixed K=12/g=3, bf16/SDPA, MessagePack, video and MPS off, and 500
+episodes per camera setting. These diagnostic runs used stage instrumentation and the earlier public
+sensor replacement implementation, not the later direct-sensor code. Warmup was separate.
+
+In the camera-on arm, mean server lock wait was 170.100 ms per action request and Policy service
+was 109.940 ms; mean full simulator action-step time was 12.933 ms. In the camera-off arm the
+corresponding simulator action-step mean was 16.348 ms. The measured client send/serialization
+mean was below 1 ms per request in both arms. These observations motivate investigating Policy
+queueing and inference as well as camera work. Durations are inclusive and taken across parallel
+processes: they cannot be added to obtain wall time, and CUDA event intervals include host gaps.
+This was not an Nsight `--profile` run or a measurement of the current head.
 
 ## CPU transport reproduction
 

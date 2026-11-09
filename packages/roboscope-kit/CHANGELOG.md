@@ -2,6 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b39 - 2026-11-10
+
+- Simplify LIBERO-Pro's opt-in camera gate to temporarily replace the two pinned robosuite RGB
+  sensor functions directly and restore them after the episode. The gate assumes the pinned sensor
+  configuration; it does not validate other sensor configurations or robosuite versions.
+
 ## 0.8.0b38 - 2026-11-09
 
 - Group loaded StarVLA components into one runtime state and prepare inference-mode/diagnostic
