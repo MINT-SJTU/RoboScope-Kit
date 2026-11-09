@@ -274,6 +274,9 @@ The exact contracts are in the protocol documents:
   license gates, seeded initial states, upstream rollout semantics, the native comparison, and the baseline.
   Its [throughput report](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/THROUGHPUT.md)
   records fixed worker/replica configurations, the compiled-model cache, and paired full evaluations.
+  The [review validation](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/REVIEW_VALIDATION.md)
+  adds matched MPS-off repeats, per-step cache traces and separately timed native throughput;
+  the measured 1.745x combined gain leaves the 2x optimization target open.
   Status: code candidate, build-verified with a real-model full evaluation and native comparison; ships in
   `0.8.0b26`, released when that version is merged.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md):

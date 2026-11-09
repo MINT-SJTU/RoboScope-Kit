@@ -102,6 +102,8 @@ configuration, and Kit version:
 
 - [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/README.md#profiling):
   repeated model compilation and Policy waits motivate cache and fixed-K/G ablations (2026-11-08).
+  [Review validation](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/REVIEW_VALIDATION.md)
+  records matched repeats, per-step cache agreement and native throughput (2026-11-09).
 
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).

@@ -1,7 +1,47 @@
 # Issue 32 delivery evidence
 
-The [throughput report](THROUGHPUT.md) defines the comparisons, timing boundaries and limitations.
-The evidence is hosted on the contributor fork as an evidence-only prerelease, not a Kit release:
+The [review validation](REVIEW_VALIDATION.md) defines the current matched comparisons. The
+[historical report](THROUGHPUT.md) preserves the original measurements and explicitly withdraws the
+MPS-confounded >=2x acceptance claim. Evidence releases on the contributor fork are reproducibility
+assets, not Kit package releases. Issue #32 remains open at the measured **1.745x** combined gain.
+
+## Review revision, 2026-11-09
+
+- [Review evidence release](https://github.com/OopsJoey/RoboScope-Kit/releases/tag/issue32-review-evidence-2026-11-09).
+- [Complete raw evidence, including per-step traces](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-review-evidence-2026-11-09/issue32-review-evidence-2026-11-09.tar.gz).
+- [Small summary bundle and reproduction scripts](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-review-evidence-2026-11-09/issue32-review-summary-2026-11-09.tar.gz).
+- [SHA256SUMS](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-review-evidence-2026-11-09/SHA256SUMS).
+
+Complete review archive: **522,258,952 bytes**, SHA-256
+**0158d44249b2eb34ef28c9d1ccf5e2c0de1262ce1afa074b86abfd03d435b6af**.
+Its inventory covers 5,759 files. The historical archives below are preserved unchanged; the original
+correctness baseline and earlier clean-build logs used by this review are in those archives.
+
+| Evidence | Path in the review archive |
+| --- | --- |
+| Hardware limits, driver/GPU UUID, checkpoints and simulator binding hashes | review-2026-11-09/host.json |
+| Three repeats per Kit configuration, three native repeats, all rates/variance/resources | review-2026-11-09/performance-summary.json |
+| Exact run order, resource guards, commands and external drivers | review-2026-11-09/matched-repeats.sh, diagnostics.sh, trace.py, compare-traces.py, native.py, summarize.py; tools/ |
+| Every numeric trajectory array, initial XML, episode metadata and cache/context counters | review-2026-11-09/trace-original/, trace-cacheoff/, trace-cacheon/ |
+| Three array comparisons, tolerance, first divergence and repeated-reset checks | review-2026-11-09/pair-original-cacheoff.json, pair-original-cacheon.json, pair-cacheoff-cacheon.json |
+| Complete Kit output and native per-episode records | runs/review110-*/ |
+| CLI/environment, process timing and one-second resource samples | evidence/review110-*/command.json, execution.json, resources.jsonl |
+| Kit per-record baseline pairing | evidence/review110-*-pairing.json |
+| Native model/import timing, worker stage sums, rollout function hash and pairing | runs/review110-native-k20-off-0{1,2,3}/summary.json |
+| Existing checks and new output-directory self-test | review-2026-11-09/checks.sh, checks.log, checks.exit, self-test/self-test.json |
+| Measured original/final source snapshots and Policy configurations | baseline-fixed/, final-b43/, policy-baseline-fixed.json, policy-final-b43.json |
+| Per-file bytes and SHA-256 | inventory.json |
+
+The small summary bundle contains the completed summaries, comparisons, driver/check scripts and logs,
+but omits the NPZ trajectories. Raw traces and all per-episode outputs are in the complete archive.
+The release also includes the transfer/inventory verification, executable-source correspondence and
+final documentation-revision check log. No checkpoints, datasets, wheelhouse or credentials are included.
+All diagnostic scripts are external evidence; no repository tests were added.
+
+## Historical evidence, 2026-11-08
+
+The following assets retain the initial delivery, prior build/check results and the 1.940x fallback.
+Their unmatched-MPS timing ratios are historical observations, not #32 acceptance results:
 
 - [Evidence release and assets](https://github.com/OopsJoey/RoboScope-Kit/releases/tag/issue32-evidence-2026-11-08).
 - [Raw archive](https://github.com/OopsJoey/RoboScope-Kit/releases/download/issue32-evidence-2026-11-08/issue32-delivery-evidence-2026-11-08.tar.gz).
@@ -17,7 +57,7 @@ was subsequently resumed and verified: 38,072,005 bytes, SHA-256
 Its entire 9,415-file hash inventory passed verification. It additionally preserves every historical
 candidate source tree and the complete remote helper set. Both archives are listed in SHA256SUMS.
 
-## Archive map
+### Historical archive map
 
 | Requirement | Path inside the archive |
 | --- | --- |
@@ -34,11 +74,11 @@ candidate source tree and the complete remote helper set. Both archives are list
 | Fresh build and all 250 state digests | evidence/build-final-b43.log, runtime-final-b43/ |
 | Final builder self-test result | Separate final-self-test.json release asset (runtime-final-b43/self-test/self-test.json) |
 | Existing checks, exit code 0 | evidence/final-checks.log, evidence/final-checks.exit |
-| Final full acceptance, exit code 0 | evidence/final-acceptance.exit, runs/final-b43-k20g8-mps-01/ |
+| Final full correctness run, exit code 0 | evidence/final-acceptance.exit, runs/final-b43-k20g8-mps-01/ |
 | Separate writing diagnostic | output-writing.json, evidence/final-output-profile-01/io/, tools/output-profile/ |
 | Hash inventory and delivery/source checks | inventory.json, delivery-validation.json |
 
-Accepted performance labels are baseline-full-01/02; baseline-k16g4-01;
+Historical completed performance labels are baseline-full-01/02; baseline-k16g4-01;
 baseline-k20g8-mps-01; baseline-k32g8-mps-01; candidate-v4/v6/v7 labels listed in the report;
 and final-b43-k20g8-mps-01. The output profile is a separate real evaluation, not another timing repeat.
 Rejected forward variants and preparation failures are retained and explicitly excluded from accepted gains.

@@ -1,4 +1,10 @@
-# robomimic throughput, 2026-11-08
+# robomimic throughput and review validation
+
+> Review correction (2026-11-09): the historical baseline below used MPS off while the
+> optimized runs used MPS on. Their ratios do not establish issue #32's matched-switch
+> >=2x acceptance criterion. [New matched-switch repeats](REVIEW_VALIDATION.md) give 1.745x
+> on the resumed 12-core allocation. Issue #32 remains open. Per-step cache validation and
+> independently timed native measurements are recorded in the review report.
 
 This report addresses issue #32 on top of the #26 integration (merged as #84). It reproduces the baseline
 on the measurement machine and distinguishes configuration gains, code gains, and native correctness.
@@ -6,7 +12,7 @@ The runtime/Policy changes were measured as candidate v7; the delivery version i
 The [evidence index](EVIDENCE.md) links the raw archive, checksums, source snapshots, commands,
 native comparisons, build logs, resource samples, and rejected experiments.
 
-## Frozen workload and hardware
+## Historical workload and hardware (2026-11-08)
 
 - Base Kit commit: `9174d1b6fb557c0285deb4b3d7d28cc66e2f4ba4`.
 - One RTX 4090 reporting 49,140 MiB, driver 595.71.05; Ubuntu 22.04.3; container quota of 20 CPU cores and
@@ -38,7 +44,7 @@ the same local immutable assets/checkpoints, warmed download caches, and no auto
 starts empty in every new Worker; its fill cost is included. `diagonal` remains the default autotune
 strategy, but this comparison explicitly uses fixed K/G. It does not measure an autotuning improvement.
 
-### Repeated complete evaluations
+### Historical repeated evaluations (MPS not matched)
 
 | Run | K/G | MPS | Formal s | End-to-end s | Steps/s |
 | --- | --- | --- | ---: | ---: | ---: |
@@ -47,18 +53,19 @@ strategy, but this comparison explicitly uses fixed K/G. It does not measure an 
 | candidate-v7-k20g8-mps-01 | 20/8 | on | 142.950367 | 168.412230 | 568.65 |
 | candidate-v7-k20g8-mps-02 | 20/8 | on | 138.663132 | 163.583030 | 586.23 |
 | candidate-v7-k20g8-mps-03 | 20/8 | on | 137.007911 | 163.174295 | 593.32 |
-| final-b43-k20g8-mps-01 (fresh-build acceptance) | 20/8 | on | 139.750959 | 163.977132 | 581.67 |
+| final-b43-k20g8-mps-01 (fresh-build correctness run) | 20/8 | on | 139.750959 | 163.977132 | 581.67 |
 
-Baseline formal mean +/- sample SD is **314.312 +/- 37.958 s** (n=2); candidate is
-**139.540 +/- 3.067 s** (n=3). The pooled formal throughput ratio is **2.252x**. The baseline varied
-substantially, so a conservative comparison also uses its fastest run: 287.472 / 139.540 = **2.060x**;
-even the slowest candidate against that baseline is **2.011x**. This is a small set of repeats on one
-machine, not a claim that every future run or hardware configuration exceeds 2x.
+Historical baseline formal mean +/- sample SD is **314.312 +/- 37.958 s** (n=2); candidate is
+**139.540 +/- 3.067 s** (n=3). The arithmetic ratios are 2.252x for the means, 2.060x against the
+fastest baseline, and 2.011x for the slowest candidate against that baseline. **All three ratios
+are confounded by changing MPS off to on and are withdrawn as evidence of #32 acceptance.**
+Repeating the candidate does not remove that mismatch. These runs remain as historical raw evidence.
 
 Mean process end-to-end time is 319.827 s versus 165.057 s, **1.938x**, reported separately from formal
 throughput. Mean candidate formal throughput is 1.792 episodes/s and 582.55 steps/s.
-The final fresh-build acceptance completed the same 250 episodes in **139.751 s**, **2.057x**
-against baseline-full-01, with no record mismatches. It is separate from the three-run v7 summary.
+The final fresh-build correctness run completed the same 250 episodes in **139.751 s**, with no record
+mismatches. Its historical 2.057x ratio against baseline-full-01 has the same MPS confound and is not
+an acceptance result. It is separate from the three-run v7 summary.
 
 ### Configuration and code ablations
 
@@ -76,10 +83,10 @@ against baseline-full-01, with no record mismatches. It is separate from the thr
 | v7, K20/G8, MPS on, cache off | 149.043636 | Same candidate code/instrumentation, cache disabled |
 | v7, K20/G8, MPS on, cache on, mean of three | 139.540470 | Cache-on mean versus cache-off single: 1.068x |
 
-At matched K20/G8/MPS, original code versus the optimized mean is **1.110x**, not 2x. The >=2x headline
-includes changing the documented initial fixed configuration; it must not be presented as a 2x
-source-only gain at fixed K/G. Most gains come from parallel configuration. The matched ablation controls
-have only one run each and should be read with the repeated-run spread above.
+At matched K20/G8/MPS, original code versus the optimized mean is **1.110x**. The original >=2x headline
+combined K/G changes with an unmatched MPS switch; it cannot establish #32's acceptance criterion.
+The historical matched ablation controls have only one run each. New repeated, matched-switch controls
+are reported separately, without dividing times from different CPU quotas or drivers.
 
 ### Startup, preparation and resources
 
@@ -146,17 +153,22 @@ including initial-state hash. No IDs are missing, extra or duplicated. The indep
 `run_trained_agent.py` baseline comparison matched **250/250** independent seeds in success and steps;
 all accepted optimized runs also match those baseline records. Five upstream continuous 50-rollout
 batches were additionally run, but use a different RNG-stream protocol and are not paired with the
-independent-seed workload. Their combined elapsed time is not a speedup denominator. No advantage over
-an equivalently optimized native evaluator is claimed.
-Per-step action/state traces were not retained, so these comparisons establish the stated initial-state,
-terminal-outcome and executed-step agreement; they do not establish bitwise identity of every trajectory.
+independent-seed workload. Their combined elapsed time is not a speedup denominator. The historical
+native work establishes correctness only; the [review validation](REVIEW_VALIDATION.md) independently
+times the native evaluator on the same 250-episode workload.
+Per-step action/state traces were not retained in these historical runs. The review diagnostic now
+retains all observations, actions and selected simulator state arrays for original/cache-off/cache-on
+arms, including repeated resets and task switches; its scope and limits are reported separately.
 
 Rejected variants remain visible: a one-entry model cache took 296.560412 s at K16/G1; skipping
 controller forward changed 35 episodes; forwardSkip reuse changed 38 episodes and produced 172 successes.
 These simulator changes are absent from the delivered patch. A faster run with changed trajectories is
 not an accepted optimization.
 
-## Reproduce
+## Historical MPS-on reproduction
+
+The following reproduces the historical candidate configuration. Use the
+[matched MPS-off instructions](REVIEW_VALIDATION.md#reproduction-and-delivery) for the review comparison.
 
 Use distinct runtime and run directories. The checkpoint files are listed in the example's pinned
 model-zoo table. Prepare a Policy JSON using the built runtime's Python and this source checkout.
