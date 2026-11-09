@@ -234,6 +234,11 @@ The paired end-to-end speedups were 2.87× and 3.48×; the ratio of combined end
 End-to-end time starts after input checks and includes service startup and evaluator execution; it excludes
 post-run audit and cleanup.
 
+The two single-Worker formal evaluation phases totaled 10,855.4 s for 16 episodes, or 5.31 episodes/h and
+0.272 steps/s. The four-Worker phases totaled 3,438.6 s, or 16.75 episodes/h and 0.868 steps/s: a 3.16×
+episode-throughput ratio for this sample. The single- and four-Worker runs executed 2,958 and 2,985 steps,
+respectively; the formal evaluation phase excludes shared-service startup and post-run audit.
+
 The success verdict differed on 2/8 and 2/8 paired layouts. Repeating the same configuration changed 2/8
 baseline and 2/8 optimized verdicts. These stochastic runs therefore do not establish episode-by-episode
 equivalence or a full-suite success rate.
