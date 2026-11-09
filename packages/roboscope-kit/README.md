@@ -294,9 +294,16 @@ The exact contracts are in the protocol documents:
   also specify `task_priority_order` as an ordered list containing every tabletop task once; each episode
   window then schedules tasks in that order. A priority order can come from a prior representative run;
   report the cost of obtaining it separately from the evaluation. Changing grouping or scheduling should
-  be validated with paired observations and actions in the target environment. The rebuilt runtime also
-  uses replacement kitchen-asset archives, so compare RoboCasa scores only with runs using the same
-  runtime and assets.
+  be validated with paired observations and actions in the target environment.
+
+  The upstream kitchen-asset archives on Box are no longer downloadable, so the lock pins repackaged
+  archives from `Livfour/robocasa-assets` by checksum. Every file of the original textures, fixtures,
+  generative-texture, and Objaverse archives is present with identical contents. The Objaverse archive
+  also adds 6,737 collision meshes inside existing object folders; no object `model.xml` references them,
+  and object sampling lists only `model.xml` files, so they are never loaded. The current
+  `robocasa/robocasa-assets` release is a newer asset set with different fixtures and object models; use
+  the pinned archives for this benchmark. Compare RoboCasa scores only with runs using the same runtime
+  and assets.
 
 After upgrading to 0.8.0b22 or later, build RoboTwin in a new, empty installation directory if the existing
 installation has a different runtime commit. The build script does not replace an existing mismatched
