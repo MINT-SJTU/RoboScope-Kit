@@ -184,7 +184,10 @@ time includes the slot barrier and IPC; RPC includes transport and queue waiting
 
 Coverage validates complete unique task/episode IDs, constructor seeds, stream
 indices, native slot assignment and actual execution mode. Initial fingerprints
-cover integration state, scenario metadata and raw initial observations. These
+cover the flattened simulator state (time/qpos/qvel), scenario metadata and raw
+initial observations. This fingerprint does not cover every `mjSTATE_INTEGRATION`
+field. The focused native and raw-reset diagnostics report their fuller checks
+separately. These
 timed runs do not record complete trajectories or establish native-horizon accuracy.
 
 | Task / split | Pair | Serial success vector | Parallel success vector | Serial / parallel actual steps |
@@ -312,7 +315,10 @@ is a correctness diagnostic and contributes no performance gain to this report.
 
 Coverage validates complete unique task/episode IDs, constructor seeds, stream
 indices, native slot assignment and actual execution mode. Initial fingerprints
-cover integration state, scenario metadata and raw initial observations. These
+cover the flattened simulator state (time/qpos/qvel), scenario metadata and raw
+initial observations. This fingerprint does not cover every `mjSTATE_INTEGRATION`
+field. The focused native and raw-reset diagnostics report their fuller checks
+separately. These
 timed runs do not record complete trajectories or establish native-horizon accuracy.
 
 | Task / split | Pair | Serial success vector | Parallel success vector | Serial / parallel actual steps |
