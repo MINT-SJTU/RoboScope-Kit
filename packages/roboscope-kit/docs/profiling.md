@@ -81,7 +81,7 @@ is not in the report, only the round-trip time of each request.
 | LIBERO-Pro | Yes | Nsight capture not yet documented; opt-in stage timing is available |
 | MetaWorld | Yes | Not yet |
 | robomimic | Yes | Not yet |
-| RoboCasa | Yes | Not yet |
+| RoboCasa GR-1 Tabletop | Yes | Not yet |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |
 

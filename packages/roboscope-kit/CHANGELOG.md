@@ -4,61 +4,40 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 ## 0.8.0b39 - 2026-11-10
 
-- Simplify LIBERO-Pro's opt-in camera gate to temporarily replace the two pinned robosuite RGB
-  sensor functions directly and restore them after the episode. The gate assumes the pinned sensor
-  configuration; it does not validate other sensor configurations or robosuite versions.
+- Prefer the existing negotiated MessagePack transport for LIBERO-Pro, with optional per-episode
+  Policy connection reuse and an unchanged JSON fallback.
+- Add opt-in chunk camera rendering on the pinned LIBERO-Pro RGB sensors, restoring the original
+  sensor functions after each episode and retaining full rendering for videos. The direct replacement
+  assumes the pinned sensor configuration and does not validate other configurations.
+- Batch already-queued action requests from distinct episodes per Policy Server when the Policy
+  declares support. Enable optional native QwenOFT batching for the LIBERO-Pro StarVLA example;
+  the default maximum remains one.
+- Add opt-in request-scoped stage and batch timing plus LIBERO-Pro ablation and replay tools. Group
+  loaded StarVLA components into one runtime state and process action transforms across each batch.
 
-## 0.8.0b38 - 2026-11-09
+## 0.8.0b33 - 2026-11-08
 
-- Group loaded StarVLA components into one runtime state and prepare inference-mode/diagnostic
-  wrappers at load time. Keep the pinned normalizer's two-dimensional per-chunk API, but convert,
-  transform and validate the resulting action batch once. Update the LIBERO-Long subclass directly.
-- Collect model prediction timing from request-scoped spans instead of a mutable Policy attribute.
-  Cache the batch-metrics destination at server construction; retain the existing log fields and
-  keep diagnostic model hooks opt-in. The recorded 2.9141x result predates this refactor.
+- A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now
+  rejects that candidate as `policy_replica_failure`, and the search keeps the last accepted configuration.
+  It used to abort the whole evaluation. Outside a probe, a dead replica still stops the evaluation.
 
-## 0.8.0b37 - 2026-11-09
+## 0.8.0b32 - 2026-11-08
 
-- Support opt-in native batching of already-queued `act` requests from distinct episodes, preserving
-  each request ID, response encoding, action chunk and serialized Policy lifecycle. The default cap
-  of one is unchanged. Record optional per-batch Policy and model prediction wall times.
-- Allow the LIBERO-Pro StarVLA QwenOFT example to use `ROBOSCOPE_STARVLA_MAX_BATCH_SIZE` and perform
-  one native `predict_action` call per batch. Add observation capture, single-vs-batch comparison
-  and fixed-K/g MPS batch comparison tools. Real-model/full-suite acceptance remains separate.
-
-## 0.8.0b36 - 2026-11-08
-
-- Add a LIBERO-Pro MPS comparison driver using the existing owned CUDA MPS lifecycle. Default arms
-  hold K12/g3, MessagePack and chunk camera rendering fixed; support read-only preview, reverse order
-  and separate diagnostic timing. Validate episode coverage, aggregate totals and MPS client attachment,
-  and record formal/CLI timing, scores, steps and recovery. No MPS benchmark result is claimed yet.
-
-## 0.8.0b35 - 2026-11-08
-
-- Add opt-in `ROBOSCOPE_TIMING_DIR` diagnostic JSONL records for client exchanges, server lock wait
-  and dispatch, LIBERO reset/settle/step/render work, and StarVLA preprocessing and model stages.
-  QwenOFT hooks record wall times and CUDA event intervals without changing installed model sources.
-  Timed runs are diagnostic; nested and parallel durations are not additive wall time.
-
-## 0.8.0b34 - 2026-11-08
-
-- Add opt-in LIBERO-Pro `chunk_camera_rendering`: skip unused RGB renders inside an action chunk
-  while preserving native sensor clocks, physics steps, state observations and per-step termination.
-  The actual returned action queue determines observation demand; no chunk length is hardcoded.
-  Video runs keep full rendering. Work results record the effective mode and render/skip counters.
-- Restrict the optimization to the pinned robosuite 1.4.0 standard, unfiltered RGB sensors. Unsupported
-  configurations fail explicitly. Use the public sensor replacement API; no simulator installation
-  or source patch is required. Keep the option off pending real-simulator equivalence and throughput
-  validation; this version does not include the upstream b32/b33 changes.
+- The `diagonal` autotune no longer ends the whole search when a `K` probe has no steady-state window, which
+  means only that the probe was too small for `K` Workers. Only the doubling of `K` ends; the replica steps
+  still run, and a replica step without a window is compared with the previous step on elapsed rates. On
+  RoboCasa, whose 24 tasks give `K=16` no window, the search used to stop at `g=1`.
 
 ## 0.8.0b31 - 2026-11-08
 
-- LIBERO-Pro Workers prefer the existing MessagePack transport and optionally reuse one Policy connection
-  within each episode (off by default). The manifest selects encoding and connection reuse independently;
-  work results record the negotiated encoding. Episode boundaries close the connection, and failed
-  requests are never replayed. Plain LIBERO and LIBERO-Plus retain their transport defaults.
-- Document the LIBERO-Pro throughput experiment, its CPU transport measurement, and the outstanding
-  real-model acceptance. A transport speedup is not a full-evaluation or end-to-end speedup.
+- Add an offline testbed for autotune strategies. `python -m roboscope_kit.runtime.benchmark.autotune_testbed`
+  builds a versioned workload record from an evaluation's `autotune/` outputs and replays it through the
+  unchanged controller, so any registered strategy runs and is scored without a GPU. A K/g the record does not
+  hold stops the search and is reported, never interpolated. The real workloads are the RoboCasa runs from #80,
+  as the table and as a record of two searches and a fixed-K/g sweep, and such records for LIBERO
+  and a 500-episode RoboTwin subset. Scores include an end-to-end estimate and a
+  no-tuning baseline, and tests apply a per-workload regression rule. It is a development tool: evaluations do
+  not import it, and search behavior does not change. See `docs/autotune-testbed.md`.
 
 ## 0.8.0b30 - 2026-11-06
 
