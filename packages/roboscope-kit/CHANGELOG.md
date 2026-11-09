@@ -11,6 +11,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - The formal pass hands out the longest tasks first when the run cache or this evaluation's probes have measured
   them; unmeasured tasks go first. On four RTX PRO 5000 GPUs at `K48/g8`, longest-first cut the 500-episode
   RoboTwin run from 655 s to 579 s (one run each), mostly from the tail.
+- `--profile` records RoboTwin episodes: its launcher, which has its own Policy client, writes the `episode` and
+  `policy.<operation>` NVTX ranges through Kit's helper. It used to record nothing.
 - `diagonal` autotune, with the manifest's `autotune_replica_memory_backoff` (on for RoboTwin): when a replica
   step's `K = r * g` is predicted not to fit in GPU memory, it tries smaller `K` that fit before stopping, and a
   step that runs out of memory moves to the next smaller `K`. On four RTX PRO 5000 GPUs the RoboTwin search

@@ -99,6 +99,28 @@ def decode(value):
     return {key: decode(item) for key, item in value.items()}
 
 
+def _load_profiling():
+    """Kit's NVTX helper for ``--profile`` Workers; ``None`` outside a profile run.
+
+    This launcher runs in RoboTwin's interpreter, which need not have roboscope_kit
+    installed, so the Worker passes the helper's file path. The helper writes ranges
+    through Nsight Systems' injection library with ctypes and needs no package.
+    """
+
+    path = os.environ.get("ROBOSCOPE_PROFILING_MODULE")
+    if not path or not os.environ.get("ROBOSCOPE_PROFILE"):
+        return None
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_roboscope_profiling", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module if module.ENABLED else None
+
+
+PROFILING = _load_profiling()
+
+
 class PolicySocketClient:
     def __init__(self, socket_path):
         self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -120,6 +142,12 @@ class PolicySocketClient:
         raise last_error
 
     def request(self, operation, payload):
+        if PROFILING is not None:
+            with PROFILING.request(operation):
+                return self._request(operation, payload)
+        return self._request(operation, payload)
+
+    def _request(self, operation, payload):
         request_id = str(uuid.uuid4())
         message = encode(
             {
@@ -194,6 +222,8 @@ class ModelClient:
         self.episode_id = f"robotwin-{uuid.uuid4()}"
         self.raw_actions = None
         self.prev_action = None
+        if PROFILING is not None:
+            PROFILING.episode_start()
         self.client.request(
             "reset",
             {
@@ -212,6 +242,8 @@ class ModelClient:
         self.episode_id = ""
         self.raw_actions = None
         self.client.request("end_episode", {"episode_id": episode_id})
+        if PROFILING is not None:
+            PROFILING.episode_end()
 
     def close(self):
         try:
