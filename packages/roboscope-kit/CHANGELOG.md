@@ -6,6 +6,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 - Policy replicas on different GPUs now start in parallel; replicas on the same GPU still start one at a time.
   With two replicas on each of four RTX PRO 5000 GPUs, Workers used to wait about 100 s for eight serial loads.
+  Commands to the CUDA MPS control daemon are serialized, since it refuses concurrent connections.
 - RoboTwin draws each episode's language instruction with the suite's `instruction_seed_limit` instead of the
   number of episodes per task in this run. A run or autotune probe with fewer episodes per task than the
   protocol used to draw different instructions for the same seeds, so its episodes differed from the formal run
