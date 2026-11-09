@@ -134,10 +134,23 @@ def state_rows(observation: Any, count: int) -> np.ndarray:
 
 
 def observation_rows(
-    observation: Any, count: int, profile: dict[str, Any],
+    observation: Any, count: int, profile: dict[str, Any], *, environment: Any = None,
 ) -> tuple[dict[str, Any], ...]:
     states = state_rows(observation, count)
     rows = [{"state.proprioception": states[lane].copy()} for lane in range(count)]
+    if profile.get("include_root_kinematics", False):
+        robot = environment.unwrapped.agent.robot
+        root_values = {
+            "state.root_pose": (robot.pose.raw_pose, 7),
+            "state.root_linear_velocity": (robot.root_linear_velocity, 3),
+            "state.root_angular_velocity": (robot.root_angular_velocity, 3),
+        }
+        for name, (value, dimension) in root_values.items():
+            array = as_numpy(value).astype(np.float32, copy=False)
+            if array.shape != (count, dimension) or not np.isfinite(array).all():
+                raise ValueError(f"Invalid native root kinematics {name}: {array.shape}")
+            for lane, row in enumerate(rows):
+                row[name] = np.ascontiguousarray(array[lane])
     for feature, camera in profile.get("cameras", {}).items():
         images = as_numpy(observation["sensor_data"][camera]["rgb"])
         if images.ndim != 4 or images.shape[0] != count or images.shape[-1] != 3:
@@ -155,6 +168,18 @@ def observation_rows(
         for row in rows:
             row["language.instruction"] = profile["instruction"]
     return tuple(rows)
+
+
+def root_joint_metadata(environment: Any, profile: dict[str, Any]) -> dict[str, Any]:
+    if not profile.get("include_root_kinematics", False):
+        return {}
+    agent = environment.unwrapped.agent
+    configs = getattr(agent.controller, "configs", None)
+    configs = configs.values() if configs is not None else (agent.controller.config,)
+    return {
+        "active_joint_names": [joint.name for joint in agent.robot.get_active_joints()],
+        "action_joint_names": [name for config in configs for name in config.joint_names],
+    }
 
 
 def observation_digest(features: dict[str, Any]) -> str:
@@ -207,7 +232,7 @@ def evaluate(
         observation, _ = environment.reset(seed=seeds)
         metadata["environment_reset_s"] = time.perf_counter() - phase_started
         phase_started = time.perf_counter()
-        initial_features = observation_rows(observation, count, profile)
+        initial_features = observation_rows(observation, count, profile, environment=environment)
         initial_states = [row["state.proprioception"] for row in initial_features]
         initial_state_digests = [
             hashlib.sha256(np.ascontiguousarray(state, dtype="<f4").tobytes()).hexdigest()
@@ -224,11 +249,15 @@ def evaluate(
                     "profile_id": profile_id, "suite": suite,
                     "robot_uid": profile["robot_uid"], "control_mode": profile["control_mode"],
                     "obs_mode": profile["obs_mode"], "action_dimension": action_dimension,
+                    "sim_freq": profile["sim_freq"], "control_freq": profile["control_freq"],
+                    **root_joint_metadata(environment, profile),
                 },
             ))
             initialized.append(episode_id)
         metadata["policy_reset_s"] = time.perf_counter() - phase_started
-        horizon = int(profile["max_episode_steps"])
+        native_horizon = int(profile["max_episode_steps"])
+        horizon = int(profile.get("diagnostic_step_limit", native_horizon))
+        diagnostic = "diagnostic_step_limit" in profile
         trajectory_dir = os.environ.get("ROBOSCOPE_MANISKILL_TRAJECTORY_DIR")
         if trajectory_dir:
             destination = Path(trajectory_dir)
@@ -243,7 +272,7 @@ def evaluate(
         started = time.perf_counter()
         for step in range(horizon):
             phase_started = time.perf_counter()
-            features = observation_rows(observation, count, profile)
+            features = observation_rows(observation, count, profile, environment=environment)
             observations = tuple(Observation(
                 episode_id=episode_ids[lane], step=step, timestamp_s=time.time(),
                 features=features[lane],
@@ -288,13 +317,15 @@ def evaluate(
                 raise RuntimeError("ManiSkill returned invalid per-environment terminal masks")
             if termination_values.any():
                 raise RuntimeError("Upstream ignore_terminations profile unexpectedly terminated")
-            if step < horizon - 1 and truncation_values.any():
+            if step < native_horizon - 1 and truncation_values.any():
                 raise RuntimeError("ManiSkill episode truncated before the configured horizon")
             final_info = info
-        if truncation_values is None or not truncation_values.all() or final_info is None:
+        expected_truncated = horizon == native_horizon
+        if (truncation_values is None or final_info is None
+                or not np.all(truncation_values == expected_truncated)):
             raise RuntimeError("ManiSkill did not complete every lane at the configured horizon")
         if trajectory_files:
-            terminal_features = observation_rows(observation, count, profile)
+            terminal_features = observation_rows(observation, count, profile, environment=environment)
             for lane, trajectory in enumerate(trajectory_files):
                 trajectory.write(json.dumps({
                     "step": horizon,
@@ -336,7 +367,10 @@ def evaluate(
                 "episode_return": float(returns[lane]), "success_available": success_available,
                 "success_once": bool(success_once[lane]) if success_available else None,
                 "success_at_end": bool(success_end[lane]) if success_available else None,
-                "terminated": False, "truncated": True, "protocol": PROTOCOL_ID,
+                "terminated": False, "truncated": bool(truncation_values[lane]),
+                "protocol": PROTOCOL_ID,
+                **({"diagnostic_step_limit": horizon, "native_max_episode_steps": native_horizon}
+                   if diagnostic else {}),
             },
         ) for lane, seed in enumerate(seeds))
         metadata.update({
@@ -350,6 +384,7 @@ def evaluate(
             "step_with_observation_cpu_wall_s": step_with_observation_s,
             "rollout_s": elapsed_s, "actual_simulation_steps": count * horizon,
             "vector_step_calls": horizon,
+            "evaluation_kind": "integration_smoke" if diagnostic else "full_horizon",
             "trajectory_diagnostics": bool(trajectory_files),
             "timing_note": "CPU wall intervals; env.step includes physics and observation/render work. "
                            "GPU execution is asynchronous; these are not isolated GPU kernel timings.",
@@ -382,12 +417,12 @@ def self_test(profiles: tuple[dict[str, Any], ...], destination: Path) -> None:
             environment = create_environment(profile, count)
             try:
                 observation, _ = environment.reset(seed=profile["seeds"][:count])
-                first_features = observation_rows(observation, count, profile)
+                first_features = observation_rows(observation, count, profile, environment=environment)
                 dimension = int(environment.single_action_space.shape[0])
                 action = torch.zeros((count, dimension), dtype=torch.float32, device=environment.device)
                 for _ in range(int(profile["max_episode_steps"])):
                     observation, _, terminated, truncated, info = environment.step(action)
-                    final_features = observation_rows(observation, count, profile)
+                    final_features = observation_rows(observation, count, profile, environment=environment)
                 if as_numpy(terminated).any() or not as_numpy(truncated).all():
                     raise RuntimeError("Self-test did not preserve fixed-horizon terminal masks")
                 frame = as_numpy(environment.render())

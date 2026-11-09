@@ -10,7 +10,8 @@ upstream source evidence. Protocol settings and observation/action mapping are i
 **Integration acceptance is partial.** Eleven state PPO tasks and four Bridge visual tasks pass
 100-episode-per-task comparisons with independent native evaluation. The
 [review validation](REVIEW_VALIDATION.md) records all 1,500 paired episodes, metrics and remaining
-model, asset and profile gaps. Forty evaluation tasks still lack a selected compatible policy.
+model, asset and profile gaps. The [completion phase](COMPLETION_VALIDATION.md) adds real-model
+five-step diagnostics for 27 more task IDs; thirteen still lack a selected compatible policy.
 The [historical three-task results](MULTITASK_VALIDATION.md) describe the previous source snapshot.
 Task declarations and simulator checks alone do not establish real-policy acceptance.
 
@@ -24,6 +25,7 @@ Task declarations and simulator checks alone do not establish real-policy accept
 | `upstream_state_v1` | 51 | 100 | All evaluation tasks supporting the declared state profile |
 | `bridge_rgb_v1` | 4 | 100 | Native Bridge RGB and segmentation observations |
 | `upstream_tasks_v1` | 55 | 100 | Complete evaluation-task inventory at the declared observation mode |
+| `transfer_reference_state_v1` | 5 | 100 | Explicit root-observation and model-compatible controller variants |
 
 These are versioned Kit suites. ManiSkill is an environment platform without one unified official
 full benchmark. The original profile IDs remain selectable.

@@ -34,15 +34,18 @@ also have the separate public [Octo-small visual example](../../examples/maniski
 The [review validation](REVIEW_VALIDATION.md) records current-source 100-episode-per-task native
 comparisons for eleven state PPO tasks and four Bridge visual tasks. The table's public state PPO
 column identifies the state checkpoints; the Bridge tasks use the visual example instead.
-The other 40 evaluation tasks lack a selected compatible public checkpoint. Full benchmark
-acceptance remains incomplete while other task, observation and controller profiles lack real-policy
-runs and matched native comparisons. Asset download failures remain task-level blockers.
+The [completion phase](COMPLETION_VALIDATION.md) selects real-policy references for 27 additional
+task IDs and distinguishes its five-step integration diagnostics from full-horizon comparisons.
+Thirteen task IDs still lack a selected compatible policy. Full benchmark acceptance remains
+incomplete while task, observation and controller profiles lack real-policy runs and matched native
+comparisons. Asset download failures remain task-level blockers.
 
 The [frozen official demonstration repository](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628)
 contains 26 PPO checkpoint files for those same eleven task IDs; the other fifteen files are
 alternate controllers for existing tasks. Motion-planning demonstrations are distinct from
 trained policy checkpoints. Missing entries below describe this selected model inventory,
-without asserting that no other public model exists.
+without asserting that no other public model exists. The completion report separately inventories
+newly selected NEWT and transfer policies; the column below still describes only official state PPO.
 
 ## Evaluation task definitions
 

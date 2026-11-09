@@ -2,6 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b45 - 2026-11-09
+
+- Add pinned learned-policy references for control, dexterous manipulation and locomotion tasks, with explicit cross-simulator transfer contracts.
+- Add separately named root-kinematics profiles without changing existing observation vectors or controllers.
+- Support clearly labeled integration prefixes while preserving native horizons and termination masks, and compare their complete observation/action traces against independent native rollouts.
+
 ## 0.8.0b44 - 2026-11-09
 
 - Integrate ManiSkill GPU vector evaluation with a complete inventory of 55 evaluation tasks,

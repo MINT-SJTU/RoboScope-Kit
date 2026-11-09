@@ -138,3 +138,21 @@ explicitly. Retain raw per-episode records, logs, commands, runtime provenance, 
 and exact Kit source identities outside Git. The historical [three-task report](MULTITASK_VALIDATION.md)
 belongs to its recorded source snapshot. Current task coverage and blockers must be reported
 against the current candidate.
+
+## Integration-prefix diagnostics and root observations
+
+A manifest may explicitly set `diagnostic_step_limit` to a positive integer no larger than the
+profile's native horizon. This bounds only the evaluator loop. Gym still receives the original
+`max_episode_steps`, and records retain the actual native terminal masks, prefix length and native
+horizon. Such runs are always `evaluation_kind="integration_smoke"` and non-formal, even if the
+selected episode count is complete. Do not use prefix throughput as a full-evaluation speedup.
+The generic `native_eval_policy.py` reference supports the same prefix; the older PPO/Octo native
+entry points reject this setting.
+
+`transfer_reference_state_v1` names four optional root-kinematics profiles and the separate
+PullCubeTool NEWT pose-controller profile. Original profiles remain unchanged. Root profiles add
+`state.root_pose` (scene-local xyz and wxyz quaternion), `state.root_linear_velocity` (world xyz)
+and `state.root_angular_velocity` (world xyz), read from the native articulation API. Their native
+`state.proprioception` vector is unchanged. Episode metadata includes active/controller joint
+names and physical/control frequencies. Model-specific frame, joint and control conversions stay
+in the example Policy. See [completion validation](COMPLETION_VALIDATION.md) for scope and evidence.

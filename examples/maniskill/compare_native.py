@@ -26,7 +26,12 @@ def compare(args: argparse.Namespace) -> dict:
     profile_ids = protocol["suites"][args.suite]
     if len(profile_ids) != len(set(profile_ids)):
         raise ValueError("The manifest suite contains duplicate profiles")
-    profiles = {name: protocol["profiles"][name] for name in profile_ids}
+    profiles = {name: {
+        **protocol["profiles"][name],
+        **({"diagnostic_step_limit": protocol["diagnostic_step_limit"]}
+           if "diagnostic_step_limit" in protocol
+           and "diagnostic_step_limit" not in protocol["profiles"][name] else {}),
+    } for name in profile_ids}
     expected = {}
     for name, profile in profiles.items():
         count = profile.get("episodes_per_task", protocol.get("episodes_per_task", 100))
@@ -102,16 +107,22 @@ def compare(args: argparse.Namespace) -> dict:
                 errors.append({"side": side, "unexpected_episode": key})
                 continue
             name, index, seed = key
+            horizon = profile["max_episode_steps"]
+            steps = profile.get("diagnostic_step_limit", horizon)
             checks = {
-                "task_id": profile["task_id"], "steps": profile["max_episode_steps"],
+                "task_id": profile["task_id"], "steps": steps,
                 "vector_lane": index % width,
             }
+            if "diagnostic_step_limit" in profile:
+                checks.update({"diagnostic_step_limit": steps, "native_max_episode_steps": horizon,
+                               "terminated": False, "truncated": steps == horizon})
             if side == "sdk":
                 checks.update({
                     "record_id": f"{name}-episode-{index:06d}-seed-{seed}",
                     "suite": args.suite, "protocol": protocol["protocol_id"],
                     "robot_uid": profile["robot_uid"], "control_mode": profile["control_mode"],
-                    "obs_mode": profile["obs_mode"], "terminated": False, "truncated": True,
+                    "obs_mode": profile["obs_mode"], "terminated": False,
+                    "truncated": steps == horizon,
                 })
                 if "action_dimension" in profile:
                     checks["action_dimension"] = profile["action_dimension"]
@@ -129,7 +140,8 @@ def compare(args: argparse.Namespace) -> dict:
     for key in sorted(set(expected) & set(indexed["sdk"]) & set(indexed["native"])):
         left, right = indexed["sdk"][key], indexed["native"][key]
         digest_fields = ["initial_state_sha256"]
-        if expected[key]["obs_mode"] != "state":
+        if (expected[key]["obs_mode"] != "state"
+                or expected[key].get("include_root_kinematics", False)):
             digest_fields.append("initial_observation_sha256")
         for field in (*digest_fields, "success_available", "success_once", "success_at_end"):
             if field not in left or field not in right or left[field] != right[field]:
@@ -253,7 +265,7 @@ def compare_trajectories(args: argparse.Namespace, expected: dict, errors: list)
             [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
             for path in paths
         ]
-        horizon = expected[key]["max_episode_steps"]
+        horizon = expected[key].get("diagnostic_step_limit", expected[key]["max_episode_steps"])
         for side, rows in zip(("sdk", "native"), traces, strict=True):
             if [row["step"] for row in rows] != list(range(horizon + 1)):
                 errors.append({"side": side, "episode": key, "field": "trajectory_step_coverage"})

@@ -134,6 +134,21 @@ class ManiSkillBenchmarkDefinition(BenchmarkDefinition):
                 required=False, shape=(None,),
             ),
             _feature(
+                "state.root_pose", FeatureKind.STATE,
+                "Optional articulation root pose: scene XYZ followed by quaternion WXYZ.",
+                required=False, shape=(7,),
+            ),
+            _feature(
+                "state.root_linear_velocity", FeatureKind.STATE,
+                "Optional articulation root linear velocity in the scene world frame.",
+                required=False, shape=(3,),
+            ),
+            _feature(
+                "state.root_angular_velocity", FeatureKind.STATE,
+                "Optional articulation root angular velocity in the scene world frame.",
+                required=False, shape=(3,),
+            ),
+            _feature(
                 "images.primary", FeatureKind.IMAGE, "Configured primary camera RGB image.",
                 required=False, shape=(None, None, 3),
             ),

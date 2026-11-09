@@ -17,6 +17,7 @@ _DEFAULTS: dict[str, Any] = {
     "action_chunk_size": 1,
     "enhanced_determinism": False,
     "use_default_robot": False,
+    "include_root_kinematics": False,
     "sim_freq": 100,
     "control_freq": 20,
     "env_kwargs": {},
@@ -55,7 +56,7 @@ def _resolve(protocol: dict[str, Any], profile_id: str) -> dict[str, Any]:
         or len(profile["control_mode"]) != len(profile["robot_uid"])
     ):
         raise ValueError(f"ManiSkill {profile_id} must pair each robot with one controller")
-    for key in ("enhanced_determinism", "use_default_robot"):
+    for key in ("enhanced_determinism", "use_default_robot", "include_root_kinematics"):
         if type(profile[key]) is not bool:
             raise ValueError(f"ManiSkill {profile_id}.{key} must be a boolean")
     if profile["use_default_robot"] and not isinstance(profile["robot_uid"], str):
@@ -73,6 +74,11 @@ def _resolve(protocol: dict[str, Any], profile_id: str) -> dict[str, Any]:
     for key in ("max_episode_steps", "sim_freq", "control_freq"):
         if type(profile.get(key)) is not int or profile[key] < 1:
             raise ValueError(f"ManiSkill {profile_id}.{key} must be a positive integer")
+    diagnostic_limit = profile.get("diagnostic_step_limit", protocol.get("diagnostic_step_limit"))
+    if "diagnostic_step_limit" in profile or "diagnostic_step_limit" in protocol:
+        if type(diagnostic_limit) is not int or not 1 <= diagnostic_limit <= profile["max_episode_steps"]:
+            raise ValueError("ManiSkill diagnostic_step_limit must be within the native episode horizon")
+        profile["diagnostic_step_limit"] = diagnostic_limit
     dimension = profile.get("action_dimension")
     if dimension is not None and (type(dimension) is not int or dimension < 1):
         raise ValueError(f"ManiSkill {profile_id}.action_dimension must be positive when specified")

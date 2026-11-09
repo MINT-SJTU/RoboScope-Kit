@@ -85,6 +85,8 @@ def main() -> None:
 
     manifest = load_benchmark_manifest(args.benchmark_manifest)
     profiles = validate_profiles(manifest.benchmark_protocols["maniskill"], args.suite)
+    if any("diagnostic_step_limit" in profile for profile in profiles):
+        raise ValueError("Diagnostic step limits require native_eval_policy.py")
     runtime_home = manifest.runtime_path("home")
     os.environ["HOME"] = str(runtime_home)
     os.environ["MS_ASSET_DIR"] = str(manifest.runtime_path("asset_dir"))

@@ -15,7 +15,8 @@
       "official_ppo_state_v1",
       "upstream_tasks_v1",
       "upstream_state_v1",
-      "bridge_rgb_v1"
+      "bridge_rgb_v1",
+      "transfer_reference_state_v1"
     ]
   },
   "runtime": {
@@ -381,6 +382,13 @@
           "put_eggplant_in_basket_scene_rgb",
           "stack_green_cube_on_yellow_cube_baked_tex_in_scene_rgb",
           "put_spoon_on_table_cloth_in_scene_rgb"
+        ],
+        "transfer_reference_state_v1": [
+          "unitree_h1_stand_root_state",
+          "unitree_g1_stand_root_state",
+          "unitree_go2_reach_root_state",
+          "anymal_c_spin_root_state",
+          "pull_cube_tool_newt_state"
         ]
       },
       "profiles": {
@@ -1962,6 +1970,113 @@
           "asset_download_ids": [],
           "instruction": "Use both robots to stack the cubes.",
           "action_dimension": 16
+        },
+        "unitree_h1_stand_root_state": {
+          "task_id": "UnitreeH1Stand-v1",
+          "robot_uid": "unitree_h1_simplified",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "unitree_h1"
+          ],
+          "instruction": "UnitreeH1Stand-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          },
+          "include_root_kinematics": true
+        },
+        "unitree_g1_stand_root_state": {
+          "task_id": "UnitreeG1Stand-v1",
+          "robot_uid": "unitree_g1_simplified_legs",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1Stand-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          },
+          "include_root_kinematics": true
+        },
+        "unitree_go2_reach_root_state": {
+          "task_id": "UnitreeGo2-Reach-v1",
+          "robot_uid": "unitree_go2_simplified_locomotion",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "unitree_go2"
+          ],
+          "instruction": "UnitreeGo2-Reach-v1",
+          "include_root_kinematics": true
+        },
+        "anymal_c_spin_root_state": {
+          "task_id": "AnymalC-Spin-v1",
+          "robot_uid": "anymal_c",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "anymal_c"
+          ],
+          "instruction": "AnymalC-Spin-v1",
+          "include_root_kinematics": true
+        },
+        "pull_cube_tool_newt_state": {
+          "task_id": "PullCubeTool-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use the tool to pull the cube to its goal.",
+          "action_dimension": 7
         }
       },
       "upstream_inventory": {

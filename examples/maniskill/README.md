@@ -179,3 +179,21 @@ metrics and complete child-process time. Upstream retains its scalar-seed and su
 reset schedule; this checks the genuine GPU-vectorized evaluator separately from the protocol-aligned
 native comparison. Runtime pins, assets and acceptance results are in the
 [benchmark documentation](../../benchmarks/maniskill/README.md).
+
+## Additional real-policy references
+
+Task-specific [NEWT priors](NEWT.md) cover six control tasks, PlaceSphere, PickSingleYCB and a
+separate PullCubeTool pose profile. Explicit transfer references are available for
+[HORA Allegro](hora_policy.md), [TriFinger](trifinger_policy.md), [ROBEL DClaw](robel_policy.md),
+[Unitree H1/G1](UNITREE.md), [Go2](GO2.md) and [ANYmal Spin](ANYMAL_SPIN.md). Their source-trained
+robot/controller contracts and cross-simulator differences are documented separately; executing
+these models does not reproduce their original expert success rates.
+
+The generic `native_eval_policy.py` compares a public Policy with independently constructed native
+Gym observations and actions. Specify `--policy-module /absolute/path/policy.py`, `--policy-class`,
+`--policy-python`, `--checkpoint`, `--benchmark-manifest`, `--suite` and `--output`. Add matched
+`--episodes`, `--num-envs` and `--trajectory-dir` for the native workload, then pass both trace
+directories to `compare_native.py`. A diagnostic manifest can set
+`benchmark_protocols.maniskill.diagnostic_step_limit=5`; retain its original environment horizon.
+All such prefixes are labeled non-formal. See [the completion report](../../benchmarks/maniskill/COMPLETION_VALIDATION.md)
+for the measured commands, coverage and unresolved asset/model gates.

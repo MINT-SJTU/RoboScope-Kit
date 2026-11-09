@@ -424,7 +424,10 @@ The `maniskill` adapter executes manifest-configured tasks through GPU vector en
 existing Policy lifecycle. Its pinned inventory declares 55 evaluation tasks with task-specific robots,
 controllers, state or visual observations, horizons and metrics. Eleven official state PPO tasks and four
 Bridge visual tasks pass 100-episode-per-task native comparisons. Full integration acceptance remains
-partial while other task policies, assets and profile comparisons are completed.
+partial while other task policies, assets and profile comparisons are completed. The
+[completion phase](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/COMPLETION_VALIDATION.md)
+adds separately labeled five-step real-policy diagnostics for 27 more task IDs; these are not formal
+full-horizon evaluation results.
 
 Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and select asset suites with
 `MANISKILL_ASSET_SUITES`. See the

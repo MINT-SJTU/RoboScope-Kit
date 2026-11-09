@@ -99,6 +99,8 @@ class ManiSkillBenchmarkAdapter:
                 raise RuntimeError(f"Unexpected or duplicate ManiSkill work item {result.item_id!r}")
             seen.add(result.item_id)
             profile = profiles[result.group_id]
+            steps = profile.get("diagnostic_step_limit", profile["max_episode_steps"])
+            diagnostic = "diagnostic_step_limit" in profile
             if len(result.records) != item.expected_results:
                 raise RuntimeError(f"Incomplete ManiSkill vector group {result.item_id!r}")
             for lane, (record, seed) in enumerate(zip(
@@ -113,11 +115,14 @@ class ManiSkillBenchmarkAdapter:
                         "suite": self.config.suite, "protocol": PROTOCOL_ID,
                         "episode_index": index, "seed": seed, "vector_lane": lane,
                         "success_metric": profile["success_metric"],
-                        "terminated": False, "truncated": True,
+                        "terminated": False, "truncated": steps == profile["max_episode_steps"],
+                        **({"diagnostic_step_limit": steps,
+                            "native_max_episode_steps": profile["max_episode_steps"]}
+                           if diagnostic else {}),
                     }.items()
                 ):
                     raise RuntimeError(f"ManiSkill record {record.record_id!r} differs from its manifest")
-                if record.steps != profile["max_episode_steps"]:
+                if record.steps != steps:
                     raise RuntimeError(f"Invalid ManiSkill steps or score in record {record.record_id!r}")
                 if profile["success_metric"] == "return":
                     if record.success or not isfinite(metadata.get("episode_return", float("nan"))):
@@ -162,6 +167,7 @@ class ManiSkillBenchmarkAdapter:
         successes = sum(row["successes"] for row in success_rows)
         return {
             "formal": require_complete and self.metadata()["complete_named_suite"],
+            "evaluation_kind": self.metadata()["evaluation_kind"],
             "tasks": rows,
             "overall": {
                 "episodes": count, "successes": successes if success_count else None,
@@ -188,7 +194,7 @@ class ManiSkillBenchmarkAdapter:
         expected_ids = self.config.expected_profile_ids or ids
         complete = ids == expected_ids and all(
             len(profile["seeds"]) == profile["episodes_per_task"] for profile in profiles
-        )
+        ) and not any("diagnostic_step_limit" in profile for profile in profiles)
         uniform_counts = set(counts.values())
         return {
             "adapter": type(self).__name__, "benchmark": "maniskill", "suite": self.config.suite,
@@ -200,6 +206,10 @@ class ManiSkillBenchmarkAdapter:
                 profile["profile_id"]: profile["episodes_per_task"] for profile in profiles
             },
             "complete_named_suite": complete,
+            "evaluation_kind": (
+                "integration_smoke" if any("diagnostic_step_limit" in profile for profile in profiles)
+                else "full_horizon"
+            ),
             "episode_seeds": {profile["profile_id"]: list(profile["seeds"]) for profile in profiles},
             "expected_records": sum(counts.values()),
             "envs_per_worker": self.config.envs_per_worker,

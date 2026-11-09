@@ -223,6 +223,8 @@ def main() -> None:
         profiles = tuple(profile for profile in profiles if profile["profile_id"] == args.profile_id)
         if len(profiles) != 1:
             parser.error("--profile-id must identify exactly one profile in the selected suite")
+    if any("diagnostic_step_limit" in profile for profile in profiles):
+        raise ValueError("Diagnostic step limits require native_eval_policy.py")
     if any(profile["obs_mode"] != "state" for profile in profiles):
         raise ValueError("This PPO native example accepts state profiles only")
     if args.episodes is not None and any(args.episodes > len(p["seeds"]) for p in profiles):
