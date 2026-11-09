@@ -1,5 +1,9 @@
 # Reduced RoboCasa365 target50 native comparison, 2026-11-09
 
+The [fresh current-source all-task comparison](approved250-native-20261109.md)
+supersedes the collection-scope status here for the approved 50×5, 128-step
+round. The measurements below remain attributed to their original sources.
+
 This paired diagnostic covers all 50 target50 tasks and one five-slot group per task.
 Both Kit and the pinned upstream `eval_robocasa.py` use the official human300
 Diffusion Policy, pretrain scenes, constructor seeds 1111111–1111115, the original

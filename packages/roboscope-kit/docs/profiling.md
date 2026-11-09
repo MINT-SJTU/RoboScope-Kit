@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-07
+Updated: 2026-11-10
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -105,8 +105,7 @@ these timers do not establish verified Nsight hardware coverage.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
-- [RoboCasa365 integration readiness](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/validation-20261107.md):
-  native stepping/observations were the largest Worker interval in a five-slot Kettle
-  smoke (2026-11-07, RTX 4090, Kit b35, K=1/G=1).
+- [RoboCasa365 all-task comparison](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/approved250-native-20261109.md): RTX 4090, Kit b34, K=2/G=1 (2026-11-09);
+  serial Worker timers locate construction/reset/native steps as dominant intervals; Nsight and Policy Server GPU time are unverified.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).

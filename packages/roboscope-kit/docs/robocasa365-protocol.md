@@ -40,9 +40,9 @@ For PR #100's integration comparison, the maintainer
 [approved five rollouts per task](https://github.com/MINT-SJTU/RoboScope-Kit/pull/100#issuecomment-6718404495)
 across all 50 tasks (250 pairs). This changes the approved collection count,
 not the formal 50-rollout default or task horizons. The
-[128-step diagnostic comparison](../../../benchmarks/robocasa365/native-comparison-20261109.md)
-records its reduced horizon separately and does not establish native-horizon
-accuracy or full trajectory equivalence.
+[current-source 128-step comparison](../../../benchmarks/robocasa365/approved250-native-20261109.md)
+records the separately approved cap and completes every task on native and Kit
+paths. It does not establish native-horizon accuracy or full trajectory equality.
 
 Each task is one work item. Its five simulator slots and Policy RNG stream
 persist across groups. At 50 episodes, a long task can occupy one Worker
@@ -81,7 +81,9 @@ The first implementation steps each slot in the worker process. The reference
 runner uses subprocess slots. This process-layout difference and model RNG
 behavior require measured comparisons; matching the intended sampling rules
 alone does not establish native equivalence. `native_equivalence_verified`
-remains `false` in results until a separate evidence-backed comparison exists.
+remains `false` in individual run results; the separate
+[paired evidence](../../../benchmarks/robocasa365/approved250-native-20261109.md)
+records the validated comparison scope.
 
 The reproducible runtime requires the reviewed EGL ownership/restoration fix,
 checked by factory self-test and worker marker-2 validation. It preserves a live

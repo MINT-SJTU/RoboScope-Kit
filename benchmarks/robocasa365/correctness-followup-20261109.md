@@ -1,5 +1,9 @@
 # RoboCasa365 focused native follow-up, 2026-11-09
 
+The [fresh current-source all-task comparison](approved250-native-20261109.md)
+supersedes the collection-scope status here for the approved 50×5, 128-step
+round. The measurements below remain attributed to their original sources.
+
 The current integration executable snapshot is `43df866a3c23e83ee6edade8f68615f3eae1be6c`.
 This diagnostic extends the earlier reviewed-runtime atomic checks with
 one Composite-Seen and one Composite-Unseen task and a second Kit pass.
@@ -114,7 +118,8 @@ measurements. The production runtime retains its original rendering settings.
 - No action or physics drift tolerance is adopted. Any such difference keeps
   full trajectory equivalence unverified, even when terminal scores agree.
 - The 128-step prefixes do not establish native-horizon success-rate equivalence
-  or statistical equivalence. The integration remains partial.
+  or statistical equivalence. The later all-task report completes the approved
+  collection scope; exact-head CI remains a separate delivery gate.
 
 ## Reproduction
 

@@ -6,19 +6,19 @@ the 50-task multi-task workload in **pretrain scenes**, with 50 rollouts per
 task (2,500 records), updated task horizons and native five-slot groups.
 
 This integration contributes to
-[issue #97](https://github.com/MINT-SJTU/RoboScope-Kit/issues/97). A
-[reduced native comparison](native-comparison-20261109.md) covers all 50 tasks,
-five paired episodes per task, with a shared 128-step diagnostic cap. It records
-the collection source separately from targeted checks of the reviewed integration.
-The [historical startup record and review update](validation-20261107.md) record
-build and real-policy checks. The maintainer approved 50×5=250 paired rollouts;
-that count was completed on the recorded historical source. The formal default
-remains 2,500, while native-horizon accuracy, trajectory parity and the scope of
-current-source evidence remain explicitly qualified. A
-[focused repeatability follow-up](correctness-followup-20261109.md) covers five
-atomic/composite tasks on the reviewed executable files. Performance is kept in a
-separate dependent change. [Issue #16](https://github.com/MINT-SJTU/RoboScope-Kit/issues/16)
-tracks GR1 Tabletop and supplies measurement guidance; issue #97 owns RoboCasa365.
+[issue #97](https://github.com/MINT-SJTU/RoboScope-Kit/issues/97). The
+[current-source native comparison](approved250-native-20261109.md) runs all 50
+tasks, five episodes each, twice natively and with serial Kit, at the approved
+shared 128-step cap. Every path completes 250 unique records, scores 3/250 and
+executes 32,000 steps, with zero paired outcome or terminal-step differences.
+The formal default remains 2,500; capped agreement does not establish accuracy
+at the official task horizons or complete trajectory equality. Exact-head CI remains a
+separate acceptance gate. The [historical build/review record](validation-20261107.md),
+[earlier all-task collection](native-comparison-20261109.md) and
+[focused repeatability controls](correctness-followup-20261109.md) retain their
+original sources. Performance is delivered separately in dependent PR #107.
+[Issue #16](https://github.com/MINT-SJTU/RoboScope-Kit/issues/16) tracks GR1
+Tabletop and supplies measurement guidance; issue #97 owns RoboCasa365.
 
 ## Build and run
 
@@ -97,16 +97,16 @@ native group's rollout after environment resets, excluding process/model/
 environment startup and the independent Policy Server's GPU execution. Nsight
 hardware capture and isolated server GPU timing remain unverified.
 
-This integration claims no speedup, unchanged success rate, full-suite result or
-full native equivalence. A self-test, smoke group or exact first action chunk is
-insufficient. Keep model/task/scenario streams, horizons, native slot count, K/G
-and outputs fixed in later comparisons.
+The approved all-task comparison reports exact paired success and terminal-step
+agreement at its common 128-step cap. It makes no speed claim or full-horizon
+accuracy/trajectory claim. Keep model/task/scenario streams, horizons, native slot
+count, K/G and outputs fixed in later comparisons.
 
 ## Validation records
 
 The [2026-11-07 startup record and 2026-11-09 review update](validation-20261107.md)
 attribute build, self-test, real five-slot Quick Test and 298 passing pytest checks
-to their tested revisions. The [2026-11-09 native comparison](native-comparison-20261109.md)
-reports all 250 reduced-horizon pairs, later native repeatability and targeted
-reviewed-source checks. Equal capped outcomes do not establish full-horizon
-success rates or full trajectory parity.
+to their tested revisions. The [approved all-task comparison](approved250-native-20261109.md)
+adds two fresh native passes and current-source serial Kit results. Historical
+results remain in the [earlier native comparison](native-comparison-20261109.md).
+Equal capped outcomes do not establish full-horizon success rates or trajectory parity.

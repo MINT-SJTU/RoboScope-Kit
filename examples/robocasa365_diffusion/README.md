@@ -10,10 +10,12 @@ It is linked in the [official multi-task documentation](https://github.com/roboc
 This example performs no training or model inference optimization. The formal
 protocol defaults to 2,500 rollouts. For PR #100, the maintainer
 [approved 50 tasks with five paired rollouts each](https://github.com/MINT-SJTU/RoboScope-Kit/pull/100#issuecomment-6718404495),
-or 250 pairs, for the integration comparison. A matched native comparison is
-still required over that approved scope. The current shorter-horizon
-[diagnostic evidence](../../benchmarks/robocasa365/native-comparison-20261109.md)
-does not establish native-horizon accuracy or full trajectory equivalence.
+or 250 pairs, for the integration comparison. The
+[current-source comparison](../../benchmarks/robocasa365/approved250-native-20261109.md)
+completes every task with two fresh native passes and serial Kit at the approved
+common 128-step cap: 3/250 successes and 32,000 steps each, with zero paired
+outcome or terminal-step differences. This is capped agreement, not native-horizon
+accuracy or full trajectory equivalence; exact-head CI remains a separate gate.
 
 ## Pinned inputs
 

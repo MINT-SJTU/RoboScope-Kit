@@ -95,6 +95,17 @@ profiling used a private client request to keep a group capture open. The extern
 startup harness did not establish those follow-ups. The review update below
 records their subsequent fixes and additional tests requested by the maintainer.
 
+### Approved all-task follow-up — collected 2026-11-09
+
+The [current-source comparison](approved250-native-20261109.md) adds two fresh
+native 250-episode passes and serial Kit over all 50 tasks at the approved
+128-step cap. All three runs score 3/250 and execute 32,000 steps, with no paired
+outcome/terminal-step differences, missing/duplicate records, failed attempts or
+retries. Initial full integration state and scenario metadata agree in every pair;
+image hashes and native traces can vary. The historical results below are retained
+with their original revisions. This completes the approved capped comparison,
+while exact-head CI remains a separate delivery requirement.
+
 ### Review update — 2026-11-09
 
 Reviewed integration source `04cdd858a548aba13ef63a21f06f6301a58a0a2d`
