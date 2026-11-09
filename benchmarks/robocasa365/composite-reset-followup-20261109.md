@@ -1,5 +1,11 @@
 # RoboCasa365 composite and reset follow-up, 2026-11-09
 
+This historical composite and eight-reset follow-up remains a separate workload.
+The [current all-task comparison](approved250-performance-20261109.md) records
+50 tasks with one group per task, its own memory/pressure/cleanup evidence, and
+fixed/bounded-tuned throughput. The old reset-growth observations below are not
+extrapolated to that lifetime pattern, and the ratios are not pooled.
+
 Baseline SDK `43df866a3c23e83ee6edade8f68615f3eae1be6c` and parallel SDK
 `e836f775fb7c86efde7e5b6046b07d5eb3deeee5` ran on the same checksum-verified simulator runtime.
 The parallel source includes the complete-message IPC deadline and bounded shutdown fix.

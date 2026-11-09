@@ -1,5 +1,11 @@
 # RoboCasa365 slot concurrency pilot, 2026-11-09
 
+This historical atomic pilot is superseded for the approved all-task scope by
+[the 50-task performance comparison](approved250-performance-20261109.md).
+That current collection uses five episodes per task and a common 128-step cap;
+2,500 episodes are not an additional gate for this round. The pilot measurements
+and their original limits below remain attributed to their own workload.
+
 The adapter can overlap work within its existing five-slot simulation group.
 Each slot owns a spawned simulator with its original constructor RNG stream.
 The Worker collects all slots at the existing action-chunk boundary and sends
