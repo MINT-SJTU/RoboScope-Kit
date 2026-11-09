@@ -2,6 +2,20 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b35 - 2026-11-09
+
+- Run cache: an evaluation stores the searched `K`/`g` and each task's mean episode time, keyed by the kit
+  version, manifest, workload, checkpoint, Policy config, GPU models, CPU quota and CUDA MPS. The next
+  evaluation with the same key skips the search (`"mode": "cached"`). `--run-cache refresh|off` searches again
+  or leaves the cache alone. On four RTX PRO 5000 GPUs the RoboTwin search took 1,130 s of a 1,827 s run.
+- The formal pass hands out the longest tasks first when the run cache or this evaluation's probes have measured
+  them; unmeasured tasks go first. On four RTX PRO 5000 GPUs at `K48/g8`, longest-first cut the 500-episode
+  RoboTwin run from 655 s to 579 s (one run each), mostly from the tail.
+- `diagonal` autotune, with the manifest's `autotune_replica_memory_backoff` (on for RoboTwin): when a replica
+  step's `K = r * g` is predicted not to fit in GPU memory, it tries smaller `K` that fit before stopping, and a
+  step that runs out of memory moves to the next smaller `K`. On four RTX PRO 5000 GPUs the RoboTwin search
+  stopped at `K32/g4` because `K64/g8` did not fit, while the measured `K48/g8` was 32% faster.
+
 ## 0.8.0b34 - 2026-11-09
 
 - Policy replicas on different GPUs now start in parallel; replicas on the same GPU still start one at a time.
