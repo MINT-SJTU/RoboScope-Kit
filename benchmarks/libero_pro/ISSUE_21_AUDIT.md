@@ -63,10 +63,11 @@ systematic regressions are not established. This is not statistical equivalence.
 
 #19 reported 351/500 (70.2%) for this suite on a different RTX 3080 and K2/g1. Our 332/500 and 339/500
 are useful correctness signals to investigate, not a matched comparison with that run. The AutoDL pair
-uses SDPA and `OMP_NUM_THREADS=1`; confirm the #19 baseline's precise model environment and attention
-configuration before making a controlled reproduction claim. Matching episode IDs and init-state indices
-alone does not prove identical starting scenes: #19 documents reset-history dependence when task
-environments move between Workers.
+uses SDPA and `OMP_NUM_THREADS=1`. A saved #19 model snapshot provenance records SDPA and the same
+configuration and statistics hashes, but the full original model environment and all thread settings
+remain unconfirmed. Matching episode IDs and init-state indices alone does not prove identical starting
+scenes: #19 documents reset-history dependence when task environments move between Workers. A later
+fixed-K/g full run and its limitations are documented in [the fixed-baseline report](FIXED_BASELINE_2026-11-09.md).
 
 The two arms' sampled mean GPU utilization was about 96.5% and 96.9%, and peak device memory about
 31.6 and 31.7 GiB respectively. These device-wide figures include inference and rendering; they do

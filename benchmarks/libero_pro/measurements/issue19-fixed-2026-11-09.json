@@ -1,0 +1,2142 @@
+{
+  "totals": {
+    "episodes": 8000,
+    "formal_s": 20853.710727687925,
+    "episodes_per_s": 0.3836247708844559,
+    "steps": 1999574,
+    "steps_per_s": 95.88576470206438,
+    "CLI_wall_s": 21174.532901849598
+  },
+  "suites": {
+    "libero_goal_object": {
+      "episodes": 500,
+      "successes": 339,
+      "steps": 82860,
+      "formal_s": 1067.2036174722016,
+      "episodes_per_s": 0.46851415401337315,
+      "steps_per_s": 77.6421656030962,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0005323402583599091,
+        "checkpoint_prepare_s": 0.00013723224401474,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1067.2036174722016,
+        "policy_load_s": 12.162790093570948,
+        "runtime_prepare_s": 1.0061410628259182
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "open the middle layer of the drawer",
+          "episodes": 50,
+          "successes": 36,
+          "success_rate": 0.72
+        },
+        {
+          "task_id": 1,
+          "task_description": "put the bowl on the stove",
+          "episodes": 50,
+          "successes": 33,
+          "success_rate": 0.66
+        },
+        {
+          "task_id": 2,
+          "task_description": "put the wine bottle on the top of the drawer",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "open the top layer of the drawer and put the bowl inside",
+          "episodes": 50,
+          "successes": 2,
+          "success_rate": 0.04
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the bowl on the top of the drawer",
+          "episodes": 50,
+          "successes": 20,
+          "success_rate": 0.4
+        },
+        {
+          "task_id": 5,
+          "task_description": "push the plate to the front of the stove",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the cream cheese on the bowl",
+          "episodes": 50,
+          "successes": 21,
+          "success_rate": 0.42
+        },
+        {
+          "task_id": 7,
+          "task_description": "turn on the stove",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put the bowl on the plate",
+          "episodes": 50,
+          "successes": 29,
+          "success_rate": 0.58
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the wine bottle on the rack",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1069.4605680890381,
+        "cpu": {
+          "cpu_cores": 2.701124081799243,
+          "throttle_time_ratio": 4.711783507521652e-05,
+          "throttle_period_ratio": 9.350163627863488e-05
+        },
+        "gpu": {
+          "mean_utilization": 0.3217550574084199,
+          "peak_memory_bytes": 9942597632.0,
+          "gpu_util_avg": {
+            "0": 32.17550574084199
+          },
+          "gpu_util_max": {
+            "0": 69.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9482.0
+          }
+        },
+        "gpu_samples": 1829
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 1081.869200680405,
+      "historical_successes": 351,
+      "success_difference_vs_historical": -12
+    },
+    "libero_goal_swap": {
+      "episodes": 500,
+      "successes": 4,
+      "steps": 149753,
+      "formal_s": 1817.454813875258,
+      "episodes_per_s": 0.2751100033864819,
+      "steps_per_s": 82.39709667427164,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0006871894001960754,
+        "checkpoint_prepare_s": 0.00012757256627082825,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1817.454813875258,
+        "policy_load_s": 12.637051947414875,
+        "runtime_prepare_s": 1.0060779601335526
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "open the middle layer of the drawer",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "put the bowl on the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "put the wine bottle on the top of the drawer",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "open the top layer of the drawer and put the bowl inside",
+          "episodes": 50,
+          "successes": 4,
+          "success_rate": 0.08
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the bowl on the top of the drawer",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "push the plate to the front of the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the cream cheese on the bowl",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "turn on the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put the bowl on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the wine bottle on the rack",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1820.0007017664611,
+        "cpu": {
+          "cpu_cores": 2.6876410862107836,
+          "throttle_time_ratio": 1.0947431676259861e-05,
+          "throttle_period_ratio": 5.4945054945054945e-05
+        },
+        "gpu": {
+          "mean_utilization": 0.3351753826530612,
+          "peak_memory_bytes": 9913237504.0,
+          "gpu_util_avg": {
+            "0": 33.517538265306115
+          },
+          "gpu_util_max": {
+            "0": 69.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9454.0
+          }
+        },
+        "gpu_samples": 3136
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 1832.8477746732533,
+      "historical_successes": 6,
+      "success_difference_vs_historical": -2
+    },
+    "libero_goal_lan": {
+      "episodes": 500,
+      "successes": 444,
+      "steps": 62524,
+      "formal_s": 869.3026566654444,
+      "episodes_per_s": 0.5751736707189514,
+      "steps_per_s": 71.92431717606344,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 8.840486407279968e-05,
+        "checkpoint_prepare_s": 0.00014144927263259888,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 869.3026566654444,
+        "policy_load_s": 11.441404834389687,
+        "runtime_prepare_s": 1.0066421702504158
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "open the cabinet\u2019s middle drawer",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "place the bowl on the stove",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 2,
+          "task_description": "place the wine bottle on top of the cabinet",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "slide open the top drawer and place the bowl in it",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 4,
+          "task_description": "place the bowl on top of the cabinet",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 5,
+          "task_description": "move the plate to the stove\u2019s front",
+          "episodes": 50,
+          "successes": 5,
+          "success_rate": 0.1
+        },
+        {
+          "task_id": 6,
+          "task_description": "place the cream cheese inside the bowl",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 7,
+          "task_description": "switch on the stove",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "place the bowl on top of the plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 9,
+          "task_description": "place the wine bottle on the rack",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        }
+      ],
+      "resources": {
+        "elapsed_s": 871.6910237260163,
+        "cpu": {
+          "cpu_cores": 2.7068172056130106,
+          "throttle_time_ratio": 0.0,
+          "throttle_period_ratio": 0.0
+        },
+        "gpu": {
+          "mean_utilization": 0.3162006688963211,
+          "peak_memory_bytes": 9911140352.0,
+          "gpu_util_avg": {
+            "0": 31.62006688963211
+          },
+          "gpu_util_max": {
+            "0": 66.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9452.0
+          }
+        },
+        "gpu_samples": 1495
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 883.3525869362056,
+      "historical_successes": 443,
+      "success_difference_vs_historical": 1
+    },
+    "libero_goal_task": {
+      "episodes": 500,
+      "successes": 45,
+      "steps": 138848,
+      "formal_s": 1677.9333550855517,
+      "episodes_per_s": 0.29798561336454676,
+      "steps_per_s": 82.74941288888118,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.00081682950258255,
+        "checkpoint_prepare_s": 0.00014925003051757812,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1677.9333550855517,
+        "policy_load_s": 21.089232072234154,
+        "runtime_prepare_s": 1.0033685006201267
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "open the bottom drawer of the cabinet",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "put the plate on the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "put the wine bottle in the bowl",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "open the top layer of the drawer and put the cream cheese inside",
+          "episodes": 50,
+          "successes": 1,
+          "success_rate": 0.02
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the plate on the top of the drawer",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "push the cream cheese to the front of the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the wine bottle in the bowl",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "turn off the stove",
+          "episodes": 50,
+          "successes": 44,
+          "success_rate": 0.88
+        },
+        {
+          "task_id": 8,
+          "task_description": "put the wine bottle on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the cream cheese on the rack",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1680.2762947194278,
+        "cpu": {
+          "cpu_cores": 2.6952549144640607,
+          "throttle_time_ratio": 1.308128117723455e-05,
+          "throttle_period_ratio": 5.951318216985062e-05
+        },
+        "gpu": {
+          "mean_utilization": 0.337101349014182,
+          "peak_memory_bytes": 9911140352.0,
+          "gpu_util_avg": {
+            "0": 33.7101349014182
+          },
+          "gpu_util_max": {
+            "0": 67.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9452.0
+          }
+        },
+        "gpu_samples": 2891
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 1701.5632511340082,
+      "historical_successes": 47,
+      "success_difference_vs_historical": -2
+    },
+    "libero_spatial_object": {
+      "episodes": 500,
+      "successes": 477,
+      "steps": 53327,
+      "formal_s": 837.0636541731656,
+      "episodes_per_s": 0.5973261382300606,
+      "steps_per_s": 63.70722194678889,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0008604228496551514,
+        "checkpoint_prepare_s": 0.00012558698654174805,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 837.0636541731656,
+        "policy_load_s": 11.838857635855675,
+        "runtime_prepare_s": 1.00483912602067
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the akita black bowl between the plate and the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the akita black bowl next to the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the akita black bowl from table center and place it on the plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the akita black bowl on the cookies box and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the akita black bowl in the top layer of the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the akita black bowl on the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the akita black bowl next to the cookies box and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the akita black bowl on the stove and place it on the plate",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the akita black bowl next to the plate and place it on the plate",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the akita black bowl on the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        }
+      ],
+      "resources": {
+        "elapsed_s": 839.5289835110307,
+        "cpu": {
+          "cpu_cores": 2.6976045586045494,
+          "throttle_time_ratio": 3.3905321387425334e-05,
+          "throttle_period_ratio": 0.00011911852293031566
+        },
+        "gpu": {
+          "mean_utilization": 0.27727586206896554,
+          "peak_memory_bytes": 9571401728.0,
+          "gpu_util_avg": {
+            "0": 27.727586206896554
+          },
+          "gpu_util_max": {
+            "0": 62.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9128.0
+          }
+        },
+        "gpu_samples": 1450
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 851.5929889269173,
+      "historical_successes": 476,
+      "success_difference_vs_historical": 1
+    },
+    "libero_spatial_swap": {
+      "episodes": 500,
+      "successes": 0,
+      "steps": 110000,
+      "formal_s": 1720.6196727864444,
+      "episodes_per_s": 0.2905929810684303,
+      "steps_per_s": 63.930455835054666,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0006387270987033844,
+        "checkpoint_prepare_s": 0.00012636184692382812,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1720.6196727864444,
+        "policy_load_s": 11.496183644980192,
+        "runtime_prepare_s": 1.004423014819622
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the akita black bowl between the plate and the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the akita black bowl next to the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the akita black bowl from table center and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the akita black bowl on the cookies box and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the akita black bowl in the top layer of the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the akita black bowl on the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the akita black bowl next to the cookies box and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the akita black bowl on the stove and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the akita black bowl next to the plate and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the akita black bowl on the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1722.9473118633032,
+        "cpu": {
+          "cpu_cores": 2.5963816363961554,
+          "throttle_time_ratio": 2.4573057482266404e-05,
+          "throttle_period_ratio": 5.803830528148578e-05
+        },
+        "gpu": {
+          "mean_utilization": 0.2768178740690589,
+          "peak_memory_bytes": 10074718208.0,
+          "gpu_util_avg": {
+            "0": 27.68178740690589
+          },
+          "gpu_util_max": {
+            "0": 69.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9608.0
+          }
+        },
+        "gpu_samples": 2954
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 1734.6652945317328,
+      "historical_successes": 0,
+      "success_difference_vs_historical": 0
+    },
+    "libero_spatial_lan": {
+      "episodes": 500,
+      "successes": 470,
+      "steps": 53571,
+      "formal_s": 926.112890701741,
+      "episodes_per_s": 0.5398909841554375,
+      "steps_per_s": 57.84499982438188,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0005360916256904602,
+        "checkpoint_prepare_s": 0.00013288110494613647,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 926.112890701741,
+        "policy_load_s": 17.453495375812054,
+        "runtime_prepare_s": 1.004264485090971
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "lift the black bowl between the plate and ramekin and set it on the plate",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 1,
+          "task_description": "take black bowl next to ramekin and place on plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "lift the black bowl from the table center and put it on the plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 3,
+          "task_description": "lift black bowl from cookie box and put it on plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "take the black bowl from the top drawer and put it on plate",
+          "episodes": 50,
+          "successes": 38,
+          "success_rate": 0.76
+        },
+        {
+          "task_id": 5,
+          "task_description": "grab black bowl on ramekin and set it on plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "grab the black bowl beside the cookie box and set it on plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 7,
+          "task_description": "lift bowl from stove and set on plate",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the bowl beside the plate and put it on plate",
+          "episodes": 50,
+          "successes": 44,
+          "success_rate": 0.88
+        },
+        {
+          "task_id": 9,
+          "task_description": "lift bowl from cabinet and put on plate",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        }
+      ],
+      "resources": {
+        "elapsed_s": 928.454348385334,
+        "cpu": {
+          "cpu_cores": 2.650917647464678,
+          "throttle_time_ratio": 2.3631210342389493e-05,
+          "throttle_period_ratio": 0.00010771219302024989
+        },
+        "gpu": {
+          "mean_utilization": 0.2735509950248756,
+          "peak_memory_bytes": 10074718208.0,
+          "gpu_util_avg": {
+            "0": 27.355099502487562
+          },
+          "gpu_util_max": {
+            "0": 72.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9608.0
+          }
+        },
+        "gpu_samples": 1608
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 946.1475575603545,
+      "historical_successes": 467,
+      "success_difference_vs_historical": 3
+    },
+    "libero_spatial_task": {
+      "episodes": 500,
+      "successes": 278,
+      "steps": 78446,
+      "formal_s": 1257.8131768256426,
+      "episodes_per_s": 0.3975153140483515,
+      "steps_per_s": 62.36697265167396,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0006769038736820221,
+        "checkpoint_prepare_s": 0.00012246519327163696,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1257.8131768256426,
+        "policy_load_s": 20.700538501143456,
+        "runtime_prepare_s": 1.0059450305998325
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the akita black bowl not between the plate and the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the akita black bowl next to the cookie box and place it on the plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the akita black bowl next to the plate and place it on the plate",
+          "episodes": 50,
+          "successes": 33,
+          "success_rate": 0.66
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the akita black bowl on the top of the cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the akita black bowl on the top of the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the akita black bowl on the cookie box and place it on the plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the akita black bowl on the stove and place it on the plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the akita black bowl on the top of the cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the akita black bowl next to the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 2,
+          "success_rate": 0.04
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the akita black bowl on the stove and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1260.1426224559546,
+        "cpu": {
+          "cpu_cores": 2.6328388809941745,
+          "throttle_time_ratio": 5.717977106927448e-05,
+          "throttle_period_ratio": 7.935878104912309e-05
+        },
+        "gpu": {
+          "mean_utilization": 0.27683204369594905,
+          "peak_memory_bytes": 10074718208.0,
+          "gpu_util_avg": {
+            "0": 27.683204369594904
+          },
+          "gpu_util_max": {
+            "0": 66.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9608.0
+          }
+        },
+        "gpu_samples": 2197
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 1281.0897774659097,
+      "historical_successes": 275,
+      "success_difference_vs_historical": 3
+    },
+    "libero_10_object": {
+      "episodes": 500,
+      "successes": 239,
+      "steps": 204203,
+      "formal_s": 2216.159534960985,
+      "episodes_per_s": 0.22561552636994717,
+      "steps_per_s": 92.14273466264464,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0005420707166194916,
+        "checkpoint_prepare_s": 0.00013864412903785706,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 2216.159534960985,
+        "policy_load_s": 11.803427059203386,
+        "runtime_prepare_s": 1.0053043514490128
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+          "episodes": 50,
+          "successes": 1,
+          "success_rate": 0.02
+        },
+        {
+          "task_id": 1,
+          "task_description": "put both the cream cheese box and the butter in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "turn on the stove and put the moka pot on it",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 3,
+          "task_description": "put the black bowl in the bottom drawer of the cabinet and close it",
+          "episodes": 50,
+          "successes": 32,
+          "success_rate": 0.64
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick up the book and place it in the back compartment of the caddy",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+          "episodes": 50,
+          "successes": 1,
+          "success_rate": 0.02
+        },
+        {
+          "task_id": 7,
+          "task_description": "put both the alphabet soup and the cream cheese box in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put both moka pots on the stove",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the yellow and white mug in the microwave and close it",
+          "episodes": 50,
+          "successes": 16,
+          "success_rate": 0.32
+        }
+      ],
+      "resources": {
+        "elapsed_s": 2218.8515414632857,
+        "cpu": {
+          "cpu_cores": 2.724498661597378,
+          "throttle_time_ratio": 5.769350988165312e-06,
+          "throttle_period_ratio": 4.5067375726711436e-05
+        },
+        "gpu": {
+          "mean_utilization": 0.36491718426501035,
+          "peak_memory_bytes": 10163847168.0,
+          "gpu_util_avg": {
+            "0": 36.49171842650104
+          },
+          "gpu_util_max": {
+            "0": 79.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9693.0
+          }
+        },
+        "gpu_samples": 3864
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 2230.9124359041452,
+      "historical_successes": 237,
+      "success_difference_vs_historical": 2
+    },
+    "libero_10_swap": {
+      "episodes": 500,
+      "successes": 0,
+      "steps": 260000,
+      "formal_s": 1382.0422416478395,
+      "episodes_per_s": 0.36178344259856987,
+      "steps_per_s": 188.12739015125635,
+      "k": 8,
+      "g": 2,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0006212666630744934,
+        "checkpoint_prepare_s": 0.000149410218000412,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1382.0422416478395,
+        "policy_load_s": 24.812120396643877,
+        "runtime_prepare_s": 1.0105767510831356
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "put both the cream cheese box and the butter in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "turn on the stove and put the moka pot on it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "put the black bowl in the bottom drawer of the cabinet and close it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick up the book and place it in the back compartment of the caddy",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "put both the alphabet soup and the cream cheese box in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put both moka pots on the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the yellow and white mug in the microwave and close it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1386.0047878585756,
+        "cpu": {
+          "cpu_cores": 6.302183371599782,
+          "throttle_time_ratio": 0.0028508568546180093,
+          "throttle_period_ratio": 0.00367965367965368
+        },
+        "gpu": {
+          "mean_utilization": 0.8888450106157113,
+          "peak_memory_bytes": 23709351936.0,
+          "gpu_util_avg": {
+            "0": 88.88450106157113
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 22611.0
+          }
+        },
+        "gpu_samples": 2355
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "CLI_wall_s": 1411.044364977628,
+      "historical_successes": 0,
+      "success_difference_vs_historical": 0
+    },
+    "libero_10_lan": {
+      "episodes": 500,
+      "successes": 458,
+      "steps": 136340,
+      "formal_s": 747.6528877317905,
+      "episodes_per_s": 0.6687595382890672,
+      "steps_per_s": 182.35735090066282,
+      "k": 8,
+      "g": 2,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.000898219645023346,
+        "checkpoint_prepare_s": 0.0001410059630870819,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 747.6528877317905,
+        "policy_load_s": 28.072124134749174,
+        "runtime_prepare_s": 1.0160568058490753
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "place alphabet soup and tomato sauce into basket",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 1,
+          "task_description": "place cream cheese box and butter into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "switch stove on and put moka pot on it",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 3,
+          "task_description": "put black bowl inside bottom drawer and close it",
+          "episodes": 50,
+          "successes": 44,
+          "success_rate": 0.88
+        },
+        {
+          "task_id": 4,
+          "task_description": "place white mug on left plate and yellow-white mug on right plate",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick up the book and place in back compartment",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 6,
+          "task_description": "place white mug on plate and chocolate pudding to right",
+          "episodes": 50,
+          "successes": 41,
+          "success_rate": 0.82
+        },
+        {
+          "task_id": 7,
+          "task_description": "put alphabet soup and cream cheese box in basket",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 8,
+          "task_description": "place both moka pots on stove",
+          "episodes": 50,
+          "successes": 40,
+          "success_rate": 0.8
+        },
+        {
+          "task_id": 9,
+          "task_description": "place yellow and white mug in microwave and close door",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        }
+      ],
+      "resources": {
+        "elapsed_s": 751.4772588871419,
+        "cpu": {
+          "cpu_cores": 6.5604637315317635,
+          "throttle_time_ratio": 0.0055416619297751595,
+          "throttle_period_ratio": 0.006387225548902195
+        },
+        "gpu": {
+          "mean_utilization": 0.8875650118203309,
+          "peak_memory_bytes": 23632805888.0,
+          "gpu_util_avg": {
+            "0": 88.75650118203309
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 22538.0
+          }
+        },
+        "gpu_samples": 1269
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "CLI_wall_s": 779.8054191358387,
+      "historical_successes": 459,
+      "success_difference_vs_historical": -1
+    },
+    "libero_10_task": {
+      "episodes": 500,
+      "successes": 51,
+      "steps": 253699,
+      "formal_s": 1352.511067058891,
+      "episodes_per_s": 0.36968274210670765,
+      "steps_per_s": 187.57628397945925,
+      "k": 8,
+      "g": 2,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0007295124232769012,
+        "checkpoint_prepare_s": 0.0001478530466556549,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1352.511067058891,
+        "policy_load_s": 23.284824393689632,
+        "runtime_prepare_s": 1.2172871492803097
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "put both the cream cheese and the tomato sauce in the basket",
+          "episodes": 50,
+          "successes": 12,
+          "success_rate": 0.24
+        },
+        {
+          "task_id": 1,
+          "task_description": "put both the alphabet soup and the butter in the basket",
+          "episodes": 50,
+          "successes": 3,
+          "success_rate": 0.06
+        },
+        {
+          "task_id": 2,
+          "task_description": "turn on the stove and put the pan on it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "put the bottle in the bottom drawer of the cabinet and close it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the yellow and white mug on the left plate and put the white mug on the right plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick up the cup and place it in the back compartment of the caddy",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the red mug on the plate and put the chocolate pudding to the right of the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "put both the ketchup and the cream cheese box in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put the left moka pot on the stove",
+          "episodes": 50,
+          "successes": 36,
+          "success_rate": 0.72
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the white mug in the microwave and close it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1356.6225654669106,
+        "cpu": {
+          "cpu_cores": 6.360465272100373,
+          "throttle_time_ratio": 0.0030294541910794344,
+          "throttle_period_ratio": 0.003611971104231166
+        },
+        "gpu": {
+          "mean_utilization": 0.8869986950848195,
+          "peak_memory_bytes": 23641194496.0,
+          "gpu_util_avg": {
+            "0": 88.69986950848195
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 22546.0
+          }
+        },
+        "gpu_samples": 2299
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "CLI_wall_s": 1380.1553766541183,
+      "historical_successes": 53,
+      "success_difference_vs_historical": -2
+    },
+    "libero_object_object": {
+      "episodes": 500,
+      "successes": 453,
+      "steps": 73936,
+      "formal_s": 936.3386584185064,
+      "episodes_per_s": 0.5339948270901358,
+      "steps_per_s": 78.96288307147256,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0005813203752040863,
+        "checkpoint_prepare_s": 0.00015192478895187378,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 936.3386584185064,
+        "policy_load_s": 17.21462434157729,
+        "runtime_prepare_s": 1.0034162513911724
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the alphabet soup and place it in the basket",
+          "episodes": 50,
+          "successes": 14,
+          "success_rate": 0.28
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the cream cheese and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the salad dressing and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the bbq sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the ketchup and place it in the basket",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the tomato sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the butter and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the milk and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the chocolate pudding and place it in the basket",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the orange juice and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 938.8197986371815,
+        "cpu": {
+          "cpu_cores": 2.7695154744013144,
+          "throttle_time_ratio": 3.61466244277421e-05,
+          "throttle_period_ratio": 0.00010651896037494674
+        },
+        "gpu": {
+          "mean_utilization": 0.32473815461346633,
+          "peak_memory_bytes": 9770631168.0,
+          "gpu_util_avg": {
+            "0": 32.47381546134663
+          },
+          "gpu_util_max": {
+            "0": 66.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9318.0
+          }
+        },
+        "gpu_samples": 1604
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 956.2560126073658,
+      "historical_successes": 451,
+      "success_difference_vs_historical": 2
+    },
+    "libero_object_swap": {
+      "episodes": 500,
+      "successes": 0,
+      "steps": 140000,
+      "formal_s": 1602.9686850868165,
+      "episodes_per_s": 0.3119212525183672,
+      "steps_per_s": 87.33795070514283,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0011439323425292969,
+        "checkpoint_prepare_s": 0.00014978274703025818,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1602.9686850868165,
+        "policy_load_s": 23.937260784208775,
+        "runtime_prepare_s": 1.004316110163927
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the alphabet soup and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the cream cheese and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the salad dressing and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the bbq sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the ketchup and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the tomato sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the butter and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the milk and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the chocolate pudding and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the orange juice and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1605.752038449049,
+        "cpu": {
+          "cpu_cores": 2.7281703302281084,
+          "throttle_time_ratio": 3.168499792106251e-05,
+          "throttle_period_ratio": 6.227425582264292e-05
+        },
+        "gpu": {
+          "mean_utilization": 0.3420868296242247,
+          "peak_memory_bytes": 9943646208.0,
+          "gpu_util_avg": {
+            "0": 34.20868296242247
+          },
+          "gpu_util_max": {
+            "0": 80.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9483.0
+          }
+        },
+        "gpu_samples": 2741
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 1629.9211881421506,
+      "historical_successes": 0,
+      "success_difference_vs_historical": 0
+    },
+    "libero_object_lan": {
+      "episodes": 500,
+      "successes": 484,
+      "steps": 68715,
+      "formal_s": 912.8662741817534,
+      "episodes_per_s": 0.5477253505155225,
+      "steps_per_s": 75.27389492134826,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0005271472036838531,
+        "checkpoint_prepare_s": 0.0001404881477355957,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 912.8662741817534,
+        "policy_load_s": 13.477090280503035,
+        "runtime_prepare_s": 1.0059892907738686
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "grab alphabet soup and put it into basket",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 1,
+          "task_description": "grab cream cheese and put into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "grab salad dressing and put into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick up bbq sauce and put it into basket",
+          "episodes": 50,
+          "successes": 44,
+          "success_rate": 0.88
+        },
+        {
+          "task_id": 4,
+          "task_description": "lift ketchup and put it in basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick tomato sauce and put it in basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "grab butter and put it into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "grab milk and put into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "lift chocolate pudding and put it in basket",
+          "episodes": 50,
+          "successes": 42,
+          "success_rate": 0.84
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick orange juice and put into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 915.4378042034805,
+        "cpu": {
+          "cpu_cores": 2.7438289837565897,
+          "throttle_time_ratio": 0.0,
+          "throttle_period_ratio": 0.0
+        },
+        "gpu": {
+          "mean_utilization": 0.3217658349328215,
+          "peak_memory_bytes": 9945743360.0,
+          "gpu_util_avg": {
+            "0": 32.17658349328215
+          },
+          "gpu_util_max": {
+            "0": 74.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9485.0
+          }
+        },
+        "gpu_samples": 1563
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 929.1234883777797,
+      "historical_successes": 482,
+      "success_difference_vs_historical": 2
+    },
+    "libero_object_task": {
+      "episodes": 500,
+      "successes": 48,
+      "steps": 133352,
+      "formal_s": 1529.6675410158932,
+      "episodes_per_s": 0.3268684119870495,
+      "steps_per_s": 87.17711295059406,
+      "k": 2,
+      "g": 1,
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 0.0005302168428897858,
+        "checkpoint_prepare_s": 0.0001519136130809784,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 1529.6675410158932,
+        "policy_load_s": 11.78654908016324,
+        "runtime_prepare_s": 1.0058842934668064
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the cream cheese and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the alphabet soup and place it in the basket",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the tomato sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the ketchup and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the milk and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the bbq sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the orange juice and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the butter and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the salad dressing and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the chocolate pudding and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 1532.1406794786453,
+        "cpu": {
+          "cpu_cores": 2.7493526106449884,
+          "throttle_time_ratio": 8.231772383737638e-05,
+          "throttle_period_ratio": 6.526989099928203e-05
+        },
+        "gpu": {
+          "mean_utilization": 0.3447779479326187,
+          "peak_memory_bytes": 9945743360.0,
+          "gpu_util_avg": {
+            "0": 34.477794793261864
+          },
+          "gpu_util_max": {
+            "0": 83.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 9485.0
+          }
+        },
+        "gpu_samples": 2612
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 2
+        },
+        "final_workers_per_gpu": {
+          "0": 2
+        }
+      },
+      "CLI_wall_s": 1544.186184141785,
+      "historical_successes": 48,
+      "success_difference_vs_historical": 0
+    }
+  },
+  "plan": "plan.json",
+  "note": "Different hardware from #19; no equality or speedup claim."
+}

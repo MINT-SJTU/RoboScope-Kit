@@ -9,6 +9,8 @@ See [the protocol](../../packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11
 frozen task semantics, [the issue audit](ISSUE_21_AUDIT.md) for completed and outstanding work, and
 [the performance review](PERFORMANCE_REVIEW.md) for earlier optimizations and negative results, and
 [the full-matrix report](FULL_AUTO_2026-11-09.md) for the results and remaining correctness questions.
+The [fixed-baseline report](FIXED_BASELINE_2026-11-09.md) compares a later #19-style fixed-K/g run
+against the full optimized matrix and the fastest measured single-suite configuration.
 
 ## Implementation
 
