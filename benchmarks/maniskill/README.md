@@ -61,4 +61,6 @@ The separate [Octo-small example](../../examples/maniskill/OCTO.md) serves `brid
 Additional real-model references document [Panda Octo](../../examples/maniskill/PANDA_OCTO.md),
 [Humanoid TD-MPC2](../../examples/maniskill/HUMANOID.md) and
 [G1 visual transfer](../../examples/maniskill/G1_VISUAL.md), including their transfer limitations.
+The [Fetch depth example](../../examples/maniskill/FETCH_MSHAB.md) supplies real MS-HAB Open
+weights and a native depth/contact adapter; original PartNet assets still block cabinet task runs.
 The [protocol](PROTOCOL.md) describes per-task coverage, metrics and timing boundaries.

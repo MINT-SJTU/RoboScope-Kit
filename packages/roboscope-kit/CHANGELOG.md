@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b47 - 2026-11-09
+## 0.8.0b47 - 2026-11-10
 
 - Add separately named cabinet depth profiles and optional native robot, handle and contact observations for the pinned MS-HAB Fetch Open policy example.
 - Keep depth normalization, contact classification, coordinate transforms and frame history in the Policy; preserve original cabinet task profiles and rules.

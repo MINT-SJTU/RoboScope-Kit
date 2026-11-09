@@ -8,6 +8,9 @@ five-tick prefixes. The [review report](REVIEW_VALIDATION.md) retains the separa
 100-episode-per-task, full-horizon comparisons. This phase does not retroactively change either
 result or claim a runtime speedup.
 
+The [final current-source results](#final-current-source-validation-r8--080b47) use Kit 0.8.0b47
+and R8. The R6 section retains the preceding phase's measurements and source identity.
+
 **The R6 real-model GPU matrix passed for 51/55 distinct task IDs across 64 selected profiles.**
 All 64 SDK/native pairs, 320 actions and 384 observations per path matched exactly. This adds nine
 task IDs: three Humanoid control tasks, four Panda manipulation tasks, and two G1 manipulation
@@ -648,3 +651,109 @@ PartNet cabinet scenes or add two task IDs to the accepted matrix.
 Every evaluation task now has a selected real-policy reference or explicit transfer candidate.
 That model inventory is separate from **51/55 canonical task IDs with real-policy/native prefixes**:
 the four original-asset blockers and the two unvalidated tabletop RGB profiles remain open.
+
+## Final current-source validation: R8 / 0.8.0b47
+
+The final experiments ran on 2026-11-09; this report was finalized on 2026-11-10. Fresh
+`runtime-r8` and `octo-policy-runtime-r8` install the corrected b47 source. The pre/post-run
+source audit passed for all 226 executable/configuration files and all 86 SDK Python files in
+each environment. The extended audit also verifies the model/source pins and preserves R6/R7
+identities separately. The R8 source archive SHA-256 is
+`5f33019eea153a73cf673ae566e7b418c2b187e71f0f94ef3a23a35a79c0f69b`.
+The machine, pinned simulator dependencies and K1/G1/N1 configuration match the R6 description;
+MPS is disabled. R8 is the final candidate evidence; R6 above remains historical.
+
+All 36 main-matrix commands passed: **64/64 profile pairs, 51/55 distinct task IDs, 320 actions
+and 384 observations per path**, with exact SDK/native pairing and no missing or duplicate
+records. Original tabletop RGB coverage remains **16/18**. The 52 success-scored five-tick
+prefixes have zero successes; twelve return-scored prefixes retain null success fields. There
+are no worker failures, OOM events or actual timeouts. These intentionally incomplete prefixes
+are `integration_smoke`, not formal full-horizon evaluations or estimates of task competence.
+
+The sequential command totals below exclude comparator commands. Each family command is measured
+separately; their sum is not the elapsed wall time of the complete pipeline. Evaluation clocks
+include simulator startup/reset/cleanup inside their respective evaluator boundary. CPU phase sums
+can overlap server/GPU work and must not be added to infer total time. Trace copying/hashing is
+enabled for the matrix. No runtime speedup is claimed.
+
+| Metric | SDK R8 | Native R8 |
+| --- | ---: | ---: |
+| Summed command wall / evaluation wall (s) | 370.052 / 248.424 | 313.285 / 214.938 |
+| Prefixes/h, command / evaluation | 622.6 / 927.4 | 735.4 / 1071.9 |
+| Actual control steps/s, command / evaluation | 0.865 / 1.288 | 1.021 / 1.489 |
+| Sample-weighted device GPU busy / sampled peak (%) | 5.487 / 96 | 6.152 / 94 |
+| Sample-weighted device VRAM / sampled peak (GiB) | 3.116 / 8.042 | 3.556 / 8.042 |
+| Accounted CPU mean / sampled peak (cores) | 1.018 / 19.954 | 1.181 / 18.073 |
+
+Per-family SDK metrics retain the cold command/model/JIT effects; RPC time includes model work,
+IPC and response validation. It is not isolated GPU inference latency. Resource samples cover the
+whole family command and device-wide VRAM, while CPU/RSS follow the process tree.
+
+| Family | Records | Command / eval (s) | RPC mean (ms) | GPU busy mean (%) | VRAM mean / peak (GiB) | CPU mean (cores) | RSS mean / peak (GiB) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| newt | 9 | 30.820 / 20.755 | 3.742 | 4.783 | 2.795 / 5.376 | 0.705 | 2.258 / 4.688 |
+| hora | 4 | 18.719 / 12.732 | 14.506 | 5.068 | 3.589 / 8.042 | 0.749 | 2.500 / 5.510 |
+| trifinger | 5 | 20.044 / 14.430 | 4.127 | 1.474 | 2.242 / 4.758 | 0.738 | 1.965 / 3.917 |
+| robel | 5 | 17.615 / 13.229 | 0.822 | 3.652 | 2.085 / 4.363 | 0.711 | 1.604 / 3.388 |
+| unitree | 2 | 17.334 / 9.750 | 19.761 | 0.254 | 2.069 / 5.372 | 0.680 | 1.748 / 5.038 |
+| go2 | 1 | 14.327 / 7.392 | 17.336 | 0.143 | 1.433 / 3.810 | 0.628 | 1.127 / 3.389 |
+| spin | 1 | 15.387 / 6.714 | 19.138 | 0.119 | 1.382 / 3.810 | 0.562 | 1.034 / 3.385 |
+| ppo | 11 | 33.541 / 24.174 | 2.951 | 3.992 | 3.023 / 5.238 | 0.701 | 2.635 / 4.631 |
+| octo | 4 | 69.251 / 48.611 | 1008.123 | 16.820 | 3.623 / 6.575 | 1.192 | 4.094 / 7.241 |
+| humanoid | 3 | 17.917 / 9.772 | 6.621 | 3.714 | 1.941 / 4.935 | 0.686 | 1.584 / 4.130 |
+| panda | 17 | 75.453 / 56.405 | 189.463 | 2.695 | 4.119 / 6.573 | 1.338 | 5.112 / 7.834 |
+| g1 | 2 | 39.644 / 24.460 | 1466.856 | 3.019 | 3.586 / 6.808 | 1.641 | 4.324 / 8.104 |
+
+| SDK host interval | Sum (s) |
+| --- | ---: |
+| `environment_initialization_s` | 88.361876 |
+| `environment_reset_s` | 35.042850 |
+| `rollout_s` | 64.644225 |
+| `step_with_observation_cpu_wall_s` | 12.246377 |
+| `observation_prepare_cpu_wall_s` | 0.087308 |
+| `inference_wait_s` | 52.159164 |
+| `policy_reset_s` | 0.242735 |
+| `policy_cleanup_s` | 0.031797 |
+| `environment_close_s` | 14.132153 |
+
+The native model-load clocks sum to **48.865 s**. SDK model loading, process startup
+and first-query JIT are not independently separated by this collector. Aggregate SDK RPC time is
+**162.997 ms/request** over 320 requests. The combined SDK step/observation
+host clock above includes physics and rendering; **independent GPU inference, isolated rendering,
+queue-only wait and SM/Tensor/RT throughput are N/A**, rather than zero. NVML busy is an activity
+indicator, not an SM or ray-tracing utilization counter. Stable-run timing and episode distributions
+are not inferred from one five-tick sample per profile.
+
+| Additional validation | R8 result |
+| --- | --- |
+| N2 paired rollouts | All nine commands pass; 16 record pairs across eight profiles, 80 actions and 96 observations per path match exactly. |
+| Complete environment sweep | All 89 profiles attempted: 81 pass across 51 task IDs; eight explicit `FileNotFoundError` results correspond only to AssemblingKits, TurnFaucet, OpenCabinetDoor and OpenCabinetDrawer. |
+| Fresh GPU self-test | Six N1/N2 cases pass. |
+| Ordinary PPO quick test | PickCube: original 50-tick horizon, 1/1 success; 12.368 s command / 7.114 s evaluation, 291.1 / 506.0 episodes/h and 4.043 / 7.028 steps/s. |
+| R6 to R8 offline regression | All 64 SDK records/traces and all 64 native records/traces are exact: 320 actions and 384 observations on each path, including outcomes, returns, steps, masks and initial hashes; no tolerance change or R6 rerun. |
+| Existing checks | Linux pytest: 265 passed; Ruff, bash syntax, ShellCheck and maintained-Python support checks passed. |
+
+| N2 family | Pairs | SDK command / eval (s) | SDK RPC mean (ms) | SDK GPU busy (%) | SDK VRAM mean / peak (GiB) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| humanoid | 6 | 18.091 / 10.174 | 7.178 | 1.143 | 1.989 / 4.935 |
+| panda | 6 | 47.453 / 31.168 | 1041.106 | 2.232 | 3.541 / 6.466 |
+| g1 | 4 | 40.820 / 25.087 | 1516.167 | 1.019 | 3.661 / 6.939 |
+
+The untraced quick test records 10.612% mean GPU busy,
+1.681/3.982 GiB mean/peak VRAM,
+0.775 mean CPU cores and
+1.369/3.583 GiB mean/peak RSS. Its mean inference RPC
+is 2.756 ms; step-with-observation host time is 1.236 s over 50 ticks. Missing GPU/queue counters
+have the same N/A scope as the matrix.
+
+The successful Fetch API fixture above remains excluded from the 51-task count. Full acceptance
+still requires the four original-asset-blocked tasks and the two overlapping tabletop RGB profiles;
+the historical fifteen full-horizon task comparisons remain fifteen.
+
+[Compatibility evidence and checksums](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/maniskill-issue25-compatibility-20261109)
+contain `remaining_summary_r8.json`, `remaining-final-auxiliary-audit-r8.json`,
+`remaining-r6-r8-regression.json`, both final source audits, exact runner/collector commands,
+per-profile records/traces, lifecycle timings and resource samples. Per-profile and native/N2
+resource detail stays in those raw files rather than being duplicated here. The archive excludes
+model weights, simulator assets and installed environments; R6, the failed R7 probe and final R8
+evidence retain their original source labels.

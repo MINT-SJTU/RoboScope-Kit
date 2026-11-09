@@ -42,6 +42,9 @@ comparisons for Humanoid, Panda visual and G1 visual transfers, covering 51 of t
 AssemblingKits, TurnFaucet, OpenCabinetDoor and OpenCabinetDrawer. Full benchmark acceptance remains
 incomplete while task, observation and controller profiles lack real-policy runs and matched native
 comparisons. Counts of distinct task IDs do not imply acceptance of every declared profile.
+All 55 evaluation tasks now have a selected real-model reference or explicit transfer candidate,
+including the separate MS-HAB Fetch depth profiles. This resolves the prior thirteen-model
+selection gap; it does not count asset-blocked scenes or unexecuted observation profiles as passed.
 
 The [frozen official demonstration repository](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628)
 contains 26 PPO checkpoint files for those same eleven task IDs; the other fifteen files are
