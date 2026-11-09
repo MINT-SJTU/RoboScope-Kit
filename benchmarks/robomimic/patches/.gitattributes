@@ -1,0 +1,2 @@
+# Patch hashes use LF; a unified diff's blank context lines contain one space.
+*.patch text eol=lf whitespace=-blank-at-eol

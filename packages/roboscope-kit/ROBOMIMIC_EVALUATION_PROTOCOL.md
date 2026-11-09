@@ -68,12 +68,19 @@ all from PyPI and GitHub:
 | MuJoCo | `mujoco==2.3.7` (DeepMind bindings) |
 | torch | `torch==2.4.1` (PyPI CUDA 12.1 wheels), `numpy==1.26.4`, `numba==0.68.1` |
 | Python | CPython 3.11 (MuJoCo 2.3.7 has no 3.12 wheel) |
+| Kit transport dependency | `msgpack==1.2.4` (required by the shared Policy client) |
 
 The script checks the installed versions and the commits uv recorded, checks that the upstream entry point
 `robomimic.scripts.run_trained_agent` is installed, regenerates the 50 seeded initial states of every task
 (section 5) and compares their digests with the task table, records `pip-freeze.txt`, and copies
 [`benchmark-manifest.json`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/benchmark-manifest.json)
 into `<install-dir>`. The manifest's `runtime.python` is `env/bin/python`, relative to the manifest file.
+The builder also applies `patches/robosuite-model-cache.patch` and records its hash and the original and
+patched source hashes in `runtime-patches.json`. The patch caches two compiled XML models and gives
+each simulation a copy of the pristine MuJoCo model. The cache key includes the working directory;
+assets are the immutable files of the pinned runtime. Before serialization it restores MuJoCo 2.3.7's
+global `mj_saveLastXML` context when necessary. The build replaces the patched file atomically to avoid changing other runtimes
+that share uv's hard-linked installation cache.
 Workers import the kit from its source tree through `PYTHONPATH`, so `roboscope-kit` is not installed into
 this environment. `--self-test` regenerates the Lift initial states through the worker's code and checks
 their digest.
@@ -391,6 +398,14 @@ python examples/robomimic/compare_native.py --runtime /sim/robomimic --checkpoin
 ```
 
 Autotune was not measured: on this shared host its worker search would take most of the CPUs other jobs
-were using, so the baseline uses a fixed K/g. Throughput work (for example, avoiding the extra model
-compilations of `reset_to`, or batching `act` across workers) is left to a separate change, measured
-against this baseline.
+were using, so the baseline uses a fixed K/g.
+
+Throughput measurements on a separate 20-core RTX 4090 container are recorded in the
+[throughput report](../../benchmarks/robomimic/THROUGHPUT.md). They use a newly reproduced baseline on that
+machine, not the historical timing above. The optimized worker prioritizes longer tasks and enables a
+two-entry compiled-model cache installed by the pinned builder. Each environment receives an independent
+model copy, and MuJoCo's last-compiled XML context is restored before serialization. Reset, forward,
+control, observations, actions, horizons, termination, and scoring remain the pinned upstream path.
+Set `ROBOSCOPE_ROBOMIMIC_MODEL_CACHE=0` for the cache-off comparison. Work-item metadata separates
+initialization, reset, Policy reset/end, observation preparation, simulation, and inference round-trip
+times; overlapping worker sums are not wall-clock phase totals.

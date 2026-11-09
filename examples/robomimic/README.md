@@ -24,6 +24,7 @@ The model-specific parts of robomimic's `run_trained_agent.py` stay in this Poli
   episode and swapped in around each call, so one replica serves concurrent episodes without mixing them;
 - the GMM head samples from the torch RNG. Each episode owns a torch RNG state seeded from its seed
   (`EpisodeContext.metadata["seed"]`), as upstream `torch.manual_seed(seed)` does before its loop;
+- inference disables gradient recording, retaining the same FP32 forward calls and GMM sampling;
 - `reset` checks that the episode's environment name and horizon equal the checkpoint's `env_metadata` and
   `experiment.rollout.horizon`.
 
@@ -61,6 +62,12 @@ it to `env.step`.
    ```
 
    Drop `--quick-test` for the full 5 x 50 evaluation; add `--concurrency K --replicas G` to skip autotuning.
+
+   The matched 12-core, single RTX 4090 review measurements use `--concurrency 20 --replicas 8`,
+   with MPS off on both sides. This is a measured configuration, not a universal default. See the
+   [review report](../../benchmarks/robomimic/REVIEW_VALIDATION.md) for repeated timings, per-step cache
+   checks and native throughput. The historical MPS-on results remain in the
+   [original report](../../benchmarks/robomimic/THROUGHPUT.md); they do not establish the 2x target.
 
 5. Compare with upstream:
 

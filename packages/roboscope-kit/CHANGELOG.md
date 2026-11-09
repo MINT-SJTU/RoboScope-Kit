@@ -2,6 +2,20 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b43 - 2026-11-08
+
+- Pin MessagePack in the robomimic runtime. The shared Policy client imports it since 0.8.0b27;
+  a clean robomimic build previously stopped before initial-state verification with a missing dependency.
+- Evaluate the robomimic model-zoo Policy without retaining backward graphs, preserving its
+  upstream FP32 forward calls, per-episode recurrent state, and random-number streams.
+- Schedule longer robomimic tasks first so short tasks can fill the tail of a parallel run;
+  all task/seed identities, horizons, reset behavior, and scoring stay unchanged.
+- Reuse two compiled XML models in the pinned robomimic runtime, copying each model before use
+  and restoring MuJoCo's XML serialization context when needed. The builder verifies patch and
+  source hashes; workers can disable the cache with `ROBOSCOPE_ROBOMIMIC_MODEL_CACHE=0`.
+- Record robomimic initialization, reset, Policy reset/end, observation preparation, simulator,
+  and inference round-trip time in work-item metadata.
+
 ## 0.8.0b33 - 2026-11-08
 
 - A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now
