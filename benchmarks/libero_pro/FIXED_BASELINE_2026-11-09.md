@@ -6,6 +6,10 @@ single-perturbation suites, 10 tasks × 50 initial states each: **8,000 episodes
 This report compares the completed fixed run with the completed optimized run; no new run was
 performed while preparing the draft.
 
+The subsequent Kit 0.8.0b38 refactor changes Policy runtime state, postprocessing and timing collection.
+The measurements below remain attributed to the original b29/b37 commits; this refactor has not been
+remeasured on the full GPU workload.
+
 ## Configuration and timing
 
 | Setting / metric | Fixed historical baseline | Optimized |

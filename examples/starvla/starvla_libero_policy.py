@@ -7,10 +7,11 @@ Policy boundary.
 
 from __future__ import annotations
 
-import numpy as np
-from starvla_policy import StarVLAPolicy, _build_example, _resize_image_with_opencv
+from dataclasses import replace
 
+import numpy as np
 from roboscope_kit import ActionChunk, Observation, PolicyCapabilities, SessionContext, run
+from starvla_policy import StarVLAPolicy, _build_example, _resize_image_with_opencv
 
 
 def decode_actions(normalized: np.ndarray, statistics: dict) -> np.ndarray:
@@ -26,28 +27,26 @@ class StarVLALiberoPolicy(StarVLAPolicy):
         if context.benchmark.name != "libero":
             raise ValueError("StarVLALiberoPolicy serves LIBERO only")
         capabilities = super().load(context)
-        config = self.config
+        runtime = self._require_runtime()
+        config = runtime.config
         if config.action_dim != 7 or config.action_horizon != 8 or config.unnorm_key != "franka":
             raise ValueError("StarVLALiberoPolicy expects a 7-D, 8-step franka checkpoint")
-        self.image_preprocessor = _resize_image_with_opencv
+        self._runtime = replace(runtime, image_preprocessor=_resize_image_with_opencv)
         return capabilities
 
     def act(self, observation: Observation) -> ActionChunk:
-        if self.framework is None or self.config is None or self.image_preprocessor is None:
-            raise RuntimeError("StarVLA LIBERO Policy is not loaded")
-        import torch
+        runtime = self._require_runtime()
 
         example = _build_example(
-            observation.features, self.config.inputs, self.norm_processor, self.image_preprocessor
+            observation.features, runtime.config.inputs, runtime.norm_processor, runtime.image_preprocessor
         )
-        with torch.inference_mode():
-            output = self.framework.predict_action(examples=[example], **self.config.kwargs)
+        output = runtime.predict(examples=[example], **runtime.config.kwargs)
         normalized = np.asarray(output["normalized_actions"])
         if normalized.shape != (1, 8, 7):
             raise ValueError(f"StarVLA returned action shape {normalized.shape}; expected (1, 8, 7)")
-        actions = decode_actions(normalized[0], self.framework.norm_stats["franka"]["action"])
+        actions = decode_actions(normalized[0], runtime.framework.norm_stats["franka"]["action"])
         actions = np.array(actions, copy=True, order="C")
-        for transform in self.config.transforms:
+        for transform in runtime.config.transforms:
             transform.apply(actions)
         if not np.isfinite(actions).all():
             raise ValueError("StarVLA returned non-finite actions")

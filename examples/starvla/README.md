@@ -77,7 +77,9 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
 
 For the LIBERO-Pro QwenOFT example only, `ROBOSCOPE_STARVLA_MAX_BATCH_SIZE` selects the maximum number
 of observations passed to a single native `predict_action` call (default 1). The server only combines
-already-queued requests, and action unnormalization/transforms run independently for every batch row.
+already-queued requests. The pinned normalizer accepts a two-dimensional action chunk, so
+unnormalization retains one call per row. Float32 conversion, action transforms and finite-value
+validation operate on the full batch before it is sliced into action chunks.
 The LIBERO-Long subclass and other benchmarks do not opt in. See the
 [batch experiment instructions](../../benchmarks/libero_pro/BATCH_EXPERIMENT.md).
 
@@ -89,6 +91,11 @@ Intervals include scheduling and host gaps and must not be described as pure ker
 building includes processor work and upload; prediction's remaining time includes output transfer
 and synchronization. Other framework types retain the coarse timings. See the
 [stage timing guide](../../benchmarks/libero_pro/README.md#stage-timing).
+
+Loaded components live in one runtime state. Inference-mode and optional model-timing wrappers are
+prepared during load; the action path contains no imports or environment lookups. Batch metrics
+consume the same `policy.predict_total` span in a request-scoped collector, without storing a last
+prediction duration on the Policy. Batch metrics alone do not enable CUDA diagnostic hooks.
 
 For LIBERO-Pro, the simulator manifest now prefers MessagePack with JSON fallback. Optional
 `persistent_policy_connection` reuses a socket within an episode and defaults to `false`. The same

@@ -136,6 +136,10 @@ Summarize a formal timing directory with
 Failed captures have `ok: false`; a successful transport capture does not imply a successful policy
 response, so also inspect normal evaluation error/recovery outputs.
 
+Batch metrics reuse these spans through a request-scoped collector, even when stage JSONL is disabled.
+This does not enable model hooks or CUDA events. The Policy stores no last-request duration, and the
+Server caches the batch-metrics directory at construction.
+
 | Span | Includes |
 | --- | --- |
 | `worker.reset`, `worker.set_init_state`, `worker.settle_step` | Initialization and settling, including their normal rendering |

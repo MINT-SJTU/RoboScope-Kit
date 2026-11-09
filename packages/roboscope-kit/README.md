@@ -200,6 +200,8 @@ distinct episodes into one `act_batch()` call without waiting for a batch to fil
 its request ID and encoding. Policy calls including reset and end-episode remain serialized. The default
 cap of one uses the original single-request path; use a larger cap only with a genuinely batched Policy.
 Set `ROBOSCOPE_BATCH_METRICS_DIR` to an absolute directory to record per-batch size and wall time.
+The Server reads this setting at construction. Prediction timing, when supplied through a Policy's
+`policy.predict_total` span, is collected within that call; it does not use mutable Policy attributes.
 
 `load()` returns `PolicyCapabilities`, which declares the benchmarks and suites you support, the
 observation features you need, the action-chunk sizes that are safe for your model, and the maximum

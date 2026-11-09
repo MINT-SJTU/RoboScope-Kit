@@ -2,6 +2,15 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b38 - 2026-11-09
+
+- Group loaded StarVLA components into one runtime state and prepare inference-mode/diagnostic
+  wrappers at load time. Keep the pinned normalizer's two-dimensional per-chunk API, but convert,
+  transform and validate the resulting action batch once. Update the LIBERO-Long subclass directly.
+- Collect model prediction timing from request-scoped spans instead of a mutable Policy attribute.
+  Cache the batch-metrics destination at server construction; retain the existing log fields and
+  keep diagnostic model hooks opt-in. The recorded 2.9141x result predates this refactor.
+
 ## 0.8.0b37 - 2026-11-09
 
 - Support opt-in native batching of already-queued `act` requests from distinct episodes, preserving

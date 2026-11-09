@@ -17,7 +17,7 @@ replicas. Queued batching is local to each Policy Server replica, not a single q
 | Priority | File and entry points | Review focus |
 | --- | --- | --- |
 | 1 | [`server.py`](../../packages/roboscope-kit/src/roboscope_kit/server.py): `_submit_action`, `_batch_actions`, `_handle_action_batch`, `_close_policy` | Collect only already-queued requests from distinct episodes; no collection timer. Check request/result ordering, per-client encoding, failure propagation, lock ordering and shutdown of waiting futures. Lifecycle calls use the existing request lock. Default cap is one. |
-| 2 | [`starvla_policy.py`](../../examples/starvla/starvla_policy.py): `load`, `act`, `act_batch` | LIBERO-Pro QwenOFT alone may opt in above one. One native prediction per batch, per-row action unnormalization and transforms, strict output shape and finite-value validation. Check single-request behavior across the other StarVLA demos and numerical/closed-loop differences for batch sizes above one. |
+| 2 | [`starvla_policy.py`](../../examples/starvla/starvla_policy.py): `load`, `act`, `act_batch` | LIBERO-Pro QwenOFT alone may opt in above one. One native prediction per batch, per-row action unnormalization followed by batch-wide conversion, transforms and validation. Loaded components share one runtime state; inference wrappers are prepared at load time. Check single-request behavior across the other StarVLA demos and numerical/closed-loop differences for batch sizes above one. |
 | 3 | [`libero/worker.py`](../../packages/roboscope-kit/src/roboscope_kit/runtime/benchmarks/libero/worker.py): `PolicyActionQueue`, `run_episode`, `run_chunk` | Episode action-cache and socket lifecycle, no failed-RPC replay, camera demand from the actual remaining action queue, per-step termination and unchanged task reset history. Review shared LIBERO/LIBERO-Plus defaults as well as LIBERO-Pro. |
 | 4 | [`libero/camera.py`](../../packages/roboscope-kit/src/roboscope_kit/runtime/benchmarks/libero/camera.py): `ChunkCameraGate.install`, `_sensor` | Skip only unconsumed RGB work while native sensor clocks advance. Preserve the image consumed at the next request. Check pinned-version/sensor guards, restoration on exceptions, settling and video behavior. Uses the public sensor replacement API; no installed simulator source patch. |
 | 5 | [`libero_pro/adapter.py`](../../packages/roboscope-kit/src/roboscope_kit/runtime/benchmarks/libero_pro/adapter.py), [`factory.py`](../../packages/roboscope-kit/src/roboscope_kit/runtime/benchmarks/libero_pro/factory.py), [`benchmark-manifest.json`](benchmark-manifest.json) | Wire manifest settings into Worker arguments/environment and result metadata. MessagePack is preferred with JSON fallback; connection reuse and camera gating default to false. |
@@ -41,9 +41,9 @@ with no demonstrated full-matrix benefit; all reported full runs leave them disa
   reviewed JSON/CSV files in [`measurements/`](measurements/README.md): both configurations, suite/task
   scores, timing and 8,000 paired outcomes. Other experiment reports and results are archived locally
   under ignored `.local/issue21-draft-archive-20261109/` and excluded from the draft file tree.
-- **Release metadata:** the implementation already carries Kit `0.8.0b37` in `pyproject.toml`, `uv.lock`
-  and the changelog. This documentation/ignore cleanup does not change executable behavior or bump the
-  version. Reconcile version conflicts and the actual merge date before merging.
+- **Release metadata:** the current refactor carries Kit `0.8.0b38` in `pyproject.toml`, `uv.lock`
+  and the changelog. The selected measurements used b37, before this runtime-state, batch-postprocessing
+  and request-scoped timing refactor. Reconcile version conflicts and the actual merge date before merging.
 
 Keep downloaded models/source snapshots, simulator/virtual environments, raw run directories,
 profiles, observation dumps, videos, archives and host-specific launch/configuration files outside Git.
@@ -70,8 +70,10 @@ Reviewed Worker and Policy profiling findings still need to be recorded with dat
 configuration and version in the benchmark docs and central index. Existing instrumentation does not
 by itself establish a bottleneck. Before merge, reconcile upstream/version changes, complete required
 checks and clean-build self-test, and provide final-head measurements and durable raw-log links.
-This cleanup changes documentation, evidence selection and ignore rules, preserving measured
-executable files; the selected measurements remain attributed to their original commits.
+The b38 refactor removes Policy-owned request timing, groups loaded components and processes action
+transforms/validation across the batch. The LIBERO-Long subclass is updated directly to use the same
+runtime state while retaining its separate decoding rules. The selected measurements remain attributed
+to their original commits; b38 needs GPU remeasurement.
 
 ## Local review commands
 

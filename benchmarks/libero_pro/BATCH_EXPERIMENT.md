@@ -30,8 +30,10 @@ Remove `--dry-run` to execute. `--batch-sizes 1 2 4` sets both the caps and the 
 requires an idle GPU, checks again between phases, and uses the existing owned MPS lifecycle. Each arm
 must have complete records, requested K/g, all MPS replicas attached and a matching Policy capability.
 Its batch log records size, Policy wall time and the `predict_action` wall interval, including input
-processing, GPU work and output synchronization. These are wall times, not pure GPU kernel time. Batch
-logging is enabled consistently in every arm; warmup and formal measurements are separate. The output
+processing, GPU work and output synchronization. These are wall times, not pure GPU kernel time.
+Metrics consume request-scoped timing spans; no per-request duration is stored on the Policy instance.
+The metrics directory is read at server construction. Metrics alone do not enable CUDA diagnostic hooks.
+Batch logging is enabled consistently in every arm; warmup and formal measurements are separate. The output
 contains per-size counts, mean/median/p95, sampled peak GPU memory, scores, actual steps and paired
 differences against cap 1. Failed/retried work requires explicit review rather than trusting the batch
 accounting. One 500-episode suite is neither full-matrix acceptance nor proof of statistical equivalence.

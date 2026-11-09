@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 from functools import wraps
 
+import torch
 from roboscope_kit import timing
 
 
@@ -24,8 +25,6 @@ class ModelTiming:
 
         @wraps(original)
         def measured(*args, **kwargs):
-            import torch
-
             start = end = None
             if cuda:
                 start, end = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
@@ -39,6 +38,14 @@ class ModelTiming:
                     self.pending.append((name, start, end))
 
         setattr(owner, attribute, measured)
+
+    def wrap_prediction(self, predict):
+        @wraps(predict)
+        def measured(*args, **kwargs):
+            with self.request():
+                return predict(*args, **kwargs)
+
+        return measured
 
     @contextmanager
     def request(self):

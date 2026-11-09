@@ -13,12 +13,25 @@ import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 DIRECTORY = os.environ.get("ROBOSCOPE_TIMING_DIR", "")
 ENABLED = bool(DIRECTORY)
 _local = threading.local()
 _lock = threading.Lock()
+_collected: ContextVar[dict[str, float] | None] = ContextVar("timing_collected", default=None)
+
+
+@contextmanager
+def collect() -> Iterator[dict[str, float]]:
+    """Collect spans for one call without enabling diagnostic JSONL or model hooks."""
+    durations: dict[str, float] = {}
+    token = _collected.set(durations)
+    try:
+        yield durations
+    finally:
+        _collected.reset(token)
 
 
 @contextmanager
@@ -45,6 +58,9 @@ def capture(kind: str, **metadata: object) -> Iterator[None]:
 
 
 def add(name: str, seconds: float) -> None:
+    durations = _collected.get()
+    if durations is not None:
+        durations[name] = durations.get(name, 0.0) + seconds
     record = getattr(_local, "record", None)
     if record is not None:
         entry = record["spans"].setdefault(name, {"seconds": 0.0, "count": 0})
@@ -54,7 +70,7 @@ def add(name: str, seconds: float) -> None:
 
 @contextmanager
 def span(name: str) -> Iterator[None]:
-    if not ENABLED:
+    if not ENABLED and _collected.get() is None:
         yield
         return
     started = time.perf_counter()

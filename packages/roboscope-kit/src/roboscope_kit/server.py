@@ -9,7 +9,6 @@ import json
 import os
 import socket
 import threading
-import time
 import traceback
 import uuid
 from collections.abc import Iterator
@@ -66,6 +65,13 @@ class PolicyServer:
         self._batch_queue: Queue[tuple[dict[str, Any], Future] | None] = Queue()
         self._batch_thread: threading.Thread | None = None
         self._batch_stopping = False
+        directory = os.environ.get("ROBOSCOPE_BATCH_METRICS_DIR")
+        self._batch_metrics_path = Path(directory) if directory else None
+        if self._batch_metrics_path is not None:
+            if not self._batch_metrics_path.is_absolute():
+                raise ValueError("ROBOSCOPE_BATCH_METRICS_DIR must be absolute")
+            self._batch_metrics_path.mkdir(parents=True, exist_ok=True)
+            self._batch_metrics_path /= f"batch-{os.getpid()}.jsonl"
 
     def serve(self) -> None:
         self.socket_path.parent.mkdir(parents=True, exist_ok=True)
@@ -219,26 +225,21 @@ class PolicyServer:
 
     @contextmanager
     def _measure_batch(self, size: int) -> Iterator[None]:
-        directory = os.environ.get("ROBOSCOPE_BATCH_METRICS_DIR")
-        if not directory:
+        if self._batch_metrics_path is None:
             yield
             return
-        path = Path(directory)
-        if not path.is_absolute():
-            raise ValueError("ROBOSCOPE_BATCH_METRICS_DIR must be absolute")
-        started = time.perf_counter()
         ok = False
-        try:
-            yield
-            ok = True
-        finally:
-            elapsed = time.perf_counter() - started
-            path.mkdir(parents=True, exist_ok=True)
-            with (path / f"batch-{os.getpid()}.jsonl").open("a") as stream:
-                stream.write(json.dumps({
-                    "size": size, "policy_wall_s": elapsed, "ok": ok,
-                    "prediction_wall_s": getattr(self.policy, "last_batch_predict_s", None),
-                }) + "\n")
+        with timing.collect() as durations:
+            try:
+                with timing.span("server.batch"):
+                    yield
+                ok = True
+            finally:
+                with self._batch_metrics_path.open("a") as stream:
+                    stream.write(json.dumps({
+                        "size": size, "policy_wall_s": durations["server.batch"], "ok": ok,
+                        "prediction_wall_s": durations.get("policy.predict_total"),
+                    }) + "\n")
 
     def _handle(self, request: dict[str, Any]) -> dict[str, Any]:
         request_id = str(request.get("request_id") or uuid.uuid4())
