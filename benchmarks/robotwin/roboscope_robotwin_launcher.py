@@ -849,6 +849,64 @@ def install_shared_engine():
     Base_Task.setup_scene = setup_scene_on_shared_engine
 
 
+class _UnusedCamera:
+    """Stand-in for a RoboTwin camera that this evaluation never reads (observer and world cameras)."""
+
+    def __init__(self, name):
+        self.name = name
+        self.entity = self
+
+    def set_pose(self, _pose):
+        return None
+
+    def __getattr__(self, attr):
+        raise RuntimeError(f"RoboTwin camera {self.name!r} was not created; it is unused in this evaluation")
+
+
+class _LeanCameraScene:
+    """Scene proxy for ``Camera.load_camera`` that skips the observer and world cameras."""
+
+    UNUSED = ("observer_camera", "world_camera1")
+
+    def __init__(self, scene):
+        self._scene = scene
+
+    def add_camera(self, name, *args, **kwargs):
+        if name in self.UNUSED:
+            return _UnusedCamera(name)
+        return self._scene.add_camera(name, *args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._scene, name)
+
+
+def install_lean_cameras():
+    """Skip the observer and the two world cameras (``ROBOTWIN_SKIP_UNUSED_CAMERAS=0`` keeps them).
+
+    They serve video logging (observer) and the world point cloud; with video disabled and no point-cloud,
+    observer or third-view data they never take a picture. They have fixed poses and draw no random numbers,
+    so the episode is otherwise built as before. Any later use of them raises.
+    """
+
+    from envs._base_task import Base_Task
+
+    fresh_load_camera = Base_Task.load_camera
+
+    def load_camera_lean(self, **kwags):
+        data = self.data_type or {}
+        if (self.eval_video_path is not None or self.render_freq
+                or any(data.get(key) for key in ("pointcloud", "observer", "third_view"))):
+            return fresh_load_camera(self, **kwags)
+        scene = self.scene
+        self.scene = _LeanCameraScene(scene)
+        try:
+            fresh_load_camera(self, **kwags)
+        finally:
+            self.scene = scene
+
+    Base_Task.load_camera = load_camera_lean
+
+
 class GripperOnlyPlanner:
     """Qpos eval-mode planner: gripper interpolation identical to CuroboPlanner.
 
@@ -1154,6 +1212,10 @@ def main():
     # ROBOTWIN_SHARED_ENGINE=0 disables it for A/B timing.
     if os.environ.get("ROBOTWIN_SHARED_ENGINE", "1") == "1":
         install_shared_engine()
+    # Unused cameras cost driver calls per scene: 6.3 -> 5.3 s for the first observation of a new scene at 48
+    # concurrent evaluators on 4x RTX PRO 5000; the three used cameras' images are unchanged.
+    if os.environ.get("ROBOTWIN_SKIP_UNUSED_CAMERAS", "1") == "1":
+        install_lean_cameras()
     # The qf-hoisted loop and GripperOnlyPlanner are qpos-only optimizations.
     # EE evaluation keeps the official take_action and CuroboPlanner even when a
     # seed cache skips the unrelated expert play_once seed validation.

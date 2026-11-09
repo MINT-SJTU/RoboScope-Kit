@@ -2,6 +2,16 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b36 - 2026-11-09
+
+- RoboTwin evaluators no longer create the observer camera and the two world cameras when video logging and
+  point-cloud, observer and third-view data are off; they serve only those outputs and never take a picture in an
+  evaluation. The three cameras the Policy reads keep the same images (12 first observations compared pixel by
+  pixel). Each camera costs GPU-driver calls when a scene is built, which queue across evaluator processes: at 48
+  processes on four RTX PRO 5000 GPUs the first observation of a new scene drops from 6.3 to 5.3 s, and a
+  500-episode K48/g8 run from 643 to 629 s with every episode equal to the official evaluation.
+  `ROBOTWIN_SKIP_UNUSED_CAMERAS=0` keeps them.
+
 ## 0.8.0b35 - 2026-11-09
 
 - Run cache: an evaluation stores the searched `K`/`g` and each task's mean episode time, keyed by the kit
