@@ -91,6 +91,14 @@ Worker still sends one ordered Policy batch at the existing chunk boundary.
 The default is serial. Runs with video or profiling use the serial path.
 The subprocess mode raises host and GPU memory use, so measure it on the
 target machine with a matched Worker and Policy replica configuration.
+Set explicit `defaults.maximum_workers` and `defaults.maximum_replicas` limits
+when enabling it; on the measured 96 GiB host, follow-up diagnostics use K≤2/G≤1
+after K=4/G=2 reached 93.83 GiB. These are host-specific limits, not a portable
+capacity estimate. Each slot command shares a 300-second transport deadline
+across sends, message headers and complete replies. Shutdown allows five seconds
+for close delivery and graceful exit, then five seconds to reap killed children.
+Serialization of trusted slot payloads is synchronous; it is not preempted by
+the transport deadline.
 Each formal worker manages **five** native environments. Use fresh output
 directories, verify all records and compare with the pinned native evaluator.
 The Policy README provides a captured-input native action comparison helper.
