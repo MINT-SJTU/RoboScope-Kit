@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b46 - 2026-11-09
+
+- Recover the original PickClutterYCB scene corpus from a checksum-pinned author mirror without changing its upstream bytes.
+- Extend separately named real-policy references for remaining control and visual task profiles, preserving canonical evaluation rules.
+
 ## 0.8.0b45 - 2026-11-09
 
 - Add pinned learned-policy references for control, dexterous manipulation and locomotion tasks, with explicit cross-simulator transfer contracts.

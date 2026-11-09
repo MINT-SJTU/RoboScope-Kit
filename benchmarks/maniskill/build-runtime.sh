@@ -129,12 +129,16 @@ fi
 install -m 0644 "$SCRIPT_DIR/benchmark-manifest.json" "$INSTALL_DIR/benchmark-manifest.json"
 install -m 0755 "$SCRIPT_DIR/prepare-assets.py" "$INSTALL_DIR/prepare-assets.py"
 IFS=',' read -r -a ASSET_SUITES <<< "${MANISKILL_ASSET_SUITES:-baseline_state_v1}"
+IFS=',' read -r -a ASSET_TASKS <<< "${MANISKILL_ASSET_TASKS:-}"
 ASSET_ARGUMENTS=()
 if [[ -n "${MANISKILL_ASSET_ARCHIVE_DIR:-}" ]]; then
   ASSET_ARGUMENTS+=(--archive-dir "$MANISKILL_ASSET_ARCHIVE_DIR")
 fi
 for suite in "${ASSET_SUITES[@]}"; do
   [[ -n "$suite" ]] && ASSET_ARGUMENTS+=(--suite "$suite")
+done
+for task in "${ASSET_TASKS[@]}"; do
+  [[ -n "$task" ]] && ASSET_ARGUMENTS+=(--task-id "$task")
 done
 HOME="$RUNTIME_HOME" "$ENV_PYTHON" -I "$INSTALL_DIR/prepare-assets.py" \
   --benchmark-manifest "$INSTALL_DIR/benchmark-manifest.json" --asset-dir "$ASSET_ROOT" \

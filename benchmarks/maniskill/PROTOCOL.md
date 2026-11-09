@@ -108,7 +108,8 @@ correctness acceptance. Repeated runs measure native variation and any systemati
 
 `benchmarks/maniskill/build-runtime.sh <install-dir>` builds the simulator into a fresh directory.
 `MANISKILL_ASSET_SUITES` selects comma-separated named suites. `MANISKILL_ASSET_DIR` selects
-shared asset storage and `MANISKILL_ASSET_ARCHIVE_DIR` selects an archive cache. The asset helper
+shared asset storage. `MANISKILL_ASSET_TASKS` adds comma-separated task IDs, and
+`MANISKILL_ASSET_ARCHIVE_DIR` selects an archive cache. The asset helper
 accepts repeated `--suite` and `--task-id`, estimates transfer size with `--estimate`, and records
 installed-file/tree hashes. Manifest asset IDs include robot downloads as well as task objects.
 Source-supplied checksums and immutable official archive overrides are verified before use.
@@ -156,3 +157,10 @@ and `state.root_angular_velocity` (world xyz), read from the native articulation
 `state.proprioception` vector is unchanged. Episode metadata includes active/controller joint
 names and physical/control frequencies. Model-specific frame, joint and control conversions stay
 in the example Policy. See [completion validation](COMPLETION_VALIDATION.md) for scope and evidence.
+
+`humanoid_control_transfer_state_v1` adds three MS-Humanoid root-observation profiles without
+changing the original state profiles. `panda_visual_rgb_v1` selects the original 18 tabletop RGB
+profiles and a separate FMB RGB profile. `g1_visual_rgb_v1` adds two head-camera profiles with actual
+root observations. All retain the target task's native horizon, controller, reset and score; model-side
+transfer does not import source-task evaluation rules. The [remaining-compatibility report](REMAINING_COMPATIBILITY.md)
+separates validated profiles, model limitations and original-asset blockers.

@@ -427,7 +427,11 @@ Bridge visual tasks pass 100-episode-per-task native comparisons. Full integrati
 partial while other task policies, assets and profile comparisons are completed. The
 [completion phase](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/COMPLETION_VALIDATION.md)
 adds separately labeled five-step real-policy diagnostics for 27 more task IDs; these are not formal
-full-horizon evaluation results.
+full-horizon evaluation results. The
+[remaining-compatibility phase](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/REMAINING_COMPATIBILITY.md)
+raises real-policy/native five-step coverage to 51 of 55 task IDs and 16 of the original 18 tabletop
+RGB profiles; four tasks retain original-asset blockers. Additional examples provide ManiSkill-finetuned
+Octo, Humanoid actor transfer and G1 visual transfer with explicit observation/control contracts.
 
 Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and select asset suites with
 `MANISKILL_ASSET_SUITES`. See the

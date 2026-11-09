@@ -36,9 +36,12 @@ comparisons for eleven state PPO tasks and four Bridge visual tasks. The table's
 column identifies the state checkpoints; the Bridge tasks use the visual example instead.
 The [completion phase](COMPLETION_VALIDATION.md) selects real-policy references for 27 additional
 task IDs and distinguishes its five-step integration diagnostics from full-horizon comparisons.
-Thirteen task IDs still lack a selected compatible policy. Full benchmark acceptance remains
+The [remaining-compatibility phase](REMAINING_COMPATIBILITY.md) adds real-policy/native five-step
+comparisons for Humanoid, Panda visual and G1 visual transfers, covering 51 of the 55 task IDs and
+16 of the original 18 tabletop RGB profiles. Four task IDs retain original-asset blockers:
+AssemblingKits, TurnFaucet, OpenCabinetDoor and OpenCabinetDrawer. Full benchmark acceptance remains
 incomplete while task, observation and controller profiles lack real-policy runs and matched native
-comparisons. Asset download failures remain task-level blockers.
+comparisons. Counts of distinct task IDs do not imply acceptance of every declared profile.
 
 The [frozen official demonstration repository](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628)
 contains 26 PPO checkpoint files for those same eleven task IDs; the other fifteen files are

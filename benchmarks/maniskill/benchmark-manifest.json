@@ -16,7 +16,10 @@
       "upstream_tasks_v1",
       "upstream_state_v1",
       "bridge_rgb_v1",
-      "transfer_reference_state_v1"
+      "transfer_reference_state_v1",
+      "humanoid_control_transfer_state_v1",
+      "panda_visual_rgb_v1",
+      "g1_visual_rgb_v1"
     ]
   },
   "runtime": {
@@ -95,6 +98,17 @@
           "sha256": "618512a205b4528cafecdad14b1788ed1130879f3064deb406516ed5b9c5ba92",
           "bytes": 81962479,
           "license": "MIT"
+        },
+        "pick_clutter_ycb_configs": {
+          "url": "https://centergrasp.cs.uni-freiburg.de/download/maniskill_ycb.tar.gz",
+          "sha256": "fdddd43f17c4e51d3e9458d1229e56c8b47aa7be339c66bdcf36118c4f038bfa",
+          "bytes": 43528012,
+          "revision": "CenterGrasp-72bc8f1121937fb5b50164d4f5616b3074309281",
+          "source": "https://github.com/robot-learning-freiburg/CenterGrasp/blob/72bc8f1121937fb5b50164d4f5616b3074309281/README.md",
+          "archive_member": "maniskill_ycb/pick_clutter/ycb_train_5k.json.gz",
+          "member_sha256": "70ec176c7036f326ea7813b77f8c03bea9db5960198498957a49b2895a9ec338",
+          "member_bytes": 16616172,
+          "license": "Original ManiSkill asset terms; no new redistribution rights asserted"
         }
       },
       "episodes_per_task": 100,
@@ -389,6 +403,36 @@
           "unitree_go2_reach_root_state",
           "anymal_c_spin_root_state",
           "pull_cube_tool_newt_state"
+        ],
+        "humanoid_control_transfer_state_v1": [
+          "ms_humanoid_stand_root_state",
+          "ms_humanoid_walk_root_state",
+          "ms_humanoid_run_root_state"
+        ],
+        "panda_visual_rgb_v1": [
+          "assembling_kits_rgb",
+          "lift_peg_upright_rgb",
+          "peg_insertion_side_rgb",
+          "pick_clutter_ycb_rgb",
+          "pickcube_rgb",
+          "pick_single_ycb_rgb",
+          "place_sphere_rgb",
+          "plug_charger_rgb",
+          "poke_cube_rgb",
+          "pull_cube_rgb",
+          "pull_cube_tool_rgb",
+          "pushcube_rgb",
+          "pusht_rgb",
+          "rollball_rgb",
+          "stackcube_rgb",
+          "turn_faucet_rgb",
+          "two_robot_pickcube_rgb",
+          "two_robot_stackcube_rgb",
+          "fmb_assembly1_easy_rgb"
+        ],
+        "g1_visual_rgb_v1": [
+          "unitree_g1_place_apple_in_bowl_rgb",
+          "unitree_g1_transport_box_rgb"
         ]
       },
       "profiles": {
@@ -2077,6 +2121,139 @@
           "asset_download_ids": [],
           "instruction": "Use the tool to pull the cube to its goal.",
           "action_dimension": 7
+        },
+        "ms_humanoid_stand_root_state": {
+          "task_id": "MS-HumanoidStand-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidStand-v1",
+          "include_root_kinematics": true,
+          "action_dimension": 21
+        },
+        "ms_humanoid_walk_root_state": {
+          "task_id": "MS-HumanoidWalk-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidWalk-v1",
+          "include_root_kinematics": true,
+          "action_dimension": 21
+        },
+        "ms_humanoid_run_root_state": {
+          "task_id": "MS-HumanoidRun-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidRun-v1",
+          "include_root_kinematics": true,
+          "action_dimension": 21
+        },
+        "fmb_assembly1_easy_rgb": {
+          "task_id": "FMBAssembly1Easy-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 500,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "FMBAssembly1Easy-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          },
+          "cameras": {
+            "images.primary": "base_camera"
+          },
+          "action_dimension": 7
+        },
+        "unitree_g1_place_apple_in_bowl_rgb": {
+          "task_id": "UnitreeG1PlaceAppleInBowl-v1",
+          "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
+          "obs_mode": "rgb",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1PlaceAppleInBowl-v1",
+          "use_default_robot": true,
+          "cameras": {
+            "images.primary": "head_camera"
+          },
+          "include_root_kinematics": true,
+          "action_dimension": 25
+        },
+        "unitree_g1_transport_box_rgb": {
+          "task_id": "UnitreeG1TransportBox-v1",
+          "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
+          "obs_mode": "rgb",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1TransportBox-v1",
+          "use_default_robot": true,
+          "cameras": {
+            "images.primary": "head_camera"
+          },
+          "include_root_kinematics": true,
+          "action_dimension": 25
         }
       },
       "upstream_inventory": {

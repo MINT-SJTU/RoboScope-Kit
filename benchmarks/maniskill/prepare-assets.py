@@ -13,10 +13,14 @@ import copy
 import hashlib
 import json
 import os
+import shutil
 import socket
+import tarfile
+import tempfile
 import time
 import urllib.parse
 import urllib.request
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +49,54 @@ def asset_present(path: Path) -> bool:
     return (path.is_file() and path.stat().st_size > 0) or (
         path.is_dir() and any(path.iterdir())
     )
+
+
+@contextmanager
+def archive_member_source(source, upstream, override, archive, record):
+    """Recover an unchanged upstream file from a checksum-pinned author bundle."""
+    member_name = override.get("archive_member")
+    if member_name is None:
+        yield source
+        return
+    with tempfile.TemporaryDirectory(prefix="maniskill-asset-") as temporary:
+        directory = Path(temporary)
+        bundle = archive if archive is not None else directory / "bundle.tar.gz"
+        if not bundle.is_file():
+            bundle.parent.mkdir(parents=True, exist_ok=True)
+            last_report = [0.0]
+
+            def progress(blocks, block_size, total):
+                now = time.monotonic()
+                if now - last_report[0] >= 15:
+                    print(f"Asset mirror download: {blocks * block_size}/{total} bytes", flush=True)
+                    last_report[0] = now
+
+            urllib.request.urlretrieve(override["url"], bundle, reporthook=progress)
+        with bundle.open("rb") as stream:
+            bundle_digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if bundle_digest != override["sha256"]:
+            raise ValueError(f"Asset mirror bundle checksum differs: {bundle}")
+        filename = Path(urllib.parse.urlsplit(upstream.url).path).name
+        recovered = directory / filename
+        with tarfile.open(bundle) as container:
+            member = container.getmember(member_name)
+            if not member.isfile() or member.size != override["member_bytes"]:
+                raise ValueError("Asset mirror member does not match its pinned size/type")
+            with container.extractfile(member) as reader, recovered.open("wb") as writer:
+                shutil.copyfileobj(reader, writer)
+        with recovered.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if digest != override["member_sha256"] or digest != upstream.checksum:
+            raise ValueError("Recovered asset differs from the original upstream checksum")
+        record.update({
+            "mirror_archive_sha256": bundle_digest, "mirror_archive_bytes": bundle.stat().st_size,
+            "mirror_member": member_name, "member_sha256": digest,
+            "member_bytes": recovered.stat().st_size, "original_archive_unchanged": True,
+        })
+        original = copy.copy(upstream)
+        original.url = recovered.as_uri()
+        original.filename = upstream.filename or filename
+        yield original
 
 
 def main() -> None:
@@ -156,7 +208,10 @@ def main() -> None:
             previous_timeout = socket.getdefaulttimeout()
             try:
                 socket.setdefaulttimeout(60)
-                download_asset.download(download_source, non_interactive=True)
+                with archive_member_source(
+                    download_source, upstream_source, override, archive, record,
+                ) as resolved_source:
+                    download_asset.download(resolved_source, non_interactive=True)
             except (OSError, ValueError) as error:
                 record.update({"availability": "download_failed", "download_error": str(error)})
                 if args.output:
