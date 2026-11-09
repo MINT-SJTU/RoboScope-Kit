@@ -8,13 +8,15 @@ from __future__ import annotations
 import ctypes
 import multiprocessing
 import os
+import pickle
 import signal
+import socket
+import struct
 import time
 import traceback
 from collections import deque
 from contextlib import ExitStack
 from dataclasses import dataclass, field
-from multiprocessing.connection import Connection
 from typing import Any
 
 import numpy as np
@@ -23,6 +25,58 @@ from .protocol import OBSERVATION_STEPS, Task
 
 SLOT_TIMEOUT_S = 300
 STOP_TIMEOUT_S = 5
+MAX_MESSAGE_BYTES = 256 * 1024 * 1024
+
+
+class _SlotChannel:
+    """Frame slot messages with deadlines covering headers and complete bodies."""
+
+    def __init__(self, transport: socket.socket) -> None:
+        self._transport = transport
+
+    @staticmethod
+    def _remaining(deadline: float | None) -> float | None:
+        if deadline is None:
+            return None
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("slot message deadline expired")
+        return remaining
+
+    def send(self, value: Any, deadline: float | None = None) -> None:
+        payload = pickle.dumps(value, protocol=pickle.HIGHEST_PROTOCOL)
+        if len(payload) > MAX_MESSAGE_BYTES:
+            raise ValueError("RoboCasa365 slot message exceeds the transport limit")
+        for data in (struct.pack("!Q", len(payload)), payload):
+            self._transport.settimeout(self._remaining(deadline))
+            self._transport.sendall(data)
+
+    def _read(self, size: int, deadline: float | None) -> bytes:
+        data = bytearray()
+        while len(data) < size:
+            self._transport.settimeout(self._remaining(deadline))
+            part = self._transport.recv(min(size - len(data), 1024 * 1024))
+            if not part:
+                raise EOFError("slot closed its message channel")
+            data.extend(part)
+        return bytes(data)
+
+    def recv(self, deadline: float | None = None) -> Any:
+        size, = struct.unpack("!Q", self._read(8, deadline))
+        if size > MAX_MESSAGE_BYTES:
+            raise ValueError("RoboCasa365 slot message exceeds the transport limit")
+        value = pickle.loads(self._read(size, deadline))
+        self._remaining(deadline)
+        return value
+
+    def close(self) -> None:
+        self._transport.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args) -> None:
+        self.close()
 
 
 @dataclass
@@ -118,7 +172,7 @@ class LocalSlots:
         self._cleanup.close()
 
 
-def _run_slot(connection: Connection, task: Task, index: int, parent_pid: int) -> None:
+def _run_slot(connection: _SlotChannel, task: Task, index: int, parent_pid: int) -> None:
     # The SDK Worker can die before it gets a chance to close its simulator children.
     libc = ctypes.CDLL(None, use_errno=True)
     if libc.prctl(1, signal.SIGTERM, 0, 0, 0) != 0:  # PR_SET_PDEATHSIG on Linux.
@@ -152,7 +206,8 @@ class SpawnedSlots:
         self._processes = []
         try:
             for index in range(count):
-                parent, child = context.Pipe()
+                parent_socket, child_socket = socket.socketpair()
+                parent, child = _SlotChannel(parent_socket), _SlotChannel(child_socket)
                 self._connections.append(parent)
                 with child:
                     process = context.Process(
@@ -161,19 +216,20 @@ class SpawnedSlots:
                     process.start()
                 self._processes.append(process)
             self._receive("create")
-        except BaseException:
-            self.close()
+        except BaseException as error:
+            self._close_after_error(error)
             raise
 
-    def _receive(self, operation: str) -> list:
-        deadline = time.monotonic() + SLOT_TIMEOUT_S
+    def _receive(self, operation: str, deadline: float | None = None) -> list:
+        if deadline is None:
+            deadline = time.monotonic() + SLOT_TIMEOUT_S
         results = []
         for index, connection in enumerate(self._connections):
-            if not connection.poll(max(0.0, deadline - time.monotonic())):
-                raise TimeoutError(f"RoboCasa365 slot {index} timed out during {operation}")
             try:
-                ok, value = connection.recv()
-            except EOFError as error:
+                ok, value = connection.recv(deadline)
+            except TimeoutError as error:
+                raise TimeoutError(f"RoboCasa365 slot {index} timed out during {operation}") from error
+            except (EOFError, OSError) as error:
                 raise RuntimeError(f"RoboCasa365 slot {index} exited during {operation}") from error
             if not ok:
                 raise RuntimeError(f"RoboCasa365 slot {index} failed during {operation}\n{value}")
@@ -181,9 +237,25 @@ class SpawnedSlots:
         return results
 
     def _call(self, operation: str, values: list) -> list:
-        for connection, value in zip(self._connections, values, strict=True):
-            connection.send((operation, value))
-        return self._receive(operation)
+        deadline = time.monotonic() + SLOT_TIMEOUT_S
+        try:
+            for index, (connection, value) in enumerate(zip(self._connections, values, strict=True)):
+                try:
+                    connection.send((operation, value), deadline)
+                except TimeoutError as error:
+                    raise TimeoutError(f"RoboCasa365 slot {index} timed out sending {operation}") from error
+                except OSError as error:
+                    raise RuntimeError(f"RoboCasa365 slot {index} exited during {operation}") from error
+            return self._receive(operation, deadline)
+        except BaseException as error:
+            self._close_after_error(error)
+            raise
+
+    def _close_after_error(self, error: BaseException) -> None:
+        try:
+            self.close()
+        except Exception as cleanup_error:
+            error.add_note(f"RoboCasa365 slot cleanup also failed: {cleanup_error}")
 
     def reset(self, identifiers: list[str]) -> list[SlotState]:
         return self._call("reset", identifiers)
@@ -195,14 +267,14 @@ class SpawnedSlots:
         return [state for state, _, _ in replies], time.perf_counter() - started, 0.0
 
     def close(self) -> None:
+        deadline = time.monotonic() + STOP_TIMEOUT_S
         for connection in self._connections:
             try:
-                connection.send(("close", None))
+                connection.send(("close", None), deadline)
             except OSError:
                 pass
             finally:
                 connection.close()
-        deadline = time.monotonic() + STOP_TIMEOUT_S
         for process in self._processes:
             process.join(max(0.0, deadline - time.monotonic()))
         for process in self._processes:
@@ -213,3 +285,7 @@ class SpawnedSlots:
             process.join(max(0.0, deadline - time.monotonic()))
         if any(process.is_alive() for process in self._processes):
             raise RuntimeError("RoboCasa365 simulator child did not exit after SIGKILL")
+        for process in self._processes:
+            process.close()
+        self._connections.clear()
+        self._processes.clear()

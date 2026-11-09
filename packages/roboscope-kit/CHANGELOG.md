@@ -6,7 +6,9 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 - Add opt-in concurrent execution of RoboCasa365's five native simulator slots. Persistent child
   processes keep the per-slot reset stream and join at every existing action-chunk boundary.
-  Retain serial execution for video and profiling, bound IPC waits, and clean up on parent death.
+  Retain serial execution for video and profiling, and clean up on parent death. Frame socket messages
+  with one deadline covering sends and complete replies, including partial headers/bodies, and bound
+  graceful shutdown before killing and reaping stalled children.
 
 ## 0.8.0b36 - 2026-11-11
 
