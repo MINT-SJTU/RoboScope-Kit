@@ -19,6 +19,7 @@ from .tasks import (
     CAMERAS,
     EPISODE_LENGTH,
     EPISODES_PER_TASK,
+    EVALUATION_ORDER,
     IMAGE_SIZE,
     PLANNING_ERRORS,
     PROTOCOL_VERSION,
@@ -76,6 +77,23 @@ class RLBenchBenchmarkAdapter:
         self.config = config
 
     def work_items(self) -> Sequence[WorkItem]:
+        if self.config.formal:
+            # One item, so one simulator process runs every task in the native evaluator's order,
+            # whatever the concurrency: outcomes depend on the process's simulation history.
+            return [
+                WorkItem(
+                    ordinal=0,
+                    item_id=f"{self.config.suite}-evaluation-order",
+                    group_id=self.config.suite,
+                    payload={
+                        "segments": [
+                            {"task": task, "episodes": list(range(EPISODES_PER_TASK))}
+                            for task in EVALUATION_ORDER
+                        ]
+                    },
+                    expected_results=len(EVALUATION_ORDER) * EPISODES_PER_TASK,
+                )
+            ]
         items: list[WorkItem] = []
         episodes = self.config.episodes_per_task
         for start in range(0, episodes, self.config.chunk_size):
@@ -210,12 +228,17 @@ class RLBenchBenchmarkAdapter:
         seen: set[str] = set()
         expected_episodes = set(range(self.config.episodes_per_task))
         for result in results:
-            task = result.group_id
-            if task not in self.config.tasks:
-                raise RuntimeError(f"unexpected RLBench task result {task!r}")
+            # A formal result is the suite's single item; any other result holds one task.
+            if result.group_id == self.config.suite and self.config.formal:
+                tasks = set(self.config.tasks)
+            elif result.group_id in self.config.tasks:
+                tasks = {result.group_id}
+            else:
+                raise RuntimeError(f"unexpected RLBench task result {result.group_id!r}")
             for record in result.records:
+                task = record.metadata.get("task")
                 episode = int(record.metadata["episode"])
-                if record.metadata.get("task") != task or episode not in expected_episodes:
+                if task not in tasks or episode not in expected_episodes:
                     raise RuntimeError(f"RLBench record {record.record_id} is outside the work manifest")
                 if record.record_id != f"{task}-episode-{episode:02d}" or record.record_id in seen:
                     raise RuntimeError(f"duplicate or malformed RLBench record {record.record_id}")

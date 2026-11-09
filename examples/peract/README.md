@@ -75,7 +75,9 @@ keep.
        --output-dir /runs/peract-quick
    ```
 
-   Drop `--quick-test` for the full 18 x 25 evaluation; add `--concurrency K --replicas G` to skip autotuning.
+   For the full 18 x 25 evaluation, replace `--quick-test` with `--concurrency 1 --replicas 1`. The run uses one
+   simulator process and PerAct's task order, as PerAct's `eval.py` does, because RLBench outcomes depend on
+   what the process simulated before.
    RLBench does not support cross-instance sharding until the Policy and checkpoint identity can be verified
    across shards.
 

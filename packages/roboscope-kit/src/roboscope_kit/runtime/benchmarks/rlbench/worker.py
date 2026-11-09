@@ -46,7 +46,7 @@ import numpy as np
 
 from roboscope_kit import EpisodeContext, Observation
 from roboscope_kit.client import PolicyClient
-from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
+from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkQueue, WorkResult
 
 from .tasks import (
     ACTION_DIM,
@@ -480,30 +480,40 @@ def main() -> None:
             current["env"].env._scene.register_step_callback(counter)
         return current["env"]
 
+    queue = WorkQueue(args.queue_dir)
+
     def evaluate(item: WorkItem, client: PolicyClient) -> WorkResult:
-        task = str(item.payload["task"])
-        episodes = [int(episode) for episode in item.payload["episodes"]]
-        loaded = task_environment(task)
+        # A formal item lists every task in evaluation order; a smaller item is one task's episodes.
+        segments = item.payload.get("segments") or [item.payload]
         started = time.perf_counter()
-        records = []
+        records: list[EvaluationRecord] = []
         inference_wait_s = 0.0
-        for index in episodes:
-            episode = load_test_episode(args.test_set, task, index)
-            record, wait = run_episode(client, loaded, counter, episode)
-            records.append(record)
-            inference_wait_s += wait
-        return WorkResult(
-            item_id=item.item_id,
-            group_id=item.group_id,
-            worker_id=args.worker_id,
-            records=tuple(records),
-            metadata={
-                "suite": args.suite,
-                "task": task,
-                "elapsed_s": time.perf_counter() - started,
-                "inference_wait_s": inference_wait_s,
-            },
-        )
+
+        def result() -> WorkResult:
+            return WorkResult(
+                item_id=item.item_id,
+                group_id=item.group_id,
+                worker_id=args.worker_id,
+                records=tuple(records),
+                metadata={
+                    "suite": args.suite,
+                    "tasks": [str(segment["task"]) for segment in segments],
+                    "elapsed_s": time.perf_counter() - started,
+                    "inference_wait_s": inference_wait_s,
+                },
+            )
+
+        for segment in segments:
+            task = str(segment["task"])
+            loaded = task_environment(task)
+            for index in (int(episode) for episode in segment["episodes"]):
+                episode = load_test_episode(args.test_set, task, index)
+                record, wait = run_episode(client, loaded, counter, episode)
+                records.append(record)
+                inference_wait_s += wait
+                if len(segments) > 1:
+                    queue.publish_partial(item, result())
+        return result()
 
     try:
         with PolicyClient(args.policy_socket) as client:

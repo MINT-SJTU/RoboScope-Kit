@@ -25,9 +25,8 @@ import json
 import math
 from pathlib import Path
 
-from run_native import TASKS
-
 from roboscope_kit.runtime.benchmarks.rlbench.tasks import (
+    EVALUATION_ORDER,
     PROTOCOL_VERSION,
     PYTHON_HASH_SEED,
     TASKS_BY_NAME,
@@ -55,7 +54,7 @@ def expected_records(run_dir: Path) -> set[tuple[str, int]]:
         or not isinstance(tasks, list)
         or not tasks
         or len(tasks) != len(set(tasks))
-        or any(task not in TASKS for task in tasks)
+        or any(task not in EVALUATION_ORDER for task in tasks)
         or type(count) is not int
         or not 1 <= count <= 25
     ):
@@ -64,11 +63,23 @@ def expected_records(run_dir: Path) -> set[tuple[str, int]]:
     recorded = []
     for item in manifest["items"]:
         payload = item["payload"]
-        if item["group_id"] != payload["task"] or item["expected_results"] != len(payload["episodes"]):
+        # A formal run is one item with every task in evaluation order; other runs have one task per item.
+        segments = payload.get("segments") or [payload]
+        if "segments" in payload:
+            consistent = item["group_id"] == "peract_18" and [s["task"] for s in segments] == list(
+                EVALUATION_ORDER
+            )
+        else:
+            consistent = item["group_id"] == payload["task"]
+        if not consistent or item["expected_results"] != sum(len(s["episodes"]) for s in segments):
             raise SystemExit("Kit manifest has an inconsistent work item")
-        recorded.extend((payload["task"], episode) for episode in payload["episodes"])
-    if (len(recorded) != len(expected) or set(recorded) != expected
-            or manifest["total_records"] != len(expected)):
+        for segment in segments:
+            recorded.extend((segment["task"], episode) for episode in segment["episodes"])
+    if (
+        len(recorded) != len(expected)
+        or set(recorded) != expected
+        or manifest["total_records"] != len(expected)
+    ):
         raise SystemExit("Kit manifest does not cover its declared workload exactly once")
     return expected
 

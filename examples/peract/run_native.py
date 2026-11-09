@@ -48,31 +48,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from assets import CHECKPOINT_SEED_DIR, CHECKPOINT_WEIGHT, CLIP_RN50, verify  # noqa: E402
 
 from roboscope_kit.runtime.benchmarks.rlbench.tasks import (  # noqa: E402
+    EVALUATION_ORDER,
     PROTOCOL_VERSION,
     PYTHON_HASH_SEED,
     require_python_hash_seed,
 )
-
-TASKS = (
-    "close_jar",
-    "insert_onto_square_peg",
-    "light_bulb_in",
-    "meat_off_grill",
-    "open_drawer",
-    "place_cups",
-    "place_shape_in_shape_sorter",
-    "push_buttons",
-    "put_groceries_in_cupboard",
-    "put_item_in_drawer",
-    "put_money_in_safe",
-    "reach_and_drag",
-    "stack_blocks",
-    "stack_cups",
-    "turn_tap",
-    "place_wine_at_rack_location",
-    "slide_block_to_color_target",
-    "sweep_to_dustpan_of_size",
-)  # PerAct README order
 
 
 def parse_args() -> argparse.Namespace:
@@ -80,7 +60,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--runtime", type=Path, required=True)
     parser.add_argument("--checkpoint-source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--task", action="append", choices=TASKS, help="default: all 18, in README order")
+    parser.add_argument(
+        "--task", action="append", choices=EVALUATION_ORDER, help="default: all 18, in README order"
+    )
     parser.add_argument("--episodes", type=int, default=25)
     return parser.parse_args()
 
@@ -194,7 +176,7 @@ def main() -> int:
     episodes_path = output / "native-episodes.jsonl"
     if episodes_path.exists():
         raise SystemExit(f"{episodes_path} exists; choose a new --output")
-    tasks = args.task or list(TASKS)
+    tasks = args.task or list(EVALUATION_ORDER)
     logdir = prepare_logdir(checkpoint_source, output)
 
     from roboscope_kit.runtime.benchmarks.rlbench.worker import start_xvfb

@@ -365,6 +365,14 @@ merge paths are disabled: the shared runtime cannot yet verify that independent 
 Policy code, dependencies and checkpoint contents. Run this profile without sharding until that provenance
 is available. A partial result never establishes a formal score.
 
+**Scheduling.** RLBench keeps simulator state across task loads and resets, so an episode's outcome
+depends on which tasks and episodes the CoppeliaSim process ran before it. PerAct's `eval.py` runs all 18
+tasks in one process in its README order (`EVALUATION_ORDER` in `tasks.py`). A formal run is therefore one
+work item that runs the whole workload in one simulator worker in that order, whatever the concurrency;
+run it with `--concurrency 1 --replicas 1`. Quick Test and runs of fewer than 25 episodes per task split the
+episodes over the workers, one episode per item, for speed. Their per-task results depend on that schedule
+and are not comparable with PerAct's numbers.
+
 ## 8. Validation sequence
 
 1. Build the runtime with `build-runtime.sh` in a fresh directory; it verifies versions, the test split's
@@ -466,7 +474,7 @@ python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 
     --checkpoint-source /models/peract --benchmark-manifest /sim/rlbench/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json --output-dir /runs/rlbench-quick
 python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 \
-    --concurrency 12 --replicas 1 --checkpoint-source /models/peract \
+    --concurrency 1 --replicas 1 --checkpoint-source /models/peract \
     --benchmark-manifest /sim/rlbench/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json --output-dir /runs/rlbench-full
 PYTHONPATH=packages/roboscope-kit/src /sim/rlbench/env/bin/python examples/peract/run_native.py \

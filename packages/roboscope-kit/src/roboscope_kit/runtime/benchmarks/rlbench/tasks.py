@@ -163,6 +163,31 @@ TASKS: tuple[RLBenchTask, ...] = (
 TASKS_BY_NAME = {task.name: task for task in TASKS}
 TASK_NAMES = tuple(task.name for task in TASKS)
 QUICK_TEST_TASK = "open_drawer"
+# The order of PerAct's README test command (``rlbench.tasks=[...]``). The native evaluator runs the
+# tasks in this order in one CoppeliaSim process, and a formal Kit run does the same: RLBench keeps
+# simulator state across task loads and resets, so an episode's outcome depends on which tasks and
+# episodes the process simulated before it.
+EVALUATION_ORDER = (
+    "close_jar",
+    "insert_onto_square_peg",
+    "light_bulb_in",
+    "meat_off_grill",
+    "open_drawer",
+    "place_cups",
+    "place_shape_in_shape_sorter",
+    "push_buttons",
+    "put_groceries_in_cupboard",
+    "put_item_in_drawer",
+    "put_money_in_safe",
+    "reach_and_drag",
+    "stack_blocks",
+    "stack_cups",
+    "turn_tap",
+    "place_wine_at_rack_location",
+    "slide_block_to_color_target",
+    "sweep_to_dustpan_of_size",
+)
+assert sorted(EVALUATION_ORDER) == sorted(TASK_NAMES)
 
 
 def episode_state_sha256(variation: int, random_state: Any) -> str:
@@ -194,6 +219,7 @@ __all__ = [
     "CAMERAS",
     "EPISODES_PER_TASK",
     "EPISODE_LENGTH",
+    "EVALUATION_ORDER",
     "IMAGE_SIZE",
     "PLANNING_ERRORS",
     "PROTOCOL_VERSION",
