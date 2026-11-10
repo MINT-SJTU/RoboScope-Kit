@@ -98,5 +98,4 @@ keep.
    It reports success only after the episode identities and per-task success rates agree with PerAct's CSV.
    For a single episode, the wrapper enables YARR's usual summary calculation for that one return.
    An incomplete native child run fails. The comparison requires the full declared workload and rejects
-   missing or mismatched protocol, hash seed, variation, instruction or stored-state digest; older v1
-   native logs cannot pass the v2 comparison.
+   missing or mismatched protocol, hash seed, variation, instruction or stored-state digest.

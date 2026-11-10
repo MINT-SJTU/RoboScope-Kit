@@ -65,8 +65,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - Allow the native PerAct runner to report and verify YARR's statistics for a single completed episode.
 - Fix and record `PYTHONHASHSEED=0` in RLBench simulator and native evaluator processes. The pinned
   `push_buttons` task constructs distractor colors from a set, whose order otherwise differs across Python
-  processes despite matching NumPy states. The v2 comparison rejects records without this execution contract;
-  earlier v1 results remain historical and require revalidation.
+  processes despite matching NumPy states. The comparison rejects records without this execution contract.
 
 ## 0.8.0b33 - 2026-11-08
 
