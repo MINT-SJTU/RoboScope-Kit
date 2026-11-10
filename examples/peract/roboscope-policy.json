@@ -1,0 +1,13 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/usr/bin/env",
+    "PYTHONPATH=/path/to/RoboScope-Kit/packages/roboscope-kit/src",
+    "PERACT_ROOT=/sim/rlbench/src/peract",
+    "COPPELIASIM_ROOT=/sim/rlbench/coppeliasim",
+    "LD_LIBRARY_PATH=/sim/rlbench/coppeliasim",
+    "/sim/rlbench/env/bin/python",
+    "/path/to/RoboScope-Kit/examples/peract/peract_policy.py"
+  ],
+  "cwd": "/path/to/RoboScope-Kit/examples/peract"
+}
