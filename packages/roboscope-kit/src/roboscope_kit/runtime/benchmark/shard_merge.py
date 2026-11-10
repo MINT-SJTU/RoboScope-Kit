@@ -106,6 +106,8 @@ def merge_shards(
     shard_dirs: list[Path],
     evaluation_config_path: Path | None = None,
 ) -> dict[str, Any]:
+    if benchmark is BenchmarkName.RLBENCH:
+        raise ValueError("RLBench shard merging is unavailable until policy identity can be verified")
     manifest = load_benchmark_manifest(manifest_path)
     factory = benchmark_factory(benchmark)
     factory.validate_suite(suite)

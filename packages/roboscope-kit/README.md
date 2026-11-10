@@ -267,6 +267,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | RoboCasa GR-1 Tabletop | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa GR-1 Tabletop environment, simulator and task source, and dataset assets |
 | CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
+| RLBench | SDK-native adapter and persistent CoppeliaSim worker on a private Xvfb display, with a fixed Python hash seed for paired evaluation | CoppeliaSim 4.1, pinned PyRep and the PerAct RLBench fork, and PerAct's released test split |
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
 
 LIBERO and CALVIN convert native observations to the canonical feature names and send native 7-dimensional
@@ -285,11 +286,12 @@ The exact contracts are in the protocol documents:
 - [MetaWorld](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md):
   MT50 manifest, camera setup, official training-goal evaluation, four-difficulty macro aggregation, and
   validation.
+- [RLBench](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md):
+  the PerAct 18-task reproduction profile `peract_18`: licence gates, pinned stack, test-episode replay,
+  cameras and key-frame actions, termination, aggregation, and the native comparison.
 - [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md):
   the `ph_low_dim` suite, supported and unsupported task/dataset/observation combinations, version and
   license gates, seeded initial states, upstream rollout semantics, the native comparison, and the baseline.
-  Status: code candidate, build-verified with a real-model full evaluation and native comparison; ships in
-  `0.8.0b26`, released when that version is merged.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md):
   environment build, suites, observation and action layouts, step observation updates, and experimental
   runtime switches.
