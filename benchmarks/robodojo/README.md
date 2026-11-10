@@ -298,10 +298,12 @@ allocate render resources. Physics state matched native to about 1e-8 in both ca
 
 For speed only, with images that differ from native, two processes × 24 tiled tables ran the same 48 layouts
 with GPT-6.1 Terra (another RTX 4090 48 GB with the same 580.105.08 driver, video off, idle tables asleep).
-A tool-transport error on one agent's `finish` call stopped the run after 1,987 s. By then, 35 episodes had
-ended normally, all successful, after 1,415–1,824 s each; 13 were cut short. That is at least 69 episodes/h,
-2.2× the four single-table Workers. Each episode took about 4.6 times as long, and the run used 1,653 model
-requests, about 34 per episode against 15.
+A tool-transport error on one agent's `finish` call stopped the run 1,987 s after launch. By then, 35 episodes
+had ended normally, all successful, after 1,415–1,824 s each; 13 were cut short. Over the 1,987 s, that is 63.4
+completed episodes/h, 2.05× the four single-table Workers measured the same way (48 episodes in 5,590.6 s). This
+is a partial-run rate, not a bound on full 48-episode throughput: the 13 cut-short episodes may have needed
+longer. Each episode took about 4.6 times as long, and the run used 1,653 model requests, about 34 per episode
+against 15.
 
 ### 2026-11-07: latency-bound Policy (synthetic)
 
