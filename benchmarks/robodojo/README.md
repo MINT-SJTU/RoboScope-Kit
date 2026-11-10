@@ -296,6 +296,13 @@ tables ended at 44 steps, which native never produced. Rendering each camera sep
 difference, but 3/24 episodes at 8 tables still ended at 44 steps, and 24 tables (72 render products) fail to
 allocate render resources. Physics state matched native to about 1e-8 in both cases.
 
+For speed only, with images that differ from native, two processes × 24 tiled tables ran the same 48 layouts
+with GPT-6.1 Terra (another RTX 4090 48 GB with the same 580.105.08 driver, video off, idle tables asleep).
+A tool-transport error on one agent's `finish` call stopped the run after 1,987 s. By then, 35 episodes had
+ended normally, all successful, after 1,415–1,824 s each; 13 were cut short. That is at least 69 episodes/h,
+2.2× the four single-table Workers. Each episode took about 4.6 times as long, and the run used 1,653 model
+requests, about 34 per episode against 15.
+
 ### 2026-11-07: latency-bound Policy (synthetic)
 
 [`examples/latency-policy/`](../../examples/latency-policy/README.md) sleeps 3 s per `act()` and returns 10
