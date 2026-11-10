@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "task_id": "UnitreeGo2-Reach-v1",
+  "robot_uid": "unitree_go2_simplified_locomotion",
+  "control_mode": "pd_joint_delta_pos",
+  "repository": "HexPlex0xFF/Maniskill-Unitree-GO2",
+  "revision": "5e51960de0e2f989f0b0a4a84300ce324a55544c",
+  "path": "model_1000.pt",
+  "bytes": 4546539,
+  "sha256": "811b99d7ebea5a9db9c9ce5e548354e9f55391e8a73d253d454a76a5dc20c853",
+  "license": "MIT",
+  "config_path": "cfgs.pkl",
+  "config_sha256": "ed7a9f1598d3f73adb08052cb7236fde98061db8302cedb2e3456048ec7c886b",
+  "observation_reference_repository": "Genesis-Embodied-AI/Genesis",
+  "observation_reference_revision": "5dc441df4961fc0d84784adcf412048f720f5def",
+  "training_simulator": "not documented by checkpoint publisher; compatible Genesis walking contract",
+  "inference": "community locomotion transfer with observed native goal velocity commands",
+  "native_observation_dimension": 35,
+  "native_joint_count": 12,
+  "policy_observation_dimension": 45,
+  "policy_joint_names": [
+    "FR_hip_joint",
+    "FR_thigh_joint",
+    "FR_calf_joint",
+    "FL_hip_joint",
+    "FL_thigh_joint",
+    "FL_calf_joint",
+    "RR_hip_joint",
+    "RR_thigh_joint",
+    "RR_calf_joint",
+    "RL_hip_joint",
+    "RL_thigh_joint",
+    "RL_calf_joint"
+  ],
+  "policy_default_angles": [
+    0.0,
+    0.8,
+    -1.5,
+    0.0,
+    0.8,
+    -1.5,
+    0.0,
+    1.0,
+    -1.5,
+    0.0,
+    1.0,
+    -1.5
+  ],
+  "native_delta_range": 0.7,
+  "action_scale": 0.25,
+  "simulate_action_latency": true,
+  "clip_actions": 100.0,
+  "observation_scales": {
+    "lin_vel": 2.0,
+    "ang_vel": 0.25,
+    "dof_pos": 1.0,
+    "dof_vel": 0.05
+  },
+  "command_ranges": [
+    [
+      -0.5,
+      0.5
+    ],
+    [
+      -0.32,
+      0.32
+    ],
+    [
+      -0.2,
+      0.2
+    ]
+  ],
+  "source_control_period_s": 0.02
+}

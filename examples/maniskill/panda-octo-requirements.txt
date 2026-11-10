@@ -1,0 +1,10 @@
+# Additional inference imports for the pinned Octo v1.5 source.
+# Install into an isolated --target directory on top of octo-requirements.txt.
+array-record==0.4.1
+click==8.1.7
+googleapis-common-protos==1.63.2
+promise==2.3
+psutil==5.9.8
+tensorflow-datasets==4.9.2
+tensorflow-metadata==1.15.0
+toml==0.10.2

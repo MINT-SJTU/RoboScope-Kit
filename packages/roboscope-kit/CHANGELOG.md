@@ -2,6 +2,40 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b48 - 2026-11-10
+
+- Check actual boolean native terminal masks in full-horizon and diagnostic ManiSkill comparisons.
+- Record returned per-lane masks in the native PPO and Octo evaluators; reject missing legacy fields instead of inferring them.
+- Integrate current main while retaining both ManiSkill and RLBench registration and documentation.
+
+## 0.8.0b47 - 2026-11-10
+
+- Add separately named cabinet depth profiles and optional native robot, handle and contact observations for the pinned MS-HAB Fetch Open policy example.
+- Keep depth normalization, contact classification, coordinate transforms and frame history in the Policy; preserve original cabinet task profiles and rules.
+
+## 0.8.0b46 - 2026-11-09
+
+- Recover the original PickClutterYCB scene corpus from a checksum-pinned author mirror without changing its upstream bytes.
+- Extend separately named real-policy references for remaining control and visual task profiles, preserving canonical evaluation rules.
+
+## 0.8.0b45 - 2026-11-09
+
+- Add pinned learned-policy references for control, dexterous manipulation and locomotion tasks, with explicit cross-simulator transfer contracts.
+- Add separately named root-kinematics profiles without changing existing observation vectors or controllers.
+- Support clearly labeled integration prefixes while preserving native horizons and termination masks, and compare their complete observation/action traces against independent native rollouts.
+
+## 0.8.0b44 - 2026-11-09
+
+- Integrate ManiSkill GPU vector evaluation with a complete inventory of 55 evaluation tasks,
+  source-backed helper exclusions, per-task robot/controller/observation settings and full horizons.
+- Add a pinned runtime builder, checksum-pinned asset sources and 11 official PPO checkpoint mappings.
+  Construct the native evaluator independently and compare expected records, inputs, actions and outcomes.
+- Add an isolated, pinned public Octo-small Bridge Policy, target-controller rotation mapping,
+  repeatable GPU inference and an independent native visual evaluator with per-step comparison.
+- Validate complete record coverage, preserve return-based scoring for tasks without success flags,
+  support task-default robots and Bridge RGB observations, and render a real frame in the GPU self-test.
+- Keep missing task policies, assets and native comparisons explicit while integration acceptance is partial.
+
 ## 0.8.0b35 - 2026-11-10
 
 - Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task

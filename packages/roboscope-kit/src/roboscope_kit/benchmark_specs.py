@@ -22,6 +22,7 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     ROBODOJO = "robodojo"
     RLBENCH = "rlbench"
     ROBOMIMIC = "robomimic"
+    MANISKILL = "maniskill"
 
 
 class BenchmarkDefinition(ABC):
@@ -118,6 +119,79 @@ class LiberoPlusBenchmarkDefinition(LiberoBenchmarkDefinition):
 class LiberoProBenchmarkDefinition(LiberoBenchmarkDefinition):
     name = BenchmarkName.LIBERO_PRO
     protocol_version = "libero-pro-v1"
+
+
+class ManiSkillBenchmarkDefinition(BenchmarkDefinition):
+    """Task-driven ManiSkill observations and native controller action vectors."""
+
+    name = BenchmarkName.MANISKILL
+    protocol_version = "maniskill-v1"
+    supported_action_representations = ("maniskill.native-controller-v1",)
+    default_action_representation = "maniskill.native-controller-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        return (
+            _feature(
+                "state.proprioception", FeatureKind.STATE,
+                "Upstream state, or nonvisual agent/extra fields for visual observations.",
+                required=False, shape=(None,),
+            ),
+            _feature(
+                "state.root_pose", FeatureKind.STATE,
+                "Optional articulation root pose: scene XYZ followed by quaternion WXYZ.",
+                required=False, shape=(7,),
+            ),
+            _feature(
+                "state.root_linear_velocity", FeatureKind.STATE,
+                "Optional articulation root linear velocity in the scene world frame.",
+                required=False, shape=(3,),
+            ),
+            _feature(
+                "state.root_angular_velocity", FeatureKind.STATE,
+                "Optional articulation root angular velocity in the scene world frame.",
+                required=False, shape=(3,),
+            ),
+            *(_feature(name, FeatureKind.STATE, description, required=False, shape=(dimension,))
+              for name, description, dimension in (
+                  ("state.robot_base_pose", "Optional scene-frame robot base-link XYZ/WXYZ pose.", 7),
+                  ("state.robot_tcp_pose", "Optional scene-frame measured TCP XYZ/WXYZ pose.", 7),
+                  ("state.target_handle_position", "Optional scene-frame cabinet handle position.", 3),
+                  ("state.left_finger_pose", "Optional scene-frame left finger XYZ/WXYZ pose.", 7),
+                  ("state.right_finger_pose", "Optional scene-frame right finger XYZ/WXYZ pose.", 7),
+                  ("state.left_target_contact_force", "Optional left finger/target contact force in N.", 3),
+                  ("state.right_target_contact_force", "Optional right finger/target contact force in N.", 3),
+              )),
+            _feature(
+                "state.depth_head", FeatureKind.STATE, "Optional native head-camera depth in millimeters.",
+                required=False, shape=(None, None, 1),
+            ),
+            _feature(
+                "state.depth_hand", FeatureKind.STATE, "Optional native hand-camera depth in millimeters.",
+                required=False, shape=(None, None, 1),
+            ),
+            _feature(
+                "images.primary", FeatureKind.IMAGE, "Configured primary camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "images.wrist", FeatureKind.IMAGE, "Configured wrist camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "images.auxiliary", FeatureKind.IMAGE, "Configured auxiliary camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "language.instruction", FeatureKind.LANGUAGE, "Task instruction.", required=False,
+            ),
+        )
+
+    def action(self, _suite: str) -> ActionSpec:
+        # Each task validates against its robot/controller action space in the worker.
+        return ActionSpec(
+            "action.robot", "Unmodified action vector for the per-episode ManiSkill controller.",
+            None,
+        )
 
 
 class RoboCasaBenchmarkDefinition(BenchmarkDefinition):
@@ -428,6 +502,9 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         LiberoBenchmarkDefinition(),
         LiberoPlusBenchmarkDefinition(),
         LiberoProBenchmarkDefinition(),
+
+
+        ManiSkillBenchmarkDefinition(),
         RoboCasaBenchmarkDefinition(),
         RoboTwinBenchmarkDefinition(),
         RoboDojoBenchmarkDefinition(),

@@ -1,0 +1,3026 @@
+{
+  "schema_version": 3,
+  "supported_benchmarks": [
+    "maniskill"
+  ],
+  "protocol_versions": {
+    "maniskill": "maniskill-v1"
+  },
+  "supported_suites": {
+    "maniskill": [
+      "pickcube_state_v1",
+      "baseline_state_v1",
+      "tabletop_state_v1",
+      "tabletop_rgb_v1",
+      "official_ppo_state_v1",
+      "upstream_tasks_v1",
+      "upstream_state_v1",
+      "bridge_rgb_v1",
+      "transfer_reference_state_v1",
+      "humanoid_control_transfer_state_v1",
+      "panda_visual_rgb_v1",
+      "g1_visual_rgb_v1",
+      "fetch_mshab_depth_v1"
+    ]
+  },
+  "runtime": {
+    "python": "env/bin/python",
+    "home": "home",
+    "physx_gpu_library": "home/.sapien/physx/105.1-physx-5.3.1.patch0/libPhysXGpu_64.so",
+    "benchmark_root": "ManiSkill",
+    "source_metadata": "build-provenance.json",
+    "asset_dir": "assets"
+  },
+  "defaults": {
+    "episodes": 100,
+    "envs_per_worker": 10,
+    "policy_batch_size": 256,
+    "maximum_workers": 2,
+    "maximum_replicas": 2,
+    "probe_items_per_worker": 3,
+    "client_cpu_threads": 1,
+    "ready_timeout_s": 300,
+    "probe_episodes_per_task": 8
+  },
+  "benchmark_protocols": {
+    "maniskill": {
+      "protocol_id": "maniskill-v1",
+      "maniskill_source_commit": "baab60ede2e89167c1b7aaed41a9aa8e690a9d1e",
+      "asset_sources": {
+        "ycb": {
+          "url": "https://huggingface.co/datasets/haosulab/ManiSkill2/resolve/4c134e2e33b11b1fa751c1d7b6afb2e89231b875/data/mani_skill2_ycb.zip",
+          "sha256": "174001ba1003cc0c5adda6453f4433f55ec7e804f0f0da22d015d525d02262fb",
+          "bytes": 26194575,
+          "revision": "4c134e2e33b11b1fa751c1d7b6afb2e89231b875"
+        },
+        "anymal_c": {
+          "url": "https://github.com/haosulab/ManiSkill-ANYmalC/archive/b0a20f72f89298b9176a011f0f1af5c714072d34.zip",
+          "revision": "b0a20f72f89298b9176a011f0f1af5c714072d34",
+          "sha256": "5d44c09080ead9d8f4f4d9eafbadcba103d5cbc42bfa3195ef840d20f4181352",
+          "bytes": 4451032,
+          "license": "BSD-3-Clause",
+          "license_source": "https://github.com/haosulab/ManiSkill-ANYmalC"
+        },
+        "unitree_h1": {
+          "url": "https://github.com/haosulab/ManiSkill-UnitreeH1/archive/4b3d2c24b17c45cc5b91934070c7a14bd154a381.zip",
+          "revision": "4b3d2c24b17c45cc5b91934070c7a14bd154a381",
+          "sha256": "c62878a19605871dd3fca2b1dff6af28aeed3a95c2e4d4b0cf2b6304cad8e58b",
+          "bytes": 35739074,
+          "license": "BSD-3-Clause",
+          "license_source": "https://github.com/haosulab/ManiSkill-UnitreeH1"
+        },
+        "unitree_g1": {
+          "url": "https://github.com/haosulab/ManiSkill-UnitreeG1/archive/13110a0621cad79029b6b8b8fa310390c1aa62c5.zip",
+          "revision": "13110a0621cad79029b6b8b8fa310390c1aa62c5",
+          "sha256": "ca5b5dce5e25954797316846e2466dd1135b0daf466b35d379bf0a586f891f9c",
+          "bytes": 7282882,
+          "license": "BSD-3-Clause",
+          "license_source": "https://github.com/haosulab/ManiSkill-UnitreeG1"
+        },
+        "unitree_go2": {
+          "url": "https://github.com/haosulab/ManiSkill-UnitreeGo2/archive/7c5f81183b0cc56d8430d054cfcf2213050f6163.zip",
+          "revision": "7c5f81183b0cc56d8430d054cfcf2213050f6163",
+          "sha256": "b6ede1f7988e0a74546f8174bb611cde01bef9248aea4e2b8a393dec89cf59b5",
+          "bytes": 13494266,
+          "license": "BSD-3-Clause",
+          "license_source": "https://github.com/haosulab/ManiSkill-UnitreeGo2"
+        },
+        "widowx250s": {
+          "url": "https://github.com/haosulab/ManiSkill-WidowX250S/archive/6a12bb745d964aab9fc897f0999cad53aa29000c.zip",
+          "revision": "6a12bb745d964aab9fc897f0999cad53aa29000c",
+          "sha256": "00e26f4402dcfd33574389a71fd8f5e31cf79ecef51b366efec7f24b36ef9c30",
+          "bytes": 315788,
+          "license": "unverified",
+          "license_source": "https://github.com/haosulab/ManiSkill-WidowX250S"
+        },
+        "bridge_v2_real2sim": {
+          "url": "https://huggingface.co/datasets/haosulab/ManiSkill_bridge_v2_real2sim/resolve/b5a8f9ba26355ae73758971189e5cdb68f4dad76/bridge_v2_real2sim_dataset.zip",
+          "revision": "b5a8f9ba26355ae73758971189e5cdb68f4dad76",
+          "sha256": "618512a205b4528cafecdad14b1788ed1130879f3064deb406516ed5b9c5ba92",
+          "bytes": 81962479,
+          "license": "MIT"
+        },
+        "pick_clutter_ycb_configs": {
+          "url": "https://centergrasp.cs.uni-freiburg.de/download/maniskill_ycb.tar.gz",
+          "sha256": "fdddd43f17c4e51d3e9458d1229e56c8b47aa7be339c66bdcf36118c4f038bfa",
+          "bytes": 43528012,
+          "revision": "CenterGrasp-72bc8f1121937fb5b50164d4f5616b3074309281",
+          "source": "https://github.com/robot-learning-freiburg/CenterGrasp/blob/72bc8f1121937fb5b50164d4f5616b3074309281/README.md",
+          "archive_member": "maniskill_ycb/pick_clutter/ycb_train_5k.json.gz",
+          "member_sha256": "70ec176c7036f326ea7813b77f8c03bea9db5960198498957a49b2895a9ec338",
+          "member_bytes": 16616172,
+          "license": "Original ManiSkill asset terms; no new redistribution rights asserted"
+        }
+      },
+      "episodes_per_task": 100,
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99
+      ],
+      "self_test_profiles": [
+        "pickcube_state",
+        "pusht_state",
+        "pickcube_rgb"
+      ],
+      "suites": {
+        "pickcube_state_v1": [
+          "pickcube_state"
+        ],
+        "baseline_state_v1": [
+          "pickcube_state",
+          "rollball_state",
+          "pusht_state"
+        ],
+        "tabletop_state_v1": [
+          "assembling_kits_state",
+          "lift_peg_upright_state",
+          "peg_insertion_side_state",
+          "pick_clutter_ycb_state",
+          "pickcube_state",
+          "pick_single_ycb_state",
+          "place_sphere_state",
+          "plug_charger_state",
+          "poke_cube_state",
+          "pull_cube_state",
+          "pull_cube_tool_state",
+          "pushcube_state",
+          "pusht_state",
+          "rollball_state",
+          "stackcube_state",
+          "turn_faucet_state",
+          "two_robot_pickcube_state",
+          "two_robot_stackcube_state"
+        ],
+        "tabletop_rgb_v1": [
+          "assembling_kits_rgb",
+          "lift_peg_upright_rgb",
+          "peg_insertion_side_rgb",
+          "pick_clutter_ycb_rgb",
+          "pickcube_rgb",
+          "pick_single_ycb_rgb",
+          "place_sphere_rgb",
+          "plug_charger_rgb",
+          "poke_cube_rgb",
+          "pull_cube_rgb",
+          "pull_cube_tool_rgb",
+          "pushcube_rgb",
+          "pusht_rgb",
+          "rollball_rgb",
+          "stackcube_rgb",
+          "turn_faucet_rgb",
+          "two_robot_pickcube_rgb",
+          "two_robot_stackcube_rgb"
+        ],
+        "official_ppo_state_v1": [
+          "pickcube_state",
+          "rollball_state",
+          "pusht_state",
+          "lift_peg_upright_ppo_state",
+          "poke_cube_state",
+          "pull_cube_state",
+          "pushcube_state",
+          "stackcube_state",
+          "two_robot_pickcube_ppo_state",
+          "two_robot_stackcube_ppo_state",
+          "anymal_c_reach_state"
+        ],
+        "upstream_tasks_v1": [
+          "tri_finger_rotate_cube_level0_state",
+          "tri_finger_rotate_cube_level1_state",
+          "tri_finger_rotate_cube_level2_state",
+          "tri_finger_rotate_cube_level3_state",
+          "tri_finger_rotate_cube_level4_state",
+          "ms_ant_walk_state",
+          "ms_ant_run_state",
+          "ms_cartpole_balance_state",
+          "ms_cartpole_swing_up_state",
+          "ms_hopper_stand_state",
+          "ms_hopper_hop_state",
+          "ms_humanoid_stand_state",
+          "ms_humanoid_walk_state",
+          "ms_humanoid_run_state",
+          "rotate_single_object_in_hand_level0_state",
+          "rotate_single_object_in_hand_level1_state",
+          "rotate_single_object_in_hand_level2_state",
+          "rotate_single_object_in_hand_level3_state",
+          "rotate_valve_level0_state",
+          "rotate_valve_level1_state",
+          "rotate_valve_level2_state",
+          "rotate_valve_level3_state",
+          "rotate_valve_level4_state",
+          "fmb_assembly1_easy_state",
+          "unitree_g1_place_apple_in_bowl_state",
+          "unitree_h1_stand_state",
+          "unitree_g1_stand_state",
+          "unitree_g1_transport_box_state",
+          "open_cabinet_drawer_state",
+          "open_cabinet_door_state",
+          "anymal_c_reach_state",
+          "unitree_go2_reach_state",
+          "anymal_c_spin_state",
+          "assembling_kits_state",
+          "lift_peg_upright_ppo_state",
+          "peg_insertion_side_state",
+          "pick_clutter_ycb_state",
+          "pickcube_state",
+          "pick_single_ycb_state",
+          "place_sphere_state",
+          "plug_charger_state",
+          "poke_cube_state",
+          "pull_cube_state",
+          "pull_cube_tool_state",
+          "pushcube_state",
+          "pusht_state",
+          "rollball_state",
+          "stackcube_state",
+          "turn_faucet_state",
+          "two_robot_pickcube_ppo_state",
+          "two_robot_stackcube_ppo_state",
+          "put_carrot_on_plate_in_scene_rgb",
+          "put_eggplant_in_basket_scene_rgb",
+          "stack_green_cube_on_yellow_cube_baked_tex_in_scene_rgb",
+          "put_spoon_on_table_cloth_in_scene_rgb"
+        ],
+        "upstream_state_v1": [
+          "tri_finger_rotate_cube_level0_state",
+          "tri_finger_rotate_cube_level1_state",
+          "tri_finger_rotate_cube_level2_state",
+          "tri_finger_rotate_cube_level3_state",
+          "tri_finger_rotate_cube_level4_state",
+          "ms_ant_walk_state",
+          "ms_ant_run_state",
+          "ms_cartpole_balance_state",
+          "ms_cartpole_swing_up_state",
+          "ms_hopper_stand_state",
+          "ms_hopper_hop_state",
+          "ms_humanoid_stand_state",
+          "ms_humanoid_walk_state",
+          "ms_humanoid_run_state",
+          "rotate_single_object_in_hand_level0_state",
+          "rotate_single_object_in_hand_level1_state",
+          "rotate_single_object_in_hand_level2_state",
+          "rotate_single_object_in_hand_level3_state",
+          "rotate_valve_level0_state",
+          "rotate_valve_level1_state",
+          "rotate_valve_level2_state",
+          "rotate_valve_level3_state",
+          "rotate_valve_level4_state",
+          "fmb_assembly1_easy_state",
+          "unitree_g1_place_apple_in_bowl_state",
+          "unitree_h1_stand_state",
+          "unitree_g1_stand_state",
+          "unitree_g1_transport_box_state",
+          "open_cabinet_drawer_state",
+          "open_cabinet_door_state",
+          "anymal_c_reach_state",
+          "unitree_go2_reach_state",
+          "anymal_c_spin_state",
+          "assembling_kits_state",
+          "lift_peg_upright_ppo_state",
+          "peg_insertion_side_state",
+          "pick_clutter_ycb_state",
+          "pickcube_state",
+          "pick_single_ycb_state",
+          "place_sphere_state",
+          "plug_charger_state",
+          "poke_cube_state",
+          "pull_cube_state",
+          "pull_cube_tool_state",
+          "pushcube_state",
+          "pusht_state",
+          "rollball_state",
+          "stackcube_state",
+          "turn_faucet_state",
+          "two_robot_pickcube_ppo_state",
+          "two_robot_stackcube_ppo_state"
+        ],
+        "bridge_rgb_v1": [
+          "put_carrot_on_plate_in_scene_rgb",
+          "put_eggplant_in_basket_scene_rgb",
+          "stack_green_cube_on_yellow_cube_baked_tex_in_scene_rgb",
+          "put_spoon_on_table_cloth_in_scene_rgb"
+        ],
+        "transfer_reference_state_v1": [
+          "unitree_h1_stand_root_state",
+          "unitree_g1_stand_root_state",
+          "unitree_go2_reach_root_state",
+          "anymal_c_spin_root_state",
+          "pull_cube_tool_newt_state"
+        ],
+        "humanoid_control_transfer_state_v1": [
+          "ms_humanoid_stand_root_state",
+          "ms_humanoid_walk_root_state",
+          "ms_humanoid_run_root_state"
+        ],
+        "panda_visual_rgb_v1": [
+          "assembling_kits_rgb",
+          "lift_peg_upright_rgb",
+          "peg_insertion_side_rgb",
+          "pick_clutter_ycb_rgb",
+          "pickcube_rgb",
+          "pick_single_ycb_rgb",
+          "place_sphere_rgb",
+          "plug_charger_rgb",
+          "poke_cube_rgb",
+          "pull_cube_rgb",
+          "pull_cube_tool_rgb",
+          "pushcube_rgb",
+          "pusht_rgb",
+          "rollball_rgb",
+          "stackcube_rgb",
+          "turn_faucet_rgb",
+          "two_robot_pickcube_rgb",
+          "two_robot_stackcube_rgb",
+          "fmb_assembly1_easy_rgb"
+        ],
+        "g1_visual_rgb_v1": [
+          "unitree_g1_place_apple_in_bowl_rgb",
+          "unitree_g1_transport_box_rgb"
+        ],
+        "fetch_mshab_depth_v1": [
+          "open_cabinet_door_mshab_depth",
+          "open_cabinet_drawer_mshab_depth"
+        ]
+      },
+      "profiles": {
+        "assembling_kits_state": {
+          "task_id": "AssemblingKits-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "assembling_kits"
+          ],
+          "instruction": "Insert the objects into the matching kit slots.",
+          "action_dimension": 7
+        },
+        "lift_peg_upright_state": {
+          "task_id": "LiftPegUpright-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Lift the peg and hold it upright.",
+          "action_dimension": 4
+        },
+        "peg_insertion_side_state": {
+          "task_id": "PegInsertionSide-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Insert the peg into the side hole.",
+          "action_dimension": 7
+        },
+        "pick_clutter_ycb_state": {
+          "task_id": "PickClutterYCB-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "ycb",
+            "pick_clutter_ycb_configs"
+          ],
+          "instruction": "Pick the target object out of the clutter.",
+          "action_dimension": 7
+        },
+        "pickcube_state": {
+          "task_id": "PickCube-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Pick up the cube and move it to the goal.",
+          "action_dimension": 4
+        },
+        "pick_single_ycb_state": {
+          "task_id": "PickSingleYCB-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "ycb"
+          ],
+          "instruction": "Pick up the object and move it to the goal pose.",
+          "action_dimension": 7
+        },
+        "place_sphere_state": {
+          "task_id": "PlaceSphere-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Place the sphere in the target receptacle.",
+          "action_dimension": 4
+        },
+        "plug_charger_state": {
+          "task_id": "PlugCharger-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Insert the charger into the receptacle.",
+          "action_dimension": 7
+        },
+        "poke_cube_state": {
+          "task_id": "PokeCube-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use the peg to push the cube to its goal.",
+          "action_dimension": 4
+        },
+        "pull_cube_state": {
+          "task_id": "PullCube-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Pull the cube to its goal.",
+          "action_dimension": 4
+        },
+        "pull_cube_tool_state": {
+          "task_id": "PullCubeTool-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use the tool to pull the cube to its goal.",
+          "action_dimension": 4
+        },
+        "pushcube_state": {
+          "task_id": "PushCube-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Push the cube to its goal.",
+          "action_dimension": 4
+        },
+        "pusht_state": {
+          "task_id": "PushT-v1",
+          "robot_uid": "panda_stick",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Push the T-shaped block into its target region.",
+          "action_dimension": 3
+        },
+        "rollball_state": {
+          "task_id": "RollBall-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 80,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Roll the ball into its target region.",
+          "action_dimension": 4
+        },
+        "stackcube_state": {
+          "task_id": "StackCube-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Stack the red cube on the green cube.",
+          "action_dimension": 4
+        },
+        "turn_faucet_state": {
+          "task_id": "TurnFaucet-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "partnet_mobility_faucet"
+          ],
+          "instruction": "Turn the faucet handle to its target angle.",
+          "action_dimension": 7
+        },
+        "two_robot_pickcube_state": {
+          "task_id": "TwoRobotPickCube-v1",
+          "robot_uid": [
+            "panda_wristcam",
+            "panda_wristcam"
+          ],
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use both robots to move the cube to its goal.",
+          "action_dimension": 8
+        },
+        "two_robot_stackcube_state": {
+          "task_id": "TwoRobotStackCube-v1",
+          "robot_uid": [
+            "panda_wristcam",
+            "panda_wristcam"
+          ],
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use both robots to stack the cubes.",
+          "action_dimension": 8
+        },
+        "assembling_kits_rgb": {
+          "task_id": "AssemblingKits-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "assembling_kits"
+          ],
+          "instruction": "Insert the objects into the matching kit slots.",
+          "action_dimension": 7,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "lift_peg_upright_rgb": {
+          "task_id": "LiftPegUpright-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Lift the peg and hold it upright.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "peg_insertion_side_rgb": {
+          "task_id": "PegInsertionSide-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Insert the peg into the side hole.",
+          "action_dimension": 7,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "pick_clutter_ycb_rgb": {
+          "task_id": "PickClutterYCB-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "ycb",
+            "pick_clutter_ycb_configs"
+          ],
+          "instruction": "Pick the target object out of the clutter.",
+          "action_dimension": 7,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "pickcube_rgb": {
+          "task_id": "PickCube-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Pick up the cube and move it to the goal.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "pick_single_ycb_rgb": {
+          "task_id": "PickSingleYCB-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "ycb"
+          ],
+          "instruction": "Pick up the object and move it to the goal pose.",
+          "action_dimension": 7,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "place_sphere_rgb": {
+          "task_id": "PlaceSphere-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Place the sphere in the target receptacle.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "plug_charger_rgb": {
+          "task_id": "PlugCharger-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Insert the charger into the receptacle.",
+          "action_dimension": 7,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "poke_cube_rgb": {
+          "task_id": "PokeCube-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use the peg to push the cube to its goal.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "pull_cube_rgb": {
+          "task_id": "PullCube-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Pull the cube to its goal.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "pull_cube_tool_rgb": {
+          "task_id": "PullCubeTool-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use the tool to pull the cube to its goal.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "pushcube_rgb": {
+          "task_id": "PushCube-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Push the cube to its goal.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "pusht_rgb": {
+          "task_id": "PushT-v1",
+          "robot_uid": "panda_stick",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Push the T-shaped block into its target region.",
+          "action_dimension": 3,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "rollball_rgb": {
+          "task_id": "RollBall-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 80,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Roll the ball into its target region.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "stackcube_rgb": {
+          "task_id": "StackCube-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Stack the red cube on the green cube.",
+          "action_dimension": 4,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "turn_faucet_rgb": {
+          "task_id": "TurnFaucet-v1",
+          "robot_uid": "panda_wristcam",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "partnet_mobility_faucet"
+          ],
+          "instruction": "Turn the faucet handle to its target angle.",
+          "action_dimension": 7,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "two_robot_pickcube_rgb": {
+          "task_id": "TwoRobotPickCube-v1",
+          "robot_uid": [
+            "panda_wristcam",
+            "panda_wristcam"
+          ],
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use both robots to move the cube to its goal.",
+          "action_dimension": 8,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "two_robot_stackcube_rgb": {
+          "task_id": "TwoRobotStackCube-v1",
+          "robot_uid": [
+            "panda_wristcam",
+            "panda_wristcam"
+          ],
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use both robots to stack the cubes.",
+          "action_dimension": 8,
+          "cameras": {
+            "images.primary": "base_camera"
+          }
+        },
+        "tri_finger_rotate_cube_level0_state": {
+          "task_id": "TriFingerRotateCubeLevel0-v1",
+          "robot_uid": "trifingerpro",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 250,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "TriFingerRotateCubeLevel0-v1"
+        },
+        "tri_finger_rotate_cube_level1_state": {
+          "task_id": "TriFingerRotateCubeLevel1-v1",
+          "robot_uid": "trifingerpro",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 250,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "TriFingerRotateCubeLevel1-v1"
+        },
+        "tri_finger_rotate_cube_level2_state": {
+          "task_id": "TriFingerRotateCubeLevel2-v1",
+          "robot_uid": "trifingerpro",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 250,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "TriFingerRotateCubeLevel2-v1"
+        },
+        "tri_finger_rotate_cube_level3_state": {
+          "task_id": "TriFingerRotateCubeLevel3-v1",
+          "robot_uid": "trifingerpro",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 250,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "TriFingerRotateCubeLevel3-v1"
+        },
+        "tri_finger_rotate_cube_level4_state": {
+          "task_id": "TriFingerRotateCubeLevel4-v1",
+          "robot_uid": "trifingerpro",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 250,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "TriFingerRotateCubeLevel4-v1"
+        },
+        "ms_ant_walk_state": {
+          "task_id": "MS-AntWalk-v1",
+          "robot_uid": "ant",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-AntWalk-v1",
+          "use_default_robot": true
+        },
+        "ms_ant_run_state": {
+          "task_id": "MS-AntRun-v1",
+          "robot_uid": "ant",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-AntRun-v1",
+          "use_default_robot": true
+        },
+        "ms_cartpole_balance_state": {
+          "task_id": "MS-CartpoleBalance-v1",
+          "robot_uid": "cart_pole",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "MS-CartpoleBalance-v1",
+          "use_default_robot": true
+        },
+        "ms_cartpole_swing_up_state": {
+          "task_id": "MS-CartpoleSwingUp-v1",
+          "robot_uid": "cart_pole",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "MS-CartpoleSwingUp-v1",
+          "use_default_robot": true
+        },
+        "ms_hopper_stand_state": {
+          "task_id": "MS-HopperStand-v1",
+          "robot_uid": "hopper",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 600,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 25,
+          "asset_download_ids": [],
+          "instruction": "MS-HopperStand-v1",
+          "use_default_robot": true
+        },
+        "ms_hopper_hop_state": {
+          "task_id": "MS-HopperHop-v1",
+          "robot_uid": "hopper",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 600,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 25,
+          "asset_download_ids": [],
+          "instruction": "MS-HopperHop-v1",
+          "use_default_robot": true
+        },
+        "ms_humanoid_stand_state": {
+          "task_id": "MS-HumanoidStand-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidStand-v1"
+        },
+        "ms_humanoid_walk_state": {
+          "task_id": "MS-HumanoidWalk-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidWalk-v1"
+        },
+        "ms_humanoid_run_state": {
+          "task_id": "MS-HumanoidRun-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidRun-v1"
+        },
+        "rotate_single_object_in_hand_level0_state": {
+          "task_id": "RotateSingleObjectInHandLevel0-v1",
+          "robot_uid": "allegro_hand_right_touch",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 300,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "RotateSingleObjectInHandLevel0-v1",
+          "use_default_robot": true
+        },
+        "rotate_single_object_in_hand_level1_state": {
+          "task_id": "RotateSingleObjectInHandLevel1-v1",
+          "robot_uid": "allegro_hand_right_touch",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 300,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "RotateSingleObjectInHandLevel1-v1",
+          "use_default_robot": true
+        },
+        "rotate_single_object_in_hand_level2_state": {
+          "task_id": "RotateSingleObjectInHandLevel2-v1",
+          "robot_uid": "allegro_hand_right_touch",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 300,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "ycb"
+          ],
+          "instruction": "RotateSingleObjectInHandLevel2-v1",
+          "use_default_robot": true
+        },
+        "rotate_single_object_in_hand_level3_state": {
+          "task_id": "RotateSingleObjectInHandLevel3-v1",
+          "robot_uid": "allegro_hand_right_touch",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 300,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "ycb"
+          ],
+          "instruction": "RotateSingleObjectInHandLevel3-v1",
+          "use_default_robot": true
+        },
+        "rotate_valve_level0_state": {
+          "task_id": "RotateValveLevel0-v1",
+          "robot_uid": "dclaw",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 80,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "RotateValveLevel0-v1",
+          "use_default_robot": true
+        },
+        "rotate_valve_level1_state": {
+          "task_id": "RotateValveLevel1-v1",
+          "robot_uid": "dclaw",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 150,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "RotateValveLevel1-v1",
+          "use_default_robot": true
+        },
+        "rotate_valve_level2_state": {
+          "task_id": "RotateValveLevel2-v1",
+          "robot_uid": "dclaw",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 150,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "RotateValveLevel2-v1",
+          "use_default_robot": true
+        },
+        "rotate_valve_level3_state": {
+          "task_id": "RotateValveLevel3-v1",
+          "robot_uid": "dclaw",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 150,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "RotateValveLevel3-v1",
+          "use_default_robot": true
+        },
+        "rotate_valve_level4_state": {
+          "task_id": "RotateValveLevel4-v1",
+          "robot_uid": "dclaw",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 300,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "RotateValveLevel4-v1",
+          "use_default_robot": true
+        },
+        "fmb_assembly1_easy_state": {
+          "task_id": "FMBAssembly1Easy-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 500,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "FMBAssembly1Easy-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          }
+        },
+        "unitree_g1_place_apple_in_bowl_state": {
+          "task_id": "UnitreeG1PlaceAppleInBowl-v1",
+          "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1PlaceAppleInBowl-v1",
+          "use_default_robot": true
+        },
+        "unitree_h1_stand_state": {
+          "task_id": "UnitreeH1Stand-v1",
+          "robot_uid": "unitree_h1_simplified",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "unitree_h1"
+          ],
+          "instruction": "UnitreeH1Stand-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          }
+        },
+        "unitree_g1_stand_state": {
+          "task_id": "UnitreeG1Stand-v1",
+          "robot_uid": "unitree_g1_simplified_legs",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1Stand-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          }
+        },
+        "unitree_g1_transport_box_state": {
+          "task_id": "UnitreeG1TransportBox-v1",
+          "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1TransportBox-v1",
+          "use_default_robot": true
+        },
+        "open_cabinet_drawer_state": {
+          "task_id": "OpenCabinetDrawer-v1",
+          "robot_uid": "fetch",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "partnet_mobility_cabinet"
+          ],
+          "instruction": "OpenCabinetDrawer-v1"
+        },
+        "open_cabinet_door_state": {
+          "task_id": "OpenCabinetDoor-v1",
+          "robot_uid": "fetch",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "partnet_mobility_cabinet"
+          ],
+          "instruction": "OpenCabinetDoor-v1"
+        },
+        "anymal_c_reach_state": {
+          "task_id": "AnymalC-Reach-v1",
+          "robot_uid": "anymal_c",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "anymal_c"
+          ],
+          "instruction": "AnymalC-Reach-v1"
+        },
+        "unitree_go2_reach_state": {
+          "task_id": "UnitreeGo2-Reach-v1",
+          "robot_uid": "unitree_go2_simplified_locomotion",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "unitree_go2"
+          ],
+          "instruction": "UnitreeGo2-Reach-v1"
+        },
+        "anymal_c_spin_state": {
+          "task_id": "AnymalC-Spin-v1",
+          "robot_uid": "anymal_c",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "anymal_c"
+          ],
+          "instruction": "AnymalC-Spin-v1"
+        },
+        "put_carrot_on_plate_in_scene_rgb": {
+          "task_id": "PutCarrotOnPlateInScene-v1",
+          "robot_uid": "widowx250s_bridgedataset_flat_table",
+          "obs_mode": "rgb+segmentation",
+          "control_mode": "arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 60,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 500,
+          "control_freq": 5,
+          "asset_download_ids": [
+            "bridge_v2_real2sim",
+            "widowx250s"
+          ],
+          "instruction": "put carrot on plate",
+          "use_default_robot": true,
+          "env_kwargs": {
+            "reward_mode": "none"
+          },
+          "cameras": {
+            "images.primary": "3rd_view_camera"
+          }
+        },
+        "put_eggplant_in_basket_scene_rgb": {
+          "task_id": "PutEggplantInBasketScene-v1",
+          "robot_uid": "widowx250s_bridgedataset_sink",
+          "obs_mode": "rgb+segmentation",
+          "control_mode": "arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 120,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 500,
+          "control_freq": 5,
+          "asset_download_ids": [
+            "bridge_v2_real2sim",
+            "widowx250s"
+          ],
+          "instruction": "put eggplant into yellow basket",
+          "use_default_robot": true,
+          "env_kwargs": {
+            "reward_mode": "none"
+          },
+          "cameras": {
+            "images.primary": "3rd_view_camera"
+          }
+        },
+        "stack_green_cube_on_yellow_cube_baked_tex_in_scene_rgb": {
+          "task_id": "StackGreenCubeOnYellowCubeBakedTexInScene-v1",
+          "robot_uid": "widowx250s_bridgedataset_flat_table",
+          "obs_mode": "rgb+segmentation",
+          "control_mode": "arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 60,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 500,
+          "control_freq": 5,
+          "asset_download_ids": [
+            "bridge_v2_real2sim",
+            "widowx250s"
+          ],
+          "instruction": "stack the green block on the yellow block",
+          "use_default_robot": true,
+          "env_kwargs": {
+            "reward_mode": "none"
+          },
+          "cameras": {
+            "images.primary": "3rd_view_camera"
+          }
+        },
+        "put_spoon_on_table_cloth_in_scene_rgb": {
+          "task_id": "PutSpoonOnTableClothInScene-v1",
+          "robot_uid": "widowx250s_bridgedataset_flat_table",
+          "obs_mode": "rgb+segmentation",
+          "control_mode": "arm_pd_ee_target_delta_pose_align2_gripper_pd_joint_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 60,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 500,
+          "control_freq": 5,
+          "asset_download_ids": [
+            "bridge_v2_real2sim",
+            "widowx250s"
+          ],
+          "instruction": "put the spoon on the towel",
+          "use_default_robot": true,
+          "env_kwargs": {
+            "reward_mode": "none"
+          },
+          "cameras": {
+            "images.primary": "3rd_view_camera"
+          }
+        },
+        "lift_peg_upright_ppo_state": {
+          "task_id": "LiftPegUpright-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 50,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Lift the peg and hold it upright.",
+          "action_dimension": 7
+        },
+        "two_robot_pickcube_ppo_state": {
+          "task_id": "TwoRobotPickCube-v1",
+          "robot_uid": [
+            "panda_wristcam",
+            "panda_wristcam"
+          ],
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use both robots to move the cube to its goal.",
+          "action_dimension": 16
+        },
+        "two_robot_stackcube_ppo_state": {
+          "task_id": "TwoRobotStackCube-v1",
+          "robot_uid": [
+            "panda_wristcam",
+            "panda_wristcam"
+          ],
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use both robots to stack the cubes.",
+          "action_dimension": 16
+        },
+        "unitree_h1_stand_root_state": {
+          "task_id": "UnitreeH1Stand-v1",
+          "robot_uid": "unitree_h1_simplified",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "unitree_h1"
+          ],
+          "instruction": "UnitreeH1Stand-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          },
+          "include_root_kinematics": true
+        },
+        "unitree_g1_stand_root_state": {
+          "task_id": "UnitreeG1Stand-v1",
+          "robot_uid": "unitree_g1_simplified_legs",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1Stand-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          },
+          "include_root_kinematics": true
+        },
+        "unitree_go2_reach_root_state": {
+          "task_id": "UnitreeGo2-Reach-v1",
+          "robot_uid": "unitree_go2_simplified_locomotion",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "unitree_go2"
+          ],
+          "instruction": "UnitreeGo2-Reach-v1",
+          "include_root_kinematics": true
+        },
+        "anymal_c_spin_root_state": {
+          "task_id": "AnymalC-Spin-v1",
+          "robot_uid": "anymal_c",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 200,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "anymal_c"
+          ],
+          "instruction": "AnymalC-Spin-v1",
+          "include_root_kinematics": true
+        },
+        "pull_cube_tool_newt_state": {
+          "task_id": "PullCubeTool-v1",
+          "robot_uid": "panda",
+          "obs_mode": "state",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "Use the tool to pull the cube to its goal.",
+          "action_dimension": 7
+        },
+        "ms_humanoid_stand_root_state": {
+          "task_id": "MS-HumanoidStand-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidStand-v1",
+          "include_root_kinematics": true,
+          "action_dimension": 21
+        },
+        "ms_humanoid_walk_root_state": {
+          "task_id": "MS-HumanoidWalk-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidWalk-v1",
+          "include_root_kinematics": true,
+          "action_dimension": 21
+        },
+        "ms_humanoid_run_root_state": {
+          "task_id": "MS-HumanoidRun-v1",
+          "robot_uid": "humanoid",
+          "obs_mode": "state",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 1000,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "return",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 200,
+          "control_freq": 40,
+          "asset_download_ids": [],
+          "instruction": "MS-HumanoidRun-v1",
+          "include_root_kinematics": true,
+          "action_dimension": 21
+        },
+        "fmb_assembly1_easy_rgb": {
+          "task_id": "FMBAssembly1Easy-v1",
+          "robot_uid": "panda",
+          "obs_mode": "rgb",
+          "control_mode": "pd_ee_delta_pose",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 500,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "FMBAssembly1Easy-v1",
+          "env_kwargs": {
+            "reward_mode": "sparse"
+          },
+          "cameras": {
+            "images.primary": "base_camera"
+          },
+          "action_dimension": 7
+        },
+        "unitree_g1_place_apple_in_bowl_rgb": {
+          "task_id": "UnitreeG1PlaceAppleInBowl-v1",
+          "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
+          "obs_mode": "rgb",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1PlaceAppleInBowl-v1",
+          "use_default_robot": true,
+          "cameras": {
+            "images.primary": "head_camera"
+          },
+          "include_root_kinematics": true,
+          "action_dimension": 25
+        },
+        "unitree_g1_transport_box_rgb": {
+          "task_id": "UnitreeG1TransportBox-v1",
+          "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
+          "obs_mode": "rgb",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [],
+          "instruction": "UnitreeG1TransportBox-v1",
+          "use_default_robot": true,
+          "cameras": {
+            "images.primary": "head_camera"
+          },
+          "include_root_kinematics": true,
+          "action_dimension": 25
+        },
+        "open_cabinet_door_mshab_depth": {
+          "task_id": "OpenCabinetDoor-v1",
+          "robot_uid": "fetch",
+          "obs_mode": "depth",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "partnet_mobility_cabinet"
+          ],
+          "instruction": "OpenCabinetDoor-v1",
+          "include_cabinet_contact_state": true,
+          "depth_cameras": {
+            "state.depth_head": "fetch_head",
+            "state.depth_hand": "fetch_hand"
+          },
+          "action_dimension": 13
+        },
+        "open_cabinet_drawer_mshab_depth": {
+          "task_id": "OpenCabinetDrawer-v1",
+          "robot_uid": "fetch",
+          "obs_mode": "depth",
+          "control_mode": "pd_joint_delta_pos",
+          "sim_backend": "physx_cuda",
+          "render_backend": "gpu",
+          "max_episode_steps": 100,
+          "reconfiguration_freq": 1,
+          "ignore_terminations": true,
+          "success_metric": "success_once",
+          "action_chunk_size": 1,
+          "enhanced_determinism": false,
+          "sim_freq": 100,
+          "control_freq": 20,
+          "asset_download_ids": [
+            "partnet_mobility_cabinet"
+          ],
+          "instruction": "OpenCabinetDrawer-v1",
+          "include_cabinet_contact_state": true,
+          "depth_cameras": {
+            "state.depth_head": "fetch_head",
+            "state.depth_hand": "fetch_hand"
+          },
+          "action_dimension": 13
+        }
+      },
+      "upstream_inventory": {
+        "source_commit": "baab60ede2e89167c1b7aaed41a9aa8e690a9d1e",
+        "source_archive_sha256": "db7f1fb49038a1a11612876022ba31fdb8c9095e4e3f4a408728abf8b821f49e",
+        "literal_task_registrations": 58,
+        "evaluation_tasks": 55,
+        "scope_note": "Source-backed evaluation task inventory. Built-in helper scenes are inventoried separately. Declared profiles require real-policy/native acceptance.",
+        "tasks": [
+          {
+            "task_id": "AnymalC-Reach-v1",
+            "source": "mani_skill/envs/tasks/quadruped/quadruped_reach.py",
+            "source_line": 161,
+            "max_episode_steps": 200,
+            "profiles": [
+              "anymal_c_reach_state"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "AnymalC-Spin-v1",
+            "source": "mani_skill/envs/tasks/quadruped/quadruped_spin.py",
+            "source_line": 129,
+            "max_episode_steps": 200,
+            "profiles": [
+              "anymal_c_spin_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "AssemblingKits-v1",
+            "source": "mani_skill/envs/tasks/tabletop/assembling_kits.py",
+            "source_line": 25,
+            "max_episode_steps": 200,
+            "profiles": [
+              "assembling_kits_state",
+              "assembling_kits_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "FMBAssembly1Easy-v1",
+            "source": "mani_skill/envs/tasks/fmb/fmb.py",
+            "source_line": 22,
+            "max_episode_steps": 500,
+            "profiles": [
+              "fmb_assembly1_easy_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "LiftPegUpright-v1",
+            "source": "mani_skill/envs/tasks/tabletop/lift_peg_upright.py",
+            "source_line": 22,
+            "max_episode_steps": 50,
+            "profiles": [
+              "lift_peg_upright_state",
+              "lift_peg_upright_rgb",
+              "lift_peg_upright_ppo_state"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-AntRun-v1",
+            "source": "mani_skill/envs/tasks/control/ant.py",
+            "source_line": 315,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "ms_ant_run_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-AntWalk-v1",
+            "source": "mani_skill/envs/tasks/control/ant.py",
+            "source_line": 298,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "ms_ant_walk_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-CartpoleBalance-v1",
+            "source": "mani_skill/envs/tasks/control/cartpole.py",
+            "source_line": 179,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "ms_cartpole_balance_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-CartpoleSwingUp-v1",
+            "source": "mani_skill/envs/tasks/control/cartpole.py",
+            "source_line": 214,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "ms_cartpole_swing_up_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-HopperHop-v1",
+            "source": "mani_skill/envs/tasks/control/hopper.py",
+            "source_line": 245,
+            "max_episode_steps": 600,
+            "profiles": [
+              "ms_hopper_hop_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-HopperStand-v1",
+            "source": "mani_skill/envs/tasks/control/hopper.py",
+            "source_line": 218,
+            "max_episode_steps": 600,
+            "profiles": [
+              "ms_hopper_stand_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-HumanoidRun-v1",
+            "source": "mani_skill/envs/tasks/control/humanoid.py",
+            "source_line": 387,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "ms_humanoid_run_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-HumanoidStand-v1",
+            "source": "mani_skill/envs/tasks/control/humanoid.py",
+            "source_line": 285,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "ms_humanoid_stand_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "MS-HumanoidWalk-v1",
+            "source": "mani_skill/envs/tasks/control/humanoid.py",
+            "source_line": 355,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "ms_humanoid_walk_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "OpenCabinetDoor-v1",
+            "source": "mani_skill/envs/tasks/mobile_manipulation/open_cabinet_drawer.py",
+            "source_line": 362,
+            "max_episode_steps": 100,
+            "profiles": [
+              "open_cabinet_door_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "OpenCabinetDrawer-v1",
+            "source": "mani_skill/envs/tasks/mobile_manipulation/open_cabinet_drawer.py",
+            "source_line": 33,
+            "max_episode_steps": 100,
+            "profiles": [
+              "open_cabinet_drawer_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PegInsertionSide-v1",
+            "source": "mani_skill/envs/tasks/tabletop/peg_insertion_side.py",
+            "source_line": 51,
+            "max_episode_steps": 100,
+            "profiles": [
+              "peg_insertion_side_state",
+              "peg_insertion_side_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PickClutterYCB-v1",
+            "source": "mani_skill/envs/tasks/tabletop/pick_clutter_ycb.py",
+            "source_line": 195,
+            "max_episode_steps": 100,
+            "profiles": [
+              "pick_clutter_ycb_state",
+              "pick_clutter_ycb_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PickCube-v1",
+            "source": "mani_skill/envs/tasks/tabletop/pick_cube.py",
+            "source_line": 20,
+            "max_episode_steps": 50,
+            "profiles": [
+              "pickcube_state",
+              "pickcube_rgb"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PickSingleYCB-v1",
+            "source": "mani_skill/envs/tasks/tabletop/pick_single_ycb.py",
+            "source_line": 28,
+            "max_episode_steps": 50,
+            "profiles": [
+              "pick_single_ycb_state",
+              "pick_single_ycb_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PlaceSphere-v1",
+            "source": "mani_skill/envs/tasks/tabletop/place_sphere.py",
+            "source_line": 24,
+            "max_episode_steps": 50,
+            "profiles": [
+              "place_sphere_state",
+              "place_sphere_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PlugCharger-v1",
+            "source": "mani_skill/envs/tasks/tabletop/plug_charger.py",
+            "source_line": 21,
+            "max_episode_steps": 200,
+            "profiles": [
+              "plug_charger_state",
+              "plug_charger_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PokeCube-v1",
+            "source": "mani_skill/envs/tasks/tabletop/poke_cube.py",
+            "source_line": 21,
+            "max_episode_steps": 50,
+            "profiles": [
+              "poke_cube_state",
+              "poke_cube_rgb"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PullCube-v1",
+            "source": "mani_skill/envs/tasks/tabletop/pull_cube.py",
+            "source_line": 21,
+            "max_episode_steps": 50,
+            "profiles": [
+              "pull_cube_state",
+              "pull_cube_rgb"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PullCubeTool-v1",
+            "source": "mani_skill/envs/tasks/tabletop/pull_cube_tool.py",
+            "source_line": 20,
+            "max_episode_steps": 100,
+            "profiles": [
+              "pull_cube_tool_state",
+              "pull_cube_tool_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PushCube-v1",
+            "source": "mani_skill/envs/tasks/tabletop/push_cube.py",
+            "source_line": 38,
+            "max_episode_steps": 50,
+            "profiles": [
+              "pushcube_state",
+              "pushcube_rgb"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PushT-v1",
+            "source": "mani_skill/envs/tasks/tabletop/push_t.py",
+            "source_line": 66,
+            "max_episode_steps": 100,
+            "profiles": [
+              "pusht_state",
+              "pusht_rgb"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PutCarrotOnPlateInScene-v1",
+            "source": "mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/put_on_in_scene.py",
+            "source_line": 17,
+            "max_episode_steps": 60,
+            "profiles": [
+              "put_carrot_on_plate_in_scene_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PutEggplantInBasketScene-v1",
+            "source": "mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/put_on_in_scene.py",
+            "source_line": 75,
+            "max_episode_steps": 120,
+            "profiles": [
+              "put_eggplant_in_basket_scene_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "PutSpoonOnTableClothInScene-v1",
+            "source": "mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/put_on_in_scene.py",
+            "source_line": 215,
+            "max_episode_steps": 60,
+            "profiles": [
+              "put_spoon_on_table_cloth_in_scene_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RollBall-v1",
+            "source": "mani_skill/envs/tasks/tabletop/roll_ball.py",
+            "source_line": 21,
+            "max_episode_steps": 80,
+            "profiles": [
+              "rollball_state",
+              "rollball_rgb"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateSingleObjectInHandLevel0-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py",
+            "source_line": 321,
+            "max_episode_steps": 300,
+            "profiles": [
+              "rotate_single_object_in_hand_level0_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateSingleObjectInHandLevel1-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py",
+            "source_line": 333,
+            "max_episode_steps": 300,
+            "profiles": [
+              "rotate_single_object_in_hand_level1_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateSingleObjectInHandLevel2-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py",
+            "source_line": 349,
+            "max_episode_steps": 300,
+            "profiles": [
+              "rotate_single_object_in_hand_level2_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateSingleObjectInHandLevel3-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py",
+            "source_line": 365,
+            "max_episode_steps": 300,
+            "profiles": [
+              "rotate_single_object_in_hand_level3_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateValveLevel0-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_valve.py",
+            "source_line": 256,
+            "max_episode_steps": 80,
+            "profiles": [
+              "rotate_valve_level0_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateValveLevel1-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_valve.py",
+            "source_line": 268,
+            "max_episode_steps": 150,
+            "profiles": [
+              "rotate_valve_level1_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateValveLevel2-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_valve.py",
+            "source_line": 280,
+            "max_episode_steps": 150,
+            "profiles": [
+              "rotate_valve_level2_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateValveLevel3-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_valve.py",
+            "source_line": 292,
+            "max_episode_steps": 150,
+            "profiles": [
+              "rotate_valve_level3_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "RotateValveLevel4-v1",
+            "source": "mani_skill/envs/tasks/dexterity/rotate_valve.py",
+            "source_line": 304,
+            "max_episode_steps": 300,
+            "profiles": [
+              "rotate_valve_level4_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "StackCube-v1",
+            "source": "mani_skill/envs/tasks/tabletop/stack_cube.py",
+            "source_line": 19,
+            "max_episode_steps": 50,
+            "profiles": [
+              "stackcube_state",
+              "stackcube_rgb"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "StackGreenCubeOnYellowCubeBakedTexInScene-v1",
+            "source": "mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/put_on_in_scene.py",
+            "source_line": 155,
+            "max_episode_steps": 60,
+            "profiles": [
+              "stack_green_cube_on_yellow_cube_baked_tex_in_scene_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "TriFingerRotateCubeLevel0-v1",
+            "source": "mani_skill/envs/tasks/rotate_cube.py",
+            "source_line": 352,
+            "max_episode_steps": 250,
+            "profiles": [
+              "tri_finger_rotate_cube_level0_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "TriFingerRotateCubeLevel1-v1",
+            "source": "mani_skill/envs/tasks/rotate_cube.py",
+            "source_line": 363,
+            "max_episode_steps": 250,
+            "profiles": [
+              "tri_finger_rotate_cube_level1_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "TriFingerRotateCubeLevel2-v1",
+            "source": "mani_skill/envs/tasks/rotate_cube.py",
+            "source_line": 374,
+            "max_episode_steps": 250,
+            "profiles": [
+              "tri_finger_rotate_cube_level2_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "TriFingerRotateCubeLevel3-v1",
+            "source": "mani_skill/envs/tasks/rotate_cube.py",
+            "source_line": 385,
+            "max_episode_steps": 250,
+            "profiles": [
+              "tri_finger_rotate_cube_level3_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "TriFingerRotateCubeLevel4-v1",
+            "source": "mani_skill/envs/tasks/rotate_cube.py",
+            "source_line": 396,
+            "max_episode_steps": 250,
+            "profiles": [
+              "tri_finger_rotate_cube_level4_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "TurnFaucet-v1",
+            "source": "mani_skill/envs/tasks/tabletop/turn_faucet.py",
+            "source_line": 24,
+            "max_episode_steps": 200,
+            "profiles": [
+              "turn_faucet_state",
+              "turn_faucet_rgb"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "TwoRobotPickCube-v1",
+            "source": "mani_skill/envs/tasks/tabletop/two_robot_pick_cube.py",
+            "source_line": 21,
+            "max_episode_steps": 100,
+            "profiles": [
+              "two_robot_pickcube_state",
+              "two_robot_pickcube_rgb",
+              "two_robot_pickcube_ppo_state"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "TwoRobotStackCube-v1",
+            "source": "mani_skill/envs/tasks/tabletop/two_robot_stack_cube.py",
+            "source_line": 22,
+            "max_episode_steps": 100,
+            "profiles": [
+              "two_robot_stackcube_state",
+              "two_robot_stackcube_rgb",
+              "two_robot_stackcube_ppo_state"
+            ],
+            "public_checkpoint": "official_state_ppo",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "UnitreeG1PlaceAppleInBowl-v1",
+            "source": "mani_skill/envs/tasks/humanoid/humanoid_pick_place.py",
+            "source_line": 210,
+            "max_episode_steps": 100,
+            "profiles": [
+              "unitree_g1_place_apple_in_bowl_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "UnitreeG1Stand-v1",
+            "source": "mani_skill/envs/tasks/humanoid/humanoid_stand.py",
+            "source_line": 100,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "unitree_g1_stand_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "UnitreeG1TransportBox-v1",
+            "source": "mani_skill/envs/tasks/humanoid/transport_box.py",
+            "source_line": 25,
+            "max_episode_steps": 100,
+            "profiles": [
+              "unitree_g1_transport_box_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "UnitreeGo2-Reach-v1",
+            "source": "mani_skill/envs/tasks/quadruped/quadruped_reach.py",
+            "source_line": 191,
+            "max_episode_steps": 200,
+            "profiles": [
+              "unitree_go2_reach_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          },
+          {
+            "task_id": "UnitreeH1Stand-v1",
+            "source": "mani_skill/envs/tasks/humanoid/humanoid_stand.py",
+            "source_line": 67,
+            "max_episode_steps": 1000,
+            "profiles": [
+              "unitree_h1_stand_state"
+            ],
+            "public_checkpoint": "missing",
+            "acceptance": "pending_current_head_native_comparison"
+          }
+        ],
+        "helpers": [
+          {
+            "task_id": "Empty-v1",
+            "source": "mani_skill/envs/tasks/empty_env.py",
+            "source_line": 18,
+            "max_episode_steps": 200000,
+            "reason": "Dummy environment for showcasing robots (class docstring)."
+          },
+          {
+            "task_id": "RoboCasaKitchen-v1",
+            "source": "mani_skill/envs/tasks/mobile_manipulation/robocasa/kitchen.py",
+            "source_line": 28,
+            "max_episode_steps": 100,
+            "reason": "Base kitchen scene constructor, reward mode none and evaluate() returns no task metric."
+          },
+          {
+            "task_id": "TableTopFreeDraw-v1",
+            "source": "mani_skill/envs/tasks/drawing/draw.py",
+            "source_line": 20,
+            "max_episode_steps": 1000,
+            "reason": "Reference for creating drawing tasks, with no goal or success conditions (class docstring)."
+          },
+          {
+            "task_id": "SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/base_env.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "ArchitecTHOR_SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/__init__.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "ReplicaCAD_SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/__init__.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "ReplicaCADPrepareGroceriesTrain_SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/__init__.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "ReplicaCADPrepareGroceriesVal_SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/__init__.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "ReplicaCADSetTableTrain_SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/__init__.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "ReplicaCADSetTableVal_SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/__init__.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "ReplicaCADTidyHouseTrain_SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/__init__.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "ReplicaCADTidyHouseVal_SceneManipulation-v1",
+            "source": "mani_skill/envs/scenes/__init__.py",
+            "reason": "Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring)."
+          },
+          {
+            "task_id": "CustomEnv-v1",
+            "source": "mani_skill/envs/minimal_template.py",
+            "reason": "Minimal template, not imported into the default registry."
+          }
+        ]
+      }
+    }
+  }
+}
