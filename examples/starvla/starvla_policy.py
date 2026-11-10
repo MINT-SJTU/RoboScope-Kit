@@ -8,10 +8,13 @@ import os
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import cv2 as cv
 import numpy as np
+import torch
+from PIL import Image
+from roboscope_kit import timing
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -21,13 +24,16 @@ from roboscope_kit.policy import (
     SessionContext,
 )
 from roboscope_kit.server import run
-from PIL import Image
 from starvla_base_assets import ensure_starvla_base_model
 from starvla_full_checkpoint import (
     CHECKPOINT_SUFFIXES,
     LoadedStarVLA,
     load_full_checkpoint,
 )
+from starvla_timing import ModelTiming
+
+if TYPE_CHECKING:
+    from deployment.model_server.policy_norm_processor import PolicyNormProcessor
 
 DTYPES = frozenset({"bfloat16", "float16", "float32"})
 OFFLINE_ENVIRONMENT = ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE")
@@ -59,10 +65,10 @@ class ActionTransform:
     def apply(self, actions: np.ndarray) -> None:
         if self.operation == "threshold":
             threshold, below, above = self.parameters
-            actions[:, self.index] = np.where(actions[:, self.index] > threshold, above, below)
+            actions[..., self.index] = np.where(actions[..., self.index] > threshold, above, below)
             return
         scale, offset = self.parameters
-        actions[:, self.index] = actions[:, self.index] * scale + offset
+        actions[..., self.index] = actions[..., self.index] * scale + offset
 
 
 @dataclass(frozen=True)
@@ -76,16 +82,28 @@ class InferenceConfig:
     action_horizon: int
 
 
+@dataclass(frozen=True)
+class _PolicyRuntime:
+    framework: torch.nn.Module
+    norm_processor: PolicyNormProcessor
+    config: InferenceConfig
+    image_preprocessor: ImagePreprocessor
+    predict: Callable[..., Mapping[str, Any]]
+    model_timing: ModelTiming | None
+    max_batch_size: int
+
+
 class StarVLAPolicy(Policy):
     def __init__(self) -> None:
-        self.framework = None
-        self.norm_processor = None
-        self.config: InferenceConfig | None = None
-        self.image_preprocessor: ImagePreprocessor | None = None
+        self._runtime: _PolicyRuntime | None = None
         self.original_cwd: Path | None = None
         self.original_environment: dict[str, str | None] = {}
 
     def load(self, context: SessionContext) -> PolicyCapabilities:
+        batch_text = os.environ.get("ROBOSCOPE_STARVLA_MAX_BATCH_SIZE", "1")
+        if not batch_text.isdecimal() or int(batch_text) < 1:
+            raise ValueError("ROBOSCOPE_STARVLA_MAX_BATCH_SIZE must be a positive integer")
+        max_batch_size = int(batch_text)
         image_preprocessor = _image_preprocessor(context.benchmark.name)
         checkpoint, run_dir = resolve_starvla_run_snapshot(context.checkpoint_path)
         ensure_starvla_base_model(run_dir)
@@ -93,8 +111,14 @@ class StarVLAPolicy(Policy):
         try:
             loaded = load_full_checkpoint(checkpoint)
             config = parse_inference_config(loaded.config)
-            self._initialize_runtime(checkpoint, loaded, config)
-            self.image_preprocessor = image_preprocessor
+            if max_batch_size > 1 and (
+                type(self) is not StarVLAPolicy or context.benchmark.name != "libero_pro"
+                or type(loaded.framework).__name__ != "Qwenvl_OFT"
+            ):
+                raise ValueError("native batch > 1 is currently supported only for LIBERO-Pro QwenOFT")
+            self._runtime = self._initialize_runtime(
+                checkpoint, loaded, config, image_preprocessor, max_batch_size,
+            )
         except Exception:
             self.unload()
             raise
@@ -102,7 +126,7 @@ class StarVLAPolicy(Policy):
             supported_benchmarks=(context.benchmark.name,),
             supported_suites={context.benchmark.name: (context.benchmark.suite,)},
             required_features=config.inputs.required_features,
-            max_batch_size=1,
+            max_batch_size=max_batch_size,
             supported_action_chunk_sizes=(config.action_horizon,),
             action_representations={
                 context.benchmark.name: context.benchmark.default_action_representation
@@ -111,6 +135,11 @@ class StarVLAPolicy(Policy):
             # observations in between are never sent to the Policy.
             observation_strides={context.benchmark.name: config.action_horizon},
         )
+
+    def _require_runtime(self) -> _PolicyRuntime:
+        if self._runtime is None:
+            raise RuntimeError("StarVLA Policy is not loaded")
+        return self._runtime
 
     def _enter_offline_run(self, run_dir: Path) -> None:
         if self.original_cwd is not None:
@@ -126,60 +155,51 @@ class StarVLAPolicy(Policy):
         checkpoint: Path,
         loaded: LoadedStarVLA,
         config: InferenceConfig,
-    ) -> None:
-        import torch
+        image_preprocessor: ImagePreprocessor,
+        max_batch_size: int,
+    ) -> _PolicyRuntime:
         from deployment.model_server.policy_norm_processor import PolicyNormProcessor
 
-        self.framework = loaded.framework.to(dtype=getattr(torch, config.dtype), device="cuda").eval()
-        self.norm_processor = PolicyNormProcessor(str(checkpoint), unnorm_key=config.unnorm_key)
-        self.config = config
+        framework = loaded.framework.to(dtype=getattr(torch, config.dtype), device="cuda").eval()
+        norm_processor = PolicyNormProcessor(str(checkpoint), unnorm_key=config.unnorm_key)
+        predict = torch.inference_mode()(framework.predict_action)
+        model_timing = ModelTiming(framework) if timing.ENABLED else None
+        if model_timing is not None:
+            predict = model_timing.wrap_prediction(predict)
+        return _PolicyRuntime(
+            framework, norm_processor, config, image_preprocessor, predict, model_timing, max_batch_size,
+        )
 
     def reset(self, _context: EpisodeContext) -> None:
         return None
 
     def act(self, observation: Observation) -> ActionChunk:
-        if (
-            self.framework is None
-            or self.norm_processor is None
-            or self.config is None
-            or self.image_preprocessor is None
-        ):
-            raise RuntimeError("StarVLA Policy is not loaded")
-        import torch
+        return self.act_batch((observation,))[0]
 
-        example = _build_example(
-            observation.features,
-            self.config.inputs,
-            self.norm_processor,
-            self.image_preprocessor,
-        )
-        with torch.inference_mode():
-            output = self.framework.predict_action(examples=[example], **self.config.kwargs)
-        if not isinstance(output, Mapping) or "normalized_actions" not in output:
-            raise TypeError("StarVLA predict_action() must return normalized_actions")
-        normalized = np.asarray(output["normalized_actions"])
-        expected = (1, self.config.action_horizon, self.config.action_dim)
-        if normalized.shape != expected:
+    def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
+        runtime = self._require_runtime()
+        batch_size = len(observations)
+        if not 1 <= batch_size <= runtime.max_batch_size:
             raise ValueError(
-                f"StarVLA returned normalized action shape {normalized.shape}; expected {expected}"
+                f"StarVLA batch size {batch_size} must be between 1 and {runtime.max_batch_size}"
             )
-        actions = np.asarray(self.norm_processor.unapply_actions(normalized[0]), dtype=np.float32)
-        if actions.shape != expected[1:]:
-            raise ValueError(
-                f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected[1:]}"
-            )
-        actions = np.array(actions, dtype=np.float32, copy=True, order="C")
-        for transform in self.config.transforms:
-            transform.apply(actions)
-        if not np.isfinite(actions).all():
-            raise ValueError("StarVLA returned non-finite actions")
-        return ActionChunk(actions)
+        with timing.span("policy.example_build"):
+            examples = [
+                _build_example(
+                    item.features, runtime.config.inputs, runtime.norm_processor, runtime.image_preprocessor,
+                )
+                for item in observations
+            ]
+        with timing.span("policy.predict_total"):
+            output = runtime.predict(examples=examples, **runtime.config.kwargs)
+        with timing.span("policy.postprocess"):
+            return _postprocess_batch(output, batch_size, runtime)
 
     def unload(self) -> None:
-        self.framework = None
-        self.norm_processor = None
-        self.config = None
-        self.image_preprocessor = None
+        runtime, self._runtime = self._runtime, None
+        if runtime is not None and runtime.model_timing is not None:
+            runtime.model_timing.close()
+        del runtime
         if self.original_cwd is not None:
             os.chdir(self.original_cwd)
         self.original_cwd = None
@@ -190,10 +210,32 @@ class StarVLAPolicy(Policy):
                 os.environ[name] = value
         self.original_environment = {}
         gc.collect()
-        import torch
-
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+
+def _postprocess_batch(
+    output: Mapping[str, Any], batch_size: int, runtime: _PolicyRuntime,
+) -> tuple[ActionChunk, ...]:
+    if not isinstance(output, Mapping) or "normalized_actions" not in output:
+        raise TypeError("StarVLA predict_action() must return normalized_actions")
+    normalized = np.asarray(output["normalized_actions"])
+    expected = (batch_size, runtime.config.action_horizon, runtime.config.action_dim)
+    if normalized.shape != expected:
+        raise ValueError(f"StarVLA returned normalized action shape {normalized.shape}; expected {expected}")
+    # The pinned processor accepts only (T, D). Keep its per-chunk semantics, then
+    # perform conversion, transforms and validation once across the whole batch.
+    actions = np.array(
+        [runtime.norm_processor.unapply_actions(row) for row in normalized],
+        dtype=np.float32, copy=True, order="C",
+    )
+    if actions.shape != expected:
+        raise ValueError(f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected}")
+    for transform in runtime.config.transforms:
+        transform.apply(actions)
+    if not np.isfinite(actions).all():
+        raise ValueError("StarVLA returned non-finite actions")
+    return tuple(ActionChunk(row) for row in actions)
 
 
 def resolve_starvla_run_snapshot(source_path: str | Path) -> tuple[Path, Path]:

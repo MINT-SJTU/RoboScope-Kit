@@ -113,6 +113,9 @@ class LiberoProBenchmarkFactory:
                 render_backend=str(manifest.defaults.get("render_backend", "egl")),
                 save_videos=bool(manifest.defaults.get("save_videos", False)) and not request.quick_test,
                 cpu_threads=int(manifest.defaults.get("client_cpu_threads", 1)),
+                policy_encoding=manifest.defaults.get("policy_encoding", "msgpack"),
+                persistent_policy_connection=manifest.defaults.get("persistent_policy_connection", False),
+                chunk_camera_rendering=manifest.defaults.get("chunk_camera_rendering", False),
             )
         )
 

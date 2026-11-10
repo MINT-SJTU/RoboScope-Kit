@@ -8,14 +8,18 @@ from __future__ import annotations
 import argparse
 import os
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 import imageio
 import numpy as np
 
-from roboscope_kit import EpisodeContext, Observation, PolicyClient
+from roboscope_kit import EpisodeContext, Observation, PolicyClient, timing
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
+
+from .camera import ChunkCameraGate
 
 LIBERO_DUMMY_ACTION = np.asarray([0.0] * 6 + [-1.0], dtype=np.float32)
 LIBERO_ENV_RESOLUTION = 256
@@ -37,23 +41,46 @@ class TaskRuntime:
 
 
 class PolicyActionQueue:
-    def __init__(self, socket_path: Path) -> None:
+    def __init__(self, socket_path: Path, *, persistent_connection: bool = False) -> None:
         self.socket_path = socket_path
+        self.persistent_connection = persistent_connection
+        self._client = PolicyClient(socket_path) if persistent_connection else None
+        self.encoding: str | None = None
         self.episode_id = ""
         self.actions = np.empty((0, 7), dtype=np.float32)
         self.inference_wait_s = 0.0
 
+    @contextmanager
+    def _connection(self) -> Iterator[PolicyClient]:
+        client = self._client if self._client is not None else PolicyClient(self.socket_path)
+        try:
+            yield client
+        except BaseException:
+            # Never replay a request: the Policy may already have changed episode state.
+            client.close()
+            raise
+        finally:
+            self.encoding = client.encoding
+            if self._client is None:
+                client.close()
+
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+
     def reset(self, context: EpisodeContext) -> None:
+        self.close()
         self.episode_id = context.episode_id
         self.actions = np.empty((0, 7), dtype=np.float32)
-        with PolicyClient(self.socket_path) as client:
+        with self._connection() as client:
             client.reset(context)
 
     def step(self, observation: dict, task_description: str, step: int) -> np.ndarray:
         if not self.actions.size:
-            request = build_observation(self.episode_id, step, observation, task_description)
+            with timing.span("worker.build_observation"):
+                request = build_observation(self.episode_id, step, observation, task_description)
             started = time.perf_counter()
-            with PolicyClient(self.socket_path) as client:
+            with self._connection() as client:
                 chunk = client.act(request).actions
             self.inference_wait_s += time.perf_counter() - started
             self.actions = chunk.reshape(1, -1) if chunk.ndim == 1 else chunk
@@ -67,14 +94,22 @@ class PolicyActionQueue:
         episode_id = self.episode_id
         self.episode_id = ""
         self.actions = np.empty((0, 7), dtype=np.float32)
-        with PolicyClient(self.socket_path) as client:
-            client.end_episode(episode_id)
+        try:
+            with self._connection() as client:
+                client.end_episode(episode_id)
+        finally:
+            self.close()
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--policy-socket", type=Path, required=True)
+    parser.add_argument(
+        "--persistent-policy-connection",
+        action="store_true",
+        help="reuse one Policy socket within each episode; close it at the episode boundary",
+    )
     parser.add_argument("--suite", required=True)
     parser.add_argument(
         "--max-steps",
@@ -92,6 +127,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--queue-dir", type=Path, required=True)
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--video-dir", type=Path)
+    parser.add_argument(
+        "--chunk-camera-rendering",
+        action="store_true",
+        help="skip unused RGB renders inside action chunks (disabled when saving video)",
+    )
     parser.add_argument("--poll-interval", type=float, default=0.05)
     args = parser.parse_args()
     if args.max_steps is None:
@@ -180,6 +220,8 @@ def run_episode(
     max_steps: int,
     settle_steps: int,
     save_frames: bool,
+    chunk_camera_rendering: bool = False,
+    camera_counters: dict[str, int] | None = None,
 ) -> tuple[bool, int, float, list[np.ndarray]]:
     episode_id = f"task-{runtime.task_id:04d}-episode-{episode_index:04d}"
     policy.reset(
@@ -190,25 +232,41 @@ def run_episode(
         )
     )
     try:
-        runtime.env.reset()
-        observation = runtime.env.set_init_state(runtime.initial_states[episode_index])
+        with timing.span("worker.reset"):
+            runtime.env.reset()
+        with timing.span("worker.set_init_state"):
+            observation = runtime.env.set_init_state(runtime.initial_states[episode_index])
         frames: list[np.ndarray] = []
         started = time.perf_counter()
 
         for _ in range(settle_steps):
-            observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
+            with timing.span("worker.settle_step"):
+                observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
             if task_done or runtime.env.env.done:
                 return bool(task_done), 0, time.perf_counter() - started, frames
 
-        for action_step in range(max_steps):
-            if save_frames:
-                frames.append(
-                    np.ascontiguousarray(observation["agentview_image"][::-1, ::-1], dtype=np.uint8)
-                )
-            action = policy.step(observation, runtime.task_description, action_step)
-            observation, _reward, task_done, _info = runtime.env.step(action)
-            if task_done or runtime.env.env.done:
-                return bool(task_done), action_step + 1, time.perf_counter() - started, frames
+        cameras = ChunkCameraGate(
+            camera_counters
+            if camera_counters is not None
+            else {"camera_renders": 0, "camera_renders_skipped": 0}
+        )
+        with cameras.install(
+            runtime.env, observation, enabled=chunk_camera_rendering and not save_frames,
+        ):
+            for action_step in range(max_steps):
+                if save_frames:
+                    frames.append(
+                        np.ascontiguousarray(observation["agentview_image"][::-1, ::-1], dtype=np.uint8)
+                    )
+                action = policy.step(observation, runtime.task_description, action_step)
+                # step() has popped one action. If that exhausted the actual returned
+                # chunk, the next request needs this step's native camera samples.
+                # Keep every physics step, state observable and terminal check intact.
+                cameras.required = save_frames or not chunk_camera_rendering or not policy.actions.size
+                with timing.span("worker.action_step"):
+                    observation, _reward, task_done, _info = runtime.env.step(action)
+                if task_done or runtime.env.env.done:
+                    return bool(task_done), action_step + 1, time.perf_counter() - started, frames
 
         return False, max_steps, time.perf_counter() - started, frames
     finally:
@@ -239,6 +297,7 @@ def run_chunk(
     records: list[EvaluationRecord] = []
     started = time.perf_counter()
     inference_wait_before = policy.inference_wait_s
+    camera_counters = {"camera_renders": 0, "camera_renders_skipped": 0}
     start_episode = int(item.payload["start_episode"])
     num_trials = int(item.payload["num_trials"])
     for episode_index in range(start_episode, start_episode + num_trials):
@@ -249,6 +308,8 @@ def run_chunk(
             max_steps=args.max_steps,
             settle_steps=args.settle_steps,
             save_frames=args.video_dir is not None,
+            chunk_camera_rendering=args.chunk_camera_rendering,
+            camera_counters=camera_counters,
         )
         save_video(args.video_dir, runtime.task_id, episode_index, success, frames)
         records.append(
@@ -271,6 +332,10 @@ def run_chunk(
             "task_description": runtime.task_description,
             "elapsed_s": time.perf_counter() - started,
             "inference_wait_s": policy.inference_wait_s - inference_wait_before,
+            "policy_encoding": policy.encoding,
+            "persistent_policy_connection": policy.persistent_connection,
+            "chunk_camera_rendering": args.chunk_camera_rendering and args.video_dir is None,
+            **camera_counters,
         },
     )
 
@@ -283,17 +348,20 @@ def main() -> None:
     from libero.libero import benchmark
 
     task_suite = benchmark.get_benchmark_dict()[args.suite]()
-    policy = PolicyActionQueue(args.policy_socket)
+    policy = PolicyActionQueue(
+        args.policy_socket, persistent_connection=args.persistent_policy_connection,
+    )
     runtime: TaskRuntime | None = None
 
     def evaluate(item: WorkItem) -> WorkResult:
         nonlocal runtime
-        task_id = int(item.payload["task_id"])
-        if runtime is None or runtime.task_id != task_id:
-            if runtime is not None:
-                runtime.env.close()
-            runtime = create_task_runtime(task_suite, task_id, args.seed, args.instruction_source)
-        return run_chunk(args, item, runtime, policy)
+        with timing.capture("worker", item_id=item.item_id, worker_id=args.worker_id):
+            task_id = int(item.payload["task_id"])
+            if runtime is None or runtime.task_id != task_id:
+                if runtime is not None:
+                    runtime.env.close()
+                runtime = create_task_runtime(task_suite, task_id, args.seed, args.instruction_source)
+            return run_chunk(args, item, runtime, policy)
 
     try:
         WorkerLoop(
@@ -303,6 +371,7 @@ def main() -> None:
             poll_interval_s=args.poll_interval,
         ).run(evaluate)
     finally:
+        policy.close()
         if runtime is not None:
             runtime.env.close()
 

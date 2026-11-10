@@ -15,6 +15,7 @@ import dataclasses
 from dataclasses import dataclass
 from typing import Any
 
+from roboscope_kit.protocol import ENCODINGS
 from roboscope_kit.runtime.benchmark import ProcessSpec, WorkerContext
 from roboscope_kit.runtime.benchmarks.libero.adapter import LiberoBenchmarkAdapter, LiberoRuntimeConfig
 
@@ -54,10 +55,20 @@ LIBERO_PRO_SUITES = {
 
 @dataclass(frozen=True)
 class LiberoProRuntimeConfig(LiberoRuntimeConfig):
+    policy_encoding: str = "msgpack"
+    persistent_policy_connection: bool = False
+    chunk_camera_rendering: bool = False
+
     def __post_init__(self) -> None:
         super().__post_init__()
         if self.suite not in LIBERO_PRO_SUITES:
             raise ValueError(f"unsupported LIBERO-Pro suite: {self.suite}")
+        if self.policy_encoding not in ENCODINGS:
+            raise ValueError(f"LIBERO-Pro policy_encoding must be one of {ENCODINGS}")
+        if type(self.persistent_policy_connection) is not bool:
+            raise ValueError("LIBERO-Pro persistent_policy_connection must be a boolean")
+        if type(self.chunk_camera_rendering) is not bool:
+            raise ValueError("LIBERO-Pro chunk_camera_rendering must be a boolean")
 
 
 class LiberoProBenchmarkAdapter(LiberoBenchmarkAdapter):
@@ -79,7 +90,10 @@ class LiberoProBenchmarkAdapter(LiberoBenchmarkAdapter):
                 str(self.suite.max_steps),
                 "--instruction-source",
                 "bddl",
+                *(("--persistent-policy-connection",) if self.config.persistent_policy_connection else ()),
+                *(("--chunk-camera-rendering",) if self.config.chunk_camera_rendering else ()),
             ),
+            env={**spec.env, "ROBOSCOPE_POLICY_ENCODING": self.config.policy_encoding},
         )
 
     def metadata(self) -> dict[str, Any]:
@@ -91,6 +105,9 @@ class LiberoProBenchmarkAdapter(LiberoBenchmarkAdapter):
             "dimension": self.suite.dimension,
             "max_steps": self.suite.max_steps,
             "instruction_source": "bddl",
+            "policy_encoding": self.config.policy_encoding,
+            "persistent_policy_connection": self.config.persistent_policy_connection,
+            "chunk_camera_rendering": self.config.chunk_camera_rendering,
         }
 
 

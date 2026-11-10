@@ -342,6 +342,40 @@ The remaining steps and the manifest layout match section 1, with `benchmark_roo
 
 ## 11. LIBERO-Pro
 
+An opt-in native batch may combine already-queued observations from different episodes into one Policy
+call. Each episode retains its own observation, returned action chunk and per-step simulation/termination
+behavior. A batch cap of one is the default. Model numerical agreement and closed-loop correctness must
+be evaluated separately; matching IDs does not guarantee identical initial images or trajectories.
+
+The opt-in environment variable `ROBOSCOPE_TIMING_DIR` writes diagnostic wall timings without
+modifying the wire contract or action sequence. In timing mode, RGB sensors are wrapped in both
+camera modes to measure the same stages; the camera-off arm still renders every sample. This also
+means its render counters become populated. Reset and settle rendering are included only in their
+outer stage timings. Use separate directories for warmup and formal runs. Timed runs incur logging
+and instrumentation overhead and are not interchangeable with clean throughput baselines.
+
+LIBERO-Pro Workers prefer MessagePack, with JSON fallback when the Policy Server does not advertise
+support. The manifest defaults `policy_encoding` (`json` or `msgpack`) and
+`persistent_policy_connection` (boolean, default `false`) independently control transport and optional
+within-episode socket reuse. Connections close at episode boundaries; failed requests are not replayed.
+WorkResult metadata records the negotiated encoding. These options preserve the protocol below; they
+do not change task seeding, reset history, observations or action execution. See the
+[throughput reproduction guide](../../benchmarks/libero_pro/README.md) for matched ablations and the
+outstanding full-evaluation acceptance.
+
+The opt-in manifest default `chunk_camera_rendering` (boolean, default `false`) suppresses RGB sensor
+rendering on steps whose images will not reach the Policy. The Worker checks the actual action queue
+after popping each action and enables native rendering for the step that exhausts the chunk. It keeps
+the native Observable clock running on every physics substep; it does not toggle sensor enablement,
+change sampling rates, or force a later sample at the end of a control step. Reset and settle rendering,
+state observables, per-step success/termination and action execution remain unchanged. Video runs always
+use full rendering. The gate directly replaces and restores the two Observable `_sensor` functions.
+It assumes the pinned robosuite 1.4.0 two-camera RGB configuration with no sensor filtering, delay or
+corruption; it does not validate those assumptions at runtime. WorkResult metadata reports the effective
+mode plus `camera_renders` and `camera_renders_skipped` during policy action steps (both zero when
+disabled). Small fixed-action real-simulator replays matched; broader closed-loop validation remains
+required before claiming correctness equivalence.
+
 LIBERO-Pro (`--benchmark libero_pro`, protocol `libero-pro-v1`) runs the LIBERO worker above against the
 released single-perturbation suites of [LIBERO-Pro](https://github.com/Zxy-MLlab/LIBERO-PRO). Sections 2–9
 apply, with the differences below.

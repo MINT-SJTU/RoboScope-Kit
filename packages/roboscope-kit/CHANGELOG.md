@@ -2,6 +2,19 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b39 - 2026-11-10
+
+- Prefer the existing negotiated MessagePack transport for LIBERO-Pro, with optional per-episode
+  Policy connection reuse and an unchanged JSON fallback.
+- Add opt-in chunk camera rendering on the pinned LIBERO-Pro RGB sensors, restoring the original
+  sensor functions after each episode and retaining full rendering for videos. The direct replacement
+  assumes the pinned sensor configuration and does not validate other configurations.
+- Batch already-queued action requests from distinct episodes per Policy Server when the Policy
+  declares support. Enable optional native QwenOFT batching for the LIBERO-Pro StarVLA example;
+  the default maximum remains one.
+- Add opt-in request-scoped stage and batch timing plus LIBERO-Pro ablation and replay tools. Group
+  loaded StarVLA components into one runtime state and process action transforms across each batch.
+
 ## 0.8.0b33 - 2026-11-08
 
 - A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now

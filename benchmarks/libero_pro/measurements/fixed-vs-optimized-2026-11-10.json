@@ -1,0 +1,4424 @@
+{
+  "baseline": {
+    "episodes": 8000,
+    "formal_s": 20853.710727687925,
+    "episodes_per_s": 0.3836247708844559,
+    "steps": 1999574,
+    "steps_per_s": 95.88576470206438,
+    "CLI_wall_s": 21174.532901849598
+  },
+  "optimized": {
+    "episodes": 8000,
+    "steps": 1997826,
+    "formal_s": 6725.748836595565,
+    "CLI_wall_s": 12669.689715735614,
+    "warmup_wall_s": 346.04642156884074,
+    "camera_renders": 494436,
+    "camera_renders_skipped": 3501216,
+    "episodes_per_s": 1.1894586304607584,
+    "steps_per_s": 297.04142223236187,
+    "elapsed_s": 13026.45734095946
+  },
+  "formal_throughput_ratio": 3.100578275272563,
+  "steps_per_s_ratio": 3.0978677925271496,
+  "paired_differences": {
+    "success_differences": 314,
+    "step_differences": 2960,
+    "fixed_only_success": 159,
+    "optimized_only_success": 155
+  },
+  "suites": {
+    "libero_goal_object": {
+      "episodes": 500,
+      "successes": 343,
+      "steps": 82119,
+      "formal_s": 391.71726966649294,
+      "episodes_per_s": 1.2764308309043886,
+      "steps_per_s": 209.63844680607497,
+      "selected": {
+        "k": 8,
+        "g": 1,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "correctness_regression: probe K=16, g=1 success rate 40.0% on the baseline episodes fell below the K=1 baseline 70.0% with 15.0% tolerance",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.6757649521993498,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 1.1374696701647649,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.4680447465485482,
+            "required_gain": 0.25
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 38.97591740104776,
+            "cpu_cores": 1.183355217865589,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.12654320987654322,
+            "vram_bytes": 9925820416,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 65.3144763604926,
+            "cpu_cores": 2.0841005047269294,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.23098039215686272,
+            "vram_bytes": 10433331200,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 139.60771224324645,
+            "cpu_cores": 3.8991904040322822,
+            "throttle_time_ratio": 0.014890714797032448,
+            "gpu_utilization": 0.4807692307692308,
+            "vram_bytes": 11571036160,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 204.95036853635938,
+            "cpu_cores": 5.039829611202866,
+            "throttle_time_ratio": 0.10182774826335309,
+            "gpu_utilization": 0.5272881355932203,
+            "vram_bytes": 13526630400,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [],
+        "concurrency_health": {
+          "requested_workers": 8,
+          "initial_workers": 8,
+          "final_workers": 8,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 30,
+          "expected_episodes": 30,
+          "successes": 20,
+          "success_rate": 0.6666666666666666,
+          "baseline_k": 1,
+          "baseline_successes": 7,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.7,
+          "minimum_success_rate": 0.595,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.6
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 201.0032033137977,
+        "checkpoint_prepare_s": 0.00012246519327163696,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 391.71726966649294,
+        "policy_load_s": 0.0014501996338367462,
+        "runtime_prepare_s": 1.210453625768423
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "open the middle layer of the drawer",
+          "episodes": 50,
+          "successes": 36,
+          "success_rate": 0.72
+        },
+        {
+          "task_id": 1,
+          "task_description": "put the bowl on the stove",
+          "episodes": 50,
+          "successes": 33,
+          "success_rate": 0.66
+        },
+        {
+          "task_id": 2,
+          "task_description": "put the wine bottle on the top of the drawer",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "open the top layer of the drawer and put the bowl inside",
+          "episodes": 50,
+          "successes": 6,
+          "success_rate": 0.12
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the bowl on the top of the drawer",
+          "episodes": 50,
+          "successes": 19,
+          "success_rate": 0.38
+        },
+        {
+          "task_id": 5,
+          "task_description": "push the plate to the front of the stove",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the cream cheese on the bowl",
+          "episodes": 50,
+          "successes": 19,
+          "success_rate": 0.38
+        },
+        {
+          "task_id": 7,
+          "task_description": "turn on the stove",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put the bowl on the plate",
+          "episodes": 50,
+          "successes": 36,
+          "success_rate": 0.72
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the wine bottle on the rack",
+          "episodes": 50,
+          "successes": 44,
+          "success_rate": 0.88
+        }
+      ],
+      "resources": {
+        "elapsed_s": 394.04594714567065,
+        "cpu": {
+          "cpu_cores": 5.091080363931212,
+          "throttle_time_ratio": 0.007824610359106634,
+          "throttle_period_ratio": 0.005076142131979695
+        },
+        "gpu": {
+          "mean_utilization": 0.6999707174231332,
+          "peak_memory_bytes": 13563330560.0,
+          "gpu_util_avg": {
+            "0": 69.99707174231332
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 12935.0
+          }
+        },
+        "gpu_samples": 683
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 1,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_goal_object/run/cuda-mps"
+      },
+      "camera_renders": 20074,
+      "camera_renders_skipped": 144164,
+      "fixed_baseline": {
+        "formal_s": 1067.2036174722016,
+        "successes": 339,
+        "steps": 82860
+      },
+      "paired": {
+        "success_differences": 44,
+        "step_differences": 239,
+        "fixed_only_success": 20,
+        "optimized_only_success": 24
+      },
+      "CLI_wall_s": 596.6819689162076,
+      "warmup_wall_s": 16.875904090702534
+    },
+    "libero_goal_swap": {
+      "episodes": 500,
+      "successes": 8,
+      "steps": 149619,
+      "formal_s": 416.8534628264606,
+      "episodes_per_s": 1.1994622681307892,
+      "steps_per_s": 358.92469019092107,
+      "selected": {
+        "k": 24,
+        "g": 3,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 1.1% at K=16 below knee 25.0%; K=30, g=4 predicted GPU memory 48.9 GiB on the busiest GPU above 46.0 GiB",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.8694129926264385,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.8285485211270482,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.3970934943661293,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": 0.011165798724398712,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.47969145974922456
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "gain": 0.1706580625661127
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 43.49762657920901,
+            "cpu_cores": 1.1358180595517053,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.18288,
+            "vram_bytes": 9911140352,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 81.31502827558643,
+            "cpu_cores": 2.1737440690940177,
+            "throttle_time_ratio": 0.0012352373547509568,
+            "gpu_utilization": 0.2847826086956522,
+            "vram_bytes": 10403971072,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 148.68847469872767,
+            "cpu_cores": 3.6851468162290084,
+            "throttle_time_ratio": 0.004395046265878641,
+            "gpu_utilization": 0.5132894736842105,
+            "vram_bytes": 11520704512,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 207.73170068881524,
+            "cpu_cores": 4.8779983765581125,
+            "throttle_time_ratio": 0.04536643348632026,
+            "gpu_utilization": 0.5768674698795181,
+            "vram_bytes": 13492027392,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 307.37882342842204,
+            "cpu_cores": 7.561166546948387,
+            "throttle_time_ratio": 0.1778853331065227,
+            "gpu_utilization": 0.7504123711340207,
+            "vram_bytes": 26867662848,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "throughput": 359.8354979085678,
+            "cpu_cores": 9.346910429318601,
+            "throttle_time_ratio": 0.3229664388222546,
+            "gpu_utilization": 0.8115789473684211,
+            "vram_bytes": 40509636608,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 24,
+          "initial_workers": 24,
+          "final_workers": 24,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 80,
+          "expected_episodes": 80,
+          "successes": 1,
+          "success_rate": 0.0125,
+          "baseline_k": 1,
+          "baseline_successes": 0,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.0,
+          "minimum_success_rate": 0.0,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.1
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 461.4266345798969,
+        "checkpoint_prepare_s": 0.00014799833297729492,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 416.8534628264606,
+        "policy_load_s": 0.0027155019342899323,
+        "runtime_prepare_s": 2.662533715367317
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "open the middle layer of the drawer",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "put the bowl on the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "put the wine bottle on the top of the drawer",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "open the top layer of the drawer and put the bowl inside",
+          "episodes": 50,
+          "successes": 8,
+          "success_rate": 0.16
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the bowl on the top of the drawer",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "push the plate to the front of the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the cream cheese on the bowl",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "turn on the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put the bowl on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the wine bottle on the rack",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 422.45299691706896,
+        "cpu": {
+          "cpu_cores": 9.475411371707716,
+          "throttle_time_ratio": 0.08964173141081401,
+          "throttle_period_ratio": 0.15080492424242425
+        },
+        "gpu": {
+          "mean_utilization": 0.9491868758915835,
+          "peak_memory_bytes": 40513830912.0,
+          "gpu_util_avg": {
+            "0": 94.91868758915835
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 38637.0
+          }
+        },
+        "gpu_samples": 701
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 24
+        },
+        "final_workers_per_gpu": {
+          "0": 24
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_goal_swap/run/cuda-mps"
+      },
+      "camera_renders": 36906,
+      "camera_renders_skipped": 262332,
+      "fixed_baseline": {
+        "formal_s": 1817.454813875258,
+        "successes": 4,
+        "steps": 149753
+      },
+      "paired": {
+        "success_differences": 12,
+        "step_differences": 12,
+        "fixed_only_success": 4,
+        "optimized_only_success": 8
+      },
+      "CLI_wall_s": 886.4640326835215,
+      "warmup_wall_s": 22.53137743845582
+    },
+    "libero_goal_lan": {
+      "episodes": 500,
+      "successes": 441,
+      "steps": 63036,
+      "formal_s": 223.3914354480803,
+      "episodes_per_s": 2.2382236767362906,
+      "steps_per_s": 282.1773353734976,
+      "selected": {
+        "k": 16,
+        "g": 2,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 1.9% at K=16 below knee 25.0%; K=22, g=3 CPU throttle ratio 0.51 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.8911446085203587,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.9105336472518215,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.6403980589211249,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": 0.018576499171220062,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.5071129515919441
+          },
+          {
+            "k": 22,
+            "g": 3,
+            "gain": -0.003628386174070908
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 32.48586313019355,
+            "cpu_cores": 1.2165196801010574,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.14144927536231883,
+            "vram_bytes": 9909043200,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 61.43546491179583,
+            "cpu_cores": 2.232958656676874,
+            "throttle_time_ratio": 0.00269278706419754,
+            "gpu_utilization": 0.24225,
+            "vram_bytes": 10401873920,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 117.3745228485446,
+            "cpu_cores": 3.802357947736033,
+            "throttle_time_ratio": 0.004566106858348992,
+            "gpu_utilization": 0.4384090909090909,
+            "vram_bytes": 11518607360,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 192.54093944754578,
+            "cpu_cores": 5.74289315372106,
+            "throttle_time_ratio": 0.14978633982749384,
+            "gpu_utilization": 0.5121951219512195,
+            "vram_bytes": 13488881664,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 290.18094355307653,
+            "cpu_cores": 8.657432055388579,
+            "throttle_time_ratio": 0.3391982168338618,
+            "gpu_utilization": 0.6478846153846154,
+            "vram_bytes": 26993491968,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 16,
+          "initial_workers": 16,
+          "final_workers": 16,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 50,
+          "expected_episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92,
+          "baseline_k": 1,
+          "baseline_successes": 9,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.9,
+          "minimum_success_rate": 0.765,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.9
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 264.80565420538187,
+        "checkpoint_prepare_s": 0.0001257583498954773,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 223.3914354480803,
+        "policy_load_s": 0.7213624231517315,
+        "runtime_prepare_s": 1.418472807854414
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "open the cabinet\u2019s middle drawer",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "place the bowl on the stove",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 2,
+          "task_description": "place the wine bottle on top of the cabinet",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 3,
+          "task_description": "slide open the top drawer and place the bowl in it",
+          "episodes": 50,
+          "successes": 42,
+          "success_rate": 0.84
+        },
+        {
+          "task_id": 4,
+          "task_description": "place the bowl on top of the cabinet",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 5,
+          "task_description": "move the plate to the stove\u2019s front",
+          "episodes": 50,
+          "successes": 7,
+          "success_rate": 0.14
+        },
+        {
+          "task_id": 6,
+          "task_description": "place the cream cheese inside the bowl",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 7,
+          "task_description": "switch on the stove",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "place the bowl on top of the plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "place the wine bottle on the rack",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 226.91908212006092,
+        "cpu": {
+          "cpu_cores": 8.843293597222758,
+          "throttle_time_ratio": 0.07640752783478903,
+          "throttle_period_ratio": 0.14587924195680918
+        },
+        "gpu": {
+          "mean_utilization": 0.8832707774798927,
+          "peak_memory_bytes": 27127709696.0,
+          "gpu_util_avg": {
+            "0": 88.32707774798926
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 25871.0
+          }
+        },
+        "gpu_samples": 373
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 16
+        },
+        "final_workers_per_gpu": {
+          "0": 16
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_goal_lan/run/cuda-mps"
+      },
+      "camera_renders": 15326,
+      "camera_renders_skipped": 110746,
+      "fixed_baseline": {
+        "formal_s": 869.3026566654444,
+        "successes": 444,
+        "steps": 62524
+      },
+      "paired": {
+        "success_differences": 33,
+        "step_differences": 371,
+        "fixed_only_success": 18,
+        "optimized_only_success": 15
+      },
+      "CLI_wall_s": 494.4614190533757,
+      "warmup_wall_s": 18.26945412158966
+    },
+    "libero_goal_task": {
+      "episodes": 500,
+      "successes": 49,
+      "steps": 138076,
+      "formal_s": 389.1005001440644,
+      "episodes_per_s": 1.2850150534755804,
+      "steps_per_s": 354.85947704738845,
+      "selected": {
+        "k": 24,
+        "g": 3,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 0.8% at K=16 below knee 25.0%; K=30, g=4 predicted GPU memory 49.0 GiB on the busiest GPU above 46.0 GiB",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 1.038301645745611,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.8543938740932144,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.34297287608472327,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": 0.008116571802532002,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.5028016098310069
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "gain": 0.14775695447588766
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 40.85996110315751,
+            "cpu_cores": 1.151093680612835,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.16570247933884297,
+            "vram_bytes": 9911140352,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 83.2849259616676,
+            "cpu_cores": 2.056568051999298,
+            "throttle_time_ratio": 0.0011417181289632358,
+            "gpu_utilization": 0.27469696969696966,
+            "vram_bytes": 10403971072,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 154.4430565076233,
+            "cpu_cores": 3.636702042344652,
+            "throttle_time_ratio": 0.014287782660695452,
+            "gpu_utilization": 0.49972602739726024,
+            "vram_bytes": 11650727936,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 207.41283578935833,
+            "cpu_cores": 4.7698605530918305,
+            "throttle_time_ratio": 0.07663867754990498,
+            "gpu_utilization": 0.5734567901234568,
+            "vram_bytes": 13621002240,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 311.700343523862,
+            "cpu_cores": 7.980024575297662,
+            "throttle_time_ratio": 0.24094005213013894,
+            "gpu_utilization": 0.7674418604651163,
+            "vram_bytes": 27001880576,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "throughput": 357.7562369920358,
+            "cpu_cores": 9.258723339333473,
+            "throttle_time_ratio": 0.32575475387587416,
+            "gpu_utilization": 0.7858730158730158,
+            "vram_bytes": 40511733760,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 24,
+          "initial_workers": 24,
+          "final_workers": 24,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 80,
+          "expected_episodes": 80,
+          "successes": 7,
+          "success_rate": 0.0875,
+          "baseline_k": 1,
+          "baseline_successes": 1,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.1,
+          "minimum_success_rate": 0.085,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.1
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 442.08585726097226,
+        "checkpoint_prepare_s": 0.00014862045645713806,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 389.1005001440644,
+        "policy_load_s": 0.002480302006006241,
+        "runtime_prepare_s": 2.8299133852124214
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "open the bottom drawer of the cabinet",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "put the plate on the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "put the wine bottle in the bowl",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "open the top layer of the drawer and put the cream cheese inside",
+          "episodes": 50,
+          "successes": 1,
+          "success_rate": 0.02
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the plate on the top of the drawer",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "push the cream cheese to the front of the stove",
+          "episodes": 50,
+          "successes": 1,
+          "success_rate": 0.02
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the wine bottle in the bowl",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "turn off the stove",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 8,
+          "task_description": "put the wine bottle on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the cream cheese on the rack",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 394.96595903113484,
+        "cpu": {
+          "cpu_cores": 9.527766641538225,
+          "throttle_time_ratio": 0.08060934435488969,
+          "throttle_period_ratio": 0.16658227848101265
+        },
+        "gpu": {
+          "mean_utilization": 0.9419969278033794,
+          "peak_memory_bytes": 40513830912.0,
+          "gpu_util_avg": {
+            "0": 94.19969278033794
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 38637.0
+          }
+        },
+        "gpu_samples": 651
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 24
+        },
+        "final_workers_per_gpu": {
+          "0": 24
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_goal_task/run/cuda-mps"
+      },
+      "camera_renders": 34026,
+      "camera_renders_skipped": 242126,
+      "fixed_baseline": {
+        "formal_s": 1677.9333550855517,
+        "successes": 45,
+        "steps": 138848
+      },
+      "paired": {
+        "success_differences": 10,
+        "step_differences": 45,
+        "fixed_only_success": 3,
+        "optimized_only_success": 7
+      },
+      "CLI_wall_s": 839.960945032537,
+      "warmup_wall_s": 21.465519711375237
+    },
+    "libero_spatial_object": {
+      "episodes": 500,
+      "successes": 477,
+      "steps": 53930,
+      "formal_s": 277.27785797417164,
+      "episodes_per_s": 1.8032453209681636,
+      "steps_per_s": 194.4980403196261,
+      "selected": {
+        "k": 8,
+        "g": 1,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 9.2% at K=15 below knee 21.9%; K=16, g=2 CPU throttle ratio 0.61 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.8713629573119008,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 1.0615118099022665,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.4649709323450657,
+            "required_gain": 0.25
+          },
+          {
+            "k": 15,
+            "g": 1,
+            "gain": 0.09165930227406416,
+            "required_gain": 0.21875
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.5497855121042934
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 32.514764736318305,
+            "cpu_cores": 1.22045345158264,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.10666666666666667,
+            "vram_bytes": 9677307904,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 60.84692629325733,
+            "cpu_cores": 2.1017378228495764,
+            "throttle_time_ratio": 0.0013806113068901469,
+            "gpu_utilization": 0.18488372093023256,
+            "vram_bytes": 9998172160,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 125.43665714980273,
+            "cpu_cores": 4.0170950939774,
+            "throttle_time_ratio": 0.018985138876799746,
+            "gpu_utilization": 0.39999999999999997,
+            "vram_bytes": 10777264128,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 183.76105657499485,
+            "cpu_cores": 5.967275558389696,
+            "throttle_time_ratio": 0.22989356351876716,
+            "gpu_utilization": 0.5053658536585366,
+            "vram_bytes": 12062818304,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [],
+        "concurrency_health": {
+          "requested_workers": 8,
+          "initial_workers": 8,
+          "final_workers": 8,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 30,
+          "expected_episodes": 30,
+          "successes": 28,
+          "success_rate": 0.9333333333333333,
+          "baseline_k": 1,
+          "baseline_successes": 8,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.8,
+          "minimum_success_rate": 0.68,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.8
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 193.01196618378162,
+        "checkpoint_prepare_s": 0.00012646988034248352,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 277.27785797417164,
+        "policy_load_s": 0.8788363821804523,
+        "runtime_prepare_s": 1.0178520306944847
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the akita black bowl between the plate and the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the akita black bowl next to the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the akita black bowl from table center and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the akita black bowl on the cookies box and place it on the plate",
+          "episodes": 50,
+          "successes": 44,
+          "success_rate": 0.88
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the akita black bowl in the top layer of the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the akita black bowl on the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the akita black bowl next to the cookies box and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the akita black bowl on the stove and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the akita black bowl next to the plate and place it on the plate",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the akita black bowl on the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        }
+      ],
+      "resources": {
+        "elapsed_s": 279.3901952393353,
+        "cpu": {
+          "cpu_cores": 6.206548957505663,
+          "throttle_time_ratio": 0.022945121288795008,
+          "throttle_period_ratio": 0.020758768790264854
+        },
+        "gpu": {
+          "mean_utilization": 0.6686353944562899,
+          "peak_memory_bytes": 12063866880.0,
+          "gpu_util_avg": {
+            "0": 66.86353944562899
+          },
+          "gpu_util_max": {
+            "0": 96.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 11505.0
+          }
+        },
+        "gpu_samples": 469
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 2,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_spatial_object/run/cuda-mps"
+      },
+      "camera_renders": 13052,
+      "camera_renders_skipped": 94808,
+      "fixed_baseline": {
+        "formal_s": 837.0636541731656,
+        "successes": 477,
+        "steps": 53327
+      },
+      "paired": {
+        "success_differences": 22,
+        "step_differences": 348,
+        "fixed_only_success": 11,
+        "optimized_only_success": 11
+      },
+      "CLI_wall_s": 474.6180713996291,
+      "warmup_wall_s": 16.326296556741
+    },
+    "libero_spatial_swap": {
+      "episodes": 500,
+      "successes": 0,
+      "steps": 110000,
+      "formal_s": 376.98253497853875,
+      "episodes_per_s": 1.3263213905346158,
+      "steps_per_s": 291.7907059176155,
+      "selected": {
+        "k": 16,
+        "g": 2,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 12.0% at K=15 below knee 21.9%; K=21, g=3 CPU throttle ratio 0.50 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.9506180741432022,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.9021311787344011,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.6098638469974225,
+            "required_gain": 0.25
+          },
+          {
+            "k": 15,
+            "g": 1,
+            "gain": 0.12015459285280228,
+            "required_gain": 0.21875
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.5825244633245015
+          },
+          {
+            "k": 21,
+            "g": 3,
+            "gain": 0.09125828617682008
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 30.985973769551585,
+            "cpu_cores": 1.1589568807313508,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.13496,
+            "vram_bytes": 9928966144,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 60.44180047981449,
+            "cpu_cores": 2.1632235641487214,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.2225373134328358,
+            "vram_bytes": 10502537216,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 114.96823319149902,
+            "cpu_cores": 3.8978790329929844,
+            "throttle_time_ratio": 0.013008655406872044,
+            "gpu_utilization": 0.40813333333333335,
+            "vram_bytes": 11784945664,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 185.08320216816338,
+            "cpu_cores": 5.898756138852373,
+            "throttle_time_ratio": 0.07581356574313923,
+            "gpu_utilization": 0.53,
+            "vram_bytes": 14076084224,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 292.89869518155297,
+            "cpu_cores": 8.869571775510577,
+            "throttle_time_ratio": 0.25706866319037536,
+            "gpu_utilization": 0.7069135802469135,
+            "vram_bytes": 28108128256,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 16,
+          "initial_workers": 16,
+          "final_workers": 16,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 50,
+          "expected_episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0,
+          "baseline_k": 1,
+          "baseline_successes": 0,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.0,
+          "minimum_success_rate": 0.0,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.0
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 412.5201862491667,
+        "checkpoint_prepare_s": 0.0001395009458065033,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 376.98253497853875,
+        "policy_load_s": 0.8375324904918671,
+        "runtime_prepare_s": 1.622053761035204
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the akita black bowl between the plate and the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the akita black bowl next to the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the akita black bowl from table center and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the akita black bowl on the cookies box and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the akita black bowl in the top layer of the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the akita black bowl on the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the akita black bowl next to the cookies box and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the akita black bowl on the stove and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the akita black bowl next to the plate and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the akita black bowl on the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 381.22270541638136,
+        "cpu": {
+          "cpu_cores": 9.680365019101568,
+          "throttle_time_ratio": 0.0723908746547274,
+          "throttle_period_ratio": 0.18835257082896117
+        },
+        "gpu": {
+          "mean_utilization": 0.8704012841091493,
+          "peak_memory_bytes": 28110225408.0,
+          "gpu_util_avg": {
+            "0": 87.04012841091493
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 26808.0
+          }
+        },
+        "gpu_samples": 623
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 16
+        },
+        "final_workers_per_gpu": {
+          "0": 16
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_spatial_swap/run/cuda-mps"
+      },
+      "camera_renders": 27000,
+      "camera_renders_skipped": 193000,
+      "fixed_baseline": {
+        "formal_s": 1720.6196727864444,
+        "successes": 0,
+        "steps": 110000
+      },
+      "paired": {
+        "success_differences": 0,
+        "step_differences": 0,
+        "fixed_only_success": 0,
+        "optimized_only_success": 0
+      },
+      "CLI_wall_s": 796.6297227591276,
+      "warmup_wall_s": 20.814290389418602
+    },
+    "libero_spatial_lan": {
+      "episodes": 500,
+      "successes": 469,
+      "steps": 53683,
+      "formal_s": 310.0266779139638,
+      "episodes_per_s": 1.6127644348682668,
+      "steps_per_s": 173.15606631406632,
+      "selected": {
+        "k": 8,
+        "g": 1,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 10.9% at K=14 below knee 18.8%; K=16, g=2 CPU throttle ratio 0.50 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.9839396526151911,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 1.1995461051345915,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.7302834768235522,
+            "required_gain": 0.25
+          },
+          {
+            "k": 14,
+            "g": 1,
+            "gain": 0.1085007301031462,
+            "required_gain": 0.1875
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.3579378861236451
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 22.627668869052187,
+            "cpu_cores": 1.1913823797628822,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.10829268292682928,
+            "vram_bytes": 9928966144,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 44.89192951555897,
+            "cpu_cores": 2.2497453168226635,
+            "throttle_time_ratio": 0.0008093946236880001,
+            "gpu_utilization": 0.20456521739130434,
+            "vram_bytes": 10502537216,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 98.74186871792435,
+            "cpu_cores": 3.837538861417734,
+            "throttle_time_ratio": 0.0175514600440914,
+            "gpu_utilization": 0.32553191489361705,
+            "vram_bytes": 11919163392,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 170.8514239133049,
+            "cpu_cores": 6.212792496503373,
+            "throttle_time_ratio": 0.10841428749721452,
+            "gpu_utilization": 0.4946808510638298,
+            "vram_bytes": 14211350528,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [],
+        "concurrency_health": {
+          "requested_workers": 8,
+          "initial_workers": 8,
+          "final_workers": 8,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 30,
+          "expected_episodes": 30,
+          "successes": 28,
+          "success_rate": 0.9333333333333333,
+          "baseline_k": 1,
+          "baseline_successes": 10,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 1.0,
+          "minimum_success_rate": 0.85,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.9
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 223.53531431779265,
+        "checkpoint_prepare_s": 0.00013282522559165955,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 310.0266779139638,
+        "policy_load_s": 0.7115685343742371,
+        "runtime_prepare_s": 1.0083680339157581
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "lift the black bowl between the plate and ramekin and set it on the plate",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 1,
+          "task_description": "take black bowl next to ramekin and place on plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "lift the black bowl from the table center and put it on the plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "lift black bowl from cookie box and put it on plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 4,
+          "task_description": "take the black bowl from the top drawer and put it on plate",
+          "episodes": 50,
+          "successes": 36,
+          "success_rate": 0.72
+        },
+        {
+          "task_id": 5,
+          "task_description": "grab black bowl on ramekin and set it on plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "grab the black bowl beside the cookie box and set it on plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "lift bowl from stove and set on plate",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the bowl beside the plate and put it on plate",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 9,
+          "task_description": "lift bowl from cabinet and put on plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        }
+      ],
+      "resources": {
+        "elapsed_s": 312.3440322764218,
+        "cpu": {
+          "cpu_cores": 6.604699827190286,
+          "throttle_time_ratio": 0.0152314614390424,
+          "throttle_period_ratio": 0.020486555697823303
+        },
+        "gpu": {
+          "mean_utilization": 0.6494274809160305,
+          "peak_memory_bytes": 14212399104.0,
+          "gpu_util_avg": {
+            "0": 64.94274809160305
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 13554.0
+          }
+        },
+        "gpu_samples": 524
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 2,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_spatial_lan/run/cuda-mps"
+      },
+      "camera_renders": 12974,
+      "camera_renders_skipped": 94392,
+      "fixed_baseline": {
+        "formal_s": 926.112890701741,
+        "successes": 470,
+        "steps": 53571
+      },
+      "paired": {
+        "success_differences": 19,
+        "step_differences": 327,
+        "fixed_only_success": 10,
+        "optimized_only_success": 9
+      },
+      "CLI_wall_s": 537.9079599715769,
+      "warmup_wall_s": 19.579720091074705
+    },
+    "libero_spatial_task": {
+      "episodes": 500,
+      "successes": 274,
+      "steps": 78505,
+      "formal_s": 282.6899574548006,
+      "episodes_per_s": 1.7687221877344022,
+      "steps_per_s": 277.7070706961785,
+      "selected": {
+        "k": 16,
+        "g": 2,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 3.9% at K=14 below knee 18.8%; K=20, g=3 CPU throttle ratio 0.54 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.9904264275151728,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 1.2009259591536239,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.5856814505771071,
+            "required_gain": 0.25
+          },
+          {
+            "k": 14,
+            "g": 1,
+            "gain": 0.039329517652301194,
+            "required_gain": 0.1875
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.43083177740355505
+          },
+          {
+            "k": 20,
+            "g": 3,
+            "gain": 0.052449448587594594
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 27.055445261647666,
+            "cpu_cores": 1.193318436572403,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.14072916666666666,
+            "vram_bytes": 9928966144,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 53.851873256973676,
+            "cpu_cores": 2.1863848409551174,
+            "throttle_time_ratio": 0.003408112889206937,
+            "gpu_utilization": 0.22403846153846155,
+            "vram_bytes": 10502537216,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 118.52398580032418,
+            "cpu_cores": 3.6906656629688928,
+            "throttle_time_ratio": 0.01711053448954511,
+            "gpu_utilization": 0.38472727272727275,
+            "vram_bytes": 11787042816,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 187.9412857320385,
+            "cpu_cores": 6.175020685216506,
+            "throttle_time_ratio": 0.06573368265061219,
+            "gpu_utilization": 0.5072222222222222,
+            "vram_bytes": 14079229952,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 268.91236391148203,
+            "cpu_cores": 9.201961704816087,
+            "throttle_time_ratio": 0.3903210607218736,
+            "gpu_utilization": 0.684923076923077,
+            "vram_bytes": 28250734592,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 16,
+          "initial_workers": 16,
+          "final_workers": 16,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 50,
+          "expected_episodes": 50,
+          "successes": 28,
+          "success_rate": 0.56,
+          "baseline_k": 1,
+          "baseline_successes": 6,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.6,
+          "minimum_success_rate": 0.51,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.6
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 321.031497836113,
+        "checkpoint_prepare_s": 0.00013853609561920166,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 282.6899574548006,
+        "policy_load_s": 1.1704647094011307,
+        "runtime_prepare_s": 1.4273822866380215
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the akita black bowl not between the plate and the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the akita black bowl next to the cookie box and place it on the plate",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the akita black bowl next to the plate and place it on the plate",
+          "episodes": 50,
+          "successes": 26,
+          "success_rate": 0.52
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the akita black bowl on the top of the cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the akita black bowl on the top of the wooden cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the akita black bowl on the cookie box and place it on the plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the akita black bowl on the stove and place it on the plate",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the akita black bowl on the top of the cabinet and place it on the plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the akita black bowl next to the ramekin and place it on the plate",
+          "episodes": 50,
+          "successes": 3,
+          "success_rate": 0.06
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the akita black bowl on the stove and place it on the plate",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        }
+      ],
+      "resources": {
+        "elapsed_s": 286.4016710780561,
+        "cpu": {
+          "cpu_cores": 9.81389022773532,
+          "throttle_time_ratio": 0.09042285374657821,
+          "throttle_period_ratio": 0.23812849162011174
+        },
+        "gpu": {
+          "mean_utilization": 0.8767584745762712,
+          "peak_memory_bytes": 28252831744.0,
+          "gpu_util_avg": {
+            "0": 87.67584745762711
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 26944.0
+          }
+        },
+        "gpu_samples": 472
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 16
+        },
+        "final_workers_per_gpu": {
+          "0": 16
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_spatial_task/run/cuda-mps"
+      },
+      "camera_renders": 19162,
+      "camera_renders_skipped": 137848,
+      "fixed_baseline": {
+        "formal_s": 1257.8131768256426,
+        "successes": 278,
+        "steps": 78446
+      },
+      "paired": {
+        "success_differences": 24,
+        "step_differences": 224,
+        "fixed_only_success": 14,
+        "optimized_only_success": 10
+      },
+      "CLI_wall_s": 610.6536894217134,
+      "warmup_wall_s": 21.15833704173565
+    },
+    "libero_10_object": {
+      "episodes": 500,
+      "successes": 240,
+      "steps": 202644,
+      "formal_s": 545.9705003201962,
+      "episodes_per_s": 0.9158003952718402,
+      "steps_per_s": 371.1629105989336,
+      "selected": {
+        "k": 24,
+        "g": 3,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain -1.1% at K=16 below knee 25.0%; K=31, g=4 predicted GPU memory 50.7 GiB on the busiest GPU above 46.0 GiB",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.994465747988079,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.7707235618308033,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.3252919132799572,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": -0.010574481088049592,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.4695916565266942
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "gain": 0.1371038002269407
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 47.56126865235449,
+            "cpu_cores": 1.1493343461772334,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.1768354430379747,
+            "vram_bytes": 10161750016,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 94.85932125798017,
+            "cpu_cores": 1.998227959018971,
+            "throttle_time_ratio": 0.000554682942421974,
+            "gpu_utilization": 0.3008988764044944,
+            "vram_bytes": 10660872192,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 167.96963521078308,
+            "cpu_cores": 3.363177576561208,
+            "throttle_time_ratio": 0.009315767403066227,
+            "gpu_utilization": 0.5084375,
+            "vram_bytes": 12316573696,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 222.60879922143516,
+            "cpu_cores": 4.346205743860207,
+            "throttle_time_ratio": 0.06333342360537957,
+            "gpu_utilization": 0.6056363636363636,
+            "vram_bytes": 14089715712,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 327.1440340052472,
+            "cpu_cores": 7.31359457491658,
+            "throttle_time_ratio": 0.15716279409404682,
+            "gpu_utilization": 0.7922764227642277,
+            "vram_bytes": 27705475072,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "throughput": 371.9967242889381,
+            "cpu_cores": 9.107518271128901,
+            "throttle_time_ratio": 0.24504090403891918,
+            "gpu_utilization": 0.8698170731707318,
+            "vram_bytes": 41656778752,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 24,
+          "initial_workers": 24,
+          "final_workers": 24,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 80,
+          "expected_episodes": 80,
+          "successes": 37,
+          "success_rate": 0.4625,
+          "baseline_k": 1,
+          "baseline_successes": 4,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.4,
+          "minimum_success_rate": 0.34,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.6
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 580.2432502247393,
+        "checkpoint_prepare_s": 0.00012968480587005615,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 545.9705003201962,
+        "policy_load_s": 0.0016187727451324463,
+        "runtime_prepare_s": 2.429819356650114
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+          "episodes": 50,
+          "successes": 1,
+          "success_rate": 0.02
+        },
+        {
+          "task_id": 1,
+          "task_description": "put both the cream cheese box and the butter in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "turn on the stove and put the moka pot on it",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "put the black bowl in the bottom drawer of the cabinet and close it",
+          "episodes": 50,
+          "successes": 30,
+          "success_rate": 0.6
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick up the book and place it in the back compartment of the caddy",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+          "episodes": 50,
+          "successes": 1,
+          "success_rate": 0.02
+        },
+        {
+          "task_id": 7,
+          "task_description": "put both the alphabet soup and the cream cheese box in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put both moka pots on the stove",
+          "episodes": 50,
+          "successes": 44,
+          "success_rate": 0.88
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the yellow and white mug in the microwave and close it",
+          "episodes": 50,
+          "successes": 18,
+          "success_rate": 0.36
+        }
+      ],
+      "resources": {
+        "elapsed_s": 551.8468401245773,
+        "cpu": {
+          "cpu_cores": 8.984759682379812,
+          "throttle_time_ratio": 0.05576038436628574,
+          "throttle_period_ratio": 0.10927872417542588
+        },
+        "gpu": {
+          "mean_utilization": 0.9596149614961496,
+          "peak_memory_bytes": 41859153920.0,
+          "gpu_util_avg": {
+            "0": 95.96149614961496
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 39920.0
+          }
+        },
+        "gpu_samples": 909
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 24
+        },
+        "final_workers_per_gpu": {
+          "0": 24
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_10_object/run/cuda-mps"
+      },
+      "camera_renders": 50470,
+      "camera_renders_skipped": 354818,
+      "fixed_baseline": {
+        "formal_s": 2216.159534960985,
+        "successes": 239,
+        "steps": 204203
+      },
+      "paired": {
+        "success_differences": 53,
+        "step_differences": 249,
+        "fixed_only_success": 26,
+        "optimized_only_success": 27
+      },
+      "CLI_wall_s": 1134.9876804500818,
+      "warmup_wall_s": 28.601348590105772
+    },
+    "libero_10_swap": {
+      "episodes": 500,
+      "successes": 0,
+      "steps": 260000,
+      "formal_s": 674.4863117411733,
+      "episodes_per_s": 0.7413048883219879,
+      "steps_per_s": 385.47854192743375,
+      "selected": {
+        "k": 16,
+        "g": 4,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 4.0,
+        "stop_reason": "worker gain 24.5% at K=8 below knee 25.0%; K=20, g=5 predicted GPU memory 55.4 GiB on the busiest GPU above 46.0 GiB",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.9585369558379253,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.9568696899228388,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.24500082978890658,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 2,
+            "gain": 0.64089660801479
+          },
+          {
+            "k": 12,
+            "g": 3,
+            "gain": 0.22962112266815193
+          },
+          {
+            "k": 16,
+            "g": 4,
+            "gain": 0.07388409639587357
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 47.04943964322787,
+            "cpu_cores": 1.141989538363363,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.15484848484848485,
+            "vram_bytes": 10329522176,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 92.14806629272772,
+            "cpu_cores": 2.0772425742562826,
+            "throttle_time_ratio": 0.0015475691172444777,
+            "gpu_utilization": 0.32533333333333336,
+            "vram_bytes": 11080302592,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 180.32175791323928,
+            "cpu_cores": 3.5608794703648288,
+            "throttle_time_ratio": 0.013297766940347096,
+            "gpu_utilization": 0.575981308411215,
+            "vram_bytes": 12656312320,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 8,
+            "g": 2,
+            "throughput": 295.88936091109844,
+            "cpu_cores": 6.116545869494199,
+            "throttle_time_ratio": 0.06963627998126566,
+            "gpu_utilization": 0.771047619047619,
+            "vram_bytes": 24345837568,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 12,
+            "g": 3,
+            "throughput": 363.83180814906683,
+            "cpu_cores": 8.052201935502838,
+            "throttle_time_ratio": 0.1373123360269195,
+            "gpu_utilization": 0.8582300884955752,
+            "vram_bytes": 36078354432,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 16,
+            "g": 4,
+            "throughput": 390.71319253423746,
+            "cpu_cores": 9.077198798549562,
+            "throttle_time_ratio": 0.205700205885287,
+            "gpu_utilization": 0.8444852941176471,
+            "vram_bytes": 47948234752,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 16,
+          "initial_workers": 16,
+          "final_workers": 16,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 50,
+          "expected_episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0,
+          "baseline_k": 1,
+          "baseline_successes": 0,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.0,
+          "minimum_success_rate": 0.0,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.0
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 569.1219710968435,
+        "checkpoint_prepare_s": 0.00014512985944747925,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 674.4863117411733,
+        "policy_load_s": 0.0033814124763011932,
+        "runtime_prepare_s": 1.4169016107916832
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "put both the cream cheese box and the butter in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "turn on the stove and put the moka pot on it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "put the black bowl in the bottom drawer of the cabinet and close it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick up the book and place it in the back compartment of the caddy",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "put both the alphabet soup and the cream cheese box in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put both moka pots on the stove",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the yellow and white mug in the microwave and close it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 678.4878466315567,
+        "cpu": {
+          "cpu_cores": 9.6948577541316,
+          "throttle_time_ratio": 0.03227953987493188,
+          "throttle_period_ratio": 0.1133382461311717
+        },
+        "gpu": {
+          "mean_utilization": 0.9780489938757656,
+          "peak_memory_bytes": 48976887808.0,
+          "gpu_util_avg": {
+            "0": 97.80489938757655
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 46708.0
+          }
+        },
+        "gpu_samples": 1143
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 16
+        },
+        "final_workers_per_gpu": {
+          "0": 16
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 4,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_10_swap/run/cuda-mps"
+      },
+      "camera_renders": 65000,
+      "camera_renders_skipped": 455000,
+      "fixed_baseline": {
+        "formal_s": 1382.0422416478395,
+        "successes": 0,
+        "steps": 260000
+      },
+      "paired": {
+        "success_differences": 0,
+        "step_differences": 0,
+        "fixed_only_success": 0,
+        "optimized_only_success": 0
+      },
+      "CLI_wall_s": 1251.0378392748535,
+      "warmup_wall_s": 27.484026584774256
+    },
+    "libero_10_lan": {
+      "episodes": 500,
+      "successes": 460,
+      "steps": 135867,
+      "formal_s": 429.96975342929363,
+      "episodes_per_s": 1.1628724951282474,
+      "steps_per_s": 315.9919945911792,
+      "selected": {
+        "k": 16,
+        "g": 2,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain -1.1% at K=16 below knee 25.0%; K=24, g=3 CPU throttle ratio 0.40 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.8518128799960227,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.9851176222082341,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.38049170677241095,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": -0.010766429370582697,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.499771433331722
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "gain": 0.11179390401471778
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 42.209615498476104,
+            "cpu_cores": 1.1847734771727578,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.15703703703703706,
+            "vram_bytes": 10325327872,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 78.16430963975779,
+            "cpu_cores": 2.2207192721992937,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.28372881355932206,
+            "vram_bytes": 10874781696,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 155.16534849362412,
+            "cpu_cores": 3.508054833849769,
+            "throttle_time_ratio": 0.015045453734650542,
+            "gpu_utilization": 0.5095833333333333,
+            "vram_bytes": 12330205184,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 214.2044767738991,
+            "cpu_cores": 4.9559982656100345,
+            "throttle_time_ratio": 0.10201866383325416,
+            "gpu_utilization": 0.594,
+            "vram_bytes": 14488174592,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 321.25775515726224,
+            "cpu_cores": 7.9762628201649886,
+            "throttle_time_ratio": 0.2727654362715293,
+            "gpu_utilization": 0.7767441860465116,
+            "vram_bytes": 28393340928,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 16,
+          "initial_workers": 16,
+          "final_workers": 16,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 50,
+          "expected_episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94,
+          "baseline_k": 1,
+          "baseline_successes": 10,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 1.0,
+          "minimum_success_rate": 0.85,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.9
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 413.1446059644222,
+        "checkpoint_prepare_s": 0.00012334808707237244,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 429.96975342929363,
+        "policy_load_s": 0.8153573423624039,
+        "runtime_prepare_s": 1.6317595764994621
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "place alphabet soup and tomato sauce into basket",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 1,
+          "task_description": "place cream cheese box and butter into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "switch stove on and put moka pot on it",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 3,
+          "task_description": "put black bowl inside bottom drawer and close it",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 4,
+          "task_description": "place white mug on left plate and yellow-white mug on right plate",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick up the book and place in back compartment",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 6,
+          "task_description": "place white mug on plate and chocolate pudding to right",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 7,
+          "task_description": "put alphabet soup and cream cheese box in basket",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 8,
+          "task_description": "place both moka pots on stove",
+          "episodes": 50,
+          "successes": 41,
+          "success_rate": 0.82
+        },
+        {
+          "task_id": 9,
+          "task_description": "place yellow and white mug in microwave and close door",
+          "episodes": 50,
+          "successes": 43,
+          "success_rate": 0.86
+        }
+      ],
+      "resources": {
+        "elapsed_s": 434.2036443054676,
+        "cpu": {
+          "cpu_cores": 7.616074960148275,
+          "throttle_time_ratio": 0.04374098996884177,
+          "throttle_period_ratio": 0.06332028551692379
+        },
+        "gpu": {
+          "mean_utilization": 0.9004132231404959,
+          "peak_memory_bytes": 28410118144.0,
+          "gpu_util_avg": {
+            "0": 90.0413223140496
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 27094.0
+          }
+        },
+        "gpu_samples": 726
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 16
+        },
+        "final_workers_per_gpu": {
+          "0": 16
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_10_lan/run/cuda-mps"
+      },
+      "camera_renders": 33594,
+      "camera_renders_skipped": 238140,
+      "fixed_baseline": {
+        "formal_s": 747.6528877317905,
+        "successes": 458,
+        "steps": 136340
+      },
+      "paired": {
+        "success_differences": 38,
+        "step_differences": 422,
+        "fixed_only_success": 18,
+        "optimized_only_success": 20
+      },
+      "CLI_wall_s": 850.2500351406634,
+      "warmup_wall_s": 21.98954690620303
+    },
+    "libero_10_task": {
+      "episodes": 500,
+      "successes": 47,
+      "steps": 253883,
+      "formal_s": 853.2823631092906,
+      "episodes_per_s": 0.5859725005659805,
+      "steps_per_s": 297.5369127223857,
+      "selected": {
+        "k": 8,
+        "g": 2,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 4.0,
+        "stop_reason": "worker gain 23.1% at K=8 below knee 25.0%; correctness_regression: probe K=12, g=3 success rate 0.0% on the baseline episodes fell below the K=1 baseline 10.0% with 15.0% tolerance",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.9077962519621721,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.8477579924972134,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.23133310868884838,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 2,
+            "gain": 0.6508732331954841
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 50.68506415991134,
+            "cpu_cores": 1.1487078691429031,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.20411111111111113,
+            "vram_bytes": 10329522176,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 96.69677543474107,
+            "cpu_cores": 2.091160292366096,
+            "throttle_time_ratio": 0.00016393866934762138,
+            "gpu_utilization": 0.3209090909090909,
+            "vram_bytes": 10878976000,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 178.67223965825102,
+            "cpu_cores": 3.5487745494297087,
+            "throttle_time_ratio": 0.008074516023494403,
+            "gpu_utilization": 0.5662727272727273,
+            "vram_bytes": 12522094592,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 8,
+            "g": 2,
+            "throughput": 294.96521796689524,
+            "cpu_cores": 6.147728320726153,
+            "throttle_time_ratio": 0.06814790961451561,
+            "gpu_utilization": 0.7768571428571428,
+            "vram_bytes": 24282923008,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 8,
+          "initial_workers": 8,
+          "final_workers": 8,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 30,
+          "expected_episodes": 30,
+          "successes": 2,
+          "success_rate": 0.06666666666666667,
+          "baseline_k": 1,
+          "baseline_successes": 1,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.1,
+          "minimum_success_rate": 0.085,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.1
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 463.8543344885111,
+        "checkpoint_prepare_s": 0.00013141706585884094,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 853.2823631092906,
+        "policy_load_s": 0.7825336940586567,
+        "runtime_prepare_s": 1.014544766396284
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "put both the cream cheese and the tomato sauce in the basket",
+          "episodes": 50,
+          "successes": 7,
+          "success_rate": 0.14
+        },
+        {
+          "task_id": 1,
+          "task_description": "put both the alphabet soup and the butter in the basket",
+          "episodes": 50,
+          "successes": 3,
+          "success_rate": 0.06
+        },
+        {
+          "task_id": 2,
+          "task_description": "turn on the stove and put the pan on it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "put the bottle in the bottom drawer of the cabinet and close it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "put the yellow and white mug on the left plate and put the white mug on the right plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick up the cup and place it in the back compartment of the caddy",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "put the red mug on the plate and put the chocolate pudding to the right of the plate",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "put both the ketchup and the cream cheese box in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "put the left moka pot on the stove",
+          "episodes": 50,
+          "successes": 37,
+          "success_rate": 0.74
+        },
+        {
+          "task_id": 9,
+          "task_description": "put the white mug in the microwave and close it",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 855.9650697559118,
+        "cpu": {
+          "cpu_cores": 6.349558664292052,
+          "throttle_time_ratio": 0.004627317912785242,
+          "throttle_period_ratio": 0.0051401869158878505
+        },
+        "gpu": {
+          "mean_utilization": 0.8910420979986198,
+          "peak_memory_bytes": 24283971584.0,
+          "gpu_util_avg": {
+            "0": 89.10420979986198
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 23159.0
+          }
+        },
+        "gpu_samples": 1449
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_10_task/run/cuda-mps"
+      },
+      "camera_renders": 63434,
+      "camera_renders_skipped": 444332,
+      "fixed_baseline": {
+        "formal_s": 1352.511067058891,
+        "successes": 51,
+        "steps": 253699
+      },
+      "paired": {
+        "success_differences": 24,
+        "step_differences": 61,
+        "fixed_only_success": 14,
+        "optimized_only_success": 10
+      },
+      "CLI_wall_s": 1322.6533552594483,
+      "warmup_wall_s": 26.73717849701643
+    },
+    "libero_object_object": {
+      "episodes": 500,
+      "successes": 446,
+      "steps": 74647,
+      "formal_s": 366.45999958738685,
+      "episodes_per_s": 1.3644053936663527,
+      "steps_per_s": 203.69753884202447,
+      "selected": {
+        "k": 8,
+        "g": 1,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain -2.4% at K=16 below knee 25.0%; K=16, g=2 CPU throttle ratio 0.42 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.790541949675891,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 1.1616667167622392,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.45489521167162517,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": -0.02371185874439663,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.3820781075937443
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 36.70054376336844,
+            "cpu_cores": 1.2330982288345682,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.1437142857142857,
+            "vram_bytes": 9776922624,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 65.71386318422708,
+            "cpu_cores": 2.2985261408607833,
+            "throttle_time_ratio": 0.0017837898919915332,
+            "gpu_utilization": 0.2546341463414634,
+            "vram_bytes": 10184818688,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 142.05147087521112,
+            "cpu_cores": 3.9757741259669643,
+            "throttle_time_ratio": 0.019633744060208805,
+            "gpu_utilization": 0.47204545454545455,
+            "vram_bytes": 11129585664,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 206.67000478725598,
+            "cpu_cores": 5.49370003171613,
+            "throttle_time_ratio": 0.14453293633128372,
+            "gpu_utilization": 0.574,
+            "vram_bytes": 12798918656,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [],
+        "concurrency_health": {
+          "requested_workers": 8,
+          "initial_workers": 8,
+          "final_workers": 8,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 30,
+          "expected_episodes": 30,
+          "successes": 26,
+          "success_rate": 0.8666666666666667,
+          "baseline_k": 1,
+          "baseline_successes": 9,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.9,
+          "minimum_success_rate": 0.765,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.8
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 222.9900085479021,
+        "checkpoint_prepare_s": 0.00013526901602745056,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 366.45999958738685,
+        "policy_load_s": 0.7225671485066414,
+        "runtime_prepare_s": 1.2093240842223167
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the alphabet soup and place it in the basket",
+          "episodes": 50,
+          "successes": 8,
+          "success_rate": 0.16
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the cream cheese and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the salad dressing and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the bbq sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 42,
+          "success_rate": 0.84
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the ketchup and place it in the basket",
+          "episodes": 50,
+          "successes": 49,
+          "success_rate": 0.98
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the tomato sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the butter and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the milk and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the chocolate pudding and place it in the basket",
+          "episodes": 50,
+          "successes": 47,
+          "success_rate": 0.94
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the orange juice and place it in the basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 368.99112813174725,
+        "cpu": {
+          "cpu_cores": 5.265773412596112,
+          "throttle_time_ratio": 0.010930390396522717,
+          "throttle_period_ratio": 0.01707317073170732
+        },
+        "gpu": {
+          "mean_utilization": 0.6767942583732057,
+          "peak_memory_bytes": 12881756160.0,
+          "gpu_util_avg": {
+            "0": 67.67942583732058
+          },
+          "gpu_util_max": {
+            "0": 95.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 12285.0
+          }
+        },
+        "gpu_samples": 627
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 2,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_object_object/run/cuda-mps"
+      },
+      "camera_renders": 18340,
+      "camera_renders_skipped": 130954,
+      "fixed_baseline": {
+        "formal_s": 936.3386584185064,
+        "successes": 453,
+        "steps": 73936
+      },
+      "paired": {
+        "success_differences": 21,
+        "step_differences": 306,
+        "fixed_only_success": 14,
+        "optimized_only_success": 7
+      },
+      "CLI_wall_s": 593.9647350050509,
+      "warmup_wall_s": 21.69874207302928
+    },
+    "libero_object_swap": {
+      "episodes": 500,
+      "successes": 0,
+      "steps": 140000,
+      "formal_s": 430.61361034587026,
+      "episodes_per_s": 1.1611337588665587,
+      "steps_per_s": 325.11745248263645,
+      "selected": {
+        "k": 16,
+        "g": 2,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 4.5% at K=16 below knee 25.0%; K=24, g=3 CPU throttle ratio 0.49 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.9170611834438869,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.8269476053009477,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.26850246524259536,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": 0.04467497601511505,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.5673767982457096
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "gain": 0.06444630148872976
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 46.636143305472736,
+            "cpu_cores": 1.1795866970031372,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.16943925233644858,
+            "vram_bytes": 9860808704,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 89.40434007644826,
+            "cpu_cores": 2.1946449583071033,
+            "throttle_time_ratio": 0.002479231361863816,
+            "gpu_utilization": 0.3062295081967213,
+            "vram_bytes": 10369368064,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 163.3370450061787,
+            "cpu_cores": 3.698331673096995,
+            "throttle_time_ratio": 0.02113548304419317,
+            "gpu_utilization": 0.5002985074626866,
+            "vram_bytes": 11515461632,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 207.19344425577845,
+            "cpu_cores": 4.7006161856506266,
+            "throttle_time_ratio": 0.1435471990129919,
+            "gpu_utilization": 0.5662025316455696,
+            "vram_bytes": 13547601920,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 324.75019727512296,
+            "cpu_cores": 7.537282924050488,
+            "throttle_time_ratio": 0.3594964100847867,
+            "gpu_utilization": 0.734065934065934,
+            "vram_bytes": 27045920768,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 16,
+          "initial_workers": 16,
+          "final_workers": 16,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 50,
+          "expected_episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0,
+          "baseline_k": 1,
+          "baseline_successes": 0,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.0,
+          "minimum_success_rate": 0.0,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.0
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 429.05272717773914,
+        "checkpoint_prepare_s": 0.00013715773820877075,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 430.61361034587026,
+        "policy_load_s": 1.042966928333044,
+        "runtime_prepare_s": 1.4201648347079754
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the alphabet soup and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the cream cheese and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the salad dressing and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the bbq sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the ketchup and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the tomato sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the butter and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the milk and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the chocolate pudding and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the orange juice and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 434.3252068720758,
+        "cpu": {
+          "cpu_cores": 7.606088255368063,
+          "throttle_time_ratio": 0.053082778300402075,
+          "throttle_period_ratio": 0.06953718627676721
+        },
+        "gpu": {
+          "mean_utilization": 0.9042163661581138,
+          "peak_memory_bytes": 27050115072.0,
+          "gpu_util_avg": {
+            "0": 90.42163661581138
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 25797.0
+          }
+        },
+        "gpu_samples": 721
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 16
+        },
+        "final_workers_per_gpu": {
+          "0": 16
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_object_swap/run/cuda-mps"
+      },
+      "camera_renders": 35000,
+      "camera_renders_skipped": 245000,
+      "fixed_baseline": {
+        "formal_s": 1602.9686850868165,
+        "successes": 0,
+        "steps": 140000
+      },
+      "paired": {
+        "success_differences": 0,
+        "step_differences": 0,
+        "fixed_only_success": 0,
+        "optimized_only_success": 0
+      },
+      "CLI_wall_s": 866.6118903458118,
+      "warmup_wall_s": 21.16280973702669
+    },
+    "libero_object_lan": {
+      "episodes": 500,
+      "successes": 484,
+      "steps": 68523,
+      "formal_s": 347.68117804825306,
+      "episodes_per_s": 1.4380991309532647,
+      "steps_per_s": 197.0857335006211,
+      "selected": {
+        "k": 8,
+        "g": 1,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 10.4% at K=16 below knee 25.0%; K=16, g=2 CPU throttle ratio 0.57 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.9372507463388171,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.9304240594045468,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.4136728883528167,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": 0.10408916380557387,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.4712495305626856
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 35.04787658167243,
+            "cpu_cores": 1.2601989802461118,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.15301369863013697,
+            "vram_bytes": 9925820416,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 67.89652506543567,
+            "cpu_cores": 2.3160824271384253,
+            "throttle_time_ratio": 0.0012389877461507048,
+            "gpu_utilization": 0.2790243902439024,
+            "vram_bytes": 10434379776,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 131.06908553628088,
+            "cpu_cores": 3.9975118936641145,
+            "throttle_time_ratio": 0.02023222312822323,
+            "gpu_utilization": 0.4608695652173913,
+            "vram_bytes": 11710496768,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 185.28881272383657,
+            "cpu_cores": 5.613608704462452,
+            "throttle_time_ratio": 0.13013476097181872,
+            "gpu_utilization": 0.5085714285714286,
+            "vram_bytes": 13742637056,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [],
+        "concurrency_health": {
+          "requested_workers": 8,
+          "initial_workers": 8,
+          "final_workers": 8,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 30,
+          "expected_episodes": 30,
+          "successes": 30,
+          "success_rate": 1.0,
+          "baseline_k": 1,
+          "baseline_successes": 10,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 1.0,
+          "minimum_success_rate": 0.85,
+          "matched_episodes": 10,
+          "matched_success_rate": 1.0
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 226.57495575025678,
+        "checkpoint_prepare_s": 0.00015736743807792664,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 347.68117804825306,
+        "policy_load_s": 0.7513768263161182,
+        "runtime_prepare_s": 1.0181040838360786
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "grab alphabet soup and put it into basket",
+          "episodes": 50,
+          "successes": 46,
+          "success_rate": 0.92
+        },
+        {
+          "task_id": 1,
+          "task_description": "grab cream cheese and put into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 2,
+          "task_description": "grab salad dressing and put into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick up bbq sauce and put it into basket",
+          "episodes": 50,
+          "successes": 43,
+          "success_rate": 0.86
+        },
+        {
+          "task_id": 4,
+          "task_description": "lift ketchup and put it in basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick tomato sauce and put it in basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "grab butter and put it into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "grab milk and put into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "lift chocolate pudding and put it in basket",
+          "episodes": 50,
+          "successes": 45,
+          "success_rate": 0.9
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick orange juice and put into basket",
+          "episodes": 50,
+          "successes": 50,
+          "success_rate": 1.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 350.0672464519739,
+        "cpu": {
+          "cpu_cores": 5.431043173188817,
+          "throttle_time_ratio": 0.01960540744545654,
+          "throttle_period_ratio": 0.025135675521279634
+        },
+        "gpu": {
+          "mean_utilization": 0.6805593220338982,
+          "peak_memory_bytes": 13743685632.0,
+          "gpu_util_avg": {
+            "0": 68.05593220338983
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 13107.0
+          }
+        },
+        "gpu_samples": 590
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 8
+        },
+        "final_workers_per_gpu": {
+          "0": 8
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 2,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_object_lan/run/cuda-mps"
+      },
+      "camera_renders": 16780,
+      "camera_renders_skipped": 120266,
+      "fixed_baseline": {
+        "formal_s": 912.8662741817534,
+        "successes": 484,
+        "steps": 68715
+      },
+      "paired": {
+        "success_differences": 12,
+        "step_differences": 330,
+        "fixed_only_success": 6,
+        "optimized_only_success": 6
+      },
+      "CLI_wall_s": 578.9386173933744,
+      "warmup_wall_s": 19.707598138600588
+    },
+    "libero_object_task": {
+      "episodes": 500,
+      "successes": 48,
+      "steps": 133294,
+      "formal_s": 409.2454236075282,
+      "episodes_per_s": 1.2217607605540548,
+      "steps_per_s": 325.70675763458433,
+      "selected": {
+        "k": 16,
+        "g": 2,
+        "mode": "dynamic-probe",
+        "bound_hint": "gpu_infer",
+        "workers_per_replica": 8.0,
+        "stop_reason": "worker gain 2.5% at K=16 below knee 25.0%; K=24, g=3 CPU throttle ratio 0.44 above 0.40",
+        "path": [
+          {
+            "k": 2,
+            "g": 1,
+            "gain": 0.9956346556088849,
+            "required_gain": 0.25
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "gain": 0.7861356702871036,
+            "required_gain": 0.25
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "gain": 0.33743113760308474,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 1,
+            "gain": 0.02452869892711984,
+            "required_gain": 0.25
+          },
+          {
+            "k": 16,
+            "g": 2,
+            "gain": 0.46971030267390224
+          },
+          {
+            "k": 24,
+            "g": 3,
+            "gain": 0.13924945336972328
+          }
+        ],
+        "k_trials": [
+          {
+            "k": 1,
+            "g": 1,
+            "throughput": 44.47768240774086,
+            "cpu_cores": 1.1808492412549196,
+            "throttle_time_ratio": 0.0,
+            "gpu_utilization": 0.1660185185185185,
+            "vram_bytes": 9860808704,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 2,
+            "g": 1,
+            "throughput": 88.76120441405328,
+            "cpu_cores": 2.212667674191159,
+            "throttle_time_ratio": 0.0011714897715143606,
+            "gpu_utilization": 0.2942372881355932,
+            "vram_bytes": 10369368064,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 4,
+            "g": 1,
+            "throughput": 158.53955334158567,
+            "cpu_cores": 3.7611241715172112,
+            "throttle_time_ratio": 0.013600258905647221,
+            "gpu_utilization": 0.52421875,
+            "vram_bytes": 11515461632,
+            "queue_wait_p95_ms": 0.0
+          },
+          {
+            "k": 8,
+            "g": 1,
+            "throughput": 212.03573518072187,
+            "cpu_cores": 4.947911646034021,
+            "throttle_time_ratio": 0.11844387057757606,
+            "gpu_utilization": 0.5921917808219178,
+            "vram_bytes": 13546553344,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "g_trials": [
+          {
+            "k": 16,
+            "g": 2,
+            "throughput": 311.6311045301421,
+            "cpu_cores": 7.761210252113544,
+            "throttle_time_ratio": 0.3133343119318809,
+            "gpu_utilization": 0.7514285714285714,
+            "vram_bytes": 27044872192,
+            "queue_wait_p95_ms": 0.0
+          }
+        ],
+        "concurrency_health": {
+          "requested_workers": 16,
+          "initial_workers": 16,
+          "final_workers": 16,
+          "worker_failures": 0,
+          "oom_events": 0,
+          "completed_episodes": 50,
+          "expected_episodes": 50,
+          "successes": 5,
+          "success_rate": 0.1,
+          "baseline_k": 1,
+          "baseline_successes": 1,
+          "baseline_episodes": 10,
+          "baseline_success_rate": 0.1,
+          "minimum_success_rate": 0.085,
+          "matched_episodes": 10,
+          "matched_success_rate": 0.1
+        },
+        "bounds": {
+          "gpu_count": 1,
+          "cpu_cores": 12.0,
+          "max_workers": 5,
+          "max_workers_hard": 64,
+          "max_replicas": 12,
+          "worker_cpu_cores": 2.0,
+          "vram_per_gpu_bytes": 51527024640,
+          "replica_vram_bytes": 9028239360
+        },
+        "strategy": "diagonal"
+      },
+      "phase_timings": {
+        "active_stage": null,
+        "autotune_s": 417.9865393899381,
+        "checkpoint_prepare_s": 0.0001287013292312622,
+        "completed_stages": [
+          "checkpoint_prepare_s",
+          "autotune_s",
+          "policy_load_s",
+          "runtime_prepare_s",
+          "evaluation_s"
+        ],
+        "evaluation_s": 409.2454236075282,
+        "policy_load_s": 0.7748413793742657,
+        "runtime_prepare_s": 1.424952920526266
+      },
+      "tasks": [
+        {
+          "task_id": 0,
+          "task_description": "pick the cream cheese and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 1,
+          "task_description": "pick the alphabet soup and place it in the basket",
+          "episodes": 50,
+          "successes": 48,
+          "success_rate": 0.96
+        },
+        {
+          "task_id": 2,
+          "task_description": "pick the tomato sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 3,
+          "task_description": "pick the ketchup and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 4,
+          "task_description": "pick the milk and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 5,
+          "task_description": "pick the bbq sauce and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 6,
+          "task_description": "pick the orange juice and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 7,
+          "task_description": "pick the butter and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 8,
+          "task_description": "pick the salad dressing and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        },
+        {
+          "task_id": 9,
+          "task_description": "pick the chocolate pudding and place it in the basket",
+          "episodes": 50,
+          "successes": 0,
+          "success_rate": 0.0
+        }
+      ],
+      "resources": {
+        "elapsed_s": 413.14083286747336,
+        "cpu": {
+          "cpu_cores": 7.595829212085288,
+          "throttle_time_ratio": 0.05185252552900084,
+          "throttle_period_ratio": 0.06824782187802517
+        },
+        "gpu": {
+          "mean_utilization": 0.9071345875542692,
+          "peak_memory_bytes": 27061649408.0,
+          "gpu_util_avg": {
+            "0": 90.71345875542693
+          },
+          "gpu_util_max": {
+            "0": 100.0
+          },
+          "gpu_mem_mib_max": {
+            "0": 25808.0
+          }
+        },
+        "gpu_samples": 691
+      },
+      "recovery": {
+        "worker_failures": [],
+        "planned_recycles": 0,
+        "oom_events": 0,
+        "initial_workers_per_gpu": {
+          "0": 16
+        },
+        "final_workers_per_gpu": {
+          "0": 16
+        }
+      },
+      "cuda_mps": {
+        "enabled": true,
+        "gpu_devices": [
+          "0"
+        ],
+        "active_thread_percentage": 100,
+        "max_observed_clients": 3,
+        "log_dir": "/root/autodl-tmp/issue21-20261108/comparison/full8k-250v85vu/suites/libero_object_task/run/cuda-mps"
+      },
+      "camera_renders": 33298,
+      "camera_renders_skipped": 233290,
+      "fixed_baseline": {
+        "formal_s": 1529.6675410158932,
+        "successes": 48,
+        "steps": 133352
+      },
+      "paired": {
+        "success_differences": 2,
+        "step_differences": 26,
+        "fixed_only_success": 1,
+        "optimized_only_success": 1
+      },
+      "CLI_wall_s": 833.8677536286414,
+      "warmup_wall_s": 21.644271600991488
+    }
+  },
+  "note": "Historical fixed configuration vs current optimized configuration: different K/g, threads and optimization settings; one run per side. Not an isolated effect or final-head acceptance."
+}

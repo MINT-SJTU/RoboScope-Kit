@@ -2,7 +2,9 @@
 .pytest_cache/
 .ruff_cache/
 .venv/
+.venv-*/
 __pycache__/
+*.py[cod]
 *.egg-info/
 build/
 dist/
@@ -13,3 +15,24 @@ sdk-dist/
 # X-VLA example sources and weights placed inside the example directory
 examples/xvla/X-VLA/
 examples/xvla/checkpoints/
+
+# Local evaluation outputs and machine-specific configurations. Keep reviewed
+# benchmark manifests, pin files and measurements/ evidence tracked.
+/.local/
+/runs/
+/outputs/
+/results/
+/artifacts/
+/benchmarks/libero_pro/runs/
+/benchmarks/libero_pro/outputs/
+/benchmarks/libero_pro/results/
+/benchmarks/libero_pro/artifacts/
+
+# Downloaded StarVLA sources and model snapshots are not example source code.
+/examples/starvla/StarVLA/
+/examples/starvla/checkpoints/
+/examples/starvla/models/
+
+# Nsight binary traces; export reviewed findings into benchmark documentation.
+*.nsys-rep
+*.qdrep

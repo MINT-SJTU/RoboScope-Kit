@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-05
+Updated: 2026-11-09
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -78,6 +78,7 @@ is not in the report, only the round-trip time of each request.
 |---|---|---|
 | RoboDojo | Yes | Yes (2026-11-05, K=1 and K=3) |
 | LIBERO, LIBERO-Plus | Yes | Not yet |
+| LIBERO-Pro | Yes | Nsight capture not yet documented; opt-in stage timing is available |
 | MetaWorld | Yes | Not yet |
 | robomimic | Yes | Not yet |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
@@ -97,8 +98,16 @@ is not in the report, only the round-trip time of each request.
 
 ## Findings
 
+LIBERO-Pro has [stage-timing instructions](../../../benchmarks/libero_pro/README.md#stage-timing)
+for Worker, RPC and Policy/model phases. Its [draft full-matrix comparison](../../../benchmarks/libero_pro/FIXED_BASELINE_2026-11-10.md)
+was unprofiled; throughput and device-wide utilization alone do not establish a bottleneck. Worker and
+Policy Server Nsight trace findings remain pending.
+
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).
+- [LIBERO-Pro](../../../benchmarks/libero_pro/README.md#stage-timing-findings-2026-11-08):
+  K=12/g=3 stage timing on an AutoDL RTX 4090 showed substantial replica lock wait and Policy service
+  intervals; the experiment used Kit 0.8.0b35 and did not capture an Nsight trace (2026-11-08).

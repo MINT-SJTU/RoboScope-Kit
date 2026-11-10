@@ -115,6 +115,13 @@ The runtime is built on three ideas:
 
 ### Automatic tuning (K/g)
 
+LIBERO-Pro transport can be measured independently of K/g: its manifest prefers MessagePack with JSON
+fallback and offers opt-in within-episode connection reuse. The independent manifest default
+`chunk_camera_rendering` (boolean, default `false`) skips unused RGB renders inside action chunks;
+video runs retain full rendering. See the
+[LIBERO-Pro throughput guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/README.md)
+for the switches, CPU measurements and real-model reproduction. The >=2x evaluation target remains unverified.
+
 The runtime picks `K` and `g` for you by running real episodes with your Policy. Every candidate runs episodes
 from the same representative task set. The smallest safe `K` sets a success-rate baseline; a faster
 candidate is accepted only if it keeps at least 85% of that baseline and stays within resource limits.
@@ -154,6 +161,11 @@ and neither can be combined with `--quick-test` or `--autotune-strategy`.
 
 ### Profiling
 
+For LIBERO-Pro and the StarVLA example, set `ROBOSCOPE_TIMING_DIR` to a fresh absolute directory
+to collect diagnostic stage timings in per-process JSONL files. See the
+[timing guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/README.md#stage-timing).
+These instrumented runs are separate from clean throughput measurements.
+
 Add `--profile` to `--quick-test` or to a fixed `--concurrency K --replicas G` run to see where a Worker's
 time goes. Each Worker then runs under Nsight Systems, and its first episode is written to
 `<output-dir>/profile/worker-<id>-attempt-<n>.nsys-rep`. The report holds the CUDA kernels and API calls of the
@@ -188,6 +200,14 @@ retry per run. Each component also keeps its own detailed log.
 ## Writing a Policy
 
 ### Capabilities and action contracts
+
+When a Policy declares `max_batch_size > 1`, the Server can coalesce already-queued `act` requests from
+distinct episodes into one `act_batch()` call without waiting for a batch to fill. Each response keeps
+its request ID and encoding. Policy calls including reset and end-episode remain serialized. The default
+cap of one uses the original single-request path; use a larger cap only with a genuinely batched Policy.
+Set `ROBOSCOPE_BATCH_METRICS_DIR` to an absolute directory to record per-batch size and wall time.
+The Server reads this setting at construction. Prediction timing, when supplied through a Policy's
+`policy.predict_total` span, is collected within that call; it does not use mutable Policy attributes.
 
 `load()` returns `PolicyCapabilities`, which declares the benchmarks and suites you support, the
 observation features you need, the action-chunk sizes that are safe for your model, and the maximum
@@ -290,6 +310,9 @@ Integration, autotune, and throughput measurements are in the
 [RoboScope Kit technical report](https://arxiv.org/abs/2611.03850).
 
 ## CUDA MPS (opt-in)
+
+The [LIBERO-Pro MPS comparison driver](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/MPS_EXPERIMENT.md)
+runs matched sequential off/on arms at fixed K/g, with separate warmup and optional diagnostic timing.
 
 `--cuda-mps` runs the Policy replicas under NVIDIA CUDA MPS, so replicas sharing a GPU run their kernels
 concurrently instead of taking turns. It is off by default. With it, the runtime:

@@ -75,6 +75,40 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
 
 ## Files
 
+For the LIBERO-Pro QwenOFT example only, `ROBOSCOPE_STARVLA_MAX_BATCH_SIZE` selects the maximum number
+of observations passed to a single native `predict_action` call (default 1). The server only combines
+already-queued requests. The pinned normalizer accepts a two-dimensional action chunk, so
+unnormalization retains one call per row. Float32 conversion, action transforms and finite-value
+validation operate on the full batch before it is sliced into action chunks.
+The LIBERO-Long subclass and other benchmarks do not opt in. See the
+[batch experiment instructions](../../benchmarks/libero_pro/BATCH_EXPERIMENT.md).
+
+Set `ROBOSCOPE_TIMING_DIR` to an absolute directory to collect example construction, prediction and
+postprocessing timings inside Policy Server records. QwenOFT additionally instruments input building,
+VLM forward, action-token gathering and the action head using instance hooks in `starvla_timing.py`.
+CUDA event intervals are read after prediction returns; no per-stage synchronization is inserted.
+Intervals include scheduling and host gaps and must not be described as pure kernel time. Input
+building includes processor work and upload; prediction's remaining time includes output transfer
+and synchronization. Other framework types retain the coarse timings. See the
+[stage timing guide](../../benchmarks/libero_pro/README.md#stage-timing).
+
+Loaded components live in one runtime state. Inference-mode and optional model-timing wrappers are
+prepared during load; the action path contains no imports or environment lookups. Batch metrics
+consume the same `policy.predict_total` span in a request-scoped collector, without storing a last
+prediction duration on the Policy. Batch metrics alone do not enable CUDA diagnostic hooks.
+
+For LIBERO-Pro, the simulator manifest now prefers MessagePack with JSON fallback. Optional
+`persistent_policy_connection` reuses a socket within an episode and defaults to `false`. The same
+StarVLA Policy and checkpoint work with either transport. Follow the
+[LIBERO-Pro throughput guide](../../benchmarks/libero_pro/README.md) to compare all four transport modes
+at fixed K/g; CPU transport measurements do not demonstrate real-model evaluation speedup.
+
+LIBERO-Pro also offers `defaults.chunk_camera_rendering` (boolean, default `false`) in the simulator
+manifest. It skips intermediate RGB rendering while consuming the returned action chunk, without
+changing the checkpoint's eight-action horizon or inference observations' sampling schedule. Video
+runs use full rendering. This is independent of encoding, socket reuse and K/g; validate it separately
+using the [camera rendering instructions](../../benchmarks/libero_pro/README.md#chunk-camera-rendering).
+
 | File | Purpose |
 | --- | --- |
 | `starvla_policy.py` | The `Policy`: loads one StarVLA run snapshot, preprocesses observations, returns action chunks |
