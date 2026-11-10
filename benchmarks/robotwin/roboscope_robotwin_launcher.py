@@ -1116,6 +1116,22 @@ def _close_active_models() -> None:
                 raise
 
 
+def _release_task_scene(namespace: dict) -> None:
+    """Free the finished task's SAPIEN scene before the next task builds its own.
+
+    ``Base_Task.close_env`` leaves the last scene attached to the task object, and
+    the task object sits in reference cycles, so in an eval session every finished
+    task keeps its scene's GPU memory (about 0.5-1 GB) until the cyclic garbage
+    collector happens to run. Dropping the evaluator's globals and collecting here
+    frees it at a fixed point, keeping each process at its single-scene footprint.
+    """
+
+    import gc
+
+    namespace.clear()
+    gc.collect()
+
+
 def run_single_task(script: Path, remaining: list[str]) -> None:
     sys.argv = [str(script)] + remaining
     source = instrument_eval_source(script)
@@ -1169,6 +1185,7 @@ def run_eval_session(script: Path) -> None:
                 exec(compile(source, str(script), "exec"), namespace)
             finally:
                 _close_active_models()
+                _release_task_scene(namespace)
         except BaseException:
             traceback.print_exc()
             sys.stdout.flush()
