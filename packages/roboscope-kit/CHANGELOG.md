@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b36 - 2026-11-10
+## 0.8.0b36 - 2026-11-11
 
 - Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,
   and official Diffusion Policy example. Freeze all 50 tasks, horizons, pretrain scenes and scoring.

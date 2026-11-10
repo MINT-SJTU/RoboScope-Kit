@@ -20,6 +20,23 @@ remains the integration reference; GR1 Tabletop and issue #16 are separate.
 
 ## Inputs and information ownership
 
+### Source review — 2026-11-11
+
+The integration and dependent performance branches are rebased onto main
+`329ef983ee81c4f8889e81393c8b7a42dc8c595e`, with package versions b36 and b37.
+The Linux-tested source trees `d705c6cfb7a01d90eaadcc17bb595715d8faddd3` and
+`a6e867eb24bab3ad87ac79f047a79b57bcde19d3` each passed all 303 pytest cases,
+Ruff, Bash syntax and ShellCheck, plus six matching simulator-free comparative
+probes. The later main changes are Markdown only; no executable, dependency,
+model, simulator pin or test file changed during this final documentation rebase.
+
+The measured SDK revisions remain `43df866a3c23e83ee6edade8f68615f3eae1be6c`
+and `e836f775fb7c86efde7e5b6046b07d5eb3deeee5`. The intervening common SDK changes
+are the separately reviewed RLBench registrations and default-equivalent feature
+helper; measurement revisions are not relabeled as submitted heads. Exact-head
+CI and the expanded K/G performance follow-up remain separate from these local
+source checks and the approved capped native comparison.
+
 | Item | Tested configuration / source of truth |
 | --- | --- |
 | Startup-tested Kit code | `0.8.0b36`, `12272399a902e9a19307df9ab06f10fc642a0cac`; the PR refresh is recorded below |
