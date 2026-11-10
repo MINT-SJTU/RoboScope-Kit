@@ -112,6 +112,12 @@ recording. Success/failure signals remain separate native metrics. The comparato
 non-boolean or incorrect masks on either side. Historical native PPO archives without these fields
 remain historical and require new native output; fields must not be inferred or backfilled.
 
+Multi-profile PPO and generic native references run sequential per-task child processes. This
+isolates the upstream simulator lifetime without changing seed groups, observations, actions or
+horizons. Each child must return its exact expected episode identities before its unchanged records
+are merged. Child phase sums and complete parent command time are reported separately; failed child
+logs and commands remain available. This native-reference strategy is not a Kit runtime speedup.
+
 ## Assets and build provenance
 
 `benchmarks/maniskill/build-runtime.sh <install-dir>` builds the simulator into a fresh directory.

@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b49 - 2026-11-10
+
+- Run generic multi-task native ManiSkill references in sequential per-task processes, matching the established PPO reference lifetime and preserving task rules.
+- Validate child coverage before merging unchanged records; retain child commands, failures and separate phase-sum versus parent wall clocks.
+
 ## 0.8.0b48 - 2026-11-10
 
 - Check actual boolean native terminal masks in full-horizon and diagnostic ManiSkill comparisons.

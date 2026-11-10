@@ -145,6 +145,93 @@ def episode_metadata(environment, profile: dict, suite: str, index: int, seed: i
     return metadata
 
 
+def run_task_processes(args: argparse.Namespace, profiles: tuple[dict, ...]) -> None:
+    """Match the upstream one-task process lifetime for a multi-task reference."""
+    root = args.output.with_suffix(".tasks")
+    root.mkdir(parents=True, exist_ok=False)
+    children, provenance = [], []
+    for profile in profiles:
+        destination = root / profile["profile_id"]
+        destination.mkdir()
+        output = destination / "result.json"
+        log = destination / "native.log"
+        command = [
+            sys.executable, str(Path(__file__).resolve()),
+            "--checkpoint", str(args.checkpoint.resolve()),
+            "--policy-python", str(args.policy_python.resolve()),
+            "--policy-module", args.policy_module, "--policy-class", args.policy_class,
+            "--benchmark-manifest", str(args.benchmark_manifest.resolve()),
+            "--suite", args.suite, "--profile-id", profile["profile_id"],
+            "--output", str(output.resolve()), "--num-envs", str(args.num_envs),
+        ]
+        if args.runtime_home is not None:
+            command.extend(["--runtime-home", str(args.runtime_home.resolve())])
+        if args.episodes is not None:
+            command.extend(["--episodes", str(args.episodes)])
+        if args.trajectory_dir is not None:
+            command.extend(["--trajectory-dir", str((args.trajectory_dir / profile["profile_id"]).resolve())])
+        (destination / "command.json").write_text(json.dumps(command, indent=2) + "\n", encoding="utf-8")
+        started = time.perf_counter()
+        with log.open("w", encoding="utf-8") as stream:
+            process = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT, check=False)
+        process_wall_s = time.perf_counter() - started
+        if process.returncode:
+            raise RuntimeError(f"Native task {profile['profile_id']} failed; see {log}")
+        result_bytes = output.read_bytes()
+        child = json.loads(result_bytes)
+        seeds = profile["seeds"][:args.episodes]
+        limit = int(profile.get("diagnostic_step_limit", profile["max_episode_steps"]))
+        expected = [
+            (profile["profile_id"], profile["task_id"], index, seed, index % args.num_envs, limit)
+            for index, seed in enumerate(seeds)
+        ]
+        actual = [
+            (row["profile_id"], row["task_id"], row["episode"], row["seed"],
+             row["vector_lane"], row["steps"])
+            for row in child["records"]
+        ]
+        if (actual != expected or child["episodes"] != len(seeds)
+                or child["actual_simulation_steps"] != len(seeds) * limit
+                or child["suite"] != args.suite or child["num_envs"] != args.num_envs
+                or [(task["profile_id"], task["task_id"], task["episodes"], task["horizon"])
+                    for task in child["tasks"]] != [
+                        (profile["profile_id"], profile["task_id"], len(seeds), profile["max_episode_steps"])
+                    ]):
+            raise RuntimeError(f"Native task {profile['profile_id']} has incomplete or unexpected records")
+        children.append(child)
+        provenance.append({
+            "profile_id": profile["profile_id"], "command": command, "log": str(log),
+            "result": str(output), "result_sha256": hashlib.sha256(result_bytes).hexdigest(),
+            "process_wall_s": process_wall_s,
+        })
+
+    records = [record for child in children for record in child["records"]]
+    timing = {
+        key: sum(child["timing"][key] for child in children)
+        for key, value in children[0]["timing"].items()
+        if key != "end_to_end_s" and type(value) in (int, float)
+    }
+    timing.update({
+        "scope": "Sequential child phase sums; end_to_end_s is the complete parent command",
+        "end_to_end_s": time.perf_counter() - PROCESS_STARTED,
+    })
+    result = {
+        **children[0], "tasks": [task for child in children for task in child["tasks"]],
+        "records": records, "episodes": len(records),
+        "actual_simulation_steps": sum(record["steps"] for record in records),
+        "evaluation_kind": "integration_smoke"
+        if any("diagnostic_step_limit" in profile for profile in profiles) else "full_horizon",
+        "timing": timing, "process_isolation": "one_task_per_process", "task_references": provenance,
+        "comparison_note": (
+            "Each task uses a separate native process, matching the upstream evaluator lifetime. "
+            "Formal timing sums child evaluation intervals. Parent end-to-end time includes process "
+            "startup and repeated model loading. Use the per-task records for correctness."
+        ),
+    }
+    args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({key: value for key, value in result.items() if key != "records"}, indent=2))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("checkpoint", "policy-python", "benchmark-manifest", "output"):
@@ -156,6 +243,7 @@ def main() -> None:
     parser.add_argument("--num-envs", type=int, default=1)
     parser.add_argument("--trajectory-dir", type=Path)
     parser.add_argument("--runtime-home", type=Path)
+    parser.add_argument("--profile-id", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.num_envs < 1 or (args.episodes is not None and args.episodes < 1):
         parser.error("Episode and environment counts must be positive")
@@ -170,8 +258,15 @@ def main() -> None:
     manifest = load_benchmark_manifest(args.benchmark_manifest)
     protocol = manifest.benchmark_protocols["maniskill"]
     profiles = validate_profiles(protocol, args.suite)
+    if args.profile_id is not None:
+        profiles = tuple(profile for profile in profiles if profile["profile_id"] == args.profile_id)
+        if len(profiles) != 1:
+            parser.error("--profile-id must identify exactly one profile in the selected suite")
     if args.episodes is not None and any(args.episodes > len(p["seeds"]) for p in profiles):
         raise ValueError("Requested episodes exceed the frozen seeds")
+    if len(profiles) > 1:
+        run_task_processes(args, profiles)
+        return
     os.environ["HOME"] = str(args.runtime_home or manifest.runtime_path("home"))
     os.environ["MS_ASSET_DIR"] = str(manifest.runtime_path("asset_dir"))
     import torch
@@ -349,6 +444,7 @@ def main() -> None:
                     finally:
                         phase = time.perf_counter()
                         env.close()
+                        env = None
                         torch.cuda.synchronize()
                         timing["env_close_s"] += time.perf_counter() - phase
                     print(
