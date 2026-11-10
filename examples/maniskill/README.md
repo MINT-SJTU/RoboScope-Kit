@@ -69,6 +69,48 @@ and restores request order. `end_episode()` removes episode routing state. A sta
 file is accepted when its pinned digest identifies its task. For another task suite, supply a bundle
 covering its tasks with compatible PPO state checkpoints.
 
+## Additional PPO state references
+
+`reference_ppo_state_v1` uses four existing canonical profiles with the unchanged
+three-layer Tanh actor/critic and all 17 original FP32 tensors. Immutable URLs,
+dimensions, hashes and source identities are in [reference-ppo-models.json](reference-ppo-models.json).
+
+| Target | Native / actor state | Actions | Reference |
+| --- | ---: | ---: | --- |
+| G1 TransportBox | 77 / 77 | 25 joint deltas | Author task-trained PPO |
+| G1 Apple | 74 / 74 | 25 joint deltas | Author nominal PPO expert, retaining source clipping |
+| PegInsertionSide | 43 / 32 | 7 EE pose deltas | Explicit LiftPeg grasp/lift-prior transfer |
+| PlugCharger | 46 / 32 | 7 EE pose deltas | Explicit LiftPeg grasp/lift-prior transfer |
+
+The [TransportBox author checkpoint](https://github.com/tjvitchutripop/stream-rl-robotics/tree/30b2d8ecca093d9b9b492598aa9eeba70b628fd5/pretrained-models/transport-box)
+uses raw state and actor means. The [Apple author reference](https://github.com/tabz23/Latent-Safety-Filters/tree/ea456084576b16053e6de79c52b489e33409479e)
+clips its deterministic actions to the normalized controller bounds. Only its
+catalog record sets `action_clip_bounds=[-1,1]`; the SDK Policy and direct native
+evaluator preserve that operation. Other actors retain their original raw actions.
+Independent CPU checks against the released author actors/critics, including
+Apple clipping, are bitwise equal. GPU/native acceptance remains pending.
+
+Peg/Plug expose the same first 32 fields as LiftPeg: qpos/qvel18, TCP pose7 and
+object pose7. Their records explicitly select this prefix while traces retain
+the full target observations. Both quaternions and all seven action components
+are retained; no hidden object/goal query, synthetic field or orientation removal
+is used. Panda/WristCam share joint and controller frames; contact geometry and
+task objectives differ. These are grasp/lift priors, not insertion experts.
+
+```bash
+/path/to/runtime/env/bin/python examples/maniskill/download_models.py \
+  /autodl-fs/maniskill-reference-models --catalog examples/maniskill/reference-ppo-models.json
+```
+
+Use the same `ppo_policy.py` configuration and `native_eval.py`, selecting
+`--suite reference_ppo_state_v1` and this bundle. The manifest retains every target's
+original horizon, controller, observations and scoring. TransportBox's source
+evaluator defaults to 200 ticks on CPU and its lock uses ManiSkill 3.0.1; Apple's
+source simulator revision is not pinned. These references transfer checkpoints
+to the pinned Kit runtime, without claiming the papers' evaluation protocols.
+TransportBox specifies no source license; Apple code is MIT and its model card
+specifies no license. Weights remain external to Git and evidence bundles.
+
 ## SDK evaluation
 
 Build the simulator through [the benchmark builder](../../benchmarks/maniskill/README.md).

@@ -21,7 +21,9 @@
       "humanoid_control_canonical_state_v1",
       "panda_visual_rgb_v1",
       "g1_visual_rgb_v1",
-      "fetch_mshab_depth_v1"
+      "fetch_mshab_depth_v1",
+      "reference_ppo_state_v1",
+      "dual_panda_transfer_state_v1"
     ]
   },
   "runtime": {
@@ -443,6 +445,16 @@
         "humanoid_control_canonical_state_v1": [
           "ms_humanoid_walk_state",
           "ms_humanoid_run_state"
+        ],
+        "reference_ppo_state_v1": [
+          "unitree_g1_transport_box_state",
+          "unitree_g1_place_apple_in_bowl_state",
+          "peg_insertion_side_state",
+          "plug_charger_state"
+        ],
+        "dual_panda_transfer_state_v1": [
+          "two_robot_pickcube_state",
+          "two_robot_stackcube_state"
         ]
       },
       "profiles": {
@@ -2906,7 +2918,7 @@
             "profiles": [
               "unitree_g1_place_apple_in_bowl_state"
             ],
-            "public_checkpoint": "missing",
+            "public_checkpoint": "author_state_ppo",
             "acceptance": "pending_current_head_native_comparison"
           },
           {
@@ -2928,7 +2940,7 @@
             "profiles": [
               "unitree_g1_transport_box_state"
             ],
-            "public_checkpoint": "missing",
+            "public_checkpoint": "author_state_ppo",
             "acceptance": "pending_current_head_native_comparison"
           },
           {

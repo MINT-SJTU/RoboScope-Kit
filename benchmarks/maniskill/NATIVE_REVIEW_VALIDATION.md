@@ -6,12 +6,20 @@
 of all 55 upstream task IDs is supported. The candidate incorporates main `329ef98`, preserving
 its RLBench registration alongside this unmerged ManiSkill integration.
 
+The subsequent b52 candidate adds six model-side references to existing canonical profiles.
+G1 TransportBox/Apple use released state PPO actors; Peg/Plug project real TCP/object fields into
+the unchanged LiftPeg actor; dual-Panda tasks compose unchanged 4D actors with pinned frame
+calibration. Their independent CPU contracts pass; fresh b52 builds and real comparisons are pending.
+All 89 existing profile definitions, seeds and scoring rules remain unchanged. These six candidates
+leave nine available profiles without a selected compatible model, plus eight asset-deferred profiles.
+
 ## Active scope and protocol
 
 The user deferred original-asset recovery for AssemblingKits, TurnFaucet, OpenCabinetDoor and
 OpenCabinetDrawer on 2026-11-11. Active verification covers the other **51 task IDs and their claimed
-profiles**. The inventory is **89 profiles = 64 historical R11-selected + two canonical candidates
-with N2 prefix checks + 15 asset-available unmatched + eight asset-deferred**. Selected siblings do not validate
+profiles**. The b51 accounting was **89 profiles = 64 R11-selected + two additional Humanoid
+profiles + 15 then-unmatched + eight asset-deferred**; b52 splits those fifteen into six pending
+candidates and nine unmatched profiles. Selected siblings do not validate
 unmatched state, RGB, root-state or controller contracts; see the
 [profile gaps](REMAINING_COMPATIBILITY.md#remaining-profile-acceptance-gaps).
 
@@ -25,7 +33,7 @@ bypassing Kit Worker/RPC while sharing the Policy implementation. This checks SD
 independent author-code/numerical probes have narrower model-transfer scope. Agreement alone does
 not independently validate Policy inference or task competence.
 
-## Current b51 changes and CPU evidence
+## Current b51 changes and evidence
 
 The b50 generic native reference uses sequential per-task child processes, retains child commands,
 logs and result hashes, and preserves the virtual-environment interpreter path. Its child phase sums
@@ -37,11 +45,13 @@ recycle. The orchestrator requeues that one item, retains the Policy replica, an
 same-profile groups. CPU queue probes and a four-episode full-horizon GPU transition check passed;
 the complete multi-task matrix remains pending.
 
-Canonical HumanoidWalk/Run now project the 185-value source state to the same 67-value actor input.
+Canonical HumanoidWalk/Run now project the 185-value ManiSkill state to the same 67-value actor input.
 `include_joint_names` adds actual joint names as metadata only; all 96 Root-input CPU samples are unchanged.
 The 64-sample CPU canonical features were bitwise equal to the old Root features. Actor/action ASTs
 were unchanged; independent native action checking had maximum absolute error `1.19e-7`.
-These two canonical profiles passed N2 five-tick GPU prefixes; full-horizon GPU comparisons remain pending.
+Both canonical profiles passed N2 five-tick GPU prefixes and R12 full-horizon GPU comparisons.
+The complete Humanoid family passed five profiles at 1,000 ticks each: 5,000 action pairs and
+5,005 observation pairs, covering the three Root profiles and canonical Walk/Run without adding task IDs.
 
 ## Historical checks retained with their source identities
 
@@ -71,11 +81,15 @@ This is one-sample integration evidence; it does not replace the prescribed 100-
 R11 is **FAILED**, with one recovery family and one hash-mismatch family. Counts of final records or
 matching profiles must not be presented as clean accepted coverage.
 
-A diagnostic visible only in ToolOutput located HORA level 2 tick 212 at state index 70, an FSR
-impulse: SDK `0.0285978801548481`, native `0.028597882017493248`, difference
-`1.862645149230957e-9` (one ULP); the action matched. The isolated level 3 diagnostic matched at tick
-212. Independent native repeatability evidence is absent, so this does not establish GPU
-nondeterminism or justify accepting the mismatch.
+The R11 numeric diagnostic initially had console-only scope. The subsequent
+[R12 native repeatability investigation](HORA_NATIVE_REPEATABILITY.md) completed twelve independent
+300-tick runs: 3,600 actions and 3,612 observations. Within each level, all actions, record fields,
+outcomes, returns and actual masks matched. Native level 3 repeats varied at observation 260; SDK
+repeats varied at 212/260. Numeric captures isolate one-ULP differences to state index 70 (FSR 3).
+At frozen native level 3/tick 212, 64 contact queries returned two raw-vector/norm variants without
+step, evaluate or get_obs, while qpos stayed bitwise unchanged. This directly demonstrates native
+contact-readback variation. SAPIEN float atomicAdd is a consistent mechanism, not a proven cause.
+**Strict observation comparison still fails**; no quantization, tolerance change or waiver was applied.
 
 ## R11 traced measurements
 
@@ -113,20 +127,21 @@ NVML busy is activity rather than arithmetic throughput; sampled peaks are not h
 
 | Gate | Current status |
 | --- | --- |
-| Current b51 GPU build and source/installed audits | R12 fresh simulator and Octo builds PASS after SSH restoration on November 11. All 247 executable/config files and 94 SDK files in each environment match the frozen source. |
+| Current b51 GPU build and source/installed audits | R12 fresh simulator and Octo builds PASS after SSH restoration on November 11. All 247 executable/config files and 94 SDK files in each environment match frozen source `42e6b24`. |
 | Current b51 source checks and wheel | 270 existing source tests PASS in 8.11 s; Ruff and maintained-Python checks PASS. Wheel/sdist and Twine PASS; 92 installed modules import; 270 installed-wheel tests PASS in 5.09 s. |
 | Fresh runtime smoke / ordinary quick test | R12 GPU self-test and real PickCube quick test PASS: 1/1 success, native 50-tick horizon; 19.258 s command / 11.025 s evaluation. Ant/Hopper A,A,B,B: four full-horizon episodes, 3,200 steps, exact strict comparison, one planned recycle, zero failures/OOMs, two Worker PIDs and one retained Policy PID. Canonical Humanoid Walk/Run N2 prefixes PASS: four episodes, 20 actions / 24 observations per path. |
-| Full-horizon GPU comparisons | PENDING for b51, including canonical HumanoidWalk/Run, crash-free profile transitions and unresolved HORA equality/repeatability. |
+| Full-horizon GPU comparisons | R12 matrix is RUNNING for 66 profiles / 51 task IDs. Humanoid's five profiles PASS, including canonical Walk/Run; remaining families are running. HORA independent native variation is demonstrated, but strict observation equality still FAILS. |
 | Exact-head CI | PENDING. The old remote PR head `b443` reports `action_required` with zero jobs; it is not CI evidence for the current head. |
 | Current evidence publication | PENDING; no new R11/b51 evidence release has been created. |
 
-Raw full R11 logs and trajectories remain outside Git under
-`ROOT=/autodl-fs/data/roboscope/maniskill-review-20261109`. Partial retrieved summaries are in the
-checkout's sibling `mask-review-20261110/`: `full-review-r11-summary.json`, its Markdown companion,
-and `full-review-r11-exhaustive-traces.json`. The JSON label is `full-review-r11`; the retained
-Markdown companion has a stale R9 heading. Detailed commands, lifecycle intervals, native resources,
-outcomes, returns, unsuccessful episodes, failure events and provenance remain in those summaries
-and server raw files; they are not bundled in Git or a new public release.
+Raw R9/R10/R11 evidence remains outside Git under
+`ROOT=/autodl-fs/data/roboscope/maniskill-review-20261109` and in a retrieved 1,483-file archive,
+SHA256 `e9a62adf371934edad08da6c6681e2c3f9468218f06e94f3a28e0fb6dd19b7fa`.
+Independent integrity checking verified every member, all 64 R11 trace pairs and 24 family result
+files; this preserves the failed measurements, rather than passing their evaluation. The sibling
+`mask-review-20261110/` also contains the summaries and exhaustive trace audit. The JSON label is
+`full-review-r11`; its retained Markdown companion has a stale R9 heading. Commands, lifecycle
+intervals, resources, failures and source identities are retained. No new public release exists yet.
 
 The [historical R8 evidence release](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/maniskill-issue25-compatibility-20261109)
 retains its original b47 scope. Historical fifteen-task, 100-episode comparisons predate complete

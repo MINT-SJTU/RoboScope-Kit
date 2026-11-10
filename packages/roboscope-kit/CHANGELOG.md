@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b52 - 2026-11-11
+
+- Pin author-released G1 TransportBox and Apple PPO state models with their original 77D/74D inputs and 25D joint controller, retaining the Apple's source action clipping.
+- Allow the PPO model downloader to select an explicit pinned catalog while retaining its original official-model defaults and checksum checks.
+- Reuse the complete LiftPeg pose actor on the real TCP/object state prefix for explicit Peg/Plug grasp-prior transfers.
+- Compose unchanged 4D official actors for canonical dual-Panda controllers using observed object/goal data and pinned robot-frame calibration.
+
 ## 0.8.0b51 - 2026-11-11
 
 - Recycle ManiSkill simulation Workers before switching profiles to isolate PhysX contact-query lifetimes while retaining the loaded Policy replica.

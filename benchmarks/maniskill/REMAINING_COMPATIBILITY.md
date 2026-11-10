@@ -11,8 +11,8 @@ result or claim a runtime speedup.
 The [historical R8 results](#historical-b47-validation-r8) use Kit 0.8.0b47 and predate the b48
 terminal-mask recording/comparison fix. Their measurements retain that original source identity;
 they do not validate the updated head. The R6 section retains the preceding phase's evidence.
-The [native-reference review](NATIVE_REVIEW_VALIDATION.md) records the mask fixes, retained R9
-full-horizon failures and pending final R10 validation separately.
+The [native-reference review](NATIVE_REVIEW_VALIDATION.md) records the mask fixes, retained R9/R11
+full-horizon failures and the running b51/R12 66-profile, 51-task matrix separately.
 
 **The R6 real-model GPU matrix passed for 51/55 distinct task IDs across 64 selected profiles.**
 All 64 SDK/native pairs, 320 actions and 384 observations per path matched exactly. This adds nine
@@ -760,20 +760,30 @@ the four blocked task IDs and remain a separate profile-coverage gap.
 
 ### Remaining profile acceptance gaps
 
+The b52 candidate selects six additional references with independent CPU checks, pending fresh GPU
+validation: G1 Apple/TransportBox state actors, Peg/Plug LiftPeg-state-prefix transfers and two
+canonical dual-Panda actor compositions. See the [PPO references](../../examples/maniskill/README.md#additional-ppo-state-references)
+and [dual-Panda contract](../../examples/maniskill/DUAL_PANDA_PPO.md). They preserve all existing
+profile observations/controllers and evaluation rules. Of the fifteen historical gaps below, six
+now have candidates awaiting real validation; nine still have no selected compatible model.
+
 The [manifest](benchmark-manifest.json) declares **89 profiles: 64 selected by the R8 model matrix,
 eight asset-blocked profiles and 17 initially unmatched asset-available profiles**. The b51 candidate
 adds exact state-only Humanoid Walk/Run conversions: 64 source inputs match bitwise in CPU checks,
-and their N2 five-tick GPU/native prefixes pass; full-horizon comparisons remain pending. This leaves
-**15 available profiles without a compatible selected Policy**, plus the two candidates awaiting full-horizon validation. The environment-only
-sweep does not supply missing model comparisons. The 15 remaining model-contract gaps are:
+and their N2 five-tick GPU/native prefixes and R12 full-horizon comparisons pass. The five-profile
+Humanoid family covers three Root profiles and these two canonical profiles, with 5,000 action pairs
+and 5,005 observation pairs at 1,000 ticks per profile. At that stage, **15 available profiles lacked
+a compatible selected Policy**. The table retains that pre-b52 diagnosis; six candidates are now
+pending as described above. The environment-only sweep does not supply missing model comparisons.
+The remaining families in the 66-profile / 51-task R12 matrix are running.
 
-| Unmatched profiles | Count | Mismatch with the selected model contract |
+| Pre-b52 unmatched profiles | Count | Original model-contract gap |
 | --- | ---: | --- |
 | `lift_peg_upright_state` | 1 | Canonical EE position control is 4D; the official PPO requires EE pose control, 7D. |
 | `two_robot_pickcube_state`, `two_robot_stackcube_state` | 2 | Canonical EE position control is 8D; the official PPO requires joint delta control, 16D. |
 | `pull_cube_tool_state` | 1 | Canonical EE position control is 4D; NEWT requires EE pose control, 7D. |
 | `peg_insertion_side_state`, `pick_clutter_ycb_state`, `plug_charger_state`, `fmb_assembly1_easy_state` | 4 | The selected Octo model requires RGB; these profiles provide state observations. No compatible state model is selected. |
-| `ms_humanoid_stand_state` | 1 | The egocentric state omits the world-frame quantities required by the selected Stand checkpoint. Walk/Run have exact b51 state reconstructions, pending GPU validation. |
+| `ms_humanoid_stand_state` | 1 | The egocentric state omits the world-frame quantities required by the selected Stand checkpoint. Canonical Walk/Run have exact b51 state reconstructions and passed R12 full-horizon GPU/native comparisons. |
 | `unitree_{h1,g1}_stand_state`, `unitree_go2_reach_state`, `anymal_c_spin_state` | 4 | H1/G1 omit required root orientation/angular velocity. Go2 and Anymal already contain world velocities but omit root pose/orientation needed by the selected conversions; joint identities alone are static metadata. |
 | `unitree_g1_{place_apple_in_bowl,transport_box}_state` | 2 | The G1 visual transfer requires RGB and root/joint metadata absent from these state profiles. |
 

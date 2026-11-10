@@ -7,10 +7,12 @@ digital-twin families. The [inventory](TASK_INVENTORY.md) identifies every task 
 upstream source evidence. Protocol settings and observation/action mapping are in
 [PROTOCOL.md](PROTOCOL.md).
 
-**Integration acceptance is partial.** Eleven state PPO tasks and four Bridge visual tasks pass
-100-episode-per-task comparisons with independent native evaluation. The
-[review validation](REVIEW_VALIDATION.md) records all 1,500 paired episodes, metrics and remaining
-model, asset and profile gaps. The [completion phase](COMPLETION_VALIDATION.md) adds real-model
+**Integration acceptance is partial.** The historical eleven state PPO and four Bridge visual task
+comparisons covered 1,500 paired episodes at 100 episodes per task, before actual native terminal-mask
+recording/checking was fixed. The [review validation](REVIEW_VALIDATION.md) retains those results;
+they do not validate the current head. The [current native review](NATIVE_REVIEW_VALIDATION.md)
+records the failed b50/R11 matrix, b51/R12 progress and strict HORA observation mismatch.
+The [completion phase](COMPLETION_VALIDATION.md) adds real-model
 five-step diagnostics for 27 more task IDs. The [remaining-compatibility phase](REMAINING_COMPATIBILITY.md)
 raises five-step real-policy/native coverage to 51 of 55 task IDs and validates 16 of the original
 18 tabletop RGB profiles. Four task IDs still require their original upstream assets.
@@ -29,6 +31,9 @@ Task declarations and simulator checks alone do not establish real-policy accept
 | `upstream_tasks_v1` | 55 | 100 | Complete evaluation-task inventory at the declared observation mode |
 | `transfer_reference_state_v1` | 5 | 100 | Explicit root-observation and model-compatible controller variants |
 | `humanoid_control_transfer_state_v1` | 3 | 100 | Explicit root observations for TD-MPC2 actor transfer |
+| `humanoid_control_canonical_state_v1` | 2 | 100 | Original Walk/Run state observations with exact TD-MPC2 actor-input reconstruction |
+| `reference_ppo_state_v1` | 4 | 100 | G1 author PPO references and explicit Peg/Plug grasp-prior transfers |
+| `dual_panda_transfer_state_v1` | 2 | 100 | Unchanged official 4D actor composition on canonical dual-Panda states |
 | `panda_visual_rgb_v1` | 19 | 100 | Tabletop and FMB visual/control transfers using ManiSkill-finetuned Octo |
 | `g1_visual_rgb_v1` | 2 | 100 | Explicit head-camera and root-observation G1 visual transfers |
 | `fetch_mshab_depth_v1` | 2 | 100 | Native Fetch depth/contact inputs for MS-HAB transfer; original assets required |

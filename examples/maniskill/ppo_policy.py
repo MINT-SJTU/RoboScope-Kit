@@ -1,4 +1,4 @@
-"""SDK Policy for task-indexed official ManiSkill PPO state checkpoints."""
+"""SDK Policy for task-indexed ManiSkill PPO state checkpoint bundles."""
 
 from __future__ import annotations
 
@@ -78,18 +78,27 @@ class ManiSkillPPOPolicy(Policy):
             values = []
             for index in indices:
                 state = np.asarray(observations[index].features["state.proprioception"], dtype=np.float32)
-                if state.shape != (model.observation_dim,) or not np.isfinite(state).all():
-                    raise ValueError(f"{task_id} requires finite state shape ({model.observation_dim},)")
+                native_dim = model.metadata.get("native_observation_dimension", model.observation_dim)
+                if state.shape != (native_dim,) or not np.isfinite(state).all():
+                    raise ValueError(f"{task_id} requires finite native state shape ({native_dim},)")
+                prefix = model.metadata.get("state_prefix_length")
+                if prefix is not None:
+                    state = state[:prefix]
+                if state.shape != (model.observation_dim,):
+                    raise ValueError(f"{task_id} observation projection differs from the checkpoint")
                 values.append(state)
             batch = torch.as_tensor(np.stack(values), device=self.device, dtype=torch.float32)
             with torch.inference_mode():
                 actions = model.agent.actor_mean(batch).cpu().numpy()
             if not np.isfinite(actions).all():
                 raise ValueError(f"{task_id} model produced non-finite actions")
+            bounds = model.metadata.get("action_clip_bounds")
+            if bounds is not None:
+                actions = np.clip(actions, bounds[0], bounds[1])
             for index, action in zip(indices, actions, strict=True):
                 result[index] = ActionChunk(np.ascontiguousarray(action[None], dtype=np.float32))
-        # Match upstream: no external normalization, rescaling, or clipping.
-        # The ManiSkill controller owns the action bounds.
+        # Preserve each model's declared actor semantics; official actors stay unclipped.
+        # The controller also enforces its native action bounds.
         return [chunk for chunk in result if chunk is not None]
 
     def end_episode(self, episode_id: str) -> None:

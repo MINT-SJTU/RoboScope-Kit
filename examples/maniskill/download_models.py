@@ -1,6 +1,6 @@
-"""Download selected official PPO checkpoints and write a models.json bundle.
+"""Download selected pinned PPO checkpoints and write a models.json bundle.
 
-Uses immutable Hugging Face dataset revisions and verifies every checkpoint's
+Uses immutable source URLs or Hugging Face revisions and verifies every checkpoint's
 published size and SHA-256. No demonstrations or training data are downloaded.
 """
 
@@ -17,11 +17,12 @@ from pathlib import Path
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output_dir", type=Path)
+    parser.add_argument("--catalog", type=Path, default=Path(__file__).with_name("official-models.json"))
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--tasks", nargs="+", help="Task IDs; defaults to the three baseline models")
-    selection.add_argument("--all", action="store_true", help="Download every pinned official state model")
+    selection.add_argument("--all", action="store_true", help="Download every pinned model in the catalog")
     args = parser.parse_args()
-    catalog = json.loads(Path(__file__).with_name("official-models.json").read_text(encoding="utf-8"))
+    catalog = json.loads(args.catalog.read_text(encoding="utf-8"))
     tasks = list(catalog["models"]) if args.all else args.tasks or catalog["default_tasks"]
     unknown = set(tasks) - set(catalog["models"])
     if unknown:
@@ -35,7 +36,7 @@ def main() -> None:
         if path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == record["sha256"]:
             print(f"Verified cached {task}: {path}", flush=True)
         else:
-            url = (
+            url = record["url"] if "url" in record else (
                 f"https://huggingface.co/datasets/{catalog['repository']}/resolve/"
                 f"{catalog['revision']}/{record['dataset_path']}"
             )
@@ -52,12 +53,10 @@ def main() -> None:
             temporary.replace(path)
             print(f"Verified {task} in {time.perf_counter() - started:.2f} s", flush=True)
         records[task] = dict(record)
-    bundle = {
-        "schema_version": 1,
-        "repository": catalog["repository"],
-        "revision": catalog["revision"],
-        "models": records,
-    }
+    bundle = {"schema_version": 1, "models": records}
+    for key in ("repository", "revision"):
+        if key in catalog:
+            bundle[key] = catalog[key]
     (output / "models.json").write_text(json.dumps(bundle, indent=2) + "\n", encoding="utf-8")
     print(f"Checkpoint bundle: {output / 'models.json'}", flush=True)
 

@@ -281,10 +281,19 @@ def main() -> None:
                     env_count = count
                     torch.cuda.synchronize()
                     create_s += time.perf_counter() - phase_started
-                    if tuple(env.single_observation_space.shape) != (model.observation_dim,):
+                    native_dim = model.metadata.get("native_observation_dimension", model.observation_dim)
+                    if tuple(env.single_observation_space.shape) != (native_dim,):
                         raise ValueError(f"{profile['task_id']} observation differs from its checkpoint")
                     if tuple(env.single_action_space.shape) != (model.action_dim,):
                         raise ValueError(f"{profile['task_id']} controller differs from its checkpoint")
+                    bounds = model.metadata.get("action_clip_bounds")
+                    if bounds is not None and not (
+                        np.all(env.single_action_space.low == bounds[0])
+                        and np.all(env.single_action_space.high == bounds[1])
+                    ):
+                        raise ValueError(
+                            f"{profile['task_id']} author action bounds differ from the controller"
+                        )
                 phase_started = time.perf_counter()
                 observation, _ = env.reset(seed=seeds)
                 torch.cuda.synchronize()
@@ -296,7 +305,14 @@ def main() -> None:
                 for step in range(horizon):
                     inference_started = time.perf_counter()
                     with torch.inference_mode():
-                        action = model.agent.actor_mean(observation)
+                        model_input = observation
+                        prefix = model.metadata.get("state_prefix_length")
+                        if prefix is not None:
+                            model_input = observation[:, :prefix]
+                        action = model.agent.actor_mean(model_input)
+                        bounds = model.metadata.get("action_clip_bounds")
+                        if bounds is not None:
+                            action = action.clamp(bounds[0], bounds[1])
                     inference_host_s += time.perf_counter() - inference_started
                     if step == 0:
                         first_actions = action.detach().clone()
