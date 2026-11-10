@@ -61,6 +61,8 @@ def merge_shard_results(shard_results: Sequence[Mapping[str, Any]]) -> dict[str,
     for shard in ordered:
         validate_shard_accounting(shard)
     standard = _merge_standard(ordered, shard_meta["full_total_records"])
+    if identity["benchmark"] == "rlbench":
+        raise ValueError("RLBench shard merging is unavailable until policy identity can be verified")
     official = _merge_official(identity["benchmark"], [shard["official_result"] for shard in ordered])
     for shard in ordered:
         _validate_partial_counts(identity["benchmark"], shard)

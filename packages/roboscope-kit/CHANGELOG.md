@@ -2,6 +2,38 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b35 - 2026-11-10
+
+- Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task
+  reproduction profile, not all of RLBench. Each task replays PerAct's 25 released test episodes from their
+  stored variation and random state, with PerAct's four 128x128 cameras (RGB, depth, point cloud, and
+  calibration), low-dimensional state, the instruction, and key-frame end-effector actions executed by
+  RLBench's motion planner (`rlbench.ee-pose-planning-v1`, 9 `float64` values), for at most 25 actions.
+  `benchmarks/rlbench/build-runtime.sh` builds CoppeliaSim Edu 4.1, PyRep, the PerAct RLBench and YARR
+  forks, PerAct, and the test split on CPython 3.11 after the user accepts the CoppeliaSim Edu and RLBench
+  licences by passing `--accept-licenses`, and checks every task's test episodes against frozen digests.
+  Each episode is reset once from its stored state, as PerAct's `eval.py` does. Records carry
+  `initial_scene_position_error_m`, which compares the scene with the recorded first frame object by object
+  (by handle, over the object list captured when the task is loaded). The build resets each of the 450 test
+  episodes on a freshly loaded task and compares the result with the frozen list of episodes that start more
+  than 1 cm off, `benchmarks/rlbench/peract-initial-scenes.json`.
+- Add `examples/peract/`: a Policy for the released PerAct 600k checkpoint, a runner for PerAct's own
+  `eval.py`, and an episode-by-episode comparison.
+- RLBench sharding is disabled until cross-shard Policy and checkpoint identity can be verified; the native
+  runner checks episode coverage and PerAct's single-task or multi-task CSV metrics before reporting completion,
+  and native comparison rejects missing or mismatched test-episode inputs.
+- Preserve RLBench camera calibration precision and the collision-ignore observation so the PerAct Policy
+  reproduces YARR's initial and subsequent input preparation.
+- Run a formal RLBench evaluation as PerAct's `eval.py` does: one simulator process, all 18 tasks in PerAct's
+  README order (`EVALUATION_ORDER`). RLBench keeps simulator state across task loads, so the outcome of an
+  episode depends on the tasks that ran before it in the same process. Runs with fewer episodes per task
+  still spread single episodes over the workers.
+- Allow the native PerAct runner to report and verify YARR's statistics for a single completed episode.
+- Fix and record `PYTHONHASHSEED=0` in RLBench simulator and native evaluator processes. The pinned
+  `push_buttons` task constructs distractor colors from a set, whose order otherwise differs across Python
+  processes despite matching NumPy states. The v2 comparison rejects records without this execution contract;
+  earlier v1 results remain historical and require revalidation.
+
 ## 0.8.0b33 - 2026-11-08
 
 - A Policy replica that dies during an autotune probe, for example killed at a container memory limit, now
