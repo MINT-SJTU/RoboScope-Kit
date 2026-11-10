@@ -197,7 +197,7 @@ one action behind `step`: its environment wrapper
 extracts the observation after an action before incrementing its step counter, so in `eval.py` the agent sees
 the counter value `max(step - 1, 0)`, the same value at its first and second action. The example Policy
 reproduces this; a Policy computing PerAct's feature from `step` itself gets a different input from the
-second action on. A historical comparison found that this shifted many later key frames.
+second action on, which shifts later key frames.
 
 An action is one key frame for RLBench's `MoveArmThenGripper(EndEffectorPoseViaPlanning(), Discrete())`, 9
 `float64` values (`rlbench.ee-pose-planning-v1`): the gripper position and orientation in the world frame
@@ -264,14 +264,9 @@ readings do not count. Objects are matched by their CoppeliaSim handle, not by t
   (`LoadedTask` in the worker), lays the recorded vector out over that list with a strict length check, and
   compares object by object. A task whose object set changes after loading fails the worker.
 
-An earlier version of this profile compared the vectors by index. After one reset following a played
-episode it then paired different objects: 105 of 450 Kit episodes and 117 of 450 episodes of PerAct's own
-`eval.py` appeared more than 1 cm off, and that version reset twice to avoid it. The difference was in the
-measurement, not in the scene. In a replay of 8 tasks (episodes 1–24 each, 192 episodes, each reset after
-replaying the previous episode's Kit actions), compared by object, one reset and a second reset left 21
-and 23 episodes more than 1 cm off; the NumPy random state and the placement attempts after the reset were
-the same in all 192; compared by index, the first reset showed 110 and its object list was out of order in
-95.
+Compared by index instead, the vectors would pair different objects after a grasp, and about a quarter of
+the episodes, in Kit and in PerAct's own `eval.py` alike, would appear more than 1 cm off. That is a
+measurement artifact, not a different scene.
 
 **Upstream's `task_low_dim_state` order is unreliable after a grasp, and this profile does not provide it.**
 RLBench's `task_low_dim_state` observation is the same vector. After an episode in which the gripper grasped
@@ -440,9 +435,7 @@ per-task 95% intervals (bootstrap over runs within each side) show the size of d
 | `turn_tap` | 20, 20, 22, 19, 22, 21, 22, 21 | 21, 19, 20, 22, 21, 21, 21, 21 | +0.5 | -3.0 to 4.0 |
 
 With eight concurrent processes on the host, a formal Kit run took 6,946–7,140 s, and a native run took
-8,361–8,799 s. With four formal Kit runs at once, a run takes about 4,700 s. An earlier version split the episodes over
-12 workers and finished in about 1,000 s, but its per-task results depended on that schedule: `push_buttons`
-differed significantly from native. A formal run therefore uses one process (section 7).
+8,361–8,799 s. With four formal Kit runs at once, a run takes about 4,700 s.
 
 
 ### Reproduction
@@ -471,6 +464,6 @@ python examples/peract/compare_native.py --kit-run /runs/rlbench-full --native /
 The native runner records each test episode's state digest, protocol and Python hash seed, and checks the
 requested episode identities and native CSV success rates before it marks the run finished. The comparison
 checks both runs against the Kit manifest and rejects mismatched execution contracts, variation, instruction
-or episode-state digests. Earlier v1 logs and native logs without these fields cannot pass the v2 comparison.
+or episode-state digests, and logs without these fields.
 Keep the original episode records, manifests, logs, configuration, comparison and timing along with any
 acceptance result.
