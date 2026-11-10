@@ -155,10 +155,11 @@ def run_task_processes(args: argparse.Namespace, profiles: tuple[dict, ...]) -> 
         destination.mkdir()
         output = destination / "result.json"
         log = destination / "native.log"
+        # Resolving the Python symlink would bypass its virtual environment.
         command = [
             sys.executable, str(Path(__file__).resolve()),
             "--checkpoint", str(args.checkpoint.resolve()),
-            "--policy-python", str(args.policy_python.resolve()),
+            "--policy-python", str(args.policy_python.absolute()),
             "--policy-module", args.policy_module, "--policy-class", args.policy_class,
             "--benchmark-manifest", str(args.benchmark_manifest.resolve()),
             "--suite", args.suite, "--profile-id", profile["profile_id"],
