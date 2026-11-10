@@ -24,6 +24,7 @@ body:
         - RoboCasa
         - CALVIN
         - MetaWorld
+        - RLBench
         - robomimic
         - Not benchmark-specific
     validations:

@@ -43,6 +43,10 @@ def benchmark_factory(name: BenchmarkName) -> BenchmarkFactory:
         from roboscope_kit.runtime.benchmarks.metaworld import MetaworldBenchmarkFactory
 
         return MetaworldBenchmarkFactory()
+    if name is BenchmarkName.RLBENCH:
+        from roboscope_kit.runtime.benchmarks.rlbench import RLBenchBenchmarkFactory
+
+        return RLBenchBenchmarkFactory()
     if name is BenchmarkName.ROBOMIMIC:
         from roboscope_kit.runtime.benchmarks.robomimic import RobomimicBenchmarkFactory
 
