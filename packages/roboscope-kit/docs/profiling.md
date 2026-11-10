@@ -79,6 +79,7 @@ is not in the report, only the round-trip time of each request.
 | RoboDojo | Yes | Yes (2026-11-05, K=1 and K=3) |
 | LIBERO, LIBERO-Plus | Yes | Not yet |
 | MetaWorld | Yes | Not yet |
+| RLBench | Yes | Not yet |
 | robomimic | Yes | Not yet |
 | SimplerEnv | Yes | Not yet |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |

@@ -20,6 +20,7 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     CALVIN = "calvin"
     METAWORLD = "metaworld"
     ROBODOJO = "robodojo"
+    RLBENCH = "rlbench"
     ROBOMIMIC = "robomimic"
     SIMPLER_ENV = "simpler_env"
 
@@ -59,12 +60,14 @@ def _feature(
     *,
     required: bool = True,
     shape: tuple[int | None, ...] | None = None,
+    dtype: str | None = None,
 ) -> FeatureSpec:
-    dtype = {
-        FeatureKind.IMAGE: "uint8",
-        FeatureKind.STATE: "float32",
-        FeatureKind.LANGUAGE: "string",
-    }[kind]
+    if dtype is None:
+        dtype = {
+            FeatureKind.IMAGE: "uint8",
+            FeatureKind.STATE: "float32",
+            FeatureKind.LANGUAGE: "string",
+        }[kind]
     return FeatureSpec(
         name=name,
         kind=kind,
@@ -380,6 +383,101 @@ class SimplerEnvBenchmarkDefinition(BenchmarkDefinition):
         )
 
 
+RLBENCH_CAMERAS = ("front", "left_shoulder", "right_shoulder", "wrist")
+
+
+class RLBenchBenchmarkDefinition(BenchmarkDefinition):
+    """RLBench with PerAct's four 128x128 cameras, low-dimensional state, and key-frame actions."""
+
+    name = BenchmarkName.RLBENCH
+    protocol_version = "rlbench-peract-v2"
+    supported_action_representations = ("rlbench.ee-pose-planning-v1",)
+    default_action_representation = "rlbench.ee-pose-planning-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        cameras: list[FeatureSpec] = []
+        for camera in RLBENCH_CAMERAS:
+            label = camera.replace("_", " ")
+            cameras.extend(
+                (
+                    _feature(
+                        f"images.{camera}",
+                        FeatureKind.IMAGE,
+                        f"RLBench {label} camera RGB.",
+                        shape=(128, 128, 3),
+                    ),
+                    _feature(
+                        f"state.{camera}_depth",
+                        FeatureKind.STATE,
+                        f"RLBench {label} camera depth in metres.",
+                        shape=(128, 128),
+                    ),
+                    _feature(
+                        f"state.{camera}_point_cloud",
+                        FeatureKind.STATE,
+                        f"RLBench {label} camera point cloud: per-pixel world-frame x, y, z in metres.",
+                        shape=(128, 128, 3),
+                    ),
+                    _feature(
+                        f"state.{camera}_camera_extrinsics",
+                        FeatureKind.STATE,
+                        f"RLBench {label} camera-to-world pose as a 4x4 matrix.",
+                        shape=(4, 4),
+                        dtype="float64",
+                    ),
+                    _feature(
+                        f"state.{camera}_camera_intrinsics",
+                        FeatureKind.STATE,
+                        f"RLBench {label} camera intrinsic matrix.",
+                        shape=(3, 3),
+                        dtype="float64",
+                    ),
+                )
+            )
+        return (
+            *cameras,
+            _feature(
+                "state.gripper_open",
+                FeatureKind.STATE,
+                "Gripper open state: 1.0 open, 0.0 closed.",
+                shape=(1,),
+            ),
+            _feature(
+                "state.ignore_collisions",
+                FeatureKind.STATE,
+                "RLBench observation's current-waypoint collision-ignore flag.",
+                shape=(1,),
+            ),
+            _feature(
+                "state.gripper_joint_positions",
+                FeatureKind.STATE,
+                "Panda gripper finger joint positions (unclipped).",
+                shape=(2,),
+            ),
+            _feature(
+                "state.gripper_pose",
+                FeatureKind.STATE,
+                "Gripper tip pose in the world frame: x, y, z, qx, qy, qz, qw.",
+                shape=(7,),
+            ),
+            _feature("state.joint_positions", FeatureKind.STATE, "Panda arm joint positions.", shape=(7,)),
+            _feature("state.joint_velocities", FeatureKind.STATE, "Panda arm joint velocities.", shape=(7,)),
+            _feature(
+                "language.instruction", FeatureKind.LANGUAGE, "The episode's first RLBench task description."
+            ),
+        )
+
+    def action(self, _suite: str) -> ActionSpec:
+        return ActionSpec(
+            "action.robot",
+            "Key-frame gripper pose in the world frame (x, y, z, qx, qy, qz, qw; a unit quaternion), "
+            "gripper open (1) or closed (0), and ignore collisions (1) or not (0) for the motion planner. "
+            "float64, as RLBench receives it.",
+            9,
+            dtype="float64",
+        )
+
+
 _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
     definition.name: definition
     for definition in (
@@ -391,6 +489,7 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         RoboDojoBenchmarkDefinition(),
         CalvinBenchmarkDefinition(),
         MetaworldBenchmarkDefinition(),
+        RLBenchBenchmarkDefinition(),
         RobomimicBenchmarkDefinition(),
         SimplerEnvBenchmarkDefinition(),
     )
