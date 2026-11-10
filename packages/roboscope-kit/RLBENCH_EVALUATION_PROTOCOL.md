@@ -9,9 +9,7 @@ postprocessing.
 the simulator workers. Python 3.8–3.10 are unsupported. See the
 [Python support policy](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/README.md#python-support).
 
-Status: code candidate for the PerAct 18-task profile, not all RLBench. Section 9 records historical
-v1 evaluations, which did not fix Python's hash seed. The v2 execution contract requires fresh validation
-before acceptance.
+Status: accepted for the PerAct 18-task profile, not all of RLBench. Section 9 has the native comparison.
 
 ## 1. Benchmark scope
 
@@ -52,7 +50,7 @@ variations. Any supplemental fresh-episode checks are separate from the released
 
 | Combination | Status | Reason |
 | --- | --- | --- |
-| PerAct's 18 tasks, released test split, PerAct cameras and key-frame actions | Supported (`peract_18`) | Released test episodes and checkpoint; historical native comparison in section 9 |
+| PerAct's 18 tasks, released test split, PerAct cameras and key-frame actions | Supported (`peract_18`) | Released test episodes and checkpoint; native comparison in section 9 |
 | Other RLBench tasks, RLBench's own task sets (for example FS10, MT15/MT30, or all 100+ tasks) | Not supported | No released test episodes or checkpoint for them; each needs its own pinned profile and test set |
 | Freshly generated test episodes (`dataset_generator.py`) | Not supported | Every generation samples new scenes; PerAct recommends its released split for reproducibility |
 | Other action modes (joint velocities, end-effector deltas, IK without planning) | Not supported | The profile's action is PerAct's `MoveArmThenGripper(EndEffectorPoseViaPlanning(), Discrete())` |
@@ -383,86 +381,73 @@ and are not comparable with PerAct's numbers.
 5. `examples/peract/run_native.py` (PerAct's own `eval.py` on the same runtime, checkpoint, and test
    episodes) and `examples/peract/compare_native.py`.
 
-## 9. Historical evaluation and native comparison
+## 9. Native comparison and acceptance
 
-The two single-reset Kit evaluations below used commit
-[`9434366`](https://github.com/MINT-SJTU/RoboScope-Kit/commit/943436615a94866e509afff91ecbcd1baa1f0d97)
-on 2026-11-07. They do **not** test the current integrated head, its shard-reduction changes, or its native
-runner validation. The native run was recorded earlier with PerAct's pinned `eval.py`; it was not repeated
-for this comparison. These were v1 runs without a recorded Python hash seed; they do not validate v2. Each
-run covers the same 450 `(task, episode)` identities with matching variation and instruction, and the two
-Kit runs have identical stored NumPy-state digests. Their separately rendered observations were not captured.
+### Nondeterminism
 
-The host had two Intel Xeon Silver 4214R CPUs (48 logical CPUs), 188 GB RAM and RTX 3080 10 GB GPUs. Kit
-used GPU 1 for one PerAct 600k + CLIP RN50 Policy replica and 12 simulator workers; CoppeliaSim rendered
-on each worker's Xvfb with Mesa llvmpipe. A clean build of the pinned stack, self-test and real-policy
-Quick Test were completed before the first full run. The native run used GPU 0 on the same host with other
-GPU jobs present. The runs used matching pinned simulator dependencies, model and test split.
+RLBench evaluation is not deterministic, in this profile or in PerAct's own `eval.py`. Run twice, the same 450 released scenes
+disagree on about 14% of episode outcomes. There are three sources:
 
-| Run | Success | End-to-end time | Configuration |
-| --- | ---: | ---: | --- |
-| Kit, single reset, run 1 | 186/450 (41.3%) | 1,605.24 s | K=12, one replica, GPU 1 |
-| Kit, single reset, run 2 | 192/450 (42.7%) | 1,617.33 s | K=12, one replica, GPU 1 |
-| Historical PerAct `eval.py` | 190/450 (42.2%) | 8,329.89 s | one environment, GPU 0 |
+- **Planning time budget.** `EndEffectorPoseViaPlanning` falls back to PyRep's `get_nonlinear_path`. It searches each joint
+  configuration with `simGetConfigForTipPose` under a 10 ms wall-clock limit (`solve_ik_via_sampling(max_time_ms=10)`),
+  and OMPL then samples the path. The result depends on CPU speed and host load at that moment, and no seed controls it.
+- **Simulator state across episodes and tasks.** An episode's outcome depends on what the CoppeliaSim process ran
+  before it (section 7, *Scheduling*).
+- **Near-tied policy decisions.** After an identical first action, the next observation can differ slightly. PerAct's
+  discrete choices (gripper state, rotation bin) are sometimes nearly tied, so the episode can take another path. In
+  about 20% of the episodes of two repeats, the first action already differs.
 
-Both Kit runs completed without missing or duplicate records, worker failures or OOM, and verified the
-frozen test-episode digests. The historical native log also contains 450 unique terminal records. The
-roughly 5.2x ratio of the historical native and Kit elapsed times is **not a controlled speedup**: GPU
-occupation differed and the runs were not contemporaneous.
+A comparison with the native evaluator is therefore statistical. Both sides are run repeatedly, at the same time on
+the same host, because run-to-run variation itself depends on host load.
 
-### Per-task comparison
+### Acceptance comparison
 
-Success counts are out of 25. A differing episode has opposite success outcomes for the same task and
-released episode identity. Simulation-step counts exclude gripper-actuation steps.
+Eight formal Kit runs (`--concurrency 1 --replicas 1`) and eight runs of `examples/peract/run_native.py` used
+the same runtime, PerAct 600k checkpoint and 450 released episodes on one RTX 4090 host (208 CPU threads). They ran
+interleaved in two waves of four Kit and four native runs at once. `compare_native.py` checked each pair's episode
+identities, variations, instructions and stored states. Each test below is an exact permutation test over the
+C(16, 8) = 12,870 ways to label the 16 runs as Kit or native, at α = 0.05:
 
-| Task | Kit 1 | Kit 2 | Native | Kit 1 vs native differing episodes | Kit 2 vs native differing episodes | Executed actions (Kit 1 / Kit 2 / native) | Simulation steps (Kit 1 / Kit 2 / native) |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `close_jar` | 10/25 | 12/25 | 11/25 | 7 | 7 | 454 / 447 / 422 | 4794 / 4872 / 4797 |
-| `insert_onto_square_peg` | 1/25 | 4/25 | 2/25 | 1 | 2 | 606 / 548 / 587 | 10284 / 9612 / 10165 |
-| `light_bulb_in` | 5/25 | 6/25 | 7/25 | 2 | 3 | 530 / 511 / 494 | 5518 / 5382 / 5169 |
-| `meat_off_grill` | 18/25 | 18/25 | 16/25 | 2 | 4 | 296 / 298 / 330 | 5481 / 5302 / 5506 |
-| `open_drawer` | 22/25 | 21/25 | 23/25 | 3 | 4 | 83 / 130 / 86 | 2249 / 2616 / 2345 |
-| `place_cups` | 0/25 | 0/25 | 0/25 | 0 | 0 | 605 / 573 / 565 | 10095 / 9569 / 8787 |
-| `place_shape_in_shape_sorter` | 3/25 | 3/25 | 0/25 | 3 | 3 | 581 / 578 / 625 | 7993 / 7467 / 7664 |
-| `place_wine_at_rack_location` | 12/25 | 17/25 | 10/25 | 8 | 11 | 278 / 220 / 239 | 7062 / 6618 / 8561 |
-| `push_buttons` | 6/25 | 6/25 | 6/25 | 6 | 2 | 511 / 524 / 507 | 6400 / 6400 / 6024 |
-| `put_groceries_in_cupboard` | 3/25 | 1/25 | 3/25 | 0 | 4 | 418 / 397 / 304 | 17544 / 15680 / 10656 |
-| `put_item_in_drawer` | 9/25 | 9/25 | 13/25 | 8 | 10 | 370 / 424 / 430 | 10537 / 12652 / 12196 |
-| `put_money_in_safe` | 12/25 | 11/25 | 12/25 | 2 | 3 | 413 / 446 / 422 | 14130 / 13850 / 14206 |
-| `reach_and_drag` | 20/25 | 25/25 | 23/25 | 5 | 2 | 230 / 165 / 157 | 5910 / 3777 / 3817 |
-| `slide_block_to_color_target` | 23/25 | 17/25 | 22/25 | 1 | 7 | 107 / 249 / 127 | 3260 / 3890 / 3282 |
-| `stack_blocks` | 6/25 | 5/25 | 6/25 | 2 | 7 | 538 / 541 / 544 | 14464 / 13497 / 14095 |
-| `stack_cups` | 3/25 | 3/25 | 3/25 | 2 | 2 | 495 / 509 / 527 | 10080 / 11488 / 10202 |
-| `sweep_to_dustpan_of_size` | 11/25 | 11/25 | 11/25 | 4 | 4 | 379 / 382 / 387 | 7796 / 7616 / 6839 |
-| `turn_tap` | 22/25 | 23/25 | 22/25 | 2 | 3 | 119 / 114 / 126 | 3197 / 3391 / 3423 |
+| Test | Kit | Native | p | Result |
+| --- | --- | --- | ---: | --- |
+| Overall successes, 8 runs | 185, 182, 184, 177, 186, 184, 186, 182 | 189, 174, 178, 187, 182, 169, 175, 193 | 0.48 | pass (+0.53 pp) |
+| Per task, Holm-corrected over 18 tasks | see below | see below | ≥ 0.44 | pass |
+| Run-to-run outcome disagreement | 14.2% | 14.0% | 0.70 | pass |
 
-Across all tasks, Kit runs 1 and 2 differ in 68 episode outcomes; they differ from the historical native run
-in 58 and 78 outcomes respectively. First actions agree with native within 1e-6 in 361/450 and 362/450
-episodes. `put_item_in_drawer` scores 9/25 in both Kit runs and 13/25 in the historical native run. The two
-Kit runs have different successful episodes despite the same drawer total. This does not establish the cause
-of the difference or statistical equivalence.
+Kit and native runs disagree on 13.9% of outcomes, no more than repeats of either side do.
+Passing means no difference from native's own variation was detected; it is not a proof of equivalence. The
+per-task 95% intervals (bootstrap over runs within each side) show the size of difference the data still allow.
 
-RLBench's planner samples from a simulator random generator that this protocol does not seed, and reset
-physics can vary. The two Kit runs measure only a small part of that variability; repeated native runs and a
-predeclared tolerance have not been established. Under the repository's benchmark acceptance standard, a
-current-head full run and the remaining native repeatability and difference analysis are still required.
+| Task | Kit successes (8 runs, of 25) | Native successes (8 runs, of 25) | Kit − native (pp) | 95% interval (pp) |
+| --- | --- | --- | ---: | --- |
+| `close_jar` | 14, 11, 11, 12, 12, 11, 14, 11 | 12, 11, 10, 13, 12, 11, 11, 13 | +1.5 | -2.5 to 6.0 |
+| `insert_onto_square_peg` | 2, 4, 1, 2, 3, 1, 1, 1 | 1, 1, 2, 3, 4, 2, 4, 2 | -2.0 | -6.0 to 2.0 |
+| `light_bulb_in` | 4, 6, 4, 4, 7, 5, 8, 5 | 5, 6, 4, 6, 3, 4, 6, 5 | +2.0 | -2.5 to 7.0 |
+| `meat_off_grill` | 18, 18, 18, 16, 16, 16, 16, 19 | 16, 16, 17, 18, 15, 19, 16, 17 | +1.5 | -3.0 to 6.0 |
+| `open_drawer` | 22, 21, 23, 20, 22, 21, 20, 21 | 22, 22, 20, 23, 20, 19, 22, 22 | +0.0 | -4.5 to 4.5 |
+| `place_cups` | 0, 0, 0, 0, 0, 1, 0, 0 | 0, 0, 0, 0, 0, 0, 0, 0 | +0.5 | 0.0 to 1.5 |
+| `place_shape_in_shape_sorter` | 1, 0, 1, 0, 0, 1, 2, 2 | 3, 0, 2, 1, 0, 0, 1, 1 | -0.5 | -4.0 to 3.0 |
+| `place_wine_at_rack_location` | 15, 15, 15, 13, 12, 15, 15, 14 | 13, 13, 13, 11, 13, 12, 13, 14 | +6.0 | 2.0 to 9.5 |
+| `push_buttons` | 3, 4, 5, 4, 5, 4, 5, 5 | 4, 5, 4, 5, 4, 5, 2, 4 | +1.0 | -2.0 to 4.5 |
+| `put_groceries_in_cupboard` | 4, 2, 0, 1, 2, 2, 1, 2 | 3, 0, 1, 2, 0, 1, 0, 2 | +2.5 | -1.5 to 6.5 |
+| `put_item_in_drawer` | 13, 11, 15, 13, 7, 14, 13, 9 | 12, 9, 11, 11, 13, 12, 11, 13 | +1.5 | -6.5 to 9.0 |
+| `put_money_in_safe` | 10, 9, 11, 9, 12, 11, 11, 12 | 13, 10, 8, 11, 13, 9, 12, 12 | -1.5 | -7.0 to 4.5 |
+| `reach_and_drag` | 22, 25, 24, 23, 23, 24, 22, 21 | 22, 23, 24, 24, 24, 22, 22, 24 | -0.5 | -4.5 to 4.0 |
+| `slide_block_to_color_target` | 18, 18, 15, 22, 23, 16, 17, 17 | 17, 18, 23, 17, 20, 16, 16, 23 | -2.0 | -12.5 to 8.5 |
+| `stack_blocks` | 7, 6, 5, 8, 7, 7, 5, 7 | 9, 7, 5, 8, 7, 4, 7, 5 | +0.0 | -5.0 to 5.0 |
+| `stack_cups` | 1, 0, 2, 1, 2, 2, 3, 2 | 4, 2, 2, 0, 2, 1, 1, 2 | -0.5 | -4.5 to 3.5 |
+| `sweep_to_dustpan_of_size` | 11, 12, 12, 10, 11, 12, 11, 13 | 12, 12, 12, 12, 11, 11, 10, 13 | -0.5 | -4.0 to 3.0 |
+| `turn_tap` | 20, 20, 22, 19, 22, 21, 22, 21 | 21, 19, 20, 22, 21, 21, 21, 21 | +0.5 | -3.0 to 4.0 |
 
-### Initial-scene diagnostic
+With eight concurrent processes on the host, a formal Kit run took 6,946–7,140 s, and a native run took
+8,361–8,799 s. With four formal Kit runs at once, a run takes about 4,700 s. An earlier version split the episodes over
+12 workers and finished in about 1,000 s, but its per-task results depended on that schedule: `push_buttons`
+differed significantly from native. A formal run therefore uses one process (section 7).
 
-The per-object handle diagnostic exceeds 1 cm in 20 episodes in Kit run 1 and 23 in run 2. These are
-measurements against the recorded vector, not 20 or 23 proven scene mismatches: some recorded vectors use a
-different object order, as explained in section 5. The sets also differ from the fresh-build check, mostly in
-`place_shape_in_shape_sorter`; contact settling depends on simulator history.
-
-The earlier native comparison reported 117 episodes over 1 cm by matching object-vector indices. That
-measurement was an ordering artifact and cannot be used to infer native scene mismatch or select a
-"matching initial scene" subset. An earlier Kit implementation also reset twice and produced 192/450 and
-197/450; those numbers are historical and do not evaluate this single-reset implementation.
 
 ### Reproduction
 
-Build and run on a suitable authorized Linux machine; the historical runs used fixed concurrency rather than
-autotuning. `--accept-licenses` accepts the CoppeliaSim Edu and RLBench licences (section 2).
+Build and run on a suitable authorized Linux machine. `--accept-licenses` accepts the CoppeliaSim Edu and RLBench licences (section 2).
 
 ```bash
 XVFB=/path/to/Xvfb KIT_PYTHON=/path/to/kit/python \
