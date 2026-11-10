@@ -105,7 +105,7 @@ these timers do not establish verified Nsight hardware coverage.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
-- [RoboCasa365 all-task comparison](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/approved250-native-20261109.md): RTX 4090, Kit b34, K=2/G=1 (2026-11-09);
-  serial Worker timers locate construction/reset/native steps as dominant intervals; Nsight and Policy Server GPU time are unverified.
+- [RoboCasa365 all-task performance](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/approved250-performance-20261109.md): RTX 4090, Kit b34/b35, MPS, K=2/G=1 (2026-11-09);
+  slot concurrency improves capped formal throughput 2.387× and Worker step/barrier intervals 3.902×; Policy RPC wait grows.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).

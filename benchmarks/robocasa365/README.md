@@ -112,10 +112,20 @@ native group's rollout after environment resets, excluding process/model/
 environment startup and the independent Policy Server's GPU execution. Nsight
 hardware capture and isolated server GPU timing remain unverified.
 
-The approved all-task comparison reports exact paired success and terminal-step
-agreement at its common 128-step cap. It makes no speed claim or full-horizon
-accuracy/trajectory claim. Keep model/task/scenario streams, horizons, native slot
-count, K/G and outputs fixed in later comparisons.
+The [approved all-task performance comparison](approved250-performance-20261109.md)
+completes 50 tasks × five episodes per arm at a shared 128-step cap. Formal
+throughput improves **2.387× at fixed K=2/G=1** and **2.402× after independent
+bounded autotune**, with MPS on and full RGB retained. All six native/SDK runs
+have identical paired successes and terminal steps. Fixed-pair sampled cgroup
+memory rises from 36.97 to 53.82 GiB, so parallel mode remains opt-in with explicit
+Worker/replica limits. The search bounds are K≤2/G≤1, not a global optimum.
+
+The earlier [atomic pilot](slot-concurrency-20261109.md) and
+[composite/reset checks](composite-reset-followup-20261109.md) remain separate
+workloads. Their ratios are not multiplied, and eight-reset growth is not
+extrapolated to the current one-group-per-task collection. The measured target
+applies to this approved capped workload; full-horizon accuracy and throughput
+remain outside its scope.
 
 ## Validation records
 
