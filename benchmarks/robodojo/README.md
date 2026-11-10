@@ -102,7 +102,8 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
 Draft for [#18](https://github.com/MINT-SJTU/RoboScope-Kit/issues/18). For `Simate_beta`, three environments
 per Worker with the observation stride and a thread cap average 1.96× over four runs (1.89–2.04×), just short of
 the 2× target. A real-agent PyRUA comparison below measures four tasks; the full declared task scope and the 2×
-target remain open for that workload.
+target remain open for that workload. On one task, `cover_blocks`, four single-table Workers with shared SAM3
+run 3.6× faster than one Worker with a scripted agent and reproduce native per-episode outcomes.
 
 ### 2026-11-07: `Simate_beta` (compute-bound VLA)
 
@@ -262,6 +263,38 @@ Frozen comparison SHA-256: `b72fd08b470ef2ed94020a15c22a430634057fda1eb3e1a4ec01
 wrapper SHA-256 was `0bb0ae6ed151578739a8ce6459e8185d337ee487e80ce071680e46f5f4fcc2c3`; the example wrapper
 SHA-256 is `b4959f29ec0a022f96c18ac84c252184fb349b5cabb2c07ad04d5509658c8920` and differs only in import
 ordering and whitespace (AST checked).
+
+### 2026-11-10: PyRUA-Lean with one table per Worker
+
+- **Machine:** the same AutoDL RTX 4090 48 GB.
+- **Configuration:** Kit `e4e5682` with its unmodified RoboDojo runtime, one environment per Worker, K=G, one
+  shared SAM3 service as above, seed 1, `cover_blocks`.
+
+A scripted agent replayed a fixed tool program per layout without model calls, on layouts 0–23. Native A and B
+are two single-Worker repeats; their differences give the native run-to-run spread.
+
+| Run | K=G | Evaluation | Episodes/h | Gain | Peak GPU | Same steps as A / B | Same verdict | 30/37/43-step episodes |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| native A | 1 | 2,412.6 s | 35.8 | — | 14,729 MiB | — / 17 | 24/24 | 13/3/8 |
+| native B | 1 | 2,497.5 s | 34.6 | — | 14,697 MiB | 17 / — | 24/24 | 13/4/7 |
+| 4 Workers | 4 | 684.6 s | 126.2 | 3.59× | 38,803 MiB | 21 / 20 | 24/24 | 13/2/9 |
+| 5 Workers | 5 | 587.5 s | 147.1 | 4.18× | 46,895 MiB | 18 / 17 | 24/24 | 13/5/6 |
+
+Gains are against the mean of the two native runs. All 24 tool sequences matched in every pair. Both
+multi-Worker runs agree with native as closely as native agrees with itself. Use K=4 on a 48 GB card: K=5 leaves
+about 2 GB of headroom, and a run that hits a GPU out-of-memory error is not usable.
+
+With GPT-6.1 Terra at max reasoning, K=4 evaluated layouts 0–47 in 5,585.6 s: 48/48 successes, 30.9 episodes/h,
+17,823 steps (3.19 steps/s) and 721 model requests, with a 38,803 MiB peak. Episodes took 326–494 s (median
+387 s); the single-Worker `cover_blocks` episode in the baseline above took 366 s. Summed episode time is 3.39
+times the evaluation time. There is no paired single-Worker run of these 48 layouts, so this real-agent gain is
+an estimate.
+
+Several tables in one Isaac Sim process (`num_envs` > 1) are faster but change camera images. RoboDojo renders
+each camera type for all tables as one tiled render product, and with the scripted agent, 11/24 episodes at 24
+tables ended at 44 steps, which native never produced. Rendering each camera separately removes most of the
+difference, but 3/24 episodes at 8 tables still ended at 44 steps, and 24 tables (72 render products) fail to
+allocate render resources. Physics state matched native to about 1e-8 in both cases.
 
 ### 2026-11-07: latency-bound Policy (synthetic)
 
