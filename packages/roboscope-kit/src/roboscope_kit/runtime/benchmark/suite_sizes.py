@@ -72,6 +72,7 @@ SUITE_SIZES: dict[tuple[str, str], SuiteSize] = {
     ("maniskill", "bridge_rgb_v1"): SuiteSize(tasks=4, episodes_per_task=100),
     ("maniskill", "transfer_reference_state_v1"): SuiteSize(tasks=5, episodes_per_task=100),
     ("maniskill", "humanoid_control_transfer_state_v1"): SuiteSize(tasks=3, episodes_per_task=100),
+    ("maniskill", "humanoid_control_canonical_state_v1"): SuiteSize(tasks=2, episodes_per_task=100),
     ("maniskill", "panda_visual_rgb_v1"): SuiteSize(tasks=19, episodes_per_task=100),
     ("maniskill", "g1_visual_rgb_v1"): SuiteSize(tasks=2, episodes_per_task=100),
     ("maniskill", "fetch_mshab_depth_v1"): SuiteSize(tasks=2, episodes_per_task=100),

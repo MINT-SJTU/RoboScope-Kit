@@ -199,6 +199,7 @@ def observation_rows(
 
 def root_joint_metadata(environment: Any, profile: dict[str, Any]) -> dict[str, Any]:
     if not (profile.get("include_root_kinematics", False)
+            or profile.get("include_joint_names", False)
             or profile.get("include_cabinet_contact_state", False)):
         return {}
     agent = environment.unwrapped.agent
@@ -534,6 +535,7 @@ def main() -> None:
     with PolicyClient(args.policy_socket, timeout_s=300) as client:
         WorkerLoop(
             worker_id=args.worker_id, queue_dir=args.queue_dir, state_dir=args.worker_state_dir,
+            recycle_on_group_change=True,
         ).run(lambda item: evaluate(
             item, worker_id=args.worker_id, client=client,
             profile=profiles[item.payload["profile_id"]],

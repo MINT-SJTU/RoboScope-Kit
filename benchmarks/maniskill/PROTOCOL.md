@@ -52,7 +52,13 @@ Every group performs a full reset with its explicit seed vector and `reconfigura
 Per-environment random initialization can depend on vector grouping, so a native comparison must
 retain the same lane width and seed grouping.
 
-Each task executes its complete registered horizon. Native task failures and success tracking
+Each task executes its complete registered horizon. A Worker plans a process recycle before evaluating
+another profile, while the loaded Policy replica and same-profile episode groups remain in place.
+The orchestrator requeues the unevaluated next-profile item and restarts that Worker context;
+planned recycling is recorded separately from failures and retries. This avoids reusing the PhysX
+contact-query context across profiles without changing episode identities or seed grouping.
+
+Native task failures and success tracking
 remain in the environment, while the wrapper's ignored terminations keep each lane running to
 the time limit. The Worker checks terminal masks and native episode lengths. One control action
 per environment is requested at every control tick. Episode-local Policy state is reset and ended
@@ -73,7 +79,9 @@ upstream insertion-order flattening. Visual profiles expose the state already pr
 upstream observation and map declared camera RGB pixels to `images.primary`, `images.wrist` or
 `images.auxiliary`. Native image shape and uint8 pixels are retained. The optional
 `language.instruction` comes from the profile. Model-specific normalization and preprocessing
-belong to the Policy implementation.
+belong to the Policy implementation. The optional `include_joint_names` profile setting adds
+actual active/controller joint identities to episode metadata without adding observation features.
+The canonical Humanoid Walk/Run references use this metadata and their original 185D states.
 
 The four Bridge tasks require the native `rgb+segmentation` observation mode, background overlay,
 500/5 Hz configuration and task-specific WidowX robot class. The declared Policy camera is

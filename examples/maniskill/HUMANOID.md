@@ -27,12 +27,19 @@ joints. Native articulation order, source joint-state order and motor order
 are mapped by name; source motor order is not identical to source qpos order.
 Reset receives the actual native state/controller joint identities.
 
-Use the explicitly named `ms_humanoid_{stand,walk,run}_root_state` profiles.
-They retain the original numeric state and add measured root pose and world
-linear/angular velocity through the native articulation API. Stand's native
-154D state contains head height, torso-frame extremities, and egocentric link
-and COM velocities. Walk/Run use their native 185D state. The policy reconstructs
-the original 67D input in source order:
+The `ms_humanoid_{stand,walk,run}_root_state` profiles retain the original
+numeric state and add measured root pose and world linear/angular velocity
+through the native articulation API. Stand's native 154D state contains head
+height, torso-frame extremities, and egocentric link and COM velocities.
+
+The canonical `ms_humanoid_walk_state` and `ms_humanoid_run_state` profiles
+also supply every numerical input required by the same checkpoints. Their
+[pinned 185D state](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/humanoid.py#L208)
+already contains world root linear velocity at `[42:45]`, world root angular
+velocity at `[45:48]`, and the WXYZ root quaternion at `[181:185]`. The Policy
+reads these actual measurements directly for those exact profile IDs. It
+does not construct unused root XYZ values. Both paths reconstruct the original
+67D input in source order:
 
 ```text
 joint angles21 | head height1 | extremities12 | torso vertical3 |
@@ -42,8 +49,20 @@ joint velocity21
 
 Stand's COM velocity is rotated back to the world frame. The native measured
 root quaternion supplies torso vertical and converts world angular velocity
-to MuJoCo's free-joint body frame. No orientation, velocity or missing body
-feature is replaced with a constant or padded to imitate another embodiment.
+to MuJoCo's free-joint body frame. Canonical Stand remains unsupported: its
+egocentric state omits orientation and world velocities required by this model.
+No orientation, velocity or missing body feature is replaced with a constant
+or padded to imitate another embodiment.
+
+The session requires `state.proprioception`; each root-state episode also
+requires finite `state.root_pose`, `state.root_linear_velocity` and
+`state.root_angular_velocity`. Reset requires actual `active_joint_names` and
+`action_joint_names` metadata on every supported profile, plus `profile_id` to
+select the canonical Walk/Run path. Joint identities describe the existing
+articulation/controller order and add no numerical observations. Native state
+shape, robot, controller, action dimension and frequencies remain checked.
+The `humanoid_control_canonical_state_v1` suite selects these two canonical
+profiles at their original 1,000-tick horizons and 100 episodes per profile.
 
 The [native controller](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/agents/robots/humanoid/humanoid.py)
 remains `pd_joint_delta_pos`, with its original per-joint gains and ±2 rad
@@ -94,6 +113,13 @@ The source numerical operations ran unchanged; only their nonnumeric
 TensorDict result container was replaced with a plain dict for this check.
 This evidence does not establish cross-simulator physics equivalence. Native
 GPU rollout validation is recorded in the benchmark's compatibility report.
+
+The canonical Walk/Run adapter was checked separately on the existing 64 actual
+DM-Control Walk/Run reference states with independently permuted joint order.
+Its 67D inputs were bitwise identical to the preceding root-feature conversion;
+the root-feature path, actor operations and physical action conversion remain
+unchanged. This CPU evidence does not establish canonical-profile native rollout
+acceptance; those profiles require their own matched SDK/native comparisons.
 
 ## Upstream license notice
 

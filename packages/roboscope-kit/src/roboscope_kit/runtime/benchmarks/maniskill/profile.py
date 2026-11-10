@@ -18,6 +18,7 @@ _DEFAULTS: dict[str, Any] = {
     "enhanced_determinism": False,
     "use_default_robot": False,
     "include_root_kinematics": False,
+    "include_joint_names": False,
     "include_cabinet_contact_state": False,
     "sim_freq": 100,
     "control_freq": 20,
@@ -60,7 +61,7 @@ def _resolve(protocol: dict[str, Any], profile_id: str) -> dict[str, Any]:
     ):
         raise ValueError(f"ManiSkill {profile_id} must pair each robot with one controller")
     for key in ("enhanced_determinism", "use_default_robot", "include_root_kinematics",
-                "include_cabinet_contact_state"):
+                "include_cabinet_contact_state", "include_joint_names"):
         if type(profile[key]) is not bool:
             raise ValueError(f"ManiSkill {profile_id}.{key} must be a boolean")
     if profile["use_default_robot"] and not isinstance(profile["robot_uid"], str):

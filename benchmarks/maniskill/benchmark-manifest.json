@@ -18,6 +18,7 @@
       "bridge_rgb_v1",
       "transfer_reference_state_v1",
       "humanoid_control_transfer_state_v1",
+      "humanoid_control_canonical_state_v1",
       "panda_visual_rgb_v1",
       "g1_visual_rgb_v1",
       "fetch_mshab_depth_v1"
@@ -438,6 +439,10 @@
         "fetch_mshab_depth_v1": [
           "open_cabinet_door_mshab_depth",
           "open_cabinet_drawer_mshab_depth"
+        ],
+        "humanoid_control_canonical_state_v1": [
+          "ms_humanoid_walk_state",
+          "ms_humanoid_run_state"
         ]
       },
       "profiles": {
@@ -1447,7 +1452,8 @@
           "sim_freq": 200,
           "control_freq": 40,
           "asset_download_ids": [],
-          "instruction": "MS-HumanoidWalk-v1"
+          "instruction": "MS-HumanoidWalk-v1",
+          "include_joint_names": true
         },
         "ms_humanoid_run_state": {
           "task_id": "MS-HumanoidRun-v1",
@@ -1465,7 +1471,8 @@
           "sim_freq": 200,
           "control_freq": 40,
           "asset_download_ids": [],
-          "instruction": "MS-HumanoidRun-v1"
+          "instruction": "MS-HumanoidRun-v1",
+          "include_joint_names": true
         },
         "rotate_single_object_in_hand_level0_state": {
           "task_id": "RotateSingleObjectInHandLevel0-v1",

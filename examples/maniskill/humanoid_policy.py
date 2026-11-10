@@ -20,12 +20,18 @@ from roboscope_kit import (
     run,
 )
 
+CANONICAL_PROFILES = {
+    "MS-HumanoidWalk-v1": "ms_humanoid_walk_state",
+    "MS-HumanoidRun-v1": "ms_humanoid_run_state",
+}
+
 
 @dataclass
 class EpisodeState:
     task_id: str
     source_state_indices: np.ndarray
     controller_state_indices: np.ndarray
+    requires_root_kinematics: bool = True
     held_source_action: np.ndarray | None = None
     steps: int = 0
     clipped_joints: int = 0
@@ -48,14 +54,22 @@ def source_observation(features: dict, episode: EpisodeState, dimension: int) ->
     value = np.asarray(features["state.proprioception"], dtype=np.float32)
     if value.shape != (dimension,) or not np.isfinite(value).all():
         raise ValueError(f"Expected the complete finite native Humanoid state of {dimension} values")
-    pose = np.asarray(features["state.root_pose"], dtype=np.float32)
-    velocity = np.asarray(features["state.root_linear_velocity"], dtype=np.float32)
-    angular_velocity = np.asarray(features["state.root_angular_velocity"], dtype=np.float32)
-    if pose.shape != (7,) or any(x.shape != (3,) for x in (velocity, angular_velocity)):
-        raise ValueError("Expected measured root pose and world linear/angular velocities")
-    if not all(np.isfinite(x).all() for x in (pose, velocity, angular_velocity)):
-        raise ValueError("Root kinematics must be finite")
-    rotation = rotation_matrix(pose[3:])
+    if episode.requires_root_kinematics:
+        pose = np.asarray(features["state.root_pose"], dtype=np.float32)
+        velocity = np.asarray(features["state.root_linear_velocity"], dtype=np.float32)
+        angular_velocity = np.asarray(features["state.root_angular_velocity"], dtype=np.float32)
+        if pose.shape != (7,) or any(x.shape != (3,) for x in (velocity, angular_velocity)):
+            raise ValueError("Expected measured root pose and world linear/angular velocities")
+        if not all(np.isfinite(x).all() for x in (pose, velocity, angular_velocity)):
+            raise ValueError("Root kinematics must be finite")
+        quaternion = pose[3:]
+    else:
+        if episode.task_id not in CANONICAL_PROFILES or dimension != 185:
+            raise ValueError("Only canonical Humanoid Walk/Run supply complete root kinematics in state")
+        # These are the same dummy_root_0 measurements exposed by the root-state profiles.
+        quaternion = value[181:185]
+        velocity, angular_velocity = value[42:45], value[45:48]
+    rotation = rotation_matrix(quaternion)
     if episode.task_id == "MS-HumanoidStand-v1":
         # Stand stores 16 link linear + 16 angular + COM velocities in the root frame.
         height, extremities = value[42:43], value[142:154]
@@ -109,8 +123,7 @@ class ManiSkillHumanoidPolicy(Policy):
         return PolicyCapabilities(
             supported_benchmarks=("maniskill",),
             supported_suites={"maniskill": (context.benchmark.suite,)},
-            required_features=("state.proprioception", "state.root_pose",
-                               "state.root_linear_velocity", "state.root_angular_velocity"),
+            required_features=("state.proprioception",),
             max_batch_size=256,
             supported_action_chunk_sizes=(1,),
             action_representations={"maniskill": "maniskill.native-controller-v1"},
@@ -125,6 +138,11 @@ class ManiSkillHumanoidPolicy(Policy):
                 raise ValueError(f"Humanoid transfer requires {key}={expected!r}")
         if context.metadata.get("obs_mode") not in {"state", "state_dict"}:
             raise ValueError("The Humanoid transfer requires a numeric native state profile")
+        profile_id = context.metadata.get("profile_id")
+        if profile_id == "ms_humanoid_stand_state":
+            raise ValueError(
+                "Canonical Humanoid Stand omits the world root kinematics required by this model"
+            )
         names = context.metadata.get("active_joint_names")
         source_names = self.contract["observation_joint_names"]
         if not isinstance(names, (list, tuple)) or len(names) != 21 or set(names) != set(source_names):
@@ -135,6 +153,10 @@ class ManiSkillHumanoidPolicy(Policy):
         self.episodes[context.episode_id] = EpisodeState(
             context.task_id, np.asarray([names.index(name) for name in source_names]),
             np.asarray([names.index(name) for name in controller]),
+            requires_root_kinematics=not (
+                context.task_id in CANONICAL_PROFILES
+                and profile_id == CANONICAL_PROFILES[context.task_id]
+            ),
         )
 
     def act(self, observation: Observation) -> ActionChunk:

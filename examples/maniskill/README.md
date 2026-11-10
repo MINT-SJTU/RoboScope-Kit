@@ -202,10 +202,16 @@ The generic `native_eval_policy.py` independently constructs the native Gym envi
 and action execution path without the Kit Worker or RPC. It intentionally reuses the same Policy
 implementation, so agreement isolates SDK integration rather than independently validating model
 inference or transfer mappings. Author-code and numerical checks provide separate, explicitly scoped
-evidence for those components. Specify `--policy-module /absolute/path/policy.py`, `--policy-class`,
+evidence for those components. Multi-profile references run sequential per-task child processes,
+as the PPO reference does, to isolate native simulator lifetimes. Child logs and record hashes are
+retained; child phase sums and parent command time have separate boundaries. Specify
+`--policy-module /absolute/path/policy.py`, `--policy-class`,
 `--policy-python`, `--checkpoint`, `--benchmark-manifest`, `--suite` and `--output`. Add matched
 `--episodes`, `--num-envs` and `--trajectory-dir` for the native workload, then pass both trace
 directories to `compare_native.py`. A diagnostic manifest can set
 `benchmark_protocols.maniskill.diagnostic_step_limit=5`; retain its original environment horizon.
 All such prefixes are labeled non-formal. See [the completion report](../../benchmarks/maniskill/COMPLETION_VALIDATION.md)
 for the measured commands, coverage and unresolved asset/model gates.
+The [native-reference review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records
+terminal-mask fixes and pending final validation; historical 100-episode-per-task evidence retains
+its original source identity.

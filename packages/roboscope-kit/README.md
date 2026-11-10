@@ -427,8 +427,8 @@ existing Policy lifecycle. Its pinned inventory declares 55 evaluation tasks wit
 controllers, state or visual observations, horizons and metrics. Historical 100-episode-per-task native
 comparisons cover eleven official state PPO tasks and four Bridge visual tasks. They predate the
 terminal-mask recording/comparison fix and are not validation of the updated head. Full integration
-acceptance remains partial: 40 task IDs still lack full-horizon comparisons, with separate asset and
-observation/controller-profile gaps. The
+acceptance remains partial: 40 task IDs lack corresponding 100-episode-per-task comparisons, with
+separate asset and observation/controller-profile gaps. The
 [completion phase](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/COMPLETION_VALIDATION.md)
 adds separately labeled five-step real-policy diagnostics for 27 more task IDs; these are not formal
 full-horizon evaluation results. The
@@ -440,6 +440,8 @@ The separate
 [Fetch depth example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/FETCH_MSHAB.md)
 provides pinned MS-HAB Open models and optional raw depth/contact observations. Original processed
 PartNet assets are still required before counting either cabinet task as validated.
+The [native-reference review](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md)
+records mask checks, retained full-horizon failures and the pending final candidate validation.
 
 Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and select asset suites with
 `MANISKILL_ASSET_SUITES`. See the

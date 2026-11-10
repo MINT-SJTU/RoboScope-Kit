@@ -11,6 +11,8 @@ result or claim a runtime speedup.
 The [historical R8 results](#historical-b47-validation-r8) use Kit 0.8.0b47 and predate the b48
 terminal-mask recording/comparison fix. Their measurements retain that original source identity;
 they do not validate the updated head. The R6 section retains the preceding phase's evidence.
+The [native-reference review](NATIVE_REVIEW_VALIDATION.md) records the mask fixes, retained R9
+full-horizon failures and pending final R10 validation separately.
 
 **The R6 real-model GPU matrix passed for 51/55 distinct task IDs across 64 selected profiles.**
 All 64 SDK/native pairs, 320 actions and 384 observations per path matched exactly. This adds nine
@@ -749,11 +751,41 @@ is 2.756 ms; step-with-observation host time is 1.236 s over 50 ticks. Missing G
 have the same N/A scope as the matrix.
 
 The successful Fetch API fixture above remains excluded from the 51-task count. Historical
-full-horizon, 100-episode native comparisons cover 15 of the 55 task IDs. The other 40 IDs still
-require full-horizon comparisons: 36 have only five-tick prefixes and four remain asset-blocked.
+full-horizon, 100-episode native comparisons cover 15 of the 55 task IDs. The other 40 IDs lack
+corresponding 100-episode-per-task comparisons: in that historical matrix, 36 had only five-tick
+prefixes and four remained asset-blocked.
 These task-ID counts do not establish acceptance of every declared observation/controller profile.
 The original tabletop RGB prefixes cover 16 of 18 profiles; their two asset-blocked profiles overlap
 the four blocked task IDs and remain a separate profile-coverage gap.
+
+### Remaining profile acceptance gaps
+
+The [manifest](benchmark-manifest.json) declares **89 profiles: 64 selected by the R8 model matrix,
+eight asset-blocked profiles and 17 initially unmatched asset-available profiles**. The b51 candidate
+adds exact state-only Humanoid Walk/Run conversions: 64 source inputs match bitwise in CPU checks,
+and their N2 five-tick GPU/native prefixes pass; full-horizon comparisons remain pending. This leaves
+**15 available profiles without a compatible selected Policy**, plus the two candidates awaiting full-horizon validation. The environment-only
+sweep does not supply missing model comparisons. The 15 remaining model-contract gaps are:
+
+| Unmatched profiles | Count | Mismatch with the selected model contract |
+| --- | ---: | --- |
+| `lift_peg_upright_state` | 1 | Canonical EE position control is 4D; the official PPO requires EE pose control, 7D. |
+| `two_robot_pickcube_state`, `two_robot_stackcube_state` | 2 | Canonical EE position control is 8D; the official PPO requires joint delta control, 16D. |
+| `pull_cube_tool_state` | 1 | Canonical EE position control is 4D; NEWT requires EE pose control, 7D. |
+| `peg_insertion_side_state`, `pick_clutter_ycb_state`, `plug_charger_state`, `fmb_assembly1_easy_state` | 4 | The selected Octo model requires RGB; these profiles provide state observations. No compatible state model is selected. |
+| `ms_humanoid_stand_state` | 1 | The egocentric state omits the world-frame quantities required by the selected Stand checkpoint. Walk/Run have exact b51 state reconstructions, pending GPU validation. |
+| `unitree_{h1,g1}_stand_state`, `unitree_go2_reach_state`, `anymal_c_spin_state` | 4 | H1/G1 omit required root orientation/angular velocity. Go2 and Anymal already contain world velocities but omit root pose/orientation needed by the selected conversions; joint identities alone are static metadata. |
+| `unitree_g1_{place_apple_in_bowl,transport_box}_state` | 2 | The G1 visual transfer requires RGB and root/joint metadata absent from these state profiles. |
+
+The eight asset-blocked profiles are `assembling_kits_{state,rgb}`, `turn_faucet_{state,rgb}`,
+`open_cabinet_{door,drawer}_state` and `open_cabinet_{door,drawer}_mshab_depth`. Selected Panda RGB
+and Fetch depth Policies cover four of these contracts once the original assets are available;
+their four canonical state siblings also lack selected compatible Policies. The categories above
+are disjoint for counting, but asset and model blockers can overlap within a profile.
+
+Closing these gaps requires compatible models or separately validated Policy adaptations. Switching
+to a sibling RGB/root-state profile or changing its controller validates a different profile; it
+does not close the canonical profile's acceptance gap.
 
 A review identified that the full-horizon comparator did not validate native terminal masks.
 Historical PPO native records did not persist the actual `terminated` and `truncated` fields.
@@ -772,3 +804,7 @@ per-profile records/traces, lifecycle timings and resource samples. Per-profile 
 resource detail stays in those raw files rather than being duplicated here. The archive excludes
 model weights, simulator assets and installed environments; R6, the failed R7 probe and final R8
 evidence retain their original source labels.
+
+The user deferred the four original-asset tasks on 2026-11-11. They remain in the 55-task inventory;
+the active phase targets the other 51 task IDs and their declared profiles. Deferral does not close
+issue 25 or make the full 55-task benchmark accepted.

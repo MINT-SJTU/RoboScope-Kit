@@ -136,6 +136,7 @@ def episode_metadata(environment, profile: dict, suite: str, index: int, seed: i
         action_dimension=int(environment.single_action_space.shape[0]),
     )
     if (profile.get("include_root_kinematics", False)
+            or profile.get("include_joint_names", False)
             or profile.get("include_cabinet_contact_state", False)):
         agent = environment.unwrapped.agent
         configs = getattr(agent.controller, "configs", None)
