@@ -4,7 +4,7 @@ This experiment reuses the Kit's existing `--cuda-mps` implementation. It does n
 daemon manager, change the model, or enable MPS by default. The driver controls two sequential arms
 whose sole intended execution difference is MPS. The current LIBERO-Pro model-service and queue
 timings motivate this experiment. This guide describes the ablation procedure; the selected draft
-result is the [fixed-baseline comparison](FIXED_BASELINE_2026-11-09.md).
+result is the [fixed-baseline comparison](FIXED_BASELINE_2026-11-10.md).
 
 ## Configuration
 

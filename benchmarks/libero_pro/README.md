@@ -2,8 +2,8 @@
 
 This directory owns the frozen simulator build and throughput work for
 [issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21). The selected draft result is
-**2.9141x formal throughput against the historical fixed configuration**, with 8,000 episodes per side
-on the available dedicated RTX 4090. See the [fixed-baseline report](FIXED_BASELINE_2026-11-09.md) for
+**3.1006x formal throughput against the historical fixed configuration**, with 8,000 episodes per side
+on the available dedicated RTX 4090. See the [fixed-baseline report](FIXED_BASELINE_2026-11-10.md) for
 the exact configurations, per-suite scores and remaining validation.
 
 Start code review with the [draft review guide](DRAFT_REVIEW.md). The
@@ -296,9 +296,9 @@ document and the central profiling index; measure performance again without prof
 ## Draft status and follow-up
 
 - The draft presents one fixed-baseline comparison: 16 suites × 10 tasks × 50 states per side,
-  complete unique episode coverage, 2.9141x formal throughput and 2.9178x actual steps/s.
-- Keep per-suite/task scores and paired differences visible. The 288 differing success flags and
-  2,899 differing step counts need repeat analysis; aggregate score similarity is insufficient.
+  complete unique episode coverage, 3.1006x formal throughput and 3.0979x actual steps/s.
+- Keep per-suite/task scores and paired differences visible. The 314 differing success flags and
+  2,960 differing step counts need repeat analysis; aggregate score similarity is insufficient.
 - Formal throughput uses total completed episodes divided by summed `evaluation_s`, not
   `result.episodes_per_s` or an average of suite ratios. Report loading, preparation, tuning,
   result writing and end-to-end time separately; fixed runs have no tuning search.
@@ -308,7 +308,7 @@ document and the central profiling index; measure performance again without prof
   These remain follow-up work; the historical fixed denominator is stated explicitly in this draft.
 - The earlier stage-timing findings are recorded above; Worker and Policy Server Nsight traces remain
   outstanding.
-- The selected comparison used Kit 0.8.0b37 at `e63260e`. A later full run used b38 plus the camera
-  patch. The current draft also incorporates upstream autotune fixes absent from those runs. Before
+- The latest optimized comparison used Kit 0.8.0b38 at `dfebac7` plus the camera patch.
+  The current draft also incorporates upstream autotune fixes absent from that run. Before
   merge, use the actual merge date in the changelog, run required checks and clean-build self-test,
   measure the exact head being merged, and publish durable raw-log/reproduction links.

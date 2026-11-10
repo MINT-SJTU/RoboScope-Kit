@@ -99,7 +99,7 @@ is not in the report, only the round-trip time of each request.
 ## Findings
 
 LIBERO-Pro has [stage-timing instructions](../../../benchmarks/libero_pro/README.md#stage-timing)
-for Worker, RPC and Policy/model phases. Its [draft full-matrix comparison](../../../benchmarks/libero_pro/FIXED_BASELINE_2026-11-09.md)
+for Worker, RPC and Policy/model phases. Its [draft full-matrix comparison](../../../benchmarks/libero_pro/FIXED_BASELINE_2026-11-10.md)
 was unprofiled; throughput and device-wide utilization alone do not establish a bottleneck. Worker and
 Policy Server Nsight trace findings remain pending.
 

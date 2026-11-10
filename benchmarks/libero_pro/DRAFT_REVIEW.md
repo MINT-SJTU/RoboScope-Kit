@@ -1,11 +1,11 @@
 # LIBERO-Pro throughput draft review
 
-Updated: 2026-11-09, against the revised [issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21).
+Updated: 2026-11-10, against the revised [issue #21](https://github.com/MINT-SJTU/RoboScope-Kit/issues/21).
 Suggested PR title: `perf(libero-pro): reduce policy and rendering overhead`.
 
 This draft implements MessagePack selection, optional camera rendering on demand, and optional native
 batching of queued Policy requests. It also includes diagnostic timing and reproducible ablation tools.
-The selected draft result is **2.9141x formal throughput against the historical fixed configuration**,
+The selected draft result is **3.1006x formal throughput against the historical fixed configuration**,
 with 8,000 episodes per side. Keep the baseline definition and configuration differences visible.
 This is a draft for code review; repeated validation and final delivery remain outstanding.
 
@@ -37,14 +37,14 @@ with no demonstrated full-matrix benefit; all reported full runs leave them disa
   acceptance runner. Keep their associated [MPS](MPS_EXPERIMENT.md) and [batch](BATCH_EXPERIMENT.md) guides.
 - **User documentation:** the benchmark and StarVLA READMEs, package README, evaluation protocol and
   profiling index describe switches, defaults, limits and protocol preservation.
-- **Evidence:** retain only the [fixed-baseline comparison](FIXED_BASELINE_2026-11-09.md) and its
+- **Evidence:** retain only the [fixed-baseline comparison](FIXED_BASELINE_2026-11-10.md) and its
   reviewed JSON/CSV files in [`measurements/`](measurements/README.md): both configurations, suite/task
   scores, timing and 8,000 paired outcomes. The current camera implementation also has a small
   fixed-action real-simulator replay summary. Other experiment reports and results are archived locally
   outside the draft file tree.
 - **Release metadata:** the current branch carries Kit `0.8.0b39` in `pyproject.toml`, `uv.lock`
-  and the changelog. The selected comparison used b37; a later full run exercised the b38 source with
-  the camera patch before it was committed. Final-head measurements remain required before merging.
+  and the changelog. The selected comparison used b38 with the camera patch before it was committed.
+  Final-head measurements remain required before merging.
 
 Keep downloaded models/source snapshots, simulator/virtual environments, raw run directories,
 profiles, observation dumps, videos, archives and host-specific launch/configuration files outside Git.
@@ -56,12 +56,13 @@ An ignore rule does not remove an already tracked file; review the staged file l
 
 ## Selected result and follow-up
 
-The [report](FIXED_BASELINE_2026-11-09.md) compares `ed8c9cf`/Kit b29 at historical fixed K/g with
-`e63260e`/Kit b37 using per-suite diagonal tuning, MessagePack, camera gating, MPS and batch cap two.
-Formal time decreases from 20,853.711 s to 7,156.150 s, giving **2.9141x** episode throughput.
+The [report](FIXED_BASELINE_2026-11-10.md) compares `ed8c9cf`/Kit b29 at historical fixed K/g with
+`dfebac7`/Kit b38 plus the camera patch, using per-suite diagonal tuning, MessagePack, camera gating,
+MPS and batch cap two. Formal time decreases from 20,853.711 s to 6,725.749 s, giving **3.1006x**
+episode throughput.
 This includes configuration changes and must not be described as the isolated benefit of batching.
 
-Both sides have complete unique episode coverage. There are 288 differing success flags and 2,899
+Both sides have complete unique episode coverage. There are 314 differing success flags and 2,960
 step counts; review per-suite/task results and within-side variation before making a correctness claim.
 The report spells out OMP threads, K/g, controller Python, timing boundaries and run-order differences.
 The public issue's best-configuration baseline, four-suite repeats and final-head checks remain
@@ -73,9 +74,8 @@ autotune and were absent from the measured snapshots. Before merge, complete req
 clean-build self-test, and provide final-head measurements and durable raw-log links.
 The b38 refactor removes Policy-owned request timing, groups loaded components and processes action
 transforms/validation across the batch. The LIBERO-Long subclass is updated directly to use the same
-runtime state while retaining its separate decoding rules. The selected measurements remain attributed
-to their original commits. A later b38 run with the camera patch completed all 8,000 episodes; a run of
-the exact merge head remains necessary.
+runtime state while retaining its separate decoding rules. The selected latest measurement remains
+attributed to the b38 source and camera patch; a run of the exact merge head remains necessary.
 
 ## Local review commands
 
