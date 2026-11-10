@@ -1116,14 +1116,47 @@ def _close_active_models() -> None:
                 raise
 
 
+def install_acyclic_check_arm_function():
+    """Store ``check_arm_function`` as the gripper method's name instead of a bound method.
+
+    ``click_bell`` and ``click_alarmclock`` assign ``self.check_arm_function =
+    self.is_left_gripper_close`` (or the right one) in ``load_actors``. A bound method
+    stored on its own instance is a reference cycle, so a finished task of either kind
+    keeps its SAPIEN scene on the GPU until the cyclic garbage collector runs. This
+    descriptor keeps the assignment and every read verbatim: reading returns the same
+    bound gripper method, built on access, so the task object holds no reference to
+    itself. Any other value is stored as assigned.
+    """
+
+    from envs._base_task import Base_Task
+
+    gripper_checks = ("is_left_gripper_close", "is_right_gripper_close")
+
+    def get_check_arm_function(self):
+        try:
+            value = self.__dict__["_roboscope_check_arm_function"]
+        except KeyError:
+            raise AttributeError("check_arm_function") from None
+        return getattr(self, value) if isinstance(value, str) else value
+
+    def set_check_arm_function(self, function):
+        name = getattr(function, "__name__", None)
+        if getattr(function, "__self__", None) is self and name in gripper_checks:
+            self.__dict__["_roboscope_check_arm_function"] = name
+        else:
+            self.__dict__["_roboscope_check_arm_function"] = function
+
+    Base_Task.check_arm_function = property(get_check_arm_function, set_check_arm_function)
+
+
 def _release_task_scene(namespace: dict) -> None:
     """Free the finished task's SAPIEN scene before the next task builds its own.
 
-    ``Base_Task.close_env`` leaves the last scene attached to the task object, and
-    the task object sits in reference cycles, so in an eval session every finished
-    task keeps its scene's GPU memory (about 0.5-1 GB) until the cyclic garbage
-    collector happens to run. Dropping the evaluator's globals and collecting here
-    frees it at a fixed point, keeping each process at its single-scene footprint.
+    ``Base_Task.close_env`` leaves the last scene attached to the task object, so the
+    scene lives as long as the task object. ``install_acyclic_check_arm_function``
+    removes the one reference cycle RoboTwin's tasks create; dropping the evaluator's
+    globals and collecting here also frees any task object a future cycle would keep,
+    so every process stays at its single-scene footprint.
     """
 
     import gc
@@ -1233,6 +1266,9 @@ def main():
     # concurrent evaluators on 4x RTX PRO 5000; the three used cameras' images are unchanged.
     if os.environ.get("ROBOTWIN_SKIP_UNUSED_CAMERAS", "1") == "1":
         install_lean_cameras()
+    # Without the bound-method cycle, finished click_bell/click_alarmclock tasks free their scene as soon as
+    # the evaluator returns instead of when the cyclic garbage collector runs.
+    install_acyclic_check_arm_function()
     # The qf-hoisted loop and GripperOnlyPlanner are qpos-only optimizations.
     # EE evaluation keeps the official take_action and CuroboPlanner even when a
     # seed cache skips the unrelated expert play_once seed validation.
