@@ -224,6 +224,10 @@ The [X-VLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/example
 Policy; the [StarVLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/starvla) is
 stateless.
 
+The [OpenVLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/openvla)
+serves the four fine-tuned LIBERO suites with a pinned Python 3.11 runtime, BF16/FlashAttention2
+inference, and one action per observation through the standard Policy lifecycle.
+
 For RoboDojo, a Policy that needs observations between actions in a chunk can declare
 `step_observation_updates=("robodojo",)` in `PolicyCapabilities` and implement `observe(Observation)`.
 The observation passed to `act()` starts each chunk; `observe()` receives the intermediate steps in order.

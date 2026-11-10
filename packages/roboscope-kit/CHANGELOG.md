@@ -2,6 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b36 - 2026-11-11
+
+- Add an OpenVLA Policy for the four fine-tuned LIBERO suites through the existing SDK lifecycle.
+- Add a self-contained Python 3.11 runtime builder with pinned simulator sources and inference dependencies.
+- Document pinned checkpoints, offline model-code preparation, and standard SDK evaluation commands.
+
 ## 0.8.0b35 - 2026-11-10
 
 - Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task

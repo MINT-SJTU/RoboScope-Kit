@@ -18,6 +18,10 @@ their evaluator workers import the kit in that interpreter. Python 3.10 is outsi
 the modules a LIBERO worker imports are kept importable on it, and the build scripts check that import,
 but CI does not test it. The LIBERO-Pro environment is CPython 3.11.18 (section 11).
 
+The separate OpenVLA runtime uses CPython 3.11.15, LIBERO 0.1.0 (source revision
+`8f1084e3132a39270c3a13ebe37270a43ece2a01`), robosuite 1.4.1, MuJoCo 3.2.3,
+and NumPy 1.24.4; build it with `benchmarks/libero/build-runtime.sh --openvla-kit <install-dir>`.
+
 ## 1. Environment and invocation
 
 The LIBERO simulator is not a dependency of `roboscope-kit`. Build it with

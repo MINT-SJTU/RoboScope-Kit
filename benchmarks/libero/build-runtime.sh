@@ -32,8 +32,12 @@ set -Eeuo pipefail
 # simulator stack; see conda-specs.txt and runtime-requirements.txt.
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+if [[ "${1:-}" == "--openvla-kit" ]]; then
+  shift
+  exec bash "${SCRIPT_DIR}/openvla-kit/build-runtime.sh" "$@"
+fi
 [[ $# -eq 1 ]] || {
-  echo "usage: $0 <install-dir>" >&2
+  echo "usage: $0 [--openvla-kit] <install-dir>" >&2
   exit 2
 }
 install -d -m 0755 "$1"
