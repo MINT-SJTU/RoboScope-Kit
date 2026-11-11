@@ -89,7 +89,7 @@ these timers do not establish verified Nsight hardware coverage.
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |
 
-The [RoboCasa365 epoch2 native correctness reference](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-epoch2-native-reference-20261111) completed on the restored RTX 4090 (driver 595.71.05, Xeon 8470Q with a 20-core quota) on 2026-11-11. Its 50 tasks × five selected episodes use a shared 128-step cap, full RGB and FP32/100-step DDPM. This is supporting correctness evidence, not a new profiling capture or throughput result. It adds no verified Nsight coverage and is never a speed denominator. The current-hardware SDK all-task comparison and expanded fixed-CLI K/G performance validation remain pending; that search is separate from SDK built-in autotune. The historical Findings below retain their original hardware and source attribution.
+The [RoboCasa365 epoch2 native correctness reference](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-epoch2-native-reference-20261111) completed on the restored RTX 4090 (driver 595.71.05, Xeon 8470Q with a 20-core quota) on 2026-11-11. Its 50 tasks × five selected episodes use a shared 128-step cap, full RGB and FP32/100-step DDPM. This is supporting correctness evidence, not a new profiling capture or throughput result. It adds no verified Nsight coverage and is never a speed denominator. The [completed bounded epoch2 comparison](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/expanded-kg-epoch2-20261111.md) adds three full50×5 SDK arms with external phase/resource telemetry: fixed K3/G2 formal gain 2.399× and provisionally selected S5/G1 versus P3/G2 gain 1.557×, below 2×. It is external fixed-CLI screening, not new SDK built-in autotune. It establishes no new Nsight coverage or isolated Policy-GPU timing. The historical Findings retain their original hardware and source attribution.
 
 ## How it works
 
@@ -107,6 +107,7 @@ The [RoboCasa365 epoch2 native correctness reference](https://github.com/QLL-CCD
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
+- [RoboCasa365 bounded epoch2 comparison](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/expanded-kg-epoch2-20261111.md): RTX 4090/driver595, CPU quota20, Kit b36/b37, MPS; full50×5/cap128, common K3/G2 and provisional selected S5/G1 vs P3/G2 (2026-11-11). Formal gain 2.399× fixed and 1.557× selected; recurring step/barrier Worker intervals improve about 4× while Policy RPC wait does not improve. Intervals overlap and are not additive wall-time contributions. Formal GPU busy means are 13.23%/31.06% for the common serial/parallel pair, not saturation or isolated kernel time. Full raw remains verified locally; public full-archive upload returned HTTP408.
 - [RoboCasa365 all-task performance](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/approved250-performance-20261109.md): RTX 4090, Kit b34/b35, MPS, K=2/G=1 (2026-11-09);
   slot concurrency improves capped formal throughput 2.387× and Worker step/barrier intervals 3.902×; Policy RPC wait grows.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
