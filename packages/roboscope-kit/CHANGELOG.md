@@ -12,9 +12,12 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   117-129 ms per observation against 8 ms in a single process, so one camera less shortens every observation.
   On four RTX PRO 5000 GPUs at K48/g8 with the longest tasks first, a 5,000-episode run takes 3,851 s instead of
   4,262 s (3,881 s instead of 4,295 s from launch to exit), steady throughput rises from 511 to 569 steps/s, GPU
-  memory is unchanged (62.4-65.2 GB peak per GPU), and every episode equals the official evaluation. Settings that
-  read every camera (video, the viewer, point clouds, depth, segmentation, observer or third-view data) render all
-  four as before, and `ROBOTWIN_SKIP_UNREAD_CAMERAS=0` turns the change off.
+  memory is unchanged (62.4-65.2 GB peak per GPU), and every episode equals the official evaluation. In the
+  default task order, which a first run without a run-cache entry uses, the same run takes 4,023 s (4,119 s from
+  launch to exit, of which replica loading took 94 s instead of 29 s), again with every episode equal to the
+  official evaluation, which takes 63,068 s on the same GPUs. Settings that read every camera (video, the viewer,
+  point clouds, depth, segmentation, observer or third-view data) render all four as before, and
+  `ROBOTWIN_SKIP_UNREAD_CAMERAS=0` turns the change off.
 
 ## 0.8.0b54 - 2026-11-10
 
