@@ -7,17 +7,20 @@ digital-twin families. The [inventory](TASK_INVENTORY.md) identifies every task 
 upstream source evidence. Protocol settings and observation/action mapping are in
 [PROTOCOL.md](PROTOCOL.md).
 
-**Integration acceptance is partial.** The historical eleven state PPO and four Bridge visual task
-comparisons covered 1,500 paired episodes at 100 episodes per task, before actual native terminal-mask
-recording/checking was fixed. The [review validation](REVIEW_VALIDATION.md) retains those results;
-they do not validate the current head. The [current native review](NATIVE_REVIEW_VALIDATION.md)
-records the failed b50/R11 matrix, b51/R12 progress and strict HORA observation mismatch.
-The [completion phase](COMPLETION_VALIDATION.md) adds real-model
-five-step diagnostics for 27 more task IDs. The [remaining-compatibility phase](REMAINING_COMPATIBILITY.md)
-raises five-step real-policy/native coverage to 51 of 55 task IDs and validates 16 of the original
-18 tabletop RGB profiles. Four task IDs still require their original upstream assets.
-The [historical three-task results](MULTITASK_VALIDATION.md) describe the previous source snapshot.
-Task declarations and simulator checks alone do not establish real-policy acceptance.
+**Integration acceptance remains partial.** Strict original-horizon SDK/native checks passed for
+66 selected profiles in b51/R12 and six additional canonical profiles in b52/R13: cumulative
+coverage is **72 profiles / 51 task IDs**, with nine available model gaps and eight asset-deferred
+profiles. These small cohorts are not 100-episode acceptance or acceptance of all 55 tasks.
+The [current native review](NATIVE_REVIEW_VALIDATION.md) records exact counts, source identities,
+R13 N1/N2 checks, retained R11 failures and the separate HORA repeatability failure. A matching
+cohort does not establish repeatability or task competence.
+
+The historical eleven state PPO and four Bridge visual task comparisons covered 1,500 paired
+episodes before actual native terminal-mask recording/checking was fixed; they remain in the
+[review validation](REVIEW_VALIDATION.md) under their original source identities. Earlier prefix
+results remain in the [completion](COMPLETION_VALIDATION.md) and
+[remaining-compatibility](REMAINING_COMPATIBILITY.md) reports. Original-asset recovery for four task
+IDs is deferred; task declarations or environment checks alone do not establish acceptance.
 
 | Suite | Tasks | Episodes per task | Configuration |
 | --- | ---: | ---: | --- |

@@ -87,8 +87,11 @@ uses raw state and actor means. The [Apple author reference](https://github.com/
 clips its deterministic actions to the normalized controller bounds. Only its
 catalog record sets `action_clip_bounds=[-1,1]`; the SDK Policy and direct native
 evaluator preserve that operation. Other actors retain their original raw actions.
-Independent CPU checks against the released author actors/critics, including
-Apple clipping, are bitwise equal. GPU/native acceptance remains pending.
+Independent CPU checks against the released author actors/critics, including Apple clipping,
+are bitwise equal. R13 strict SDK/native checks passed for these four canonical profiles and the
+two [dual-Panda transfers](DUAL_PANDA_PPO.md), at N1/N2 prefixes and full target horizons. The
+[current review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records the measured
+cohorts and source identities; these small checks do not establish 100-episode acceptance.
 
 Peg/Plug expose the same first 32 fields as LiftPeg: qpos/qvel18, TCP pose7 and
 object pose7. Their records explicitly select this prefix while traces retain
@@ -255,5 +258,6 @@ directories to `compare_native.py`. A diagnostic manifest can set
 All such prefixes are labeled non-formal. See [the completion report](../../benchmarks/maniskill/COMPLETION_VALIDATION.md)
 for the measured commands, coverage and unresolved asset/model gates.
 The [native-reference review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records
-terminal-mask fixes and pending final validation; historical 100-episode-per-task evidence retains
-its original source identity.
+terminal-mask fixes, passing R12/R13 cohorts and retained R11/HORA repeatability failures.
+Cumulative compared coverage is 72 profiles / 51 task IDs across those source snapshots;
+historical 100-episode-per-task evidence retains its original source identity.

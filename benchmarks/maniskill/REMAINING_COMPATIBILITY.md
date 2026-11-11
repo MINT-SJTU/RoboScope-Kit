@@ -11,8 +11,13 @@ result or claim a runtime speedup.
 The [historical R8 results](#historical-b47-validation-r8) use Kit 0.8.0b47 and predate the b48
 terminal-mask recording/comparison fix. Their measurements retain that original source identity;
 they do not validate the updated head. The R6 section retains the preceding phase's evidence.
-The [native-reference review](NATIVE_REVIEW_VALIDATION.md) records the mask fixes, retained R9/R11
-full-horizon failures and the running b51/R12 66-profile, 51-task matrix separately.
+The [native-reference review](NATIVE_REVIEW_VALIDATION.md) records the passing b51/R12 66-profile
+matrix and b52/R13 six-profile extension, retaining the R9/R11 failures and separate HORA
+repeatability failure. Cumulative selected coverage is **72 profiles / 51 task IDs**, with original
+full-horizon SDK/native comparisons. R12 used one episode per profile; R13 additionally checked
+the six new profiles at N2. These source-identified cohorts do not supply 100-episode acceptance
+or acceptance of all 55 tasks. The current inventory has **72 compared, nine unmatched available
+and eight asset-deferred profiles (89 total)**.
 
 **The R6 real-model GPU matrix passed for 51/55 distinct task IDs across 64 selected profiles.**
 All 64 SDK/native pairs, 320 actions and 384 observations per path matched exactly. This adds nine
@@ -760,32 +765,39 @@ the four blocked task IDs and remain a separate profile-coverage gap.
 
 ### Remaining profile acceptance gaps
 
-The b52 candidate selects six additional references with independent CPU checks, pending fresh GPU
-validation: G1 Apple/TransportBox state actors, Peg/Plug LiftPeg-state-prefix transfers and two
-canonical dual-Panda actor compositions. See the [PPO references](../../examples/maniskill/README.md#additional-ppo-state-references)
-and [dual-Panda contract](../../examples/maniskill/DUAL_PANDA_PPO.md). They preserve all existing
-profile observations/controllers and evaluation rules. Of the fifteen historical gaps below, six
-now have candidates awaiting real validation; nine still have no selected compatible model.
+The original 89-profile inventory had 64 R8-selected profiles, 17 unmatched available profiles
+and eight asset-blocked profiles. Canonical Humanoid Walk/Run added two compared profiles in
+b51/R12; all 66 selected profiles then passed strict full-horizon comparison: 19,240 action pairs
+and 19,306 observation pairs, zero differences/recoveries. This left **15 historical model gaps**.
+The five Humanoid profiles account for 5,000 action pairs / 5,005 observation pairs; the original
+Root conversion and the 64-input canonical CPU feature equivalence retain their separate evidence.
 
-The [manifest](benchmark-manifest.json) declares **89 profiles: 64 selected by the R8 model matrix,
-eight asset-blocked profiles and 17 initially unmatched asset-available profiles**. The b51 candidate
-adds exact state-only Humanoid Walk/Run conversions: 64 source inputs match bitwise in CPU checks,
-and their N2 five-tick GPU/native prefixes and R12 full-horizon comparisons pass. The five-profile
-Humanoid family covers three Root profiles and these two canonical profiles, with 5,000 action pairs
-and 5,005 observation pairs at 1,000 ticks per profile. At that stage, **15 available profiles lacked
-a compatible selected Policy**. The table retains that pre-b52 diagnosis; six candidates are now
-pending as described above. The environment-only sweep does not supply missing model comparisons.
-The remaining families in the 66-profile / 51-task R12 matrix are running.
+The following six existing canonical profiles passed b52/R13 N1/N2 prefixes and full horizons,
+leaving **nine unmatched available profiles**. No new task ID or replacement profile is counted.
+The external `b52-frozen-protocol-proof.json` verifies all 89 existing definitions and existing
+suite memberships unchanged; only two suites were added.
 
-| Pre-b52 unmatched profiles | Count | Original model-contract gap |
+| R13 extension | Profiles | Reference and scope |
 | --- | ---: | --- |
-| `lift_peg_upright_state` | 1 | Canonical EE position control is 4D; the official PPO requires EE pose control, 7D. |
-| `two_robot_pickcube_state`, `two_robot_stackcube_state` | 2 | Canonical EE position control is 8D; the official PPO requires joint delta control, 16D. |
+| G1 Apple / TransportBox state | 2 | Released author state PPO actors, preserving original FP32 tensors and Apple's source action clipping; target-runtime transfer limits remain documented. |
+| PegInsertionSide / PlugCharger state | 2 | Real qpos/qvel, TCP and object prefix32 into the unchanged LiftPeg actor; complete target observations remain in traces. Grasp/lift-prior transfers, not insertion experts. |
+| Canonical dual-Panda Pick / Stack state | 2 | Unchanged 4D PushCube/StackCube actors, real object/goal state and pinned static base calibration; native 8D EE-position control remains unchanged. Coordination is untrained. |
+
+The R13 full N1 cohort covered these six plus eleven official PPO regression profiles: 17 profiles
+/ 15 task IDs, 1,580 action pairs / 1,597 observation pairs. Full N2 covered the new six with two
+episodes each: 1,400 / 1,412 pairs. Both exhaustive audits found zero action, observation or
+structural differences and zero worker failures/OOMs. See the [current review](NATIVE_REVIEW_VALIDATION.md),
+[PPO references](../../examples/maniskill/README.md#additional-ppo-state-references) and
+[dual-Panda contract](../../examples/maniskill/DUAL_PANDA_PPO.md) for source identities and limits.
+These small cohorts do not establish success rates or 100-episode acceptance.
+
+| Current unmatched profiles | Count | Remaining model-contract gap |
+| --- | ---: | --- |
+| `lift_peg_upright_state` | 1 | Canonical EE position control is 4D; the official LiftPeg actor requires EE pose control, 7D. The canonical state has no position goal for the selected 4D goal-conditioned actors. |
 | `pull_cube_tool_state` | 1 | Canonical EE position control is 4D; NEWT requires EE pose control, 7D. |
-| `peg_insertion_side_state`, `pick_clutter_ycb_state`, `plug_charger_state`, `fmb_assembly1_easy_state` | 4 | The selected Octo model requires RGB; these profiles provide state observations. No compatible state model is selected. |
-| `ms_humanoid_stand_state` | 1 | The egocentric state omits the world-frame quantities required by the selected Stand checkpoint. Canonical Walk/Run have exact b51 state reconstructions and passed R12 full-horizon GPU/native comparisons. |
-| `unitree_{h1,g1}_stand_state`, `unitree_go2_reach_state`, `anymal_c_spin_state` | 4 | H1/G1 omit required root orientation/angular velocity. Go2 and Anymal already contain world velocities but omit root pose/orientation needed by the selected conversions; joint identities alone are static metadata. |
-| `unitree_g1_{place_apple_in_bowl,transport_box}_state` | 2 | The G1 visual transfer requires RGB and root/joint metadata absent from these state profiles. |
+| `pick_clutter_ycb_state`, `fmb_assembly1_easy_state` | 2 | Selected Octo requires RGB; no compatible state model is selected. |
+| `ms_humanoid_stand_state` | 1 | Egocentric state omits world-frame quantities required by the selected Stand checkpoint. |
+| `unitree_{h1,g1}_stand_state`, `unitree_go2_reach_state`, `anymal_c_spin_state` | 4 | H1/G1 omit required root orientation/angular velocity. Go2/Anymal omit root pose/orientation required by the selected conversions; static joint identities do not supply it. |
 
 The eight asset-blocked profiles are `assembling_kits_{state,rgb}`, `turn_faucet_{state,rgb}`,
 `open_cabinet_{door,drawer}_state` and `open_cabinet_{door,drawer}_mshab_depth`. Selected Panda RGB

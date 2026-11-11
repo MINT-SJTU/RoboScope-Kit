@@ -3,8 +3,10 @@
 `dual_panda_policy.py:ManiSkillDualPandaPolicy` composes unchanged, published official PPO actors
 for the existing `two_robot_pickcube_state` and `two_robot_stackcube_state` profiles. It requests
 only `state.proprioception`, retains their native 8D `pd_ee_delta_pos` controller, and returns one
-action per tick. **GPU/native comparisons are pending.** These are cross-task transfers, not
-task-trained dual-arm experts or evidence of task competence.
+action per tick. **R13 strict N1/N2 SDK/native comparisons passed at the original 100-tick
+horizons.** These are cross-task transfers, not task-trained dual-arm experts. The
+[current review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records cohort counts,
+source identities and remaining acceptance gates.
 
 For TwoRobotPickCube, each arm uses the PushCube35 actor with its own measured joints/TCP, the
 actual cube and the actual task goal. This is a weak planar-pushing-to-lifting/handover transfer;
@@ -99,14 +101,17 @@ Kit Worker/RPC and constructs the original Gym tasks while loading this same Pol
   --trajectory-dir /path/to/evidence/dual-panda-native-traces
 ```
 
-Independent CPU checks use SAPIEN Pose composition and the pinned author actor with independently
-generated unit-quaternion poses and unconstrained joint arrays. These are not kinematically
-consistent simulator states. The checks cover projection arithmetic, original tensor/actor
-operations and episode isolation; these inputs are not simulator observations or GPU acceptance.
-On 2026-11-11, 128 synthetic inputs per task passed: maximum input error against SAPIEN was
-`1.49e-7`; action-frame error was below `8.95e-8`. Author actor/critic and mixed-task action routing
-were bitwise equal, all original tensors stayed unchanged, and CUDA remained uninitialized.
-The `2e-6` geometry-oracle comparison bound is confined to this CPU diagnostic; no benchmark
-tolerance changed. The external `cpu-proof.json` retains source/tensor hashes and lifecycle checks.
-Actual task assets, full trajectories, strict masks/outcomes and N1/N2 SDK/native comparisons
-remain required. Keep checkpoints, CPU proofs and raw GPU evidence outside Git.
+The external `cpu-proof.json` passed with CUDA uninitialized. For 128 synthetic inputs per task,
+the independent SAPIEN Pose oracle's maximum projected-input error was `1.4901161193847656e-7`
+for both tasks; action-frame error was below `8.95e-8`. The `2e-6` bound applies only to this CPU
+geometry cross-check; no benchmark tolerance changed. All 17 original tensors per actor loaded
+strictly; actor/critic outputs on identical inputs and mixed-task action routing were bitwise equal
+to author code. Metadata, shape/nonfinite rejection and episode cleanup checks passed. Independently
+generated unit poses and unconstrained joint arrays are not kinematically consistent simulator states.
+
+R13 then passed N1/N2 prefixes and full SDK/native comparisons: N1 had two 100-tick episodes,
+200 action pairs / 202 observation pairs; N2 had four episodes, 400 / 404 pairs. All actions,
+observations, actual masks and outcomes matched exactly, with no worker failure/OOM. Both cohorts
+had zero task successes (0/2 and 0/4), so integration equality does not imply useful coordination
+or task competence. These samples do not establish success rates or 100-episode acceptance.
+Checkpoints, CPU receipts and raw trajectories remain outside Git.
