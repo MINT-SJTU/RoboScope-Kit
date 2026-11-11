@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b55 - 2026-11-11
+
+- Include vector width in opt-in Worker recycling so ManiSkill tail batches start in a fresh simulator process while retaining the Policy replica.
+- Isolate native Policy reference width segments while preserving the frozen seed indices, episode identities and complete per-profile records.
+
 ## 0.8.0b54 - 2026-11-11
 
 - Keep Go2 transfer action normalization on the same Torch device in the SDK Policy and native evaluator, avoiding mixed NumPy/CUDA FP32 rounding drift without relaxing strict comparisons.

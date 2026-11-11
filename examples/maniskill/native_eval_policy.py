@@ -146,66 +146,97 @@ def episode_metadata(environment, profile: dict, suite: str, index: int, seed: i
     return metadata
 
 
+def episode_segments(
+    profile: dict, episodes: int | None, num_envs: int, episode_start: int = 0,
+) -> tuple[tuple[int, int, int], ...]:
+    """Keep full-width groups together and isolate a smaller final group."""
+    stop = len(profile["seeds"]) if episodes is None else episode_start + episodes
+    if num_envs < 1 or not 0 <= episode_start < stop <= len(profile["seeds"]):
+        raise ValueError("Requested episode interval exceeds the frozen seeds")
+    count = stop - episode_start
+    full = count // num_envs * num_envs
+    segments = [(episode_start, full, num_envs)] if full else []
+    if count > full:
+        segments.append((episode_start + full, count - full, count - full))
+    return tuple(segments)
+
+
 def run_task_processes(args: argparse.Namespace, profiles: tuple[dict, ...]) -> None:
-    """Match the upstream one-task process lifetime for a multi-task reference."""
+    """Isolate native profile and vector-width lifetimes, preserving episode identities."""
     root = args.output.with_suffix(".tasks")
     root.mkdir(parents=True, exist_ok=False)
-    children, provenance = [], []
+    children, provenance, tasks = [], [], []
     for profile in profiles:
-        destination = root / profile["profile_id"]
-        destination.mkdir()
-        output = destination / "result.json"
-        log = destination / "native.log"
-        # Resolving the Python symlink would bypass its virtual environment.
-        command = [
-            sys.executable, str(Path(__file__).resolve()),
-            "--checkpoint", str(args.checkpoint.resolve()),
-            "--policy-python", str(args.policy_python.absolute()),
-            "--policy-module", args.policy_module, "--policy-class", args.policy_class,
-            "--benchmark-manifest", str(args.benchmark_manifest.resolve()),
-            "--suite", args.suite, "--profile-id", profile["profile_id"],
-            "--output", str(output.resolve()), "--num-envs", str(args.num_envs),
-        ]
-        if args.runtime_home is not None:
-            command.extend(["--runtime-home", str(args.runtime_home.resolve())])
-        if args.episodes is not None:
-            command.extend(["--episodes", str(args.episodes)])
-        if args.trajectory_dir is not None:
-            command.extend(["--trajectory-dir", str((args.trajectory_dir / profile["profile_id"]).resolve())])
-        (destination / "command.json").write_text(json.dumps(command, indent=2) + "\n", encoding="utf-8")
-        started = time.perf_counter()
-        with log.open("w", encoding="utf-8") as stream:
-            process = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT, check=False)
-        process_wall_s = time.perf_counter() - started
-        if process.returncode:
-            raise RuntimeError(f"Native task {profile['profile_id']} failed; see {log}")
-        result_bytes = output.read_bytes()
-        child = json.loads(result_bytes)
-        seeds = profile["seeds"][:args.episodes]
-        limit = int(profile.get("diagnostic_step_limit", profile["max_episode_steps"]))
-        expected = [
-            (profile["profile_id"], profile["task_id"], index, seed, index % args.num_envs, limit)
-            for index, seed in enumerate(seeds)
-        ]
-        actual = [
-            (row["profile_id"], row["task_id"], row["episode"], row["seed"],
-             row["vector_lane"], row["steps"])
-            for row in child["records"]
-        ]
-        if (actual != expected or child["episodes"] != len(seeds)
-                or child["actual_simulation_steps"] != len(seeds) * limit
-                or child["suite"] != args.suite or child["num_envs"] != args.num_envs
-                or [(task["profile_id"], task["task_id"], task["episodes"], task["horizon"])
-                    for task in child["tasks"]] != [
-                        (profile["profile_id"], profile["task_id"], len(seeds), profile["max_episode_steps"])
-                    ]):
-            raise RuntimeError(f"Native task {profile['profile_id']} has incomplete or unexpected records")
-        children.append(child)
-        provenance.append({
-            "profile_id": profile["profile_id"], "command": command, "log": str(log),
-            "result": str(output), "result_sha256": hashlib.sha256(result_bytes).hexdigest(),
-            "process_wall_s": process_wall_s,
-        })
+        segments = episode_segments(profile, args.episodes, args.num_envs, args.episode_start)
+        profile_tasks = []
+        for episode_start, count, width in segments:
+            segment_name = f"episodes-{episode_start:06d}-{episode_start + count:06d}-envs-{width}"
+            relative = Path(profile["profile_id"])
+            if len(segments) > 1:
+                relative /= segment_name
+            destination = root / relative
+            destination.mkdir(parents=True)
+            output = destination / "result.json"
+            log = destination / "native.log"
+            # Resolving the Python symlink would bypass its virtual environment.
+            command = [
+                sys.executable, str(Path(__file__).resolve()),
+                "--checkpoint", str(args.checkpoint.resolve()),
+                "--policy-python", str(args.policy_python.absolute()),
+                "--policy-module", args.policy_module, "--policy-class", args.policy_class,
+                "--benchmark-manifest", str(args.benchmark_manifest.resolve()),
+                "--suite", args.suite, "--profile-id", profile["profile_id"],
+                "--output", str(output.resolve()), "--num-envs", str(width),
+                "--episodes", str(count), "--episode-start", str(episode_start),
+            ]
+            if args.runtime_home is not None:
+                command.extend(["--runtime-home", str(args.runtime_home.resolve())])
+            if args.trajectory_dir is not None:
+                command.extend(["--trajectory-dir", str((args.trajectory_dir / relative).resolve())])
+            (destination / "command.json").write_text(json.dumps(command, indent=2) + "\n", encoding="utf-8")
+            started = time.perf_counter()
+            with log.open("w", encoding="utf-8") as stream:
+                process = subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT, check=False)
+            process_wall_s = time.perf_counter() - started
+            if process.returncode:
+                raise RuntimeError(f"Native task {profile['profile_id']} segment failed; see {log}")
+            result_bytes = output.read_bytes()
+            child = json.loads(result_bytes)
+            seeds = profile["seeds"][episode_start:episode_start + count]
+            limit = int(profile.get("diagnostic_step_limit", profile["max_episode_steps"]))
+            expected = [
+                (profile["profile_id"], profile["task_id"], episode_start + index,
+                 seed, index % width, limit)
+                for index, seed in enumerate(seeds)
+            ]
+            actual = [
+                (row["profile_id"], row["task_id"], row["episode"], row["seed"],
+                 row["vector_lane"], row["steps"])
+                for row in child["records"]
+            ]
+            if (actual != expected or child["episodes"] != count
+                    or child["actual_simulation_steps"] != count * limit
+                    or child["suite"] != args.suite or child["num_envs"] != width
+                    or [(task["profile_id"], task["task_id"], task["episodes"], task["horizon"])
+                        for task in child["tasks"]] != [
+                            (profile["profile_id"], profile["task_id"], count, profile["max_episode_steps"])
+                        ]):
+                raise RuntimeError(f"Native task {profile['profile_id']} segment has unexpected records")
+            children.append(child)
+            profile_tasks.extend(child["tasks"])
+            provenance.append({
+                "profile_id": profile["profile_id"], "episode_start": episode_start,
+                "episodes": count, "vector_envs": width, "command": command, "log": str(log),
+                "result": str(output), "result_sha256": hashlib.sha256(result_bytes).hexdigest(),
+                "process_wall_s": process_wall_s,
+            })
+        task = dict(profile_tasks[0])
+        task["episodes"] = sum(row["episodes"] for row in profile_tasks)
+        task["successes"] = (None if profile["success_metric"] == "return"
+                             else sum(row["successes"] for row in profile_tasks))
+        task["success_rate"] = (None if task["successes"] is None
+                                else task["successes"] / task["episodes"])
+        tasks.append(task)
 
     records = [record for child in children for record in child["records"]]
     timing = {
@@ -214,18 +245,22 @@ def run_task_processes(args: argparse.Namespace, profiles: tuple[dict, ...]) -> 
         if key != "end_to_end_s" and type(value) in (int, float)
     }
     timing.update({
-        "scope": "Sequential child phase sums; end_to_end_s is the complete parent command",
+        "scope": ("Sequential profile/width-segment child phase sums; "
+                  "end_to_end_s is the complete parent command"),
         "end_to_end_s": time.perf_counter() - PROCESS_STARTED,
     })
     result = {
-        **children[0], "tasks": [task for child in children for task in child["tasks"]],
+        **children[0], "tasks": tasks, "num_envs": args.num_envs,
+        "episode_start": args.episode_start,
         "records": records, "episodes": len(records),
         "actual_simulation_steps": sum(record["steps"] for record in records),
         "evaluation_kind": "integration_smoke"
         if any("diagnostic_step_limit" in profile for profile in profiles) else "full_horizon",
-        "timing": timing, "process_isolation": "one_task_per_process", "task_references": provenance,
+        "timing": timing, "process_isolation": "one_profile_and_vector_width_segment_per_process",
+        "task_references": provenance,
         "comparison_note": (
-            "Each task uses a separate native process, matching the upstream evaluator lifetime. "
+            "Each profile and vector-width segment uses a separate native process. Full-width "
+            "groups stay together; a smaller final group retains its original episode indices and seeds. "
             "Formal timing sums child evaluation intervals. Parent end-to-end time includes process "
             "startup and repeated model loading. Use the per-task records for correctness."
         ),
@@ -246,8 +281,10 @@ def main() -> None:
     parser.add_argument("--trajectory-dir", type=Path)
     parser.add_argument("--runtime-home", type=Path)
     parser.add_argument("--profile-id", help=argparse.SUPPRESS)
+    parser.add_argument("--episode-start", type=int, default=0, help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if args.num_envs < 1 or (args.episodes is not None and args.episodes < 1):
+    if (args.num_envs < 1 or args.episode_start < 0
+            or (args.episodes is not None and args.episodes < 1)):
         parser.error("Episode and environment counts must be positive")
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -264,9 +301,8 @@ def main() -> None:
         profiles = tuple(profile for profile in profiles if profile["profile_id"] == args.profile_id)
         if len(profiles) != 1:
             parser.error("--profile-id must identify exactly one profile in the selected suite")
-    if args.episodes is not None and any(args.episodes > len(p["seeds"]) for p in profiles):
-        raise ValueError("Requested episodes exceed the frozen seeds")
-    if len(profiles) > 1:
+    segments = [episode_segments(p, args.episodes, args.num_envs, args.episode_start) for p in profiles]
+    if len(profiles) > 1 or len(segments[0]) > 1:
         run_task_processes(args, profiles)
         return
     os.environ["HOME"] = str(args.runtime_home or manifest.runtime_path("home"))
@@ -305,7 +341,8 @@ def main() -> None:
             evaluation_started = time.perf_counter()
             for profile in profiles:
                 before = len(records)
-                seeds = profile["seeds"][: args.episodes]
+                stop = None if args.episodes is None else args.episode_start + args.episodes
+                seeds = profile["seeds"][args.episode_start:stop]
                 horizon = int(profile["max_episode_steps"])
                 limit = int(profile.get("diagnostic_step_limit", horizon))
                 diagnostic = "diagnostic_step_limit" in profile
@@ -313,7 +350,7 @@ def main() -> None:
                     group = seeds[start : start + args.num_envs]
                     count = len(group)
                     ids = [
-                        f"{profile['profile_id']}-episode-{start + lane:06d}-seed-{seed}"
+                        f"{profile['profile_id']}-episode-{args.episode_start + start + lane:06d}-seed-{seed}"
                         for lane, seed in enumerate(group)
                     ]
                     phase = time.perf_counter()
@@ -339,7 +376,8 @@ def main() -> None:
                                         "episode_id": ids[lane],
                                         "task_id": profile["task_id"],
                                         "metadata": episode_metadata(
-                                            env, profile, args.suite, start + lane, seed, lane
+                                            env, profile, args.suite, args.episode_start + start + lane,
+                                            seed, lane,
                                         ),
                                     }
                                     for lane, seed in enumerate(group)
@@ -405,7 +443,7 @@ def main() -> None:
                                 {
                                     "profile_id": profile["profile_id"],
                                     "task_id": profile["task_id"],
-                                    "episode": start + lane,
+                                    "episode": args.episode_start + start + lane,
                                     "seed": seed,
                                     "vector_lane": lane,
                                     "steps": limit,
@@ -489,6 +527,7 @@ def main() -> None:
         "protocol": protocol["protocol_id"],
         "suite": args.suite,
         "num_envs": args.num_envs,
+        "episode_start": args.episode_start,
         "episodes": len(records),
         "actual_simulation_steps": sum(row["steps"] for row in records),
         "evaluation_kind": "integration_smoke"

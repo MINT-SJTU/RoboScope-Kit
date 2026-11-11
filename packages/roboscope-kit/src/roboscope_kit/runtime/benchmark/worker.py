@@ -45,6 +45,7 @@ class WorkerLoop:
         self._write_state("ready")
         self._wait_for_start()
         preferred_group: str | None = None
+        preferred_width: int | None = None
         completed_records = 0
         while True:
             claimed = self.queue.claim(self.worker_id, preferred_group)
@@ -54,7 +55,8 @@ class WorkerLoop:
                 time.sleep(self.poll_interval_s)
                 continue
             if (self.recycle_on_group_change and preferred_group is not None
-                    and claimed.item.group_id != preferred_group):
+                    and (claimed.item.group_id != preferred_group
+                         or claimed.item.expected_results != preferred_width)):
                 # The orchestrator requeues this unevaluated claim when recycling.
                 self._write_state("recycling", completed_records=completed_records)
                 return
@@ -65,6 +67,7 @@ class WorkerLoop:
             self.queue.complete(claimed, result)
             completed_records += len(result.records)
             preferred_group = claimed.item.group_id
+            preferred_width = claimed.item.expected_results
             self._write_state("idle", completed_item_id=claimed.item.item_id)
             if self.recycle_after_records is not None and completed_records >= self.recycle_after_records:
                 self._write_state("recycling", completed_records=completed_records)
