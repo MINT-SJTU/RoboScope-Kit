@@ -258,3 +258,11 @@ comparisons under `full50x50-v36-original-rendering/first-batch-comparisons/`.
 The cancelled full run records its cancellation separately and is not merged into
 startup coverage. That collection was not resumed; later reduced runs have
 separate source and evidence records.
+
+## Native reference on restored hardware — 2026-11-11
+
+A fresh native reference on the restored GPU/driver/20-core hardware covers all **50 target tasks × five selected episodes**, using the same **128-control-step cap**, full RGB, FP32, 100 DDPM steps, original MSAA4, constructor seeds and pretrain scenes. It completes **250 unique selected records, 32,000 steps and three successes**. Including five retained unselected records from one failed cleanup audit, actual execution is **255 episodes and 32,640 steps**; an explicitly reviewed infrastructure retry preserves the original failure. This is a capped correctness reference, not official-horizon accuracy or a speed denominator.
+
+[Per-task results, exact source attribution and recovery accounting](native50x5-epoch2-20261111.md) · [public raw archive, manifest and receipt](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-epoch2-native-reference-20261111). All three release assets were downloaded and the full hash/credential/native-record verification passed again. The native identity retains submitted provenance `b05eead` and executable correspondence `43df866`; release anchor `c353d658` is not relabeled as a measured tree.
+
+The new-hardware SDK/native all-50 comparison and selected/common-K/G full performance validation remain pending in #107. The historical approved250 native/SDK results retain their original hardware, revisions and scope. This Markdown-only addition does not claim new runtime changes, exact-head green CI or complete expanded acceptance; both PRs remain Draft with SDK compatibility `action_required`.
