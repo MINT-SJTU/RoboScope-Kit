@@ -12,12 +12,12 @@ The [historical R8 results](#historical-b47-validation-r8) use Kit 0.8.0b47 and 
 terminal-mask recording/comparison fix. Their measurements retain that original source identity;
 they do not validate the updated head. The R6 section retains the preceding phase's evidence.
 The [native-reference review](NATIVE_REVIEW_VALIDATION.md) records the passing b51/R12 66-profile
-matrix, b52/R13 six-profile extension and b55/R16 two-profile extension, retaining the R9/R11,
+matrix, b52/R13 six-profile extension, b55/R16 two-profile extension and b56/R17 LiftPeg4 extension, retaining the R9/R11,
 R14/R15 failures and separate HORA repeatability failure. Cumulative selected coverage is
-**74 profiles / 51 task IDs**, with original full-horizon SDK/native comparisons. R12 used one
+**75 profiles / 51 task IDs**, with original full-horizon SDK/native comparisons. R12 used one
 episode per profile; R13/R16 additionally checked their new profiles at N2, including three-episode
 five-tick prefixes with a width-two-to-one tail. These source-identified cohorts do not supply
-100-episode acceptance or acceptance of all 55 tasks. The current inventory has **74 compared, seven unmatched available
+100-episode acceptance or acceptance of all 55 tasks. The current inventory has **75 compared, six unmatched available
 and eight asset-deferred profiles (89 total)**.
 
 **The R6 real-model GPU matrix passed for 51/55 distinct task IDs across 64 selected profiles.**
@@ -810,9 +810,18 @@ while preserving identities, seeds, observations and rules. The latter is a corr
 with no runtime speed gain claimed. Source identities, original CPU receipt reuse, actual gates
 and raw evidence links are recorded in the [current review](NATIVE_REVIEW_VALIDATION.md).
 
+R17/b56 validates the existing `lift_peg_upright_state` using the author's complete learned
+LiftCube actor prior: the ordinary N1 Quick Test executes 50 ticks; five N2 five-tick prefixes
+use groups 2,2,1. All 75 action / 81 observation pairs and records match at zero tolerance,
+with zero Worker failures/OOMs and zero successes. The production CPU actor/source proof,
+fresh 51-second build/self-test and 270 existing pytest cases pass. This closes one model-profile
+gap, not a new TaskID. The original `upstream_tasks_v1` already selects the 7D LiftPeg PPO
+profile, so its validated count remains **45/55 profiles**, with six original model gaps and
+four original-asset tasks deferred. See [the LiftCube contract](../../examples/maniskill/LIFTCUBE.md)
+and [current evidence](NATIVE_REVIEW_VALIDATION.md#r17-canonical-liftpeg4-extension).
+
 | Current unmatched profiles | Count | Remaining model-contract gap |
 | --- | ---: | --- |
-| `lift_peg_upright_state` | 1 | b56 adds an author-released LiftCube actor-mean candidate with active learned grip and an exact real-state projection. CPU actor/source checks passed; native frame saturation and fresh GPU/SDK comparison remain separate gates. See [the contract](../../examples/maniskill/LIFTCUBE.md). |
 | `pick_clutter_ycb_state`, `fmb_assembly1_easy_state` | 2 | Selected Octo requires RGB; no compatible state model is selected. |
 | `ms_humanoid_stand_state` | 1 | Egocentric state omits world-frame quantities required by the selected Stand checkpoint. |
 | `unitree_{h1,g1}_stand_state`, `anymal_c_spin_state` | 3 | H1/G1 omit required root orientation/angular velocity; Anymal Spin omits root pose/orientation required by the selected conversion. Static joint identities do not supply them. |
@@ -826,6 +835,17 @@ are disjoint for counting, but asset and model blockers can overlap within a pro
 Closing these gaps requires compatible models or separately validated Policy adaptations. Switching
 to a sibling RGB/root-state profile or changing its controller validates a different profile; it
 does not close the canonical profile's acceptance gap.
+
+These six are unresolved input/model contracts, not six demonstrated download failures. Inspected
+locomotion checkpoints need root information absent from their canonical state. The concrete
+encoder-only G1 lead [Blind Dexterity](https://aditya.bhatts.org/BlindDexterity/) has no released
+actor/config at this review date, and 37-action compatibility is still unproven. Other inspected
+choices being incompatible does not prove that every public model is unavailable. FMB's pinned
+upstream function builds object/TCP extras but returns an empty dict; changing that observation
+contract would require an explicit simulator patch and regenerated native/SDK baselines. No
+constant root/IMU, fabricated image/object state, truncated actor or untrained action padding is
+used to convert an unresolved profile into a passed one. Asset/model gap expansion is deferred;
+the independent [HORA native repeatability limit](HORA_NATIVE_REPEATABILITY.md) remains recorded.
 
 A review identified that the full-horizon comparator did not validate native terminal masks.
 Historical PPO native records did not persist the actual `terminated` and `truncated` fields.

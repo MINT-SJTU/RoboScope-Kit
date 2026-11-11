@@ -1,14 +1,15 @@
 # ManiSkill native-reference review validation
 
-**2026-11-11: selected R12/b51, R13/b52 and R16/b55 correctness cohorts PASS; acceptance remains partial.**
-Cumulative coverage is **74 profiles / 51 task IDs**: 66 compared in R12, six additional canonical
-profiles in R13 and two in R16. This is not a fresh b55 rerun of all 74 profiles, acceptance of all 55 tasks, or
+**2026-11-11: selected R12/b51, R13/b52, R16/b55 and R17/b56 correctness cohorts PASS; acceptance remains partial.**
+Cumulative coverage is **75 profiles / 51 task IDs**: 66 compared in R12, six additional canonical
+profiles in R13, two in R16 and canonical LiftPeg4 in R17. This is not a fresh b56 rerun of all 75 profiles, acceptance of all 55 tasks, or
 100-episode-per-task acceptance. [Issue 25](https://github.com/MINT-SJTU/RoboScope-Kit/issues/25)
 and [PR 99](https://github.com/MINT-SJTU/RoboScope-Kit/pull/99) remain open.
 
 R12 binds b51 `source-r12` at code head `42e6b24bbde9e26bfe714e92786d2891bfc37d4b`;
 R13 binds b52 `source-r13` at `db473261e41c4663a7350bbb79816789fc632f48`.
 R16 binds b55 `source-r16` at `c660435b235cd9d3db303fcc3c14ee6beba1ebe1`.
+R17 binds b56 `source-r17` at `575b49c03c7566f112bd1b1a1df4f1b5a15a4668`.
 The final documentation commit follows measurement without changing the measured runtime or Policy
 code. The candidate incorporates main `329ef98`, preserving its RLBench registration; this ManiSkill
 integration has not been merged.
@@ -16,17 +17,75 @@ integration has not been merged.
 ## Scope and strict comparison
 
 The user deferred original-asset recovery for AssemblingKits, TurnFaucet, OpenCabinetDoor and
-OpenCabinetDrawer. The inventory is **89 profiles = 74 compared + seven unmatched available + eight
+OpenCabinetDrawer. The inventory is **89 profiles = 75 compared + six unmatched available + eight
 asset-deferred**. Active verification covers the other 51 task IDs and their claimed profiles.
 Selected siblings do not validate unmatched observation/controller contracts; see the
 [current gaps](REMAINING_COMPATIBILITY.md#remaining-profile-acceptance-gaps).
 
-The 74 configurations comprise 45 profiles selected by the named per-task inventory,
-19 additional RGB profiles, seven root-state profiles and three controller alternatives.
+The 75 configurations comprise 45 profiles selected by the named per-task inventory,
+19 additional RGB profiles, seven root-state profiles and four controller alternatives.
 They cover 51 distinct tasks. Six task IDs currently have comparison evidence only for an
 alternative profile; that does not validate their original state configuration. Optional model
 compatibility variants are retained separately from task coverage and the regression matrix for
-each change. The performance workload selects only `rollball_state`; no 74-profile rerun is implied.
+each change. The original `upstream_tasks_v1` still has 45 of 55 selected profiles validated:
+six model-contract gaps and four asset-deferred profiles remain. LiftPeg4 is an existing extra
+tabletop controller profile; the original per-task inventory already selects its validated 7D PPO
+sibling. The performance workload selects only `rollball_state`; no full-profile rerun is implied.
+
+## R17 canonical LiftPeg4 extension
+
+The [LiftCube actor prior](../../examples/maniskill/LIFTCUBE.md) uses the author's complete
+four-output trained policy, explicit `mpc=False, eval_mode=True`, real native state and the
+unchanged 50-tick LiftPeg4 profile. It does not reproduce the author's default stochastic MPC
+evaluation or claim peg-uprighting competence. Both SDK and native samples have zero successes.
+
+| R17 cohort | Seeds / vector groups | Paired samples | Action / observation pairs | SDK command / eval s | Native command / eval s |
+| --- | --- | ---: | --- | --- | --- |
+| Ordinary Quick Test, full 50 ticks | 0 / 1 | 1 | 50 / 51 | 10.170 / 6.413 | 9.547 / 5.126 |
+| Five-tick diagnostic prefix, original horizon retained | 0-4 / 2,2,1 | 5 | 25 / 30 | 16.163 / 12.441 | 18.690 / 9.449 |
+
+All 75 actions, 81 observations, initial hashes, returns, success fields, episode identities,
+lanes and actual boolean terminal masks match at zero tolerance. There are six paired samples
+across the cohorts, with five distinct identities; seed 0 appears in both. The full episode
+normally truncates at 50; the five short prefixes retain false/false masks. There are no
+missing/duplicate records, Worker failures or OOMs. The N2 run retains its process between the
+two full-width groups and performs one planned recycle before the smaller tail.
+
+Native evaluation is the GPU-vectorized Gym reference with the same declared actor prior.
+Its tail cohort sums sequential child evaluation intervals; the parent command includes the
+extra interpreter/model startup. SDK and native clocks have different boundaries. Tracing is
+enabled for these correctness checks; the small-sample throughput below is diagnostic.
+
+| Path / cohort | Episodes or prefixes/h | Actual steps/s | GPU busy mean % | VRAM mean / peak GiB | Accounted CPU cores |
+| --- | ---: | ---: | ---: | --- | ---: |
+| SDK full N1 | 561.394 | 7.797 | 5.683 | 1.928 / 3.942 | 0.952 |
+| Native full N1 | 702.366 | 9.755 | 9.128 | 1.914 / 3.942 | 0.957 |
+| SDK N2 prefix | 1446.853 | 2.010 | 2.369 | 1.987 / 5.072 | 0.984 |
+| Native N2 prefix | 1905.009 | 2.646 | 2.240 | 1.877 / 5.072 | 0.954 |
+
+The raw summary retains model-loading/preparation, creation/reset/rollout/cleanup, RPC and
+resource clocks. RPC includes inference, transport and validation. Isolated inference GPU,
+render/Vulkan duration, queue-only wait and SM/Tensor/RT throughput remain N/A. NVML busy is
+an activity indicator. There are too few full episodes to estimate success rates, stable
+throughput or an independent episode-latency distribution. No runtime speedup is claimed.
+
+The source-to-root frame conversion saturates 43 XYZ components in the full episode and
+4/3/4/3/3 in the prefixes, identically on both paths. Native controller clipping is retained;
+this is a measured transfer limitation, not exact source-controller equivalence. The fourth
+trained gripper output and the two-tick source action hold remain intact.
+
+The fresh simulator build and self-test pass in 51 s. All 337 regular source files and 94
+installed SDK files match their snapshot; version and runtime manifest match b56. The actual
+production model/policy CPU proof binds its four inputs to canonical-LF Git content, explicitly
+retaining the original CRLF projection-file receipt and AST equivalence. All 60 tensors load
+strictly and remain unchanged; 147 synthetic inputs plus one historical measured reset reproduce
+the author's complete actor branch bitwise. Existing 270 pytest cases and Ruff pass. Older
+prototype evidence is retained separately and is not relabeled as production execution.
+
+[R17 raw evidence, CPU proofs and audits](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/maniskill-issue25-lift-prior-20261111)
+include commands, traces, logs, source binding and measurements. Final-head CI is checked
+separately. Four original-asset tasks, the six original state-model gaps and the documented
+HORA repeatability limit remain outside this extension's passed scope.
 
 All listed cohorts retain exact actions, complete observation hashes, native returns/outcomes,
 episode identities, horizons and actual boolean terminal masks. Full horizons require

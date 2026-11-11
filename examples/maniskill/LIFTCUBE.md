@@ -78,9 +78,17 @@ observation/controller functions were checked separately with synthetic CPU
 fixtures: exact input/gripper mapping; target saturation remains a measured
 limitation. The synthetic fixtures are not native rollouts.
 
-**b56 is a code candidate; clean-build, self-test and real SDK/native validation
-are pending.** These CPU checks do not increase the current 74-profile/51-TaskID
-rollout count or establish success rates. Cube-to-peg geometry, source500Hz versus
+**R17/b56 clean-build, self-test and real SDK/native checks pass.** The ordinary
+Quick Test completes the original 50 ticks at N1. An N2 five-tick prefix covers
+five seeds in groups 2,2,1. All 75 action and 81 observation pairs, records and
+terminal masks match at zero tolerance, with zero failures/OOMs. Both paths
+have zero successes. Saturated XYZ-component counts are 43 in the full episode
+and 4/3/4/3/3 in the prefixes, identically on both paths. The actual production
+CPU implementation independently reproduces all four author outputs bitwise;
+the earlier prototype receipt retains its original identity.
+See [counts, metrics and raw evidence](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md#r17-canonical-liftpeg4-extension).
+This adds one profile to cumulative coverage of 75 profiles / 51 TaskIDs; it
+does not add another TaskID or establish success rates. Cube-to-peg geometry, source500Hz versus
 target100Hz physics, and the different task objective remain transfer limits.
 
 ## Run
