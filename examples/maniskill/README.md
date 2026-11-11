@@ -243,6 +243,11 @@ native comparison. Runtime pins, assets and acceptance results are in the
 
 ## Additional real-policy references
 
+The [LiftCube actor prior](LIFTCUBE.md) targets the existing canonical LiftPeg4
+profile through `liftcube_prior_state_v1`. It retains the authors' complete
+42D state input and active learned gripper, with explicit actor-mean mode,
+EE-to-root conversion and two-tick action holds. b56 GPU/native validation is pending.
+
 Task-specific [NEWT priors](NEWT.md) cover six control tasks, PlaceSphere, PickSingleYCB and a
 separate PullCubeTool pose profile. Explicit transfer references are available for
 [HORA Allegro](hora_policy.md), [TriFinger](trifinger_policy.md), [ROBEL DClaw](robel_policy.md),

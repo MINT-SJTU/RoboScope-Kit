@@ -24,7 +24,8 @@
       "fetch_mshab_depth_v1",
       "reference_ppo_state_v1",
       "dual_panda_transfer_state_v1",
-      "canonical_prior_state_v1"
+      "canonical_prior_state_v1",
+      "liftcube_prior_state_v1"
     ]
   },
   "runtime": {
@@ -460,6 +461,9 @@
         "canonical_prior_state_v1": [
           "pull_cube_tool_state",
           "unitree_go2_reach_state"
+        ],
+        "liftcube_prior_state_v1": [
+          "lift_peg_upright_state"
         ]
       },
       "profiles": {

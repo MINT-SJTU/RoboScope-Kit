@@ -197,3 +197,11 @@ raw physical measurements; base-relative transforms, source-specific state order
 sentinel, grasp classification, depth normalization and frame history belong to the Fetch Policy.
 The original cabinet state profiles and all native reset, horizon and success rules are unchanged.
 The original processed PartNet assets remain necessary for task acceptance.
+
+`liftcube_prior_state_v1` selects the existing `lift_peg_upright_state`; it adds no
+profile and changes none of its 32D state, 4D controller, frequencies, seeds,
+50-tick horizon or scoring. The [model-side reference](../../examples/maniskill/LIFTCUBE.md)
+declares a TD-MPC2 LiftCube actor-mean prior, actual state projection, active
+gripper, per-episode two-tick holds and EE-to-root conversion. It is separate
+from the author's full MPC evaluator and the existing 7D official LiftPeg profile.
+CPU source-function checks do not establish real-policy rollout acceptance.

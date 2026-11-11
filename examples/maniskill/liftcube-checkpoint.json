@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "repository": "nicklashansen/tdmpc2",
+  "revision": "8fb2a82efb3bae96941da440128fe1332e4394fd",
+  "source_repository": "https://github.com/nicklashansen/tdmpc2",
+  "source_revision": "7ec6bc83a82a5188ca3faddc59aea83f430ab570",
+  "source_environment_revision": "90a628059cbdbcd76303b899b192efc4a38beddc",
+  "license": "MIT",
+  "path": "lift-cube-1.pt",
+  "url": "https://huggingface.co/nicklashansen/tdmpc2/resolve/8fb2a82efb3bae96941da440128fe1332e4394fd/maniskill2/lift-cube-1.pt",
+  "bytes": 31468066,
+  "sha256": "da231968f24a40dd12cbb9415cd2c2ca41c1f7ff964d09b521a14c8866ea2d6a",
+  "model_task": "lift-cube",
+  "source_task_id": "LiftCube-v0",
+  "target_task_id": "LiftPegUpright-v1",
+  "target_profile": "lift_peg_upright_state",
+  "observation_dimension": 42,
+  "native_observation_dimension": 32,
+  "action_dimension": 4,
+  "action_repeat": 2,
+  "inference": {
+    "mpc": false,
+    "eval_mode": true,
+    "precision": "float32",
+    "scope": "Explicit learned actor-mean transfer prior; not the authors' default stochastic MPC evaluator"
+  },
+  "configuration": {
+    "task": "lift-cube",
+    "seed": 1,
+    "num_enc_layers": 2,
+    "enc_dim": 256,
+    "mlp_dim": 512,
+    "latent_dim": 512,
+    "num_q": 5,
+    "dropout": 0.01,
+    "simnorm_dim": 8,
+    "num_bins": 101,
+    "vmin": -10,
+    "vmax": 10
+  }
+}

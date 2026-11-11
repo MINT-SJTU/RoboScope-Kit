@@ -433,6 +433,8 @@ records source identities, R13/R16 N1/N2 checks and retained R11/R14/R15/HORA fa
 fifteen-task, 100-episode comparisons predate actual native-mask checking and retain their original scope.
 The [profile-gap report](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/REMAINING_COMPATIBILITY.md)
 separates model, asset and profile contracts; integration equality does not imply task competence.
+The [LiftCube actor prior](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/LIFTCUBE.md)
+adds a b56 code candidate for the existing LiftPeg4 profile; its CPU proof does not increase those rollout counts.
 
 Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and select asset suites with
 `MANISKILL_ASSET_SUITES`. See the

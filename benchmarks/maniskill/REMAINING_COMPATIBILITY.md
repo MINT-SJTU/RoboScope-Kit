@@ -812,7 +812,7 @@ and raw evidence links are recorded in the [current review](NATIVE_REVIEW_VALIDA
 
 | Current unmatched profiles | Count | Remaining model-contract gap |
 | --- | ---: | --- |
-| `lift_peg_upright_state` | 1 | Canonical EE position control is 4D; the official LiftPeg actor requires EE pose control, 7D. The canonical state has no position goal for the selected 4D goal-conditioned actors. |
+| `lift_peg_upright_state` | 1 | b56 adds an author-released LiftCube actor-mean candidate with active learned grip and an exact real-state projection. CPU actor/source checks passed; native frame saturation and fresh GPU/SDK comparison remain separate gates. See [the contract](../../examples/maniskill/LIFTCUBE.md). |
 | `pick_clutter_ycb_state`, `fmb_assembly1_easy_state` | 2 | Selected Octo requires RGB; no compatible state model is selected. |
 | `ms_humanoid_stand_state` | 1 | Egocentric state omits world-frame quantities required by the selected Stand checkpoint. |
 | `unitree_{h1,g1}_stand_state`, `anymal_c_spin_state` | 3 | H1/G1 omit required root orientation/angular velocity; Anymal Spin omits root pose/orientation required by the selected conversion. Static joint identities do not supply them. |
