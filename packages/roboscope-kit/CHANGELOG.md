@@ -11,9 +11,9 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   5,000-episode run each evaluator grew from about 3 GB to 4.4-5.7 GB, and at K48/g8 on four RTX PRO 5000 GPUs the
   last minutes, which run those two short tasks, reached 72.8 of 73.4 GB per GPU and hit out-of-memory errors. The
   launcher now stores `check_arm_function` as the gripper method's name and returns the same bound method on every
-  read, and it clears the evaluator's globals and collects after every task. The 5,000-episode K48/g8 run with the
-  collection peaks at 62.5-64.3 GB per GPU (56-57.6 GB in its last minutes), takes 4,254 s instead of 4,285 s, and
-  every episode equals the previous run and the official evaluation's 1,000 shared episodes.
+  read, and it clears the evaluator's globals and collects after every task. The same 5,000-episode K48/g8 run now
+  peaks at 63.3-64.1 GB per GPU (57.2-58.9 GB in its last five minutes), takes 4,262 s instead of 4,285 s, and every
+  episode equals the previous run and a full 5,000-episode run of the official evaluator.
 
 ## 0.8.0b53 - 2026-11-10
 
