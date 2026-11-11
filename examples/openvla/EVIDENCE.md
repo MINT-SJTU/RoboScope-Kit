@@ -14,10 +14,10 @@ MuJoCo 3.2.3, NumPy 1.24.4, torch 2.2.0, Transformers 4.40.1,
 TensorFlow 2.15.0 and FlashAttention 2.5.5.
 Each run used one GPU reported as NVIDIA GeForce RTX 4090 with 49,140 MiB.
 Replica count is the number of model processes, not GPU count.
-The server inspected on 2026-11-11 reports Intel Xeon Platinum 8470Q;
-this is a current observation, not verified historical CPU identity for every run.
-Native manifests retain CPU affinity and a cgroup quota of 20 CPU equivalents.
-Historical CPU model provenance remains incomplete.
+Hardware descriptions below come only from the historical run manifests.
+The archived manifests do not establish the historical CPU model; it is unknown.
+Native manifests retain CPU affinity and a cgroup quota of 20 CPU equivalents,
+which describes allocated CPU time, not the CPU model or dedicated core count.
 
 | Run and records | Path / concurrency/replicas | Recorded driver |
 | --- | --- | --- |

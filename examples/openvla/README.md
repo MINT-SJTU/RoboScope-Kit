@@ -20,6 +20,28 @@ and NumPy 1.24.4. The LIBERO source is pinned to `8f1084e3132a39270c3a13ebe37270
 The builder writes a benchmark manifest and runs the SDK environment self-test. The self-test
 checks the simulator runtime; it does not load an OpenVLA checkpoint or run an episode.
 
+The default builder remains a separate simulator environment. Selecting `--openvla-kit`
+creates an independent environment containing both the simulator and OpenVLA inference dependencies:
+
+| Component | Default LIBERO runtime | OpenVLA Kit runtime |
+| --- | --- | --- |
+| Environment manager | conda / micromamba | uv venv |
+| CPython | 3.10.20 | 3.11.15 |
+| LIBERO | 0.1.0, revision `8f1084e3132a39270c3a13ebe37270a43ece2a01` | Same |
+| robosuite | 1.4.0 | 1.4.1 |
+| MuJoCo / NumPy | 3.2.3 / 1.24.4 | Same |
+| PyTorch | 2.5.1+cpu, for simulator utilities | 2.2.0, with GPU inference dependencies |
+| OpenVLA inference stack | Not supplied by this simulator builder | Transformers 4.40.1, TensorFlow 2.15.0, FlashAttention 2.5.5 |
+| Default server readiness timeout | 300 seconds | 1,800 seconds |
+
+The default CLI/Policy environment is separate from its Python 3.10 simulator Worker.
+The OpenVLA builder installs the Kit into its Python 3.11 environment and verifies Worker
+and model imports. It materializes the same pinned LIBERO source using file checksums,
+locks dependency hashes, and verifies the FlashAttention wheel checksum. It does not
+change the default runtime's pins or the LIBERO Worker implementation.
+The historical native comparison used a third environment: CPython 3.10.13 with
+robosuite 1.4.1 and MuJoCo 3.2.3, not the default Kit simulator environment.
+
 Optional build inputs:
 
 - `LIBERO_SOURCE_CACHE`: an existing LIBERO tree; only files matching the pinned inventory are reused.
