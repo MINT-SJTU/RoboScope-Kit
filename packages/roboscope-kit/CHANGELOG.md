@@ -14,14 +14,14 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   CPython 3.11 with SAPIEN 2.2.2 and the TensorFlow stack of SimplerEnv's RT-1 inference.
 - Add `examples/rt1/`: an RT-1-X Policy built on SimplerEnv's `RT1Inference`, a runner for SimplerEnv's
   official scripts, and an episode-by-episode comparison. The runner binds its output directory to one run
-  identity and reuses a finished invocation only when its command line and episode records still match; the
-  comparison matches on the observation camera and policy configuration too, and `--strict` fails on missing,
-  duplicate, unknown, or unpaired episodes.
-- A SimplerEnv shard's `official_result` is `partial` and never `formal`; only a result holding every episode of
-  the full matrix is formal. `benchmark.formal_selection` replaces `benchmark.formal`, and `benchmark` no longer
-  carries the host's SimplerEnv path, so shards from different hosts or install directories merge. The Vulkan ICD
-  check runs before workers start instead of when the adapter is built, so `shard_merge` works on hosts without
-  the NVIDIA ICD. `build-runtime.sh` fails when the venv holds anything other than the lock and the two checkouts.
+  identity and reuses a finished invocation only when its command line and episode records still match. The
+  comparison matches every native invocation to one frozen variant, including its observation camera and
+  policy configuration, and `--strict` fails on missing, duplicate, unknown, or unpaired episodes.
+- A SimplerEnv result is `formal` only when it holds every episode of the full matrix. One shard's
+  `official_result` is `partial`, and `benchmark.formal_selection` records whether the requested workload is
+  the full matrix. Shards from different hosts or install directories merge, and `shard_merge` runs without
+  the Vulkan ICD check. `build-runtime.sh` fails when the venv holds anything other than the lock and the two
+  checkouts.
 
 ## 0.8.0b35 - 2026-11-10
 

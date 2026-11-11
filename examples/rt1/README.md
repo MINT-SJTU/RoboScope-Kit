@@ -5,6 +5,8 @@ A `roboscope-kit` `Policy` that serves the released RT-1-X TF-Agents checkpoint
 benchmark: Google Robot visual matching, Google Robot variant aggregation, and WidowX (Bridge) visual
 matching. It runs SimplerEnv's own RT-1 inference code. The benchmark contract is the
 [SimplerEnv protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md).
+Its [correctness baseline](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md#8-correctness-baseline)
+reports this Policy's Kit and native results on all three suites, with times and limits.
 
 | File | Purpose |
 | --- | --- |
@@ -74,7 +76,8 @@ too, but reuses the SavedModel and encoder the first instance loaded. The return
    Drop `--quick-test` for the full suite; add `--concurrency K --replicas G` to skip autotuning. The other
    suites are `google_robot_variant_aggregation` and `widowx_visual_matching`.
 
-5. Run SimplerEnv's own scripts on the same suite and compare:
+5. Run SimplerEnv's own scripts on the same suite and compare them with the full Kit run (here in
+   `/runs/rt1x-vm`):
 
    ```bash
    python examples/rt1/run_native.py --runtime /sim/simpler-env --checkpoint-source /models/rt1 \
@@ -91,10 +94,10 @@ too, but reuses the SavedModel and encoder the first instance loaded. The return
    scripts' relative paths resolve. Videos and per-episode action plots are skipped unless `--write-videos` is
    given; they do not feed back into the episode.
 
-   An output directory belongs to one native run: `run-identity.json` records the suite, runtime, SimplerEnv
-   commit, checkpoint digests, TensorFlow memory limit and planned invocations, and a re-run with a different
-   identity is refused. A finished invocation is reused only when its command line, output settings, and
-   episode records still match; otherwise it runs again.
+   Give each native run its own `--output` directory. Its `run-identity.json` records the suite, runtime,
+   SimplerEnv commit, checkpoint digests, TensorFlow memory limit and planned invocations, and `run_native.py`
+   stops when the directory belongs to a different run. When a run is resumed, a finished invocation is reused
+   only if its command line, output settings, and episode records still match; otherwise it runs again.
 
    `compare_native.py` exits 1 on protocol or integrity failures (duplicated or unknown episodes, native
    records that contradict their invocation). `--strict` is the acceptance mode and also requires complete

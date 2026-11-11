@@ -102,16 +102,16 @@ never import it, and the example Policy uses it from this environment so that th
 TensorFlow. The build checks both commits and that the checkouts are unmodified, the versions, that
 `simpler_env` and the assets resolve to the checkout, and then builds, resets, renders, and steps one episode of
 every suite plus one ray-traced drawer variant through the kit worker's own code. `--self-test` repeats that
-check.
+check. Set `ROBOSCOPE_PYPI_INDEX_URL` to install the locked packages from a PyPI mirror.
 
-SAPIEN renders through Vulkan, and SAPIEN 2.2 breaks when the Vulkan loader loads any ICD besides the regular
-NVIDIA one. Two hosts showed two failures: with NVIDIA's Vulkan SC ICD (`nvidia_icd_vksc.json`) installed, every
-renderer teardown segfaulted inside `libnvidia-vksc-core.so` (also in upstream's own evaluator, which drops one
-environment per episode); with Mesa's ICDs installed next to the NVIDIA one, creating the renderer failed with
-`ErrorExtensionNotPresent`. Export `VK_ICD_FILENAMES=<dir>/nvidia_icd.json` (`/usr/share/vulkan/icd.d` or
-`/etc/vulkan/icd.d`) for the build and every run; the build, `--self-test`, and every run (before it starts its
-workers) refuse to go on without it while another ICD is installed. Merging shard results renders nothing and
-does not check it.
+SAPIEN renders through Vulkan, and SAPIEN 2.2 breaks when the Vulkan loader loads any ICD (installable client
+driver) besides the regular NVIDIA one. With NVIDIA's Vulkan SC ICD (`nvidia_icd_vksc.json`) installed, every
+renderer teardown segfaults inside `libnvidia-vksc-core.so`; upstream's own evaluator, which drops one
+environment per episode, crashes the same way. With Mesa's ICDs installed next to the NVIDIA one, creating the
+renderer can fail with `ErrorExtensionNotPresent`. Export `VK_ICD_FILENAMES=<dir>/nvidia_icd.json` (`<dir>` is
+`/usr/share/vulkan/icd.d` or `/etc/vulkan/icd.d`) for the build and every run. While another ICD is installed
+and the variable is unset, the build, `--self-test`, and every run stop before they render anything. Merging
+shard results renders nothing and needs no ICD setting.
 
 ```bash
 export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json   # or /etc/vulkan/icd.d/; see above
@@ -226,105 +226,108 @@ whole matrix.
 
 ## 8. Correctness baseline
 
-Measured 2026-11-05/06 with the RT-1-X checkpoint (`examples/rt1/`), Kit `0.8.0b28`, on one RTX 3080 (10 GB,
-driver 560.35.03) shared with other users' jobs (about 4.4 GB of it held by them) on a shared 48-core host.
-Fixed `--concurrency 2 --replicas 1`, no autotuning, TensorFlow capped at 1,536 MB. Evaluation on this host
-was stopped by the maintainer before every suite was finished; this section reports what finished, and only
-that.
-
-| Suite | Kit run | Native run | Status |
-| --- | --- | --- | --- |
-| `widowx_visual_matching` | 96/96, formal | 96/96 | Complete |
-| `google_robot_visual_matching` | 864/864, formal | 201 episodes logged (4 of 244 invocations complete, others cut off) | Kit complete; native partial |
-| `google_robot_variant_aggregation` | not run | not run | Not evaluated |
+The results below come from one RTX 4090 host, the RT-1-X checkpoint served by `examples/rt1/`, and a runtime
+built with the committed script. Commit hashes are those of
+[pull request #88](https://github.com/MINT-SJTU/RoboScope-Kit/pull/88).
 
 ### Build, self-test, and Quick Test
 
-A clean build into a fresh directory with the committed script passed its checks and `--self-test` in 88 s
-(warm uv cache). The first build attempt exposed the Vulkan SC teardown crash of section 1; the build passed
-after that host check was added. A second clean build was planned and not run. `--quick-test` on
-`google_robot_visual_matching` (horizontal coke can, `urdf_version=None`, episode 0) succeeded in 47 steps, ended
-by the policy's terminate signal: 65 s end to end (Policy load 40 s, evaluation 23 s).
+A clean build of commit `932d85d` into a new directory finished in 60 s (warm uv cache, PyPI through a
+mirror). The build's checks and `--self-test` passed.
 
-### Full evaluation
-
-`widowx_visual_matching`: 96/96 unique records, `formal: true`, no worker failures, restarts, or OOM events.
-
-| Task | Success | Grasped (partial success) | Executed steps |
-| --- | --- | --- | --- |
-| `put_spoon_on_tablecloth` | 1/24 (4.2%) | 3/24 | 820 |
-| `put_carrot_on_plate` | 1/24 (4.2%) | 7/24 | 934 |
-| `stack_green_block_on_yellow_block` | 0/24 (0.0%) | 3/24 | 815 |
-| `put_eggplant_in_basket` | 0/24 (0.0%) | 1/24 | 1,536 |
-
-`google_robot_visual_matching`: 864/864 unique records, `formal: true`, no worker failures, restarts, or OOM
-events.
-
-| Task | Episodes | Success (mean of variant rates) | Executed steps | Policy-terminated / truncated |
-| --- | --- | --- | --- | --- |
-| `pick_coke_can` (horizontal 82/100, vertical 34/100, standing 60/100) | 300 | 176 (58.7%) | 12,962 | 240 / 63 |
-| `move_near` | 240 | 81 (33.8%) | 14,151 | 117 / 123 |
-| `open_drawer` (top 7/36, middle 15/36, bottom 9/36) | 108 | 31 (28.7%) | 11,332 | 25 / 83 |
-| `close_drawer` (top 31/36, middle 35/36, bottom 27/36) | 108 | 93 (86.1%) | 6,215 | 85 / 23 |
-| `place_apple_in_closed_top_drawer` | 108 | 25 (23.1%) | 19,471 | 33 / 75 |
-
-An episode the policy terminates on its last allowed step is counted in both columns. For context only,
-SimplerEnv's published RT-1-X visual-matching numbers (`SIMPLER_PERF`, the authors' run on their hardware) are
-56.7%, 31.7%, 29.6%, 89.1%, and 21.3%; that is not a paired comparison.
+`--quick-test` on `google_robot_visual_matching` runs the episode `pick_coke_can/horizontal/urdf_none/000`. It
+succeeded in 47 steps on `932d85d`, and again on commit `8769edc` on 2026-11-10 with the same runtime: Policy
+load 37.54 s, evaluation 14.83 s, sampled peak GPU memory 2,415 MiB.
 
 ### Native comparison
 
-`run_native.py` ran SimplerEnv's unmodified `main_inference.py` with the official scripts' RT-1-X command lines on
-the same runtime, checkpoint, and GPU. `compare_native.py` matched every native invocation to exactly one frozen
-Kit variant with an identical episode list (visual matching 244/244, WidowX 4/4) and paired episodes on variant,
-robot pose, and object pose or episode id.
+Measured between 2026-11-07 and 2026-11-10. The Kit ran commit `932d85d`, one suite at a time on an idle GPU,
+with fixed `--concurrency` (K simulator Workers) and `--replicas` (G Policy replicas). The native side ran
+`examples/rt1/run_native.py` on the same host, runtime, and checkpoint: SimplerEnv's unmodified
+`main_inference.py` with the official scripts' RT-1-X command lines, `--jobs` invocations at once.
+`examples/rt1/compare_native.py --strict` paired the two runs of each suite on variant, robot pose, and object
+pose or episode id. It exited 0 for all three suites: every native invocation matched one frozen variant with
+an identical episode list, both sides held exactly one record for every frozen episode, and every native
+record carried the configuration of its invocation.
 
-| Pairing | Episodes | Kit / native successes | Same outcome | Same steps | Same action trajectory | Same first image |
-| --- | --- | --- | --- | --- | --- | --- |
-| WidowX, all four tasks | 96 | 2 / 3 | 95 | 84 | 82 | 96 |
-| Visual matching `pick_coke_can` (partial native run) | 185 | 119 / 119 | 183 | 179 | 173 | 185 |
-| Visual matching `move_near` (partial native run) | 16 | 1 / 1 | 16 | 15 | 14 | 16 |
-| Kit vs the separate Quick-Test-time native run, `pick_coke_can/horizontal/urdf_none` | 25 | 22 / 22 | 25 | 25 | 25 | 25 |
-| **Native vs native**, same 21 episodes of that variant in two native runs | 21 | 18 / 18 | 21 | 20 | 20 | n/a |
+| Suite | Episodes paired | Kit / native successes | Different outcomes (Kit only / native only) | Same action trajectory | Same first image | Kit evaluation time | Native wall time |
+| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `widowx_visual_matching` | 96 of 96 | 3 / 3 | 2 (1 / 1) | 73 | 96 | 195.7 s (K=4, G=2) | 231 s (4 jobs) |
+| `google_robot_visual_matching` | 864 of 864 | 399 / 392 | 27 (17 / 10) | 642 | 864 | 3,815.3 s (K=4, G=2) | 3,821 s (6 jobs) |
+| `google_robot_variant_aggregation` | 1,722 of 1,722 | 622 / 622 | 44 (22 / 22) | 1,324 | 1,722 | 7,267.5 s (K=8, G=3) | 6,955 s (8 jobs), then 1,210 s (1 job) for three invocations |
 
-"Same action trajectory" compares a SHA-256 over every float64 action passed to `env.step`; "same first image"
-a SHA-256 of the first policy image.
+"Kit only" counts the pairs in which only the Kit episode succeeded. A pair has the same action trajectory
+when the SHA-256 over every `float64` action passed to `env.step` is identical on both sides, and the same
+first image when the SHA-256 of the first image sent to the Policy is.
 
-- **Observation mapping.** The first policy image is identical in all 297 Kit-vs-native pairs of the main runs (the first three rows), so the robot pose,
-  object pose, overlay, recolor settings, and camera reach the policy as upstream renders them.
-- **Action mapping and loop.** 269 of those 297 trajectories are identical action for action, and all 25 against the separate Quick-Test-time native run, which requires the
-  same observation-to-action path, subtask and termination handling, and step count.
-- **Divergence is not specific to the Kit.** Two native runs of the same 21 episodes also differ in one action
-  trajectory. Some run-to-run variation exists inside upstream's own pipeline on this host; I did not isolate its
-  source (candidates are GPU kernel nondeterminism in TensorFlow inference and SAPIEN contact or rendering
-  nondeterminism, and other users' jobs shared the GPU). Once a trajectory diverges, outcome and steps can differ:
-  WidowX `put_carrot_on_plate` episode 5 failed in the Kit and succeeded natively after diverging.
-- **Not established.** The native visual-matching run covers 201 of 864 episodes (coke can and move near only, no
-  ray-traced task), and each side ran once, so these counts do not establish statistical equivalence; they show
-  no systematic Kit-vs-native difference on the paired episodes.
+- The first image is identical in every pair, so the robot pose, object pose, overlay, recolor settings, and
+  camera reach the Policy as upstream renders them.
+- Every pair with a different outcome also has a different action trajectory.
+- Kit and native differ in 27 visual-matching outcomes; two runs of the same side differ in 22 (Kit) and 28
+  (native), as the next section shows.
+- At 8 jobs, three native variant-aggregation invocations failed with SAPIEN's `RuntimeError: cannot create
+  buffer` (GPU memory). They were rerun with `--jobs 1`; the other 81 were reused after `run_native.py` checked
+  their run identity, command line, and record digests.
 
-### Performance baseline
+Variant-aggregation success by task (mean of variant rates) in the runs above:
 
-| Run | Policy load | Evaluation | Episodes/s | Env steps/s |
-| --- | --- | --- | --- | --- |
-| Kit, WidowX, K=2 | 39 s | 565 s | 0.170 | 7.25 |
-| Native, WidowX, 2 invocations at a time | (loaded per invocation, 4 times) | 627 s wall | 0.153 | 6.16 |
-| Kit, Google Robot visual matching, K=2 | 54 s | 11,139 s | 0.078 | 5.76 |
+| Task | Kit | Native |
+| --- | ---: | ---: |
+| `pick_coke_can` | 48.9% | 48.9% |
+| `move_near` | 32.5% | 31.9% |
+| `open_drawer` | 8.5% | 7.9% |
+| `close_drawer` | 50.8% | 52.9% |
+| `place_apple_in_closed_top_drawer` | 12.7% | 12.7% |
 
-The WidowX rows ran the same 96 episodes back to back on the same host; the native run loads the model once per
-invocation and its episodes took fewer steps in total (3,865 vs 4,105), so the two rows differ in more than the
-runtime. Per-process sampling during the Kit visual-matching run (every 20 s): the two workers used 1.42 CPU
-cores together and the Policy replica 0.68; peak resident memory 1.96 GB per worker and 4.07 GB for the replica;
-peak GPU memory 1.42 GB per worker (ray-traced scenes) and 1.78 GB for the replica.
+### Run-to-run variation
 
-Ray-traced episodes (32 samples per pixel, OptiX denoiser, as upstream) cost about 0.15 s per environment step
-alone on this card, against about 0.12 s rasterized. Earlier attempts at K=4, K=3, and once at K=2 made no
-progress for 7–17 minutes on ray-traced episodes with the GPU at 100%; the formal K=2 run that followed did not
-stall. I did not isolate the cause; other users' and agents' jobs were starting and stopping on the same GPU.
+Two runs of the same side can give different outcomes. The repeats below ran on the same host from 2026-11-06
+with Kit commit `97ccf22`, whose SimplerEnv adapter, worker, and example files are those of `932d85d`. The
+result files do not record the commit; `97ccf22` is what the checkout held during the runs. Each repeat ran
+alone on the GPU with the settings of the first run (Kit K=4, G=2; native 3 jobs). The last four rows pair the
+`932d85d` Kit runs of the table above with the `97ccf22` Kit runs of the same suite.
+
+| Suite | Runs compared | Different outcomes |
+| --- | --- | ---: |
+| `google_robot_visual_matching` | Kit `97ccf22`, run 1 and run 2 | 22 of 864 |
+| `google_robot_visual_matching` | Native, run 1 and run 2 | 28 of 864 |
+| `google_robot_visual_matching` | Kit `932d85d` and Kit `97ccf22` run 1 | 32 of 864 |
+| `google_robot_visual_matching` | Kit `932d85d` and Kit `97ccf22` run 2 | 26 of 864 |
+| `widowx_visual_matching` | Kit `932d85d` and Kit `97ccf22` | 0 of 96 |
+| `google_robot_variant_aggregation` | Kit `932d85d` and Kit `97ccf22` | 39 of 1,722 |
+
+The first image is identical in all 864 pairs of both visual-matching repeats. The four Kit-and-native pairings
+of those four runs differ in 24 to 28 outcomes.
+
+### Resource use
+
+Per-process sampling every 20 s during a Kit `google_robot_visual_matching` run on an RTX 3080 (Kit `0.8.0b28`,
+`--concurrency 2 --replicas 1`, TensorFlow capped at 1,536 MB): the two Workers used 1.42 CPU cores together
+and the Policy replica 0.68; peak resident memory was 1.96 GB per Worker and 4.07 GB for the replica; peak GPU
+memory was 1.42 GB per Worker (ray-traced scenes) and 1.78 GB for the replica.
+
+### Limits
+
+- Each comparison pairs one run with one run. The counts show no difference beyond run-to-run variation; they
+  do not establish statistical equivalence.
+- Repeats at one commit cover visual matching only, with one repeat per side.
+- The source of the variation was not isolated. In a separate probe, five passes on the same rendered frame
+  produced different actions at steps 0 and 3.
+- The Kit runs used commit `932d85d`. Since then the adapter's result flags and shard metadata, the place of
+  the Vulkan check, and the build's lock check changed, and `main` was merged; the worker, the frozen matrix,
+  and the example Policy did not change. On the later code only the Quick Test ran. The native runs and the
+  comparison used the `examples/rt1/` tools as they are now.
+- Ray-traced images depend on the GPU model. A Kit visual-matching run on another GPU, an RTX 3080, gave the
+  same first image as the RTX 4090 in all 540 rasterized episodes and a different one in all 324 ray-traced
+  episodes. Run the Kit and the native evaluation on the same host.
+- The times are not a throughput comparison: the two sides ran with different parallelism, and the native side
+  loads the model once per invocation.
+- RT-1-X is the only model evaluated.
 
 ### Raw results and reproduction
 
-The per-episode Kit records (`queue/completed/`), native `episodes/*.jsonl` and `plan.jsonl`, the comparison
-JSON files, and the logs are kept on the evaluation host. Reproduce with the commands of section 1 and
-`examples/rt1/README.md`; the native visual-matching run, both variant-aggregation runs, the second clean build,
-and a Kit-vs-Kit repeat still need an authorized GPU machine.
+A Kit run directory holds `result.json` and the per-episode records under `queue/completed/`. A native run
+directory holds `run-identity.json`, `plan.jsonl`, `episodes/*.jsonl`, and `logs/`. `compare_native.py` writes
+the comparison JSON. The records of the runs above have no public archive yet. Reproduce with the commands of
+section 1 and of the
+[RT-1-X example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/rt1/README.md).
