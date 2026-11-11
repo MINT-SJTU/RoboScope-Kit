@@ -424,11 +424,12 @@ your own dependencies.
 
 The `maniskill` adapter runs a pinned 55-task inventory through GPU vector environments and the
 existing Policy lifecycle. Strict original-horizon SDK/native cohorts passed for 66 profiles in b51/R12
-and six additional canonical profiles in b52/R13: cumulative coverage is **72 profiles / 51 task IDs**.
-Nine available profiles lack compatible selected models and eight profiles belong to four asset-deferred
+plus six additional canonical profiles in b52/R13 and two in b55/R16: cumulative coverage is
+**74 profiles / 51 task IDs** across those source snapshots. Seven available profiles lack compatible
+selected models and eight profiles belong to four asset-deferred
 tasks. These small cohorts do not establish 100-episode acceptance or acceptance of all 55 tasks.
 The [native-reference review](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md)
-records source identities, R13 N1/N2 checks and retained R11/HORA repeatability failures. Historical
+records source identities, R13/R16 N1/N2 checks and retained R11/R14/R15/HORA failures. Historical
 fifteen-task, 100-episode comparisons predate actual native-mask checking and retain their original scope.
 The [profile-gap report](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/REMAINING_COMPATIBILITY.md)
 separates model, asset and profile contracts; integration equality does not imply task competence.

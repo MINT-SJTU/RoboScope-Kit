@@ -8,11 +8,11 @@ upstream source evidence. Protocol settings and observation/action mapping are i
 [PROTOCOL.md](PROTOCOL.md).
 
 **Integration acceptance remains partial.** Strict original-horizon SDK/native checks passed for
-66 selected profiles in b51/R12 and six additional canonical profiles in b52/R13: cumulative
-coverage is **72 profiles / 51 task IDs**, with nine available model gaps and eight asset-deferred
+66 selected profiles in b51/R12, six additional canonical profiles in b52/R13 and two in b55/R16:
+cumulative coverage is **74 profiles / 51 task IDs**, with seven available model gaps and eight asset-deferred
 profiles. These small cohorts are not 100-episode acceptance or acceptance of all 55 tasks.
 The [current native review](NATIVE_REVIEW_VALIDATION.md) records exact counts, source identities,
-R13 N1/N2 checks, retained R11 failures and the separate HORA repeatability failure. A matching
+R13/R16 N1/N2 checks, retained R11/R14/R15 failures and the separate HORA repeatability failure. A matching
 cohort does not establish repeatability or task competence.
 
 The historical eleven state PPO and four Bridge visual task comparisons covered 1,500 paired

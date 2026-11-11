@@ -54,7 +54,7 @@ not benchmark tolerances. Native target SDK/reference comparisons remain exact.
 
 The SDK and direct native evaluator run the action conversion on the same Torch
 device before copying actions to the host. NumPy and CUDA scalar division can
-round differently in FP32; b53's mixed-backend conversion first diverged at action
+round differently in FP32; b53's mixed-backend conversion first diverged at control step
 2 in the Go2 full-horizon check. A synthetic probe reproduced 72 differing
 components out of 1,536, maximum `2.9802e-8`. The failed b53 records remain separate.
 
@@ -65,8 +65,41 @@ define these contracts. Limb geometry, joint limits, PD gains and contact dynami
 differ. Home alignment is not an exact kinematic mapping or a claim of learned
 Go2 competence. Source and target retain their original 200-tick horizons.
 
-The b54 candidates require fresh-build and real-model verification; they are not
-included in the passing R12/R13 coverage until those gates run.
+## Current real-model validation
+
+R16/b55 at code head `c660435b235cd9d3db303fcc3c14ee6beba1ebe1` passed strict
+SDK/native checks for these two existing profiles. All actions, complete observation
+hashes, actual terminal masks, native returns and outcomes agree exactly, with zero
+Worker failures/OOM. Task/controller/seed/scoring definitions remain unchanged.
+
+| Cohort | Episodes per profile | Seeds | N | Steps per episode | Action / observation pairs |
+| --- | ---: | --- | ---: | --- | --- |
+| Full horizons N1 | 1 | 0 | 1 | PullCubeTool 100; Go2 200 | 300 / 302 |
+| Five-tick tail check | 3 | 0/1/2 | 2 | 5 | 30 / 36 |
+| Full horizons N2 | 2 | 0/1 | 2 | PullCubeTool 100; Go2 200 | 600 / 604 |
+| Five-tick multi-group check | 5 | 0/1/2/3/4 | 2 | 5 | 50 / 60 |
+
+The three-episode prefix exercises two then one vector lanes. The supplemental
+five-episode check executes groups of two, two, then one, verifying consecutive
+same-width reuse before a fresh tail process. Both retain global episode indices
+and seeds. Both priors have zero success-once and success-at-end in every
+listed sample. Equality verifies this integration; these small samples do not
+establish useful tool manipulation, Go2 task competence or 100-episode acceptance.
+Eleven old official PPO profiles also passed a separate N1 five-tick regression.
+
+R14/b53 remains failed for the step-2 rounding divergence above. R15/b54 passed
+N1 full horizons but failed at the N2 width-two-to-one transition: SDK recovered a
+Worker OOM and the native child failed. b55 recycles the opted-in Worker before
+width changes and isolates native width segments in separate processes. Same-width
+groups retain their process. This is a correctness fix with no speed gain claimed.
+
+The original model CPU proofs executed with b54 and remain source-identified.
+An exact seven-file source binding reuses them for unchanged b55 model code;
+separate CPU fixtures cover Worker/native process lifetimes. Actual per-task R14
+joint/controller-order probes carry through identical profiles, calibration helper
+and source pin; they are not relabeled as fresh R16 measurements. Failed attempts
+and the new passing cohorts are retained in the
+[canonical-prior evidence release](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/maniskill-issue25-canonical-priors-20261111).
 
 ## Reproduction
 

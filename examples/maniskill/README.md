@@ -74,6 +74,7 @@ covering its tasks with compatible PPO state checkpoints.
 `reference_ppo_state_v1` uses four existing canonical profiles with the unchanged
 three-layer Tanh actor/critic and all 17 original FP32 tensors. Immutable URLs,
 dimensions, hashes and source identities are in [reference-ppo-models.json](reference-ppo-models.json).
+It selects the first four rows below; `canonical_prior_state_v1` selects the last two.
 
 | Target | Native / actor state | Actions | Reference |
 | --- | ---: | ---: | --- |
@@ -88,9 +89,10 @@ The [TransportBox author checkpoint](https://github.com/tjvitchutripop/stream-rl
 uses raw state and actor means. The [Apple author reference](https://github.com/tabz23/Latent-Safety-Filters/tree/ea456084576b16053e6de79c52b489e33409479e)
 clips its deterministic actions to the normalized controller bounds. Only its
 catalog record sets `action_clip_bounds=[-1,1]`; the SDK Policy and direct native
-evaluator preserve that operation. Other actors retain their original raw actions.
+evaluator preserve that operation. Other actors in the four-task reference suite retain their
+original raw actions; the canonical priors have their separately documented conversions.
 Independent CPU checks against the released author actors/critics, including Apple clipping,
-are bitwise equal. R13 strict SDK/native checks passed for these four canonical profiles and the
+are bitwise equal. R13 strict SDK/native checks passed for the first four canonical profiles and the
 two [dual-Panda transfers](DUAL_PANDA_PPO.md), at N1/N2 prefixes and full target horizons. The
 [current review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records the measured
 cohorts and source identities; these small checks do not establish 100-episode acceptance.
@@ -116,18 +118,21 @@ to the pinned Kit runtime, without claiming the papers' evaluation protocols.
 TransportBox specifies no source license; Apple code is MIT and its model card
 specifies no license. Weights remain external to Git and evidence bundles.
 
-The additional [canonical priors](CANONICAL_PRIORS.md) use
-`canonical_prior_state_v1`, with unchanged target profiles and separate real-model
-acceptance gates. Their source models and transfer semantics differ from the
-four-task `reference_ppo_state_v1` suite.
+The additional [canonical priors](CANONICAL_PRIORS.md) use `canonical_prior_state_v1`,
+with unchanged target profiles. R16/b55 passed their full N1/N2 horizons and N2
+five-tick prefixes including a smaller final vector group, plus an old-PPO prefix
+regression. Their source models and transfer semantics differ from the four-task
+`reference_ppo_state_v1` suite. Both new priors had zero successes in these samples;
+they do not establish tool-use or Go2 task competence.
 
 ## SDK evaluation
 
 Build the simulator through [the benchmark builder](../../benchmarks/maniskill/README.md).
 The protocol is `maniskill-v1`; actions use `maniskill.native-controller-v1`, whose controller and
 shape are provided in each task's episode metadata. The adapter supports state and RGB observation
-paths. This PPO example consumes `state.proprioception`; RGB integration uses separate rendering and
-transport smoke checks, without claiming these actors are trained image policies.
+paths. This PPO example consumes `state.proprioception`; separate visual Policies supply the
+RGB references. Sixteen of the original eighteen tabletop RGB profiles have one full-horizon
+real-policy/native comparison in R12; the other two belong to asset-deferred tasks.
 
 Fill [roboscope-policy.json](roboscope-policy.json) with absolute executable, script and working
 directory paths from your installation. The contract contains portable placeholders. Use the runtime's
@@ -265,6 +270,6 @@ directories to `compare_native.py`. A diagnostic manifest can set
 All such prefixes are labeled non-formal. See [the completion report](../../benchmarks/maniskill/COMPLETION_VALIDATION.md)
 for the measured commands, coverage and unresolved asset/model gates.
 The [native-reference review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records
-terminal-mask fixes, passing R12/R13 cohorts and retained R11/HORA repeatability failures.
-Cumulative compared coverage is 72 profiles / 51 task IDs across those source snapshots;
+terminal-mask fixes, passing R12/R13/R16 cohorts and retained R11/R14/R15/HORA failures.
+Cumulative compared coverage is 74 profiles / 51 task IDs across those source snapshots;
 historical 100-episode-per-task evidence retains its original source identity.
