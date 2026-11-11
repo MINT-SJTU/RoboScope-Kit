@@ -1,30 +1,28 @@
 # PyRUA-Lean Policy example
 
-This experimental Policy connects [PyRUA-Lean](https://github.com/DAGroup-PKU/PyRUA-Lean)'s
-RoboDojo agent to the Kit's RoboDojo Workers. It uses PyRUA's own `Bridge`, episode runner,
-robot primitives and SAM3 perception. The Policy translates the Kit transport; it does not
-replace the agent with a direct image-to-joint policy.
+This experimental Policy runs [PyRUA-Lean](https://github.com/DAGroup-PKU/PyRUA-Lean)'s RoboDojo agent on the
+Kit's RoboDojo Workers. The agent keeps PyRUA's own `Bridge`, episode runner, robot primitives and SAM3
+perception; the Policy only translates the Kit transport.
 
-The adapter targets PyRUA-Lean commit `c6861200bfb190169953d1827260ccf71320eea1`, using
-`robodojo_xpl_rgb`, `cells`, `no-vla`, on-demand images and pure feedback. The agent can wait
-without advancing the simulator, and early finish asks RoboDojo to judge the current scene.
-The actual simulator verdict is reported back to PyRUA. Each Worker uses one environment;
-lockstep batches and asynchronous observation overlap are not supported for this Policy.
-Interactive Policies use `act` and `poll`; `act_batch` is not supported.
-The adapter records the Kit episode and native run IDs in `kit_episode.json`, alongside the agent result.
-After the simulator reports its verdict, the adapter waits up to twelve minutes for the agent to finish.
-PyRUA changes process-wide working directory and output streams, so each Policy replica accepts
-one active episode. Use `--concurrency K --replicas K`; all replicas may be assigned to the same GPU
-if its memory permits. Compare configurations with replica count and memory usage explicitly reported.
+The adapter targets PyRUA-Lean commit `c6861200bfb190169953d1827260ccf71320eea1`, using `robodojo_xpl_rgb`,
+`cells`, `no-vla`, on-demand images and pure feedback. It uses the Kit's interactive Policy contract
+([package README](../../packages/roboscope-kit/README.md#episode-state)): the agent can wait without advancing
+the simulator, an early finish asks RoboDojo to judge the current scene, and the simulator's verdict is
+reported back to PyRUA.
 
-Build the RoboDojo runtime with [`build-runtime.sh`](../../benchmarks/robodojo/build-runtime.sh).
-Create a separate Python 3.11 Policy environment containing that PyRUA revision, its dependencies,
-SAM3, and this version of `roboscope-kit`. Obtain the official SAM3 checkpoint and set
-`SAM3_CHECKPOINT_PATH` in that environment. Follow the upstream PyRUA and SAM3 installation and
-model-license instructions; do not install Policy dependencies into the simulator environment.
+## Set up
 
-Copy [`roboscope-policy.json`](roboscope-policy.json), replace its paths, and supply an available
-Codex executable and model. A small integration check can be run with a new output directory:
+1. Build the RoboDojo runtime with [`build-runtime.sh`](../../benchmarks/robodojo/build-runtime.sh).
+2. Create a separate Python 3.11 Policy environment containing that PyRUA revision, its dependencies, SAM3, and
+   this version of `roboscope-kit`. Follow the upstream PyRUA and SAM3 installation and model-license
+   instructions. Keep the Policy dependencies out of the simulator environment.
+3. Obtain the official SAM3 checkpoint and set `SAM3_CHECKPOINT_PATH` in the Policy environment.
+4. Copy [`roboscope-policy.json`](roboscope-policy.json), replace its paths, and supply an available Codex
+   executable and model.
+
+## Run it
+
+A small integration check, with a new output directory:
 
 ```bash
 /sim/robodojo/env/bin/python -m roboscope_kit.runtime.benchmark \
@@ -35,16 +33,19 @@ Codex executable and model. A small integration check can be run with a new outp
     --output-dir /runs/pyrua-smoke --quick-test
 ```
 
-This issues real model requests unless the configured Codex executable is a fake service. The
-example itself does not enforce an upstream request budget. Record model, reasoning effort, task,
-layout, seed, Tool and simulator versions when comparing runs. The published PyRUA-Lean leaderboard
-entry used a different model from the example's Terra configuration; a result with another model is
-not a reproduction of that leaderboard score. A completed run may still fail its robot task.
+This issues real model requests unless the configured Codex executable is a fake service.
+
+PyRUA changes the process-wide working directory and output streams, so each Policy replica accepts one active
+episode. Run with `--concurrency K --replicas K`; all replicas may be assigned to the same GPU if its memory
+permits.
+
+The adapter records the Kit episode and native run IDs in `kit_episode.json`, alongside the agent result. After
+the simulator reports its verdict, the adapter waits up to twelve minutes for the agent to finish.
 
 ## Optional shared SAM3
 
-On a trusted single host, Policy replicas can use one local SAM3 service to reduce the memory used
-by multiple model copies. Start the service in the Policy environment and wait for its ready message:
+On a trusted single host, Policy replicas can use one local SAM3 service instead of one model copy each, which
+saves GPU memory. Start the service in the Policy environment and wait for its ready message:
 
 ```bash
 /path/to/pyrua-policy-env/bin/python \
@@ -52,10 +53,26 @@ by multiple model copies. Start the service in the Policy environment and wait f
     --checkpoint /path/to/sam3.pt --port 8790
 ```
 
-Copy [`roboscope-policy-shared-sam3.json`](roboscope-policy-shared-sam3.json), replace the paths,
-and use it as the Policy config. Keep the service running until evaluation finishes. Its HTTP server
-listens on loopback by default and has no authentication. The wrapper requires the pinned PyRUA
-local SAM3 and this exact `pyrua_policy.py`, and fails the Policy if the service is unavailable.
-The service serializes SAM3 requests, so replica throughput and memory headroom depend on the workload.
-The vendored service and its attribution are described in
-[`pyrua-shared-sam3/README.md`](pyrua-shared-sam3/README.md).
+Copy [`roboscope-policy-shared-sam3.json`](roboscope-policy-shared-sam3.json), replace the paths, and use it as
+the Policy config. Keep the service running until evaluation finishes. The wrapper requires the pinned PyRUA
+local SAM3 and this exact `pyrua_policy.py`, and fails the Policy if the service is unavailable. The vendored
+service and its attribution are described in [`pyrua-shared-sam3/README.md`](pyrua-shared-sam3/README.md).
+
+## Results
+
+On one RTX 4090 48 GB with GPT-6.1 Terra, two runs of 8 episodes from four tasks took 3,438.6 s of evaluation
+with four Workers and shared SAM3, against 10,855.4 s with one Worker: 3.16× the episode throughput
+(2026-11-08). Every measured configuration, with its table and limits, is in
+[RoboDojo's throughput notes](../../benchmarks/robodojo/README.md#throughput).
+
+## Limits
+
+- Each Worker uses one environment. Lockstep batches, asynchronous observation overlap and `act_batch` are not
+  supported for this Policy.
+- The SAM3 service listens on loopback by default and has no authentication. It serializes SAM3 requests, so
+  replica throughput and memory headroom depend on the workload.
+- The example enforces no request budget for the model service.
+- The published PyRUA-Lean leaderboard entry used a different model from this example's Terra configuration, so
+  a result here is not a reproduction of that leaderboard score.
+- When comparing runs, record the model, reasoning effort, task, layout, seed, replica count, memory usage, and
+  the tool and simulator versions.
