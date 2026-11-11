@@ -1,0 +1,16 @@
+{
+  "import_s": 16.614359967410564,
+  "model_load_s": 384.1359066590667,
+  "processor_load_s": 1.0245462534949183,
+  "evaluation_s": 1719.4034776324406,
+  "torch_allocator": {
+    "loading_peak_allocated_bytes": 15129554944,
+    "loading_peak_reserved_bytes": 15172894720,
+    "evaluation_peak_allocated_bytes": 15478815232,
+    "evaluation_peak_reserved_bytes": 15573450752,
+    "scope": "PyTorch allocator on cuda:0; excludes TensorFlow and EGL allocations"
+  },
+  "cuda_runtime_version": "12.1",
+  "cudnn_version": 8902,
+  "exit_code": 0
+}

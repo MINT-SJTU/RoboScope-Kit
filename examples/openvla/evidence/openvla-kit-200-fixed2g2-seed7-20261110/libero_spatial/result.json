@@ -1,0 +1,421 @@
+{
+  "sdk_version": 1,
+  "runtime": {
+    "output_dir": "/root/autodl-tmp/openvla-kit-200-fixed2g2-seed7-20261110/libero_spatial",
+    "gpu_devices": [
+      "0"
+    ],
+    "replicas": 2,
+    "concurrency": 2,
+    "base_port": 16694,
+    "ready_timeout_s": 1800.0,
+    "poll_interval_s": 0.2,
+    "probe_limits": null,
+    "shard_index": null,
+    "shard_count": null,
+    "shard_episodes": 500,
+    "shard_build": null,
+    "profile": false
+  },
+  "phase_timings": {
+    "policy_load_s": 733.0457541011274,
+    "runtime_prepare_s": 1.007364459335804,
+    "evaluation_s": 1157.9357287213206
+  },
+  "item_timeline": {
+    "completion_s": {
+      "task-0000-episodes-0000-0001": 38.661141730844975,
+      "task-0001-episodes-0000-0001": 45.479764722287655,
+      "task-0001-episodes-0001-0002": 80.16431926935911,
+      "task-0000-episodes-0001-0002": 114.2785134576261,
+      "task-0001-episodes-0002-0003": 127.32467424497008,
+      "task-0001-episodes-0003-0004": 171.9547959677875,
+      "task-0000-episodes-0002-0003": 189.4595819786191,
+      "task-0001-episodes-0004-0005": 213.625822275877,
+      "task-0000-episodes-0003-0004": 218.25183680281043,
+      "task-0000-episodes-0004-0005": 244.65349373221397,
+      "task-0003-episodes-0000-0001": 276.7129455283284,
+      "task-0002-episodes-0000-0001": 288.82637578621507,
+      "task-0003-episodes-0001-0002": 314.86406590789557,
+      "task-0002-episodes-0001-0002": 325.3586685396731,
+      "task-0003-episodes-0002-0003": 343.3447383865714,
+      "task-0002-episodes-0002-0003": 366.20505525916815,
+      "task-0003-episodes-0003-0004": 380.5621163621545,
+      "task-0002-episodes-0003-0004": 396.1440001912415,
+      "task-0003-episodes-0004-0005": 410.9376224912703,
+      "task-0002-episodes-0004-0005": 428.58850845322013,
+      "task-0004-episodes-0000-0001": 459.98764241859317,
+      "task-0005-episodes-0000-0001": 461.613238979131,
+      "task-0004-episodes-0001-0002": 536.9511675573885,
+      "task-0005-episodes-0001-0002": 537.9657036028802,
+      "task-0005-episodes-0002-0003": 570.6763672567904,
+      "task-0004-episodes-0002-0003": 580.8254383653402,
+      "task-0005-episodes-0003-0004": 603.1449894569814,
+      "task-0005-episodes-0004-0005": 634.8381727077067,
+      "task-0004-episodes-0003-0004": 639.523622084409,
+      "task-0006-episodes-0000-0001": 674.568699516356,
+      "task-0004-episodes-0004-0005": 691.5762260742486,
+      "task-0006-episodes-0001-0002": 707.2881526648998,
+      "task-0006-episodes-0002-0003": 741.3922882862389,
+      "task-0007-episodes-0000-0001": 767.3352734036744,
+      "task-0007-episodes-0001-0002": 808.4397090114653,
+      "task-0006-episodes-0003-0004": 816.2108345404267,
+      "task-0007-episodes-0002-0003": 851.3540703430772,
+      "task-0006-episodes-0004-0005": 851.9698055796325,
+      "task-0007-episodes-0003-0004": 889.8515561409295,
+      "task-0008-episodes-0000-0001": 892.3038718104362,
+      "task-0007-episodes-0004-0005": 951.6831226050854,
+      "task-0008-episodes-0001-0002": 966.8388792276382,
+      "task-0009-episodes-0000-0001": 991.5017194449902,
+      "task-0009-episodes-0001-0002": 1034.820422757417,
+      "task-0008-episodes-0002-0003": 1041.6178139075637,
+      "task-0009-episodes-0002-0003": 1075.2670704834163,
+      "task-0008-episodes-0003-0004": 1117.2789478935301,
+      "task-0009-episodes-0003-0004": 1121.1928270943463,
+      "task-0008-episodes-0004-0005": 1147.4102434702218,
+      "task-0009-episodes-0004-0005": 1157.9302250556648
+    },
+    "worker_id": {
+      "task-0000-episodes-0000-0001": 0,
+      "task-0001-episodes-0000-0001": 1,
+      "task-0002-episodes-0000-0001": 1,
+      "task-0003-episodes-0000-0001": 0,
+      "task-0004-episodes-0000-0001": 0,
+      "task-0005-episodes-0000-0001": 1,
+      "task-0006-episodes-0000-0001": 1,
+      "task-0007-episodes-0000-0001": 0,
+      "task-0008-episodes-0000-0001": 1,
+      "task-0009-episodes-0000-0001": 0,
+      "task-0000-episodes-0001-0002": 0,
+      "task-0001-episodes-0001-0002": 1,
+      "task-0002-episodes-0001-0002": 1,
+      "task-0003-episodes-0001-0002": 0,
+      "task-0004-episodes-0001-0002": 0,
+      "task-0005-episodes-0001-0002": 1,
+      "task-0006-episodes-0001-0002": 1,
+      "task-0007-episodes-0001-0002": 0,
+      "task-0008-episodes-0001-0002": 1,
+      "task-0009-episodes-0001-0002": 0,
+      "task-0000-episodes-0002-0003": 0,
+      "task-0001-episodes-0002-0003": 1,
+      "task-0002-episodes-0002-0003": 1,
+      "task-0003-episodes-0002-0003": 0,
+      "task-0004-episodes-0002-0003": 0,
+      "task-0005-episodes-0002-0003": 1,
+      "task-0006-episodes-0002-0003": 1,
+      "task-0007-episodes-0002-0003": 0,
+      "task-0008-episodes-0002-0003": 1,
+      "task-0009-episodes-0002-0003": 0,
+      "task-0000-episodes-0003-0004": 0,
+      "task-0001-episodes-0003-0004": 1,
+      "task-0002-episodes-0003-0004": 1,
+      "task-0003-episodes-0003-0004": 0,
+      "task-0004-episodes-0003-0004": 0,
+      "task-0005-episodes-0003-0004": 1,
+      "task-0006-episodes-0003-0004": 1,
+      "task-0007-episodes-0003-0004": 0,
+      "task-0008-episodes-0003-0004": 1,
+      "task-0009-episodes-0003-0004": 0,
+      "task-0000-episodes-0004-0005": 0,
+      "task-0001-episodes-0004-0005": 1,
+      "task-0002-episodes-0004-0005": 1,
+      "task-0003-episodes-0004-0005": 0,
+      "task-0004-episodes-0004-0005": 0,
+      "task-0005-episodes-0004-0005": 1,
+      "task-0006-episodes-0004-0005": 1,
+      "task-0007-episodes-0004-0005": 0,
+      "task-0008-episodes-0004-0005": 1,
+      "task-0009-episodes-0004-0005": 0
+    }
+  },
+  "record_success": {
+    "task-0000-episode-0000": true,
+    "task-0001-episode-0000": true,
+    "task-0002-episode-0000": false,
+    "task-0003-episode-0000": true,
+    "task-0004-episode-0000": true,
+    "task-0005-episode-0000": true,
+    "task-0006-episode-0000": true,
+    "task-0007-episode-0000": false,
+    "task-0008-episode-0000": true,
+    "task-0009-episode-0000": true,
+    "task-0000-episode-0001": false,
+    "task-0001-episode-0001": true,
+    "task-0002-episode-0001": true,
+    "task-0003-episode-0001": true,
+    "task-0004-episode-0001": false,
+    "task-0005-episode-0001": false,
+    "task-0006-episode-0001": true,
+    "task-0007-episode-0001": true,
+    "task-0008-episode-0001": false,
+    "task-0009-episode-0001": true,
+    "task-0000-episode-0002": false,
+    "task-0001-episode-0002": true,
+    "task-0002-episode-0002": true,
+    "task-0003-episode-0002": true,
+    "task-0004-episode-0002": true,
+    "task-0005-episode-0002": true,
+    "task-0006-episode-0002": true,
+    "task-0007-episode-0002": true,
+    "task-0008-episode-0002": false,
+    "task-0009-episode-0002": true,
+    "task-0000-episode-0003": true,
+    "task-0001-episode-0003": true,
+    "task-0002-episode-0003": true,
+    "task-0003-episode-0003": true,
+    "task-0004-episode-0003": true,
+    "task-0005-episode-0003": true,
+    "task-0006-episode-0003": false,
+    "task-0007-episode-0003": true,
+    "task-0008-episode-0003": false,
+    "task-0009-episode-0003": true,
+    "task-0000-episode-0004": true,
+    "task-0001-episode-0004": true,
+    "task-0002-episode-0004": true,
+    "task-0003-episode-0004": true,
+    "task-0004-episode-0004": true,
+    "task-0005-episode-0004": true,
+    "task-0006-episode-0004": true,
+    "task-0007-episode-0004": true,
+    "task-0008-episode-0004": true,
+    "task-0009-episode-0004": true
+  },
+  "inference": {
+    "adapter": "PolicyProcessAdapter",
+    "benchmark": "libero",
+    "suite": "libero_spatial",
+    "checkpoint_path": "/root/autodl-fs/Kit-Models/openvla/spatial",
+    "load_timeout_s": 1800.0,
+    "replica_vram_bytes": {
+      "0": 15584985088,
+      "1": 15584985088
+    },
+    "replicas": {
+      "0": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_spatial"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      },
+      "1": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_spatial"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      }
+    },
+    "execution_contract": {
+      "benchmark": "libero",
+      "action_representation": "libero.delta-eef-v1",
+      "action_representation_source": "policy",
+      "observation_stride": 1,
+      "observation_stride_source": "safe_default",
+      "step_observation_updates": false
+    }
+  },
+  "policy_io": {
+    "benchmark": "libero",
+    "action_representation": "libero.delta-eef-v1",
+    "action_representation_source": "policy",
+    "observation_stride": 1,
+    "observation_stride_source": "safe_default",
+    "step_observation_updates": false
+  },
+  "benchmark": {
+    "adapter": "LiberoBenchmarkAdapter",
+    "benchmark": "libero",
+    "suite": "libero_spatial",
+    "protocol": "roboscope-policy-v1",
+    "bound_hint": "gpu_infer",
+    "task_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "episodes_per_task": 5,
+    "seed": 7,
+    "render_backend": "egl"
+  },
+  "result": {
+    "state": "complete",
+    "episodes": 50,
+    "successes": 40,
+    "failures": 10,
+    "total_steps": 6588,
+    "total_episodes": 50,
+    "success_rate": 0.8,
+    "completed_items": 50,
+    "elapsed_s": 1160.7133812978864,
+    "steps_per_s": 5.6758198071546575,
+    "episodes_per_s": 0.04307695664203596,
+    "steady_steps_per_s": 5.743182044839385,
+    "steady_window": {
+      "steps_per_s": 5.743182044839385,
+      "workers": 2,
+      "measured_workers": 2,
+      "measured_items": 47,
+      "window_s": 1101.930478747934
+    }
+  },
+  "official_result": {
+    "tasks": [
+      {
+        "task_id": 0,
+        "task_description": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+        "episodes": 5,
+        "successes": 3,
+        "success_rate": 0.6
+      },
+      {
+        "task_id": 1,
+        "task_description": "pick up the black bowl next to the ramekin and place it on the plate",
+        "episodes": 5,
+        "successes": 5,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 2,
+        "task_description": "pick up the black bowl from table center and place it on the plate",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 3,
+        "task_description": "pick up the black bowl on the cookie box and place it on the plate",
+        "episodes": 5,
+        "successes": 5,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 4,
+        "task_description": "pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 5,
+        "task_description": "pick up the black bowl on the ramekin and place it on the plate",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 6,
+        "task_description": "pick up the black bowl next to the cookie box and place it on the plate",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 7,
+        "task_description": "pick up the black bowl on the stove and place it on the plate",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 8,
+        "task_description": "pick up the black bowl next to the plate and place it on the plate",
+        "episodes": 5,
+        "successes": 2,
+        "success_rate": 0.4
+      },
+      {
+        "task_id": 9,
+        "task_description": "pick up the black bowl on the wooden cabinet and place it on the plate",
+        "episodes": 5,
+        "successes": 5,
+        "success_rate": 1.0
+      }
+    ],
+    "runtime_metrics": {
+      "inference_wait_s": 2033.412257835269,
+      "episode_elapsed_s": 2238.1726095825434,
+      "inference_wait_ratio": 0.9085144948738044
+    }
+  },
+  "resources": {
+    "elapsed_s": 1160.7133812978864,
+    "cpu": {
+      "cpu_cores": 2.1146612441526345,
+      "throttle_time_ratio": 0.0,
+      "throttle_period_ratio": 0.0
+    },
+    "gpu": {
+      "mean_utilization": 0.9419845857418111,
+      "peak_memory_bytes": 33318502400.0,
+      "gpu_util_avg": {
+        "0": 94.1984585741811
+      },
+      "gpu_util_max": {
+        "0": 100.0
+      },
+      "gpu_mem_mib_max": {
+        "0": 31775.0
+      }
+    },
+    "gpu_samples": 2076
+  },
+  "recovery": {
+    "worker_failures": [],
+    "planned_recycles": 0,
+    "oom_events": 0,
+    "initial_workers_per_gpu": {
+      "0": 2
+    },
+    "final_workers_per_gpu": {
+      "0": 2
+    }
+  },
+  "autotune": {
+    "k": 2,
+    "g": 2,
+    "mode": "fixed"
+  },
+  "cuda_mps": {
+    "enabled": false
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "policy_load_s": 586.3570939227939,
+  "checkpoint": "/root/autodl-fs/Kit-Models/openvla/goal",
+  "suite": "libero_goal",
+  "code_revision": "47a0ec7fc4ec123775a391911046cf33cf9ed83f",
+  "dtype": "torch.bfloat16",
+  "loading_peak_allocated_bytes": 15129554944,
+  "loading_peak_reserved_bytes": 15172894720,
+  "model_class_file": "/root/autodl-tmp/openvla-libero-quick-20261109/hf/modules/transformers_modules/openvla/openvla-7b/47a0ec7fc4ec123775a391911046cf33cf9ed83f/modeling_prismatic.py",
+  "boundary": "PyTorch allocator only; excludes TensorFlow and EGL allocations",
+  "service_boundary": "Policy.act including JPEG/resize/crop, prompt, processor, H2D, prediction, CPU action, gripper conversion; excludes socket/queue and measurement writes",
+  "native_service_boundary_difference": "Native get_action excludes JPEG/resize and environment action conversion; service_ms is not directly comparable.",
+  "synchronization": "No added CUDA synchronization; predict_action returns a CPU NumPy action"
+}

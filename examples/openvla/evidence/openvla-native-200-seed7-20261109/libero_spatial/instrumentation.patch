@@ -1,0 +1,70 @@
+--- upstream/run_libero_eval.py
++++ instrumented/run_libero_eval.py
+@@ -87,7 +87,6 @@
+     # fmt: on
+ 
+ 
+-@draccus.wrap()
+ def eval_libero(cfg: GenerateConfig) -> None:
+     assert cfg.pretrained_checkpoint is not None, "cfg.pretrained_checkpoint must not be None!"
+     if "image_aug" in cfg.pretrained_checkpoint:
+@@ -143,9 +142,10 @@
+     # Get expected image dimensions
+     resize_size = get_image_resize_size(cfg)
+ 
++    _observer.formal_start()
+     # Start evaluation
+     total_episodes, total_successes = 0, 0
+-    for task_id in tqdm.tqdm(range(num_tasks_in_suite)):
++    for task_id in tqdm.tqdm(_observer.task_ids(num_tasks_in_suite)):
+         # Get task
+         task = task_suite.get_task(task_id)
+ 
+@@ -154,6 +154,7 @@
+ 
+         # Initialize LIBERO environment and task description
+         env, task_description = get_libero_env(task, cfg.model_family, resolution=256)
++        env = _observer.task_env(task_id, task, env, task_description)
+ 
+         # Start episodes
+         task_episodes, task_successes = 0, 0
+@@ -161,6 +162,7 @@
+             print(f"\nTask: {task_description}")
+             log_file.write(f"\nTask: {task_description}\n")
+ 
++            _observer.episode_start(task_id, episode_idx, task_description)
+             # Reset environment
+             env.reset()
+ 
+@@ -196,7 +198,6 @@
+                     img = get_libero_image(obs, resize_size)
+ 
+                     # Save preprocessed image for replay video
+-                    replay_images.append(img)
+ 
+                     # Prepare observations dict
+                     # Note: OpenVLA does not take proprio state as input
+@@ -233,6 +234,7 @@
+                     t += 1
+ 
+                 except Exception as e:
++                    _observer.error(e)
+                     print(f"Caught exception: {e}")
+                     log_file.write(f"Caught exception: {e}\n")
+                     break
+@@ -253,6 +255,7 @@
+             log_file.write(f"# episodes completed so far: {total_episodes}\n")
+             log_file.write(f"# successes: {total_successes} ({total_successes / total_episodes * 100:.1f}%)\n")
+             log_file.flush()
++            _observer.episode_end(done)
+ 
+         # Log final results
+         print(f"Current task success rate: {float(task_successes) / float(task_episodes)}")
+@@ -268,6 +271,7 @@
+                 }
+             )
+ 
++    _observer.formal_finish()
+     # Save local log file
+     log_file.close()
+ 

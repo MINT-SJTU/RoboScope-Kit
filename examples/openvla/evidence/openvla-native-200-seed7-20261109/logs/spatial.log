@@ -1,0 +1,133 @@
+{
+  "suite": "libero_spatial",
+  "profile": "matched-serial",
+  "repeat_id": "native-200-seed7",
+  "exit_code": 0,
+  "complete_unique_coverage": true,
+  "execution_valid": true,
+  "diagnostic_trace": false,
+  "performance_evidence": true,
+  "expected_episodes": 50,
+  "completed_episodes": 50,
+  "unique_episodes": 50,
+  "missing": [],
+  "duplicates": [],
+  "unexpected": [],
+  "successes": 43,
+  "observed_success_rate": 0.86,
+  "policy_steps": 6181,
+  "settling_steps": 500,
+  "errors": 0,
+  "oom_errors": 0,
+  "retries": 0,
+  "per_task": {
+    "0": {
+      "completed": 5,
+      "successes": 3,
+      "success_rate": 0.6
+    },
+    "1": {
+      "completed": 5,
+      "successes": 4,
+      "success_rate": 0.8
+    },
+    "2": {
+      "completed": 5,
+      "successes": 4,
+      "success_rate": 0.8
+    },
+    "3": {
+      "completed": 5,
+      "successes": 4,
+      "success_rate": 0.8
+    },
+    "4": {
+      "completed": 5,
+      "successes": 3,
+      "success_rate": 0.6
+    },
+    "5": {
+      "completed": 5,
+      "successes": 5,
+      "success_rate": 1.0
+    },
+    "6": {
+      "completed": 5,
+      "successes": 5,
+      "success_rate": 1.0
+    },
+    "7": {
+      "completed": 5,
+      "successes": 5,
+      "success_rate": 1.0
+    },
+    "8": {
+      "completed": 5,
+      "successes": 5,
+      "success_rate": 1.0
+    },
+    "9": {
+      "completed": 5,
+      "successes": 5,
+      "success_rate": 1.0
+    }
+  },
+  "phase_timings": {
+    "import_s": 27.231886113993824,
+    "model_load_s": 312.4406128535047,
+    "processor_load_s": 0.42847629357129335,
+    "evaluation_s": 1377.5944201871753,
+    "torch_allocator": {
+      "loading_peak_allocated_bytes": 15129554944,
+      "loading_peak_reserved_bytes": 15172894720,
+      "evaluation_peak_allocated_bytes": 15485928448,
+      "evaluation_peak_reserved_bytes": 15573450752,
+      "scope": "PyTorch allocator on cuda:0; excludes TensorFlow and EGL allocations"
+    },
+    "cuda_runtime_version": "12.1",
+    "cudnn_version": 8902,
+    "exit_code": 0
+  },
+  "formal_episodes_per_s": 0.03629515281660799,
+  "formal_steps_per_s": 4.486806791189079,
+  "formal_boundary": "before first task creation through last task upstream logs; excludes model/processor loading",
+  "child_process_elapsed_s": 1720.3906194670126,
+  "resources_by_phase": {
+    "startup": {
+      "samples": 1,
+      "observed_peak_gpu_memory_mib": 1.0,
+      "mean_gpu_util_pct": 0.0
+    },
+    "imports": {
+      "samples": 49,
+      "observed_peak_gpu_memory_mib": 4.0,
+      "mean_gpu_util_pct": 0.0
+    },
+    "policy_load": {
+      "samples": 559,
+      "observed_peak_gpu_memory_mib": 14866.0,
+      "mean_gpu_util_pct": 0.41323792486583183
+    },
+    "evaluation": {
+      "samples": 2496,
+      "observed_peak_gpu_memory_mib": 16393.0,
+      "mean_gpu_util_pct": 69.88741987179488
+    },
+    "exiting": {
+      "samples": 5,
+      "observed_peak_gpu_memory_mib": 15797.0,
+      "mean_gpu_util_pct": 0.0
+    }
+  },
+  "resource_samples": 3110,
+  "resource_error_samples": 1,
+  "sampler_interval_requested_s": 0.5,
+  "observed_sample_gap_s": {
+    "count": 3109,
+    "mean": 0.5533512995712251,
+    "p50": 0.5487457355484366,
+    "p95": 0.5888540586456656,
+    "p99": 0.596607179120183,
+    "max": 0.8339958069846034
+  }
+}

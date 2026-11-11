@@ -1,0 +1,397 @@
+{
+  "sdk_version": 1,
+  "runtime": {
+    "output_dir": "/root/autodl-tmp/openvla-kit-200-fixed4-seed7-20261109/libero_10",
+    "gpu_devices": [
+      "0"
+    ],
+    "replicas": 1,
+    "concurrency": 4,
+    "base_port": 16694,
+    "ready_timeout_s": 1800.0,
+    "poll_interval_s": 0.2,
+    "probe_limits": null,
+    "shard_index": null,
+    "shard_count": null,
+    "shard_episodes": 500,
+    "shard_build": null,
+    "profile": false
+  },
+  "phase_timings": {
+    "policy_load_s": 592.8406358603388,
+    "runtime_prepare_s": 1.810142527334392,
+    "evaluation_s": 4040.336656086147
+  },
+  "item_timeline": {
+    "completion_s": {
+      "task-0001-episodes-0000-0001": 202.50865679886192,
+      "task-0000-episodes-0000-0001": 247.2289485456422,
+      "task-0003-episodes-0000-0001": 404.58509969338775,
+      "task-0002-episodes-0000-0001": 404.58509969338775,
+      "task-0000-episodes-0001-0002": 546.2494015274569,
+      "task-0003-episodes-0001-0002": 594.8706331187859,
+      "task-0001-episodes-0001-0002": 599.90342217125,
+      "task-0002-episodes-0001-0002": 801.9628405142576,
+      "task-0001-episodes-0002-0003": 809.2154971351847,
+      "task-0003-episodes-0002-0003": 898.6854807380587,
+      "task-0000-episodes-0002-0003": 944.8570107799023,
+      "task-0001-episodes-0003-0004": 1012.86530979909,
+      "task-0000-episodes-0003-0004": 1193.376766222529,
+      "task-0002-episodes-0002-0003": 1199.8434011405334,
+      "task-0001-episodes-0004-0005": 1226.3176620248705,
+      "task-0003-episodes-0003-0004": 1294.7688756128773,
+      "task-0002-episodes-0003-0004": 1450.5623532310128,
+      "task-0000-episodes-0004-0005": 1592.8354270402342,
+      "task-0004-episodes-0000-0001": 1630.7213479625061,
+      "task-0003-episodes-0004-0005": 1695.3764102905989,
+      "task-0002-episodes-0004-0005": 1766.3578988369554,
+      "task-0005-episodes-0000-0001": 1767.1715225093067,
+      "task-0005-episodes-0001-0002": 1919.4361744811758,
+      "task-0004-episodes-0001-0002": 2029.313825062476,
+      "task-0005-episodes-0002-0003": 2082.797350635752,
+      "task-0006-episodes-0000-0001": 2096.838791280985,
+      "task-0007-episodes-0000-0001": 2167.396705944091,
+      "task-0007-episodes-0001-0002": 2355.045599397272,
+      "task-0004-episodes-0002-0003": 2428.0345560582355,
+      "task-0005-episodes-0003-0004": 2481.4327275902033,
+      "task-0006-episodes-0001-0002": 2495.93358242698,
+      "task-0005-episodes-0004-0005": 2617.2512960620224,
+      "task-0007-episodes-0002-0003": 2656.70816687122,
+      "task-0004-episodes-0003-0004": 2827.403921966441,
+      "task-0006-episodes-0002-0003": 2896.3918391168118,
+      "task-0004-episodes-0004-0005": 3014.0304315658286,
+      "task-0008-episodes-0000-0001": 3017.721887853928,
+      "task-0007-episodes-0003-0004": 3056.6407836386934,
+      "task-0006-episodes-0003-0004": 3072.619217177853,
+      "task-0006-episodes-0004-0005": 3224.5851305387914,
+      "task-0009-episodes-0000-0001": 3410.7228426309302,
+      "task-0008-episodes-0001-0002": 3412.780164381489,
+      "task-0007-episodes-0004-0005": 3452.2278814464808,
+      "task-0009-episodes-0001-0002": 3622.5406174007803,
+      "task-0009-episodes-0002-0003": 3756.869467286393,
+      "task-0008-episodes-0002-0003": 3807.9621952604502,
+      "task-0008-episodes-0003-0004": 3847.711990546435,
+      "task-0009-episodes-0003-0004": 3976.9918693797663,
+      "task-0008-episodes-0004-0005": 4035.5820729108527,
+      "task-0009-episodes-0004-0005": 4040.330923207104
+    },
+    "worker_id": {
+      "task-0000-episodes-0000-0001": 0,
+      "task-0001-episodes-0000-0001": 3,
+      "task-0002-episodes-0000-0001": 1,
+      "task-0003-episodes-0000-0001": 2,
+      "task-0004-episodes-0000-0001": 3,
+      "task-0005-episodes-0000-0001": 0,
+      "task-0006-episodes-0000-0001": 2,
+      "task-0007-episodes-0000-0001": 1,
+      "task-0008-episodes-0000-0001": 0,
+      "task-0009-episodes-0000-0001": 3,
+      "task-0000-episodes-0001-0002": 0,
+      "task-0001-episodes-0001-0002": 3,
+      "task-0002-episodes-0001-0002": 1,
+      "task-0003-episodes-0001-0002": 2,
+      "task-0004-episodes-0001-0002": 3,
+      "task-0005-episodes-0001-0002": 0,
+      "task-0006-episodes-0001-0002": 2,
+      "task-0007-episodes-0001-0002": 1,
+      "task-0008-episodes-0001-0002": 0,
+      "task-0009-episodes-0001-0002": 2,
+      "task-0000-episodes-0002-0003": 0,
+      "task-0001-episodes-0002-0003": 3,
+      "task-0002-episodes-0002-0003": 1,
+      "task-0003-episodes-0002-0003": 2,
+      "task-0004-episodes-0002-0003": 3,
+      "task-0005-episodes-0002-0003": 0,
+      "task-0006-episodes-0002-0003": 2,
+      "task-0007-episodes-0002-0003": 1,
+      "task-0008-episodes-0002-0003": 0,
+      "task-0009-episodes-0002-0003": 3,
+      "task-0000-episodes-0003-0004": 0,
+      "task-0001-episodes-0003-0004": 3,
+      "task-0002-episodes-0003-0004": 1,
+      "task-0003-episodes-0003-0004": 2,
+      "task-0004-episodes-0003-0004": 3,
+      "task-0005-episodes-0003-0004": 0,
+      "task-0006-episodes-0003-0004": 2,
+      "task-0007-episodes-0003-0004": 1,
+      "task-0008-episodes-0003-0004": 1,
+      "task-0009-episodes-0003-0004": 2,
+      "task-0000-episodes-0004-0005": 0,
+      "task-0001-episodes-0004-0005": 3,
+      "task-0002-episodes-0004-0005": 1,
+      "task-0003-episodes-0004-0005": 2,
+      "task-0004-episodes-0004-0005": 3,
+      "task-0005-episodes-0004-0005": 0,
+      "task-0006-episodes-0004-0005": 2,
+      "task-0007-episodes-0004-0005": 1,
+      "task-0008-episodes-0004-0005": 0,
+      "task-0009-episodes-0004-0005": 3
+    }
+  },
+  "record_success": {
+    "task-0000-episode-0000": true,
+    "task-0001-episode-0000": true,
+    "task-0002-episode-0000": false,
+    "task-0003-episode-0000": false,
+    "task-0004-episode-0000": false,
+    "task-0005-episode-0000": true,
+    "task-0006-episode-0000": false,
+    "task-0007-episode-0000": false,
+    "task-0008-episode-0000": false,
+    "task-0009-episode-0000": false,
+    "task-0000-episode-0001": true,
+    "task-0001-episode-0001": false,
+    "task-0002-episode-0001": false,
+    "task-0003-episode-0001": true,
+    "task-0004-episode-0001": false,
+    "task-0005-episode-0001": true,
+    "task-0006-episode-0001": false,
+    "task-0007-episode-0001": true,
+    "task-0008-episode-0001": false,
+    "task-0009-episode-0001": false,
+    "task-0000-episode-0002": false,
+    "task-0001-episode-0002": true,
+    "task-0002-episode-0002": false,
+    "task-0003-episode-0002": true,
+    "task-0004-episode-0002": false,
+    "task-0005-episode-0002": true,
+    "task-0006-episode-0002": false,
+    "task-0007-episode-0002": true,
+    "task-0008-episode-0002": false,
+    "task-0009-episode-0002": true,
+    "task-0000-episode-0003": true,
+    "task-0001-episode-0003": true,
+    "task-0002-episode-0003": true,
+    "task-0003-episode-0003": false,
+    "task-0004-episode-0003": false,
+    "task-0005-episode-0003": false,
+    "task-0006-episode-0003": true,
+    "task-0007-episode-0003": false,
+    "task-0008-episode-0003": false,
+    "task-0009-episode-0003": false,
+    "task-0000-episode-0004": false,
+    "task-0001-episode-0004": true,
+    "task-0002-episode-0004": true,
+    "task-0003-episode-0004": false,
+    "task-0004-episode-0004": true,
+    "task-0005-episode-0004": true,
+    "task-0006-episode-0004": true,
+    "task-0007-episode-0004": false,
+    "task-0008-episode-0004": true,
+    "task-0009-episode-0004": false
+  },
+  "inference": {
+    "adapter": "PolicyProcessAdapter",
+    "benchmark": "libero",
+    "suite": "libero_10",
+    "checkpoint_path": "/root/autodl-fs/Kit-Models/openvla/10",
+    "load_timeout_s": 1800.0,
+    "replica_vram_bytes": {
+      "0": 15587082240
+    },
+    "replicas": {
+      "0": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_10"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      }
+    },
+    "execution_contract": {
+      "benchmark": "libero",
+      "action_representation": "libero.delta-eef-v1",
+      "action_representation_source": "policy",
+      "observation_stride": 1,
+      "observation_stride_source": "safe_default",
+      "step_observation_updates": false
+    }
+  },
+  "policy_io": {
+    "benchmark": "libero",
+    "action_representation": "libero.delta-eef-v1",
+    "action_representation_source": "policy",
+    "observation_stride": 1,
+    "observation_stride_source": "safe_default",
+    "step_observation_updates": false
+  },
+  "benchmark": {
+    "adapter": "LiberoBenchmarkAdapter",
+    "benchmark": "libero",
+    "suite": "libero_10",
+    "protocol": "roboscope-policy-v1",
+    "bound_hint": "gpu_infer",
+    "task_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "episodes_per_task": 5,
+    "seed": 7,
+    "render_backend": "egl"
+  },
+  "result": {
+    "state": "complete",
+    "episodes": 50,
+    "successes": 22,
+    "failures": 28,
+    "total_steps": 21021,
+    "total_episodes": 50,
+    "success_rate": 0.44,
+    "completed_items": 50,
+    "elapsed_s": 4043.6394796986133,
+    "steps_per_s": 5.1985346630275675,
+    "episodes_per_s": 0.012365098385013956,
+    "steady_steps_per_s": 5.212472727821138,
+    "steady_window": {
+      "steps_per_s": 5.212472727821138,
+      "workers": 4,
+      "measured_workers": 4,
+      "measured_items": 43,
+      "window_s": 3443.1268908530474
+    }
+  },
+  "official_result": {
+    "tasks": [
+      {
+        "task_id": 0,
+        "task_description": "put both the alphabet soup and the tomato sauce in the basket",
+        "episodes": 5,
+        "successes": 3,
+        "success_rate": 0.6
+      },
+      {
+        "task_id": 1,
+        "task_description": "put both the cream cheese box and the butter in the basket",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 2,
+        "task_description": "turn on the stove and put the moka pot on it",
+        "episodes": 5,
+        "successes": 2,
+        "success_rate": 0.4
+      },
+      {
+        "task_id": 3,
+        "task_description": "put the black bowl in the bottom drawer of the cabinet and close it",
+        "episodes": 5,
+        "successes": 2,
+        "success_rate": 0.4
+      },
+      {
+        "task_id": 4,
+        "task_description": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+        "episodes": 5,
+        "successes": 1,
+        "success_rate": 0.2
+      },
+      {
+        "task_id": 5,
+        "task_description": "pick up the book and place it in the back compartment of the caddy",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 6,
+        "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+        "episodes": 5,
+        "successes": 2,
+        "success_rate": 0.4
+      },
+      {
+        "task_id": 7,
+        "task_description": "put both the alphabet soup and the cream cheese box in the basket",
+        "episodes": 5,
+        "successes": 2,
+        "success_rate": 0.4
+      },
+      {
+        "task_id": 8,
+        "task_description": "put both moka pots on the stove",
+        "episodes": 5,
+        "successes": 1,
+        "success_rate": 0.2
+      },
+      {
+        "task_id": 9,
+        "task_description": "put the yellow and white mug in the microwave and close it",
+        "episodes": 5,
+        "successes": 1,
+        "success_rate": 0.2
+      }
+    ],
+    "runtime_metrics": {
+      "inference_wait_s": 15283.827711337246,
+      "episode_elapsed_s": 15770.528242575005,
+      "inference_wait_ratio": 0.9691386031113508
+    }
+  },
+  "resources": {
+    "elapsed_s": 4043.6394796986133,
+    "cpu": {
+      "cpu_cores": 1.3092187091799246,
+      "throttle_time_ratio": 1.0842039756538248e-05,
+      "throttle_period_ratio": 4.946087644673064e-05
+    },
+    "gpu": {
+      "mean_utilization": 0.8092218896964515,
+      "peak_memory_bytes": 18869125120.0,
+      "gpu_util_avg": {
+        "0": 80.92218896964515
+      },
+      "gpu_util_max": {
+        "0": 100.0
+      },
+      "gpu_mem_mib_max": {
+        "0": 17995.0
+      }
+    },
+    "gpu_samples": 7017
+  },
+  "recovery": {
+    "worker_failures": [],
+    "planned_recycles": 0,
+    "oom_events": 0,
+    "initial_workers_per_gpu": {
+      "0": 4
+    },
+    "final_workers_per_gpu": {
+      "0": 4
+    }
+  },
+  "autotune": {
+    "k": 4,
+    "g": 1,
+    "mode": "fixed"
+  },
+  "cuda_mps": {
+    "enabled": false
+  }
+}

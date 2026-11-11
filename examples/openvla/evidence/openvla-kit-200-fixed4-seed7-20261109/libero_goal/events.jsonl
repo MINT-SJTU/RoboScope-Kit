@@ -1,0 +1,55 @@
+{"phase": "server-starting", "type": "phase"}
+{"restarted_replicas": [], "reused_replicas": 0, "started_replicas": 1, "stopped_replicas": 0, "target_replicas": 1, "type": "inference-pool"}
+{"phase": "workers-starting", "type": "phase"}
+{"phase": "evaluation", "type": "phase"}
+{"completed_items": 0, "episodes": 0, "failures": 0, "state": "running", "success_rate": 0.0, "successes": 0, "total_episodes": 50, "total_steps": 0, "type": "progress"}
+{"completed_items": 1, "episodes": 1, "failures": 0, "state": "running", "success_rate": 1.0, "successes": 1, "total_episodes": 50, "total_steps": 78, "type": "progress"}
+{"completed_items": 2, "episodes": 2, "failures": 0, "state": "running", "success_rate": 1.0, "successes": 2, "total_episodes": 50, "total_steps": 168, "type": "progress"}
+{"completed_items": 3, "episodes": 3, "failures": 0, "state": "running", "success_rate": 1.0, "successes": 3, "total_episodes": 50, "total_steps": 360, "type": "progress"}
+{"completed_items": 4, "episodes": 4, "failures": 0, "state": "running", "success_rate": 1.0, "successes": 4, "total_episodes": 50, "total_steps": 443, "type": "progress"}
+{"completed_items": 6, "episodes": 6, "failures": 2, "state": "running", "success_rate": 0.6666666666666666, "successes": 4, "total_episodes": 50, "total_steps": 1043, "type": "progress"}
+{"completed_items": 7, "episodes": 7, "failures": 2, "state": "running", "success_rate": 0.7142857142857143, "successes": 5, "total_episodes": 50, "total_steps": 1120, "type": "progress"}
+{"completed_items": 8, "episodes": 8, "failures": 2, "state": "running", "success_rate": 0.75, "successes": 6, "total_episodes": 50, "total_steps": 1209, "type": "progress"}
+{"completed_items": 9, "episodes": 9, "failures": 2, "state": "running", "success_rate": 0.7777777777777778, "successes": 7, "total_episodes": 50, "total_steps": 1301, "type": "progress"}
+{"completed_items": 10, "episodes": 10, "failures": 2, "state": "running", "success_rate": 0.8, "successes": 8, "total_episodes": 50, "total_steps": 1395, "type": "progress"}
+{"completed_items": 11, "episodes": 11, "failures": 3, "state": "running", "success_rate": 0.7272727272727273, "successes": 8, "total_episodes": 50, "total_steps": 1695, "type": "progress"}
+{"completed_items": 12, "episodes": 12, "failures": 3, "state": "running", "success_rate": 0.75, "successes": 9, "total_episodes": 50, "total_steps": 1787, "type": "progress"}
+{"completed_items": 13, "episodes": 13, "failures": 4, "state": "running", "success_rate": 0.6923076923076923, "successes": 9, "total_episodes": 50, "total_steps": 2087, "type": "progress"}
+{"completed_items": 14, "episodes": 14, "failures": 4, "state": "running", "success_rate": 0.7142857142857143, "successes": 10, "total_episodes": 50, "total_steps": 2214, "type": "progress"}
+{"completed_items": 15, "episodes": 15, "failures": 4, "state": "running", "success_rate": 0.7333333333333333, "successes": 11, "total_episodes": 50, "total_steps": 2396, "type": "progress"}
+{"completed_items": 16, "episodes": 16, "failures": 4, "state": "running", "success_rate": 0.75, "successes": 12, "total_episodes": 50, "total_steps": 2482, "type": "progress"}
+{"completed_items": 17, "episodes": 17, "failures": 4, "state": "running", "success_rate": 0.7647058823529411, "successes": 13, "total_episodes": 50, "total_steps": 2591, "type": "progress"}
+{"completed_items": 18, "episodes": 18, "failures": 5, "state": "running", "success_rate": 0.7222222222222222, "successes": 13, "total_episodes": 50, "total_steps": 2891, "type": "progress"}
+{"completed_items": 19, "episodes": 19, "failures": 5, "state": "running", "success_rate": 0.7368421052631579, "successes": 14, "total_episodes": 50, "total_steps": 3017, "type": "progress"}
+{"completed_items": 20, "episodes": 20, "failures": 5, "state": "running", "success_rate": 0.75, "successes": 15, "total_episodes": 50, "total_steps": 3154, "type": "progress"}
+{"completed_items": 21, "episodes": 21, "failures": 5, "state": "running", "success_rate": 0.7619047619047619, "successes": 16, "total_episodes": 50, "total_steps": 3337, "type": "progress"}
+{"completed_items": 22, "episodes": 22, "failures": 5, "state": "running", "success_rate": 0.7727272727272727, "successes": 17, "total_episodes": 50, "total_steps": 3445, "type": "progress"}
+{"completed_items": 23, "episodes": 23, "failures": 5, "state": "running", "success_rate": 0.782608695652174, "successes": 18, "total_episodes": 50, "total_steps": 3581, "type": "progress"}
+{"completed_items": 24, "episodes": 24, "failures": 5, "state": "running", "success_rate": 0.7916666666666666, "successes": 19, "total_episodes": 50, "total_steps": 3732, "type": "progress"}
+{"completed_items": 25, "episodes": 25, "failures": 5, "state": "running", "success_rate": 0.8, "successes": 20, "total_episodes": 50, "total_steps": 3823, "type": "progress"}
+{"completed_items": 26, "episodes": 26, "failures": 5, "state": "running", "success_rate": 0.8076923076923077, "successes": 21, "total_episodes": 50, "total_steps": 3910, "type": "progress"}
+{"completed_items": 27, "episodes": 27, "failures": 5, "state": "running", "success_rate": 0.8148148148148148, "successes": 22, "total_episodes": 50, "total_steps": 3996, "type": "progress"}
+{"completed_items": 28, "episodes": 28, "failures": 6, "state": "running", "success_rate": 0.7857142857142857, "successes": 22, "total_episodes": 50, "total_steps": 4296, "type": "progress"}
+{"completed_items": 29, "episodes": 29, "failures": 6, "state": "running", "success_rate": 0.7931034482758621, "successes": 23, "total_episodes": 50, "total_steps": 4413, "type": "progress"}
+{"completed_items": 30, "episodes": 30, "failures": 6, "state": "running", "success_rate": 0.8, "successes": 24, "total_episodes": 50, "total_steps": 4504, "type": "progress"}
+{"completed_items": 31, "episodes": 31, "failures": 6, "state": "running", "success_rate": 0.8064516129032258, "successes": 25, "total_episodes": 50, "total_steps": 4586, "type": "progress"}
+{"completed_items": 32, "episodes": 32, "failures": 7, "state": "running", "success_rate": 0.78125, "successes": 25, "total_episodes": 50, "total_steps": 4886, "type": "progress"}
+{"completed_items": 33, "episodes": 33, "failures": 7, "state": "running", "success_rate": 0.7878787878787878, "successes": 26, "total_episodes": 50, "total_steps": 4977, "type": "progress"}
+{"completed_items": 34, "episodes": 34, "failures": 7, "state": "running", "success_rate": 0.7941176470588235, "successes": 27, "total_episodes": 50, "total_steps": 5054, "type": "progress"}
+{"completed_items": 35, "episodes": 35, "failures": 7, "state": "running", "success_rate": 0.8, "successes": 28, "total_episodes": 50, "total_steps": 5127, "type": "progress"}
+{"completed_items": 36, "episodes": 36, "failures": 7, "state": "running", "success_rate": 0.8055555555555556, "successes": 29, "total_episodes": 50, "total_steps": 5226, "type": "progress"}
+{"completed_items": 37, "episodes": 37, "failures": 7, "state": "running", "success_rate": 0.8108108108108109, "successes": 30, "total_episodes": 50, "total_steps": 5291, "type": "progress"}
+{"completed_items": 38, "episodes": 38, "failures": 7, "state": "running", "success_rate": 0.8157894736842105, "successes": 31, "total_episodes": 50, "total_steps": 5369, "type": "progress"}
+{"completed_items": 39, "episodes": 39, "failures": 8, "state": "running", "success_rate": 0.7948717948717948, "successes": 31, "total_episodes": 50, "total_steps": 5669, "type": "progress"}
+{"completed_items": 40, "episodes": 40, "failures": 8, "state": "running", "success_rate": 0.8, "successes": 32, "total_episodes": 50, "total_steps": 5752, "type": "progress"}
+{"completed_items": 41, "episodes": 41, "failures": 8, "state": "running", "success_rate": 0.8048780487804879, "successes": 33, "total_episodes": 50, "total_steps": 5830, "type": "progress"}
+{"completed_items": 42, "episodes": 42, "failures": 9, "state": "running", "success_rate": 0.7857142857142857, "successes": 33, "total_episodes": 50, "total_steps": 6130, "type": "progress"}
+{"completed_items": 43, "episodes": 43, "failures": 9, "state": "running", "success_rate": 0.7906976744186046, "successes": 34, "total_episodes": 50, "total_steps": 6214, "type": "progress"}
+{"completed_items": 44, "episodes": 44, "failures": 9, "state": "running", "success_rate": 0.7954545454545454, "successes": 35, "total_episodes": 50, "total_steps": 6331, "type": "progress"}
+{"completed_items": 45, "episodes": 45, "failures": 9, "state": "running", "success_rate": 0.8, "successes": 36, "total_episodes": 50, "total_steps": 6465, "type": "progress"}
+{"completed_items": 46, "episodes": 46, "failures": 9, "state": "running", "success_rate": 0.8043478260869565, "successes": 37, "total_episodes": 50, "total_steps": 6624, "type": "progress"}
+{"completed_items": 47, "episodes": 47, "failures": 9, "state": "running", "success_rate": 0.8085106382978723, "successes": 38, "total_episodes": 50, "total_steps": 6775, "type": "progress"}
+{"completed_items": 48, "episodes": 48, "failures": 9, "state": "running", "success_rate": 0.8125, "successes": 39, "total_episodes": 50, "total_steps": 6914, "type": "progress"}
+{"completed_items": 49, "episodes": 49, "failures": 10, "state": "running", "success_rate": 0.7959183673469388, "successes": 39, "total_episodes": 50, "total_steps": 7214, "type": "progress"}
+{"completed_items": 50, "episodes": 50, "failures": 11, "state": "complete", "success_rate": 0.78, "successes": 39, "total_episodes": 50, "total_steps": 7514, "type": "progress"}
+{"completed_items": 50, "elapsed_s": 1452.47196062468, "episodes": 50, "episodes_per_s": 0.034424072447151385, "failures": 11, "state": "complete", "steady_steps_per_s": 5.200028295757454, "steady_window": {"measured_items": 43, "measured_workers": 4, "steps_per_s": 5.200028295757454, "window_s": 1157.7961791763082, "workers": 4}, "steps_per_s": 5.173249607357911, "success_rate": 0.78, "successes": 39, "total_episodes": 50, "total_steps": 7514, "type": "complete"}

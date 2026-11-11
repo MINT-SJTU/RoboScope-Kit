@@ -1,0 +1,321 @@
+Task suite: libero_10
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 1...
+Success: True
+# episodes completed so far: 1
+# successes: 1 (100.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 2...
+Success: True
+# episodes completed so far: 2
+# successes: 2 (100.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 3...
+Success: True
+# episodes completed so far: 3
+# successes: 3 (100.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 4...
+Success: True
+# episodes completed so far: 4
+# successes: 4 (100.0%)
+
+Task: put both the alphabet soup and the tomato sauce in the basket
+Starting episode 5...
+Success: False
+# episodes completed so far: 5
+# successes: 4 (80.0%)
+Current task success rate: 0.8
+Current total success rate: 0.8
+
+Task: put both the cream cheese box and the butter in the basket
+Starting episode 1...
+Success: True
+# episodes completed so far: 6
+# successes: 5 (83.3%)
+
+Task: put both the cream cheese box and the butter in the basket
+Starting episode 2...
+Success: True
+# episodes completed so far: 7
+# successes: 6 (85.7%)
+
+Task: put both the cream cheese box and the butter in the basket
+Starting episode 3...
+Success: False
+# episodes completed so far: 8
+# successes: 6 (75.0%)
+
+Task: put both the cream cheese box and the butter in the basket
+Starting episode 4...
+Success: True
+# episodes completed so far: 9
+# successes: 7 (77.8%)
+
+Task: put both the cream cheese box and the butter in the basket
+Starting episode 5...
+Success: True
+# episodes completed so far: 10
+# successes: 8 (80.0%)
+Current task success rate: 0.8
+Current total success rate: 0.8
+
+Task: turn on the stove and put the moka pot on it
+Starting episode 1...
+Success: True
+# episodes completed so far: 11
+# successes: 9 (81.8%)
+
+Task: turn on the stove and put the moka pot on it
+Starting episode 2...
+Success: True
+# episodes completed so far: 12
+# successes: 10 (83.3%)
+
+Task: turn on the stove and put the moka pot on it
+Starting episode 3...
+Success: True
+# episodes completed so far: 13
+# successes: 11 (84.6%)
+
+Task: turn on the stove and put the moka pot on it
+Starting episode 4...
+Success: True
+# episodes completed so far: 14
+# successes: 12 (85.7%)
+
+Task: turn on the stove and put the moka pot on it
+Starting episode 5...
+Success: True
+# episodes completed so far: 15
+# successes: 13 (86.7%)
+Current task success rate: 1.0
+Current total success rate: 0.8666666666666667
+
+Task: put the black bowl in the bottom drawer of the cabinet and close it
+Starting episode 1...
+Success: False
+# episodes completed so far: 16
+# successes: 13 (81.2%)
+
+Task: put the black bowl in the bottom drawer of the cabinet and close it
+Starting episode 2...
+Success: True
+# episodes completed so far: 17
+# successes: 14 (82.4%)
+
+Task: put the black bowl in the bottom drawer of the cabinet and close it
+Starting episode 3...
+Success: True
+# episodes completed so far: 18
+# successes: 15 (83.3%)
+
+Task: put the black bowl in the bottom drawer of the cabinet and close it
+Starting episode 4...
+Success: False
+# episodes completed so far: 19
+# successes: 15 (78.9%)
+
+Task: put the black bowl in the bottom drawer of the cabinet and close it
+Starting episode 5...
+Success: False
+# episodes completed so far: 20
+# successes: 15 (75.0%)
+Current task success rate: 0.4
+Current total success rate: 0.75
+
+Task: put the white mug on the left plate and put the yellow and white mug on the right plate
+Starting episode 1...
+Success: False
+# episodes completed so far: 21
+# successes: 15 (71.4%)
+
+Task: put the white mug on the left plate and put the yellow and white mug on the right plate
+Starting episode 2...
+Success: False
+# episodes completed so far: 22
+# successes: 15 (68.2%)
+
+Task: put the white mug on the left plate and put the yellow and white mug on the right plate
+Starting episode 3...
+Success: False
+# episodes completed so far: 23
+# successes: 15 (65.2%)
+
+Task: put the white mug on the left plate and put the yellow and white mug on the right plate
+Starting episode 4...
+Success: True
+# episodes completed so far: 24
+# successes: 16 (66.7%)
+
+Task: put the white mug on the left plate and put the yellow and white mug on the right plate
+Starting episode 5...
+Success: True
+# episodes completed so far: 25
+# successes: 17 (68.0%)
+Current task success rate: 0.4
+Current total success rate: 0.68
+
+Task: pick up the book and place it in the back compartment of the caddy
+Starting episode 1...
+Success: True
+# episodes completed so far: 26
+# successes: 18 (69.2%)
+
+Task: pick up the book and place it in the back compartment of the caddy
+Starting episode 2...
+Success: True
+# episodes completed so far: 27
+# successes: 19 (70.4%)
+
+Task: pick up the book and place it in the back compartment of the caddy
+Starting episode 3...
+Success: True
+# episodes completed so far: 28
+# successes: 20 (71.4%)
+
+Task: pick up the book and place it in the back compartment of the caddy
+Starting episode 4...
+Success: False
+# episodes completed so far: 29
+# successes: 20 (69.0%)
+
+Task: pick up the book and place it in the back compartment of the caddy
+Starting episode 5...
+Success: True
+# episodes completed so far: 30
+# successes: 21 (70.0%)
+Current task success rate: 0.8
+Current total success rate: 0.7
+
+Task: put the white mug on the plate and put the chocolate pudding to the right of the plate
+Starting episode 1...
+Success: False
+# episodes completed so far: 31
+# successes: 21 (67.7%)
+
+Task: put the white mug on the plate and put the chocolate pudding to the right of the plate
+Starting episode 2...
+Success: True
+# episodes completed so far: 32
+# successes: 22 (68.8%)
+
+Task: put the white mug on the plate and put the chocolate pudding to the right of the plate
+Starting episode 3...
+Success: False
+# episodes completed so far: 33
+# successes: 22 (66.7%)
+
+Task: put the white mug on the plate and put the chocolate pudding to the right of the plate
+Starting episode 4...
+Success: True
+# episodes completed so far: 34
+# successes: 23 (67.6%)
+
+Task: put the white mug on the plate and put the chocolate pudding to the right of the plate
+Starting episode 5...
+Success: True
+# episodes completed so far: 35
+# successes: 24 (68.6%)
+Current task success rate: 0.6
+Current total success rate: 0.6857142857142857
+
+Task: put both the alphabet soup and the cream cheese box in the basket
+Starting episode 1...
+Success: True
+# episodes completed so far: 36
+# successes: 25 (69.4%)
+
+Task: put both the alphabet soup and the cream cheese box in the basket
+Starting episode 2...
+Success: False
+# episodes completed so far: 37
+# successes: 25 (67.6%)
+
+Task: put both the alphabet soup and the cream cheese box in the basket
+Starting episode 3...
+Success: True
+# episodes completed so far: 38
+# successes: 26 (68.4%)
+
+Task: put both the alphabet soup and the cream cheese box in the basket
+Starting episode 4...
+Success: False
+# episodes completed so far: 39
+# successes: 26 (66.7%)
+
+Task: put both the alphabet soup and the cream cheese box in the basket
+Starting episode 5...
+Success: False
+# episodes completed so far: 40
+# successes: 26 (65.0%)
+Current task success rate: 0.4
+Current total success rate: 0.65
+
+Task: put both moka pots on the stove
+Starting episode 1...
+Success: False
+# episodes completed so far: 41
+# successes: 26 (63.4%)
+
+Task: put both moka pots on the stove
+Starting episode 2...
+Success: True
+# episodes completed so far: 42
+# successes: 27 (64.3%)
+
+Task: put both moka pots on the stove
+Starting episode 3...
+Success: False
+# episodes completed so far: 43
+# successes: 27 (62.8%)
+
+Task: put both moka pots on the stove
+Starting episode 4...
+Success: False
+# episodes completed so far: 44
+# successes: 27 (61.4%)
+
+Task: put both moka pots on the stove
+Starting episode 5...
+Success: False
+# episodes completed so far: 45
+# successes: 27 (60.0%)
+Current task success rate: 0.2
+Current total success rate: 0.6
+
+Task: put the yellow and white mug in the microwave and close it
+Starting episode 1...
+Success: False
+# episodes completed so far: 46
+# successes: 27 (58.7%)
+
+Task: put the yellow and white mug in the microwave and close it
+Starting episode 2...
+Success: False
+# episodes completed so far: 47
+# successes: 27 (57.4%)
+
+Task: put the yellow and white mug in the microwave and close it
+Starting episode 3...
+Success: True
+# episodes completed so far: 48
+# successes: 28 (58.3%)
+
+Task: put the yellow and white mug in the microwave and close it
+Starting episode 4...
+Success: False
+# episodes completed so far: 49
+# successes: 28 (57.1%)
+
+Task: put the yellow and white mug in the microwave and close it
+Starting episode 5...
+Success: False
+# episodes completed so far: 50
+# successes: 28 (56.0%)
+Current task success rate: 0.2
+Current total success rate: 0.56

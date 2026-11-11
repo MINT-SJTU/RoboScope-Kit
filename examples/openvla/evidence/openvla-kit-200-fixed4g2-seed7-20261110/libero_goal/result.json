@@ -1,0 +1,421 @@
+{
+  "sdk_version": 1,
+  "runtime": {
+    "output_dir": "/root/autodl-tmp/openvla-kit-200-fixed4g2-seed7-20261110/libero_goal",
+    "gpu_devices": [
+      "0"
+    ],
+    "replicas": 2,
+    "concurrency": 4,
+    "base_port": 16694,
+    "ready_timeout_s": 1800.0,
+    "poll_interval_s": 0.2,
+    "probe_limits": null,
+    "shard_index": null,
+    "shard_count": null,
+    "shard_episodes": 500,
+    "shard_build": null,
+    "profile": false
+  },
+  "phase_timings": {
+    "policy_load_s": 1426.4867686666548,
+    "runtime_prepare_s": 1.2155941613018513,
+    "evaluation_s": 1358.374820355326
+  },
+  "item_timeline": {
+    "completion_s": {
+      "task-0001-episodes-0000-0001": 62.082969672977924,
+      "task-0001-episodes-0001-0002": 127.66695244982839,
+      "task-0003-episodes-0000-0001": 142.89857723936439,
+      "task-0001-episodes-0002-0003": 188.22043166682124,
+      "task-0000-episodes-0000-0001": 216.50029965862632,
+      "task-0002-episodes-0000-0001": 218.70770857483149,
+      "task-0001-episodes-0003-0004": 242.59122808277607,
+      "task-0002-episodes-0001-0002": 283.5259920321405,
+      "task-0001-episodes-0004-0005": 309.29649448022246,
+      "task-0002-episodes-0002-0003": 352.5488558150828,
+      "task-0003-episodes-0001-0002": 355.16681410744786,
+      "task-0004-episodes-0000-0001": 377.13199454918504,
+      "task-0000-episodes-0001-0002": 428.52982246503234,
+      "task-0002-episodes-0003-0004": 444.40976648777723,
+      "task-0003-episodes-0002-0003": 485.8674071840942,
+      "task-0002-episodes-0004-0005": 506.2839343473315,
+      "task-0000-episodes-0002-0003": 507.7011240012944,
+      "task-0004-episodes-0001-0002": 592.2473974563181,
+      "task-0000-episodes-0003-0004": 598.8984332494438,
+      "task-0005-episodes-0000-0001": 607.171812698245,
+      "task-0003-episodes-0003-0004": 616.4923205524683,
+      "task-0004-episodes-0002-0003": 669.6027555838227,
+      "task-0005-episodes-0001-0002": 704.9816550239921,
+      "task-0000-episodes-0004-0005": 706.9929088875651,
+      "task-0004-episodes-0003-0004": 734.738673850894,
+      "task-0006-episodes-0000-0001": 770.934683766216,
+      "task-0004-episodes-0004-0005": 796.941358115524,
+      "task-0003-episodes-0004-0005": 833.3236152529716,
+      "task-0006-episodes-0001-0002": 854.1446298658848,
+      "task-0007-episodes-0000-0001": 862.6847804412246,
+      "task-0008-episodes-0000-0001": 893.8568106070161,
+      "task-0005-episodes-0002-0003": 919.9404885023832,
+      "task-0007-episodes-0001-0002": 929.5401400327682,
+      "task-0008-episodes-0001-0002": 949.5000123493373,
+      "task-0007-episodes-0002-0003": 1001.6727493926883,
+      "task-0008-episodes-0002-0003": 1002.901881147176,
+      "task-0008-episodes-0003-0004": 1050.7539411075413,
+      "task-0007-episodes-0003-0004": 1059.142387919128,
+      "task-0006-episodes-0002-0003": 1067.1133079528809,
+      "task-0008-episodes-0004-0005": 1111.7130282148719,
+      "task-0007-episodes-0004-0005": 1115.1987894251943,
+      "task-0006-episodes-0003-0004": 1125.9965213425457,
+      "task-0005-episodes-0003-0004": 1130.6602870672941,
+      "task-0009-episodes-0000-0001": 1195.7700510062277,
+      "task-0009-episodes-0001-0002": 1210.9693467579782,
+      "task-0005-episodes-0004-0005": 1244.0756334885955,
+      "task-0009-episodes-0002-0003": 1304.2977025657892,
+      "task-0009-episodes-0003-0004": 1311.8942348249257,
+      "task-0006-episodes-0004-0005": 1325.246608991176,
+      "task-0009-episodes-0004-0005": 1358.3690975494683
+    },
+    "worker_id": {
+      "task-0000-episodes-0000-0001": 0,
+      "task-0001-episodes-0000-0001": 2,
+      "task-0002-episodes-0000-0001": 3,
+      "task-0003-episodes-0000-0001": 1,
+      "task-0004-episodes-0000-0001": 2,
+      "task-0005-episodes-0000-0001": 3,
+      "task-0006-episodes-0000-0001": 0,
+      "task-0007-episodes-0000-0001": 2,
+      "task-0008-episodes-0000-0001": 1,
+      "task-0009-episodes-0000-0001": 1,
+      "task-0000-episodes-0001-0002": 0,
+      "task-0001-episodes-0001-0002": 2,
+      "task-0002-episodes-0001-0002": 3,
+      "task-0003-episodes-0001-0002": 1,
+      "task-0004-episodes-0001-0002": 2,
+      "task-0005-episodes-0001-0002": 3,
+      "task-0006-episodes-0001-0002": 0,
+      "task-0007-episodes-0001-0002": 2,
+      "task-0008-episodes-0001-0002": 1,
+      "task-0009-episodes-0001-0002": 2,
+      "task-0000-episodes-0002-0003": 0,
+      "task-0001-episodes-0002-0003": 2,
+      "task-0002-episodes-0002-0003": 3,
+      "task-0003-episodes-0002-0003": 1,
+      "task-0004-episodes-0002-0003": 2,
+      "task-0005-episodes-0002-0003": 3,
+      "task-0006-episodes-0002-0003": 0,
+      "task-0007-episodes-0002-0003": 2,
+      "task-0008-episodes-0002-0003": 1,
+      "task-0009-episodes-0002-0003": 1,
+      "task-0000-episodes-0003-0004": 0,
+      "task-0001-episodes-0003-0004": 2,
+      "task-0002-episodes-0003-0004": 3,
+      "task-0003-episodes-0003-0004": 1,
+      "task-0004-episodes-0003-0004": 2,
+      "task-0005-episodes-0003-0004": 3,
+      "task-0006-episodes-0003-0004": 0,
+      "task-0007-episodes-0003-0004": 2,
+      "task-0008-episodes-0003-0004": 1,
+      "task-0009-episodes-0003-0004": 2,
+      "task-0000-episodes-0004-0005": 0,
+      "task-0001-episodes-0004-0005": 2,
+      "task-0002-episodes-0004-0005": 3,
+      "task-0003-episodes-0004-0005": 1,
+      "task-0004-episodes-0004-0005": 2,
+      "task-0005-episodes-0004-0005": 3,
+      "task-0006-episodes-0004-0005": 0,
+      "task-0007-episodes-0004-0005": 2,
+      "task-0008-episodes-0004-0005": 1,
+      "task-0009-episodes-0004-0005": 3
+    }
+  },
+  "record_success": {
+    "task-0000-episode-0000": false,
+    "task-0001-episode-0000": true,
+    "task-0002-episode-0000": false,
+    "task-0003-episode-0000": true,
+    "task-0004-episode-0000": true,
+    "task-0005-episode-0000": true,
+    "task-0006-episode-0000": true,
+    "task-0007-episode-0000": true,
+    "task-0008-episode-0000": true,
+    "task-0009-episode-0000": true,
+    "task-0000-episode-0001": false,
+    "task-0001-episode-0001": true,
+    "task-0002-episode-0001": true,
+    "task-0003-episode-0001": false,
+    "task-0004-episode-0001": false,
+    "task-0005-episode-0001": true,
+    "task-0006-episode-0001": true,
+    "task-0007-episode-0001": true,
+    "task-0008-episode-0001": true,
+    "task-0009-episode-0001": true,
+    "task-0000-episode-0002": true,
+    "task-0001-episode-0002": true,
+    "task-0002-episode-0002": true,
+    "task-0003-episode-0002": true,
+    "task-0004-episode-0002": true,
+    "task-0005-episode-0002": false,
+    "task-0006-episode-0002": false,
+    "task-0007-episode-0002": true,
+    "task-0008-episode-0002": true,
+    "task-0009-episode-0002": true,
+    "task-0000-episode-0003": true,
+    "task-0001-episode-0003": true,
+    "task-0002-episode-0003": true,
+    "task-0003-episode-0003": true,
+    "task-0004-episode-0003": true,
+    "task-0005-episode-0003": false,
+    "task-0006-episode-0003": true,
+    "task-0007-episode-0003": true,
+    "task-0008-episode-0003": true,
+    "task-0009-episode-0003": true,
+    "task-0000-episode-0004": true,
+    "task-0001-episode-0004": true,
+    "task-0002-episode-0004": true,
+    "task-0003-episode-0004": false,
+    "task-0004-episode-0004": true,
+    "task-0005-episode-0004": true,
+    "task-0006-episode-0004": false,
+    "task-0007-episode-0004": true,
+    "task-0008-episode-0004": true,
+    "task-0009-episode-0004": false
+  },
+  "inference": {
+    "adapter": "PolicyProcessAdapter",
+    "benchmark": "libero",
+    "suite": "libero_goal",
+    "checkpoint_path": "/root/autodl-fs/Kit-Models/openvla/goal",
+    "load_timeout_s": 1800.0,
+    "replica_vram_bytes": {
+      "0": 15584985088,
+      "1": 15584985088
+    },
+    "replicas": {
+      "0": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_goal"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      },
+      "1": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_goal"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      }
+    },
+    "execution_contract": {
+      "benchmark": "libero",
+      "action_representation": "libero.delta-eef-v1",
+      "action_representation_source": "policy",
+      "observation_stride": 1,
+      "observation_stride_source": "safe_default",
+      "step_observation_updates": false
+    }
+  },
+  "policy_io": {
+    "benchmark": "libero",
+    "action_representation": "libero.delta-eef-v1",
+    "action_representation_source": "policy",
+    "observation_stride": 1,
+    "observation_stride_source": "safe_default",
+    "step_observation_updates": false
+  },
+  "benchmark": {
+    "adapter": "LiberoBenchmarkAdapter",
+    "benchmark": "libero",
+    "suite": "libero_goal",
+    "protocol": "roboscope-policy-v1",
+    "bound_hint": "gpu_infer",
+    "task_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "episodes_per_task": 5,
+    "seed": 7,
+    "render_backend": "egl"
+  },
+  "result": {
+    "state": "complete",
+    "episodes": 50,
+    "successes": 39,
+    "failures": 11,
+    "total_steps": 7514,
+    "total_episodes": 50,
+    "success_rate": 0.78,
+    "completed_items": 50,
+    "elapsed_s": 1361.1299019120634,
+    "steps_per_s": 5.520413583923635,
+    "episodes_per_s": 0.036734186744234995,
+    "steady_steps_per_s": 5.56623727076927,
+    "steady_window": {
+      "steps_per_s": 5.56623727076927,
+      "workers": 4,
+      "measured_workers": 4,
+      "measured_items": 43,
+      "window_s": 1085.5899939909577
+    }
+  },
+  "official_result": {
+    "tasks": [
+      {
+        "task_id": 0,
+        "task_description": "open the middle drawer of the cabinet",
+        "episodes": 5,
+        "successes": 3,
+        "success_rate": 0.6
+      },
+      {
+        "task_id": 1,
+        "task_description": "put the bowl on the stove",
+        "episodes": 5,
+        "successes": 5,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 2,
+        "task_description": "put the wine bottle on top of the cabinet",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 3,
+        "task_description": "open the top drawer and put the bowl inside",
+        "episodes": 5,
+        "successes": 3,
+        "success_rate": 0.6
+      },
+      {
+        "task_id": 4,
+        "task_description": "put the bowl on top of the cabinet",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      },
+      {
+        "task_id": 5,
+        "task_description": "push the plate to the front of the stove",
+        "episodes": 5,
+        "successes": 3,
+        "success_rate": 0.6
+      },
+      {
+        "task_id": 6,
+        "task_description": "put the cream cheese in the bowl",
+        "episodes": 5,
+        "successes": 3,
+        "success_rate": 0.6
+      },
+      {
+        "task_id": 7,
+        "task_description": "turn on the stove",
+        "episodes": 5,
+        "successes": 5,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 8,
+        "task_description": "put the bowl on the plate",
+        "episodes": 5,
+        "successes": 5,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 9,
+        "task_description": "put the wine bottle on the rack",
+        "episodes": 5,
+        "successes": 4,
+        "success_rate": 0.8
+      }
+    ],
+    "runtime_metrics": {
+      "inference_wait_s": 5028.45872220397,
+      "episode_elapsed_s": 5218.53324560076,
+      "inference_wait_ratio": 0.9635770216550745
+    }
+  },
+  "resources": {
+    "elapsed_s": 1361.1299019120634,
+    "cpu": {
+      "cpu_cores": 2.318417939071824,
+      "throttle_time_ratio": 1.6391161467145098e-06,
+      "throttle_period_ratio": 0.00014692918013517486
+    },
+    "gpu": {
+      "mean_utilization": 0.9394627238650562,
+      "peak_memory_bytes": 34058797056.0,
+      "gpu_util_avg": {
+        "0": 93.94627238650563
+      },
+      "gpu_util_max": {
+        "0": 100.0
+      },
+      "gpu_mem_mib_max": {
+        "0": 32481.0
+      }
+    },
+    "gpu_samples": 2401
+  },
+  "recovery": {
+    "worker_failures": [],
+    "planned_recycles": 0,
+    "oom_events": 0,
+    "initial_workers_per_gpu": {
+      "0": 4
+    },
+    "final_workers_per_gpu": {
+      "0": 4
+    }
+  },
+  "autotune": {
+    "k": 4,
+    "g": 2,
+    "mode": "fixed"
+  },
+  "cuda_mps": {
+    "enabled": false
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "scope": "Since model load; pooled Autotune process includes probe and formal phases",
+  "evaluation_peak_allocated_bytes": 15487943680,
+  "evaluation_peak_reserved_bytes": 15573450752
+}

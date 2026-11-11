@@ -1,0 +1,8 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/root/autodl-tmp/openvla-kit-20261109/runtime/env/bin/python",
+    "/root/autodl-tmp/openvla-kit-200-fixed2g2-seed7-20261110/measured_policy.py"
+  ],
+  "cwd": "/root/autodl-tmp/openvla-kit-20261109/source-final/examples/openvla"
+}

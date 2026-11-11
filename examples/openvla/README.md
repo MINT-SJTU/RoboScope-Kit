@@ -110,3 +110,9 @@ action unnormalization, and the OpenVLA gripper binarization/sign conversion.
 the benchmark manifest. One inference call returns one control step, not a multi-step action sequence.
 Multiple Workers may share a replica; requests to each standard Policy server execute serially.
 Increasing `--replicas` creates independent model processes rather than a batch of observations.
+
+## Validation evidence
+
+See [historical experiment records](EVIDENCE.md) for runtime versions, hardware,
+exact commands, raw outcomes and logs. These old-revision runs do not validate
+the current PR head; paired divergence and repeatability checks remain pending.

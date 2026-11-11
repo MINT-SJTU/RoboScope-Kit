@@ -1,0 +1,23 @@
+[
+  "/root/autodl-tmp/openvla-kit-20261109/runtime/env/bin/python",
+  "-m",
+  "roboscope_kit.runtime.benchmark",
+  "--benchmark",
+  "libero",
+  "--suite",
+  "libero_spatial",
+  "--checkpoint-source",
+  "/root/autodl-fs/Kit-Models/openvla/spatial",
+  "--benchmark-manifest",
+  "/root/autodl-tmp/openvla-kit-200-fixed4g2-seed7-20261110/benchmark-manifest.json",
+  "--policy-config",
+  "/root/autodl-tmp/openvla-kit-200-fixed4g2-seed7-20261110/roboscope-policy.json",
+  "--episodes",
+  "5",
+  "--concurrency",
+  "4",
+  "--replicas",
+  "2",
+  "--output-dir",
+  "/root/autodl-tmp/openvla-kit-200-fixed4g2-seed7-20261110/libero_spatial"
+]
