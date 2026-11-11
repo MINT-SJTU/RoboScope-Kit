@@ -37,6 +37,7 @@ IDs is deferred; task declarations or environment checks alone do not establish 
 | `humanoid_control_canonical_state_v1` | 2 | 100 | Original Walk/Run state observations with exact TD-MPC2 actor-input reconstruction |
 | `reference_ppo_state_v1` | 4 | 100 | G1 author PPO references and explicit Peg/Plug grasp-prior transfers |
 | `dual_panda_transfer_state_v1` | 2 | 100 | Unchanged official 4D actor composition on canonical dual-Panda states |
+| `canonical_prior_state_v1` | 2 | 100 | Explicit PullCubeTool direct-pull and ANYmal-to-Go2 joint priors; separate validation |
 | `panda_visual_rgb_v1` | 19 | 100 | Tabletop and FMB visual/control transfers using ManiSkill-finetuned Octo |
 | `g1_visual_rgb_v1` | 2 | 100 | Explicit head-camera and root-observation G1 visual transfers |
 | `fetch_mshab_depth_v1` | 2 | 100 | Native Fetch depth/contact inputs for MS-HAB transfer; original assets required |

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import numpy as np
 import torch
+from go2_reach_prior import project_action as project_go2_action
+from go2_reach_prior import project_actor_input as project_go2_actor_input
 from ppo_model import LoadedPPO, load_model_bundle
+from pull_tool_prior import project_actor_input
 
 from roboscope_kit import (
     ActionChunk,
@@ -84,6 +87,10 @@ class ManiSkillPPOPolicy(Policy):
                 prefix = model.metadata.get("state_prefix_length")
                 if prefix is not None:
                     state = state[:prefix]
+                if model.metadata.get("state_projection") == "pull_cube_tool_workspace_target_v1":
+                    state = project_actor_input(state)
+                if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
+                    state = project_go2_actor_input(state)
                 if state.shape != (model.observation_dim,):
                     raise ValueError(f"{task_id} observation projection differs from the checkpoint")
                 values.append(state)
@@ -95,6 +102,8 @@ class ManiSkillPPOPolicy(Policy):
             bounds = model.metadata.get("action_clip_bounds")
             if bounds is not None:
                 actions = np.clip(actions, bounds[0], bounds[1])
+            if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
+                actions = project_go2_action(actions)
             for index, action in zip(indices, actions, strict=True):
                 result[index] = ActionChunk(np.ascontiguousarray(action[None], dtype=np.float32))
         # Preserve each model's declared actor semantics; official actors stay unclipped.

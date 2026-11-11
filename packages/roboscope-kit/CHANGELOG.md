@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b53 - 2026-11-11
+
+- Add an explicit direct-pull PPO prior for the canonical PullCubeTool state/controller, using the pinned native dense-reward workspace target and all original learned action outputs.
+- Retarget all twelve joints of the official ANYmal Reach PPO actor to the canonical Go2 Reach state/controller using pinned joint axes, home offsets and native action scaling; retain transfer limitations separately from task competence.
+
 ## 0.8.0b52 - 2026-11-11
 
 - Pin author-released G1 TransportBox and Apple PPO state models with their original 77D/74D inputs and 25D joint controller, retaining the Apple's source action clipping.

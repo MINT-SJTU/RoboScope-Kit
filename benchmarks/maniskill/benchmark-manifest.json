@@ -23,7 +23,8 @@
       "g1_visual_rgb_v1",
       "fetch_mshab_depth_v1",
       "reference_ppo_state_v1",
-      "dual_panda_transfer_state_v1"
+      "dual_panda_transfer_state_v1",
+      "canonical_prior_state_v1"
     ]
   },
   "runtime": {
@@ -455,6 +456,10 @@
         "dual_panda_transfer_state_v1": [
           "two_robot_pickcube_state",
           "two_robot_stackcube_state"
+        ],
+        "canonical_prior_state_v1": [
+          "pull_cube_tool_state",
+          "unitree_go2_reach_state"
         ]
       },
       "profiles": {

@@ -24,7 +24,10 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from go2_reach_prior import project_native_action as project_go2_native_action
+from go2_reach_prior import project_native_actor_input as project_go2_native_input
 from ppo_model import load_model_bundle
+from pull_tool_prior import project_native_actor_input
 
 PHYSX_SHA256 = "4c582a16509a71faf5592fe9708586dfcc7ab61ae932eabc1ddd81f290818706"
 
@@ -309,10 +312,16 @@ def main() -> None:
                         prefix = model.metadata.get("state_prefix_length")
                         if prefix is not None:
                             model_input = observation[:, :prefix]
+                        if model.metadata.get("state_projection") == "pull_cube_tool_workspace_target_v1":
+                            model_input = project_native_actor_input(observation)
+                        if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
+                            model_input = project_go2_native_input(observation)
                         action = model.agent.actor_mean(model_input)
                         bounds = model.metadata.get("action_clip_bounds")
                         if bounds is not None:
                             action = action.clamp(bounds[0], bounds[1])
+                        if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
+                            action = project_go2_native_action(action)
                     inference_host_s += time.perf_counter() - inference_started
                     if step == 0:
                         first_actions = action.detach().clone()

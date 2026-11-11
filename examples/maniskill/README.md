@@ -81,6 +81,8 @@ dimensions, hashes and source identities are in [reference-ppo-models.json](refe
 | G1 Apple | 74 / 74 | 25 joint deltas | Author nominal PPO expert, retaining source clipping |
 | PegInsertionSide | 43 / 32 | 7 EE pose deltas | Explicit LiftPeg grasp/lift-prior transfer |
 | PlugCharger | 46 / 32 | 7 EE pose deltas | Explicit LiftPeg grasp/lift-prior transfer |
+| PullCubeTool | 39 / 35 | 4 EE position deltas | Explicit direct-pull prior using the authored static workspace target |
+| Go2 Reach | 35 / 35 | 12 joint deltas | Explicit ANYmal cross-robot joint prior |
 
 The [TransportBox author checkpoint](https://github.com/tjvitchutripop/stream-rl-robotics/tree/30b2d8ecca093d9b9b492598aa9eeba70b628fd5/pretrained-models/transport-box)
 uses raw state and actor means. The [Apple author reference](https://github.com/tabz23/Latent-Safety-Filters/tree/ea456084576b16053e6de79c52b489e33409479e)
@@ -113,6 +115,11 @@ source simulator revision is not pinned. These references transfer checkpoints
 to the pinned Kit runtime, without claiming the papers' evaluation protocols.
 TransportBox specifies no source license; Apple code is MIT and its model card
 specifies no license. Weights remain external to Git and evidence bundles.
+
+The additional [canonical priors](CANONICAL_PRIORS.md) use
+`canonical_prior_state_v1`, with unchanged target profiles and separate real-model
+acceptance gates. Their source models and transfer semantics differ from the
+four-task `reference_ppo_state_v1` suite.
 
 ## SDK evaluation
 
