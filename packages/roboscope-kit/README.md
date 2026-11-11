@@ -283,29 +283,30 @@ The exact contracts are in the protocol documents:
   the manifest freezes RoboTwin's 50 × 100 inputs per suite under `robotwin2-native-step-lim-v2`.
   The clean entries are unchanged and the randomized pool is new,
   so report randomized v1 and v2 scores separately.
-- RoboCasa seeds: the manifest's `seed` (42) fixes every scene. Each task's environment is built with a seed
-  derived from the manifest seed and the task name, each episode resets with that seed plus its index, and
-  every Worker starts with `PYTHONHASHSEED` set to the manifest seed, because upstream novel-task generation
-  hashes class names. Episode seeds do not depend on `K`, `g`, or which Worker runs a task. Work is
-  scheduled in groups of ten episodes per task by default; the manifest's `episode_shard_size` changes
-  that group size without changing episode seeds. With videos off, `defer_observations` (default `true`)
-  skips intermediate observation conversions within an action chunk while updating the render cache.
-  Camera rendering, physics, reward, and success checks still run at every native step. Video evaluation
-  keeps the per-step conversion path. Workers recycle after a group when they have completed at least
-  ten episodes by default; `recycle_after_records` selects another positive threshold. A manifest may
-  also specify `task_priority_order` as an ordered list containing every tabletop task once; each episode
-  window then schedules tasks in that order. A priority order can come from a prior representative run;
-  report the cost of obtaining it separately from the evaluation. Changing grouping or scheduling should
-  be validated with paired observations and actions in the target environment.
-
-  The upstream kitchen-asset archives on Box are no longer downloadable, so the lock pins repackaged
-  archives from `Livfour/robocasa-assets` by checksum. Every file of the original textures, fixtures,
-  generative-texture, and Objaverse archives is present with identical contents. The Objaverse archive
-  also adds 6,737 collision meshes inside existing object folders; no object `model.xml` references them,
-  and object sampling lists only `model.xml` files, so they are never loaded. The current
-  `robocasa/robocasa-assets` release is a newer asset set with different fixtures and object models; use
-  the pinned archives for this benchmark. Compare RoboCasa scores only with runs using the same runtime
-  and assets.
+- RoboCasa GR-1 Tabletop:
+  - **Seeds.** The manifest's `seed` (42) fixes every scene. Each task's environment is built with a seed
+    derived from the manifest seed and the task name, and each episode resets with that seed plus its index.
+    Every Worker starts with `PYTHONHASHSEED` set to the manifest seed, because upstream novel-task
+    generation hashes class names. Episode seeds do not depend on `K`, `g`, or which Worker runs a task.
+  - **Scheduling.** Work is scheduled in groups of ten episodes per task by default; the manifest's
+    `episode_shard_size` changes that group size without changing episode seeds. Workers recycle after a
+    group when they have completed at least ten episodes by default; `recycle_after_records` selects
+    another positive threshold. A manifest may also specify `task_priority_order` as an ordered list
+    containing every tabletop task once; each episode window then schedules tasks in that order. A priority
+    order can come from a prior representative run; report the cost of obtaining it separately from the
+    evaluation. Validate a change of grouping or scheduling with paired observations and actions in the
+    target environment.
+  - **Observations.** With videos off, `defer_observations` (default `true`) skips intermediate observation
+    conversions within an action chunk while updating the render cache. Camera rendering, physics, reward,
+    and success checks still run at every native step. Video evaluation keeps the per-step conversion path.
+  - **Assets.** The upstream kitchen-asset archives on Box are no longer downloadable, so the lock pins
+    repackaged archives from `Livfour/robocasa-assets` by checksum. Every file of the original textures,
+    fixtures, generative-texture, and Objaverse archives is present with identical contents. The Objaverse
+    archive also adds 6,737 collision meshes inside existing object folders; no object `model.xml`
+    references them, and object sampling lists only `model.xml` files, so they are never loaded. The
+    current `robocasa/robocasa-assets` release is a newer asset set with different fixtures and object
+    models; use the pinned archives for this benchmark. Compare RoboCasa scores only with runs using the
+    same runtime and assets.
 
 After upgrading to 0.8.0b22 or later, build RoboTwin in a new, empty installation directory if the existing
 installation has a different runtime commit. The build script does not replace an existing mismatched
