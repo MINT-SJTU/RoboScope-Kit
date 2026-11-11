@@ -52,6 +52,12 @@ actual affine clip/scale function. Home-coordinate inversion has at most
 physical-delta error in the synthetic sample. These are transfer-map diagnostics,
 not benchmark tolerances. Native target SDK/reference comparisons remain exact.
 
+The SDK and direct native evaluator run the action conversion on the same Torch
+device before copying actions to the host. NumPy and CUDA scalar division can
+round differently in FP32; b53's mixed-backend conversion first diverged at action
+2 in the Go2 full-horizon check. A synthetic probe reproduced 72 differing
+components out of 1,536, maximum `2.9802e-8`. The failed b53 records remain separate.
+
 The [shared native observation builder](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/quadruped/quadruped_reach.py)
 and frozen [ANYmal](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/agents/robots/anymal/anymal_c.py)
 and [Go2 controllers](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/agents/robots/unitree_go/unitree_go2.py)
@@ -59,7 +65,7 @@ define these contracts. Limb geometry, joint limits, PD gains and contact dynami
 differ. Home alignment is not an exact kinematic mapping or a claim of learned
 Go2 competence. Source and target retain their original 200-tick horizons.
 
-The b53 candidates require fresh-build and real-model verification; they are not
+The b54 candidates require fresh-build and real-model verification; they are not
 included in the passing R12/R13 coverage until those gates run.
 
 ## Reproduction

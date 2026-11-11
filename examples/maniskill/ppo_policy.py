@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 import torch
-from go2_reach_prior import project_action as project_go2_action
 from go2_reach_prior import project_actor_input as project_go2_actor_input
+from go2_reach_prior import project_native_action as project_go2_action
 from ppo_model import LoadedPPO, load_model_bundle
 from pull_tool_prior import project_actor_input
 
@@ -96,14 +96,15 @@ class ManiSkillPPOPolicy(Policy):
                 values.append(state)
             batch = torch.as_tensor(np.stack(values), device=self.device, dtype=torch.float32)
             with torch.inference_mode():
-                actions = model.agent.actor_mean(batch).cpu().numpy()
+                actor_actions = model.agent.actor_mean(batch)
+                if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
+                    actor_actions = project_go2_action(actor_actions)
+                actions = actor_actions.cpu().numpy()
             if not np.isfinite(actions).all():
                 raise ValueError(f"{task_id} model produced non-finite actions")
             bounds = model.metadata.get("action_clip_bounds")
             if bounds is not None:
                 actions = np.clip(actions, bounds[0], bounds[1])
-            if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
-                actions = project_go2_action(actions)
             for index, action in zip(indices, actions, strict=True):
                 result[index] = ActionChunk(np.ascontiguousarray(action[None], dtype=np.float32))
         # Preserve each model's declared actor semantics; official actors stay unclipped.
