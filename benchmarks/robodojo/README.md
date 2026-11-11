@@ -165,10 +165,10 @@ the published 0.8.0b31) with MessagePack and G=1. `stride` is `--observation-str
   fits in 48 GB (peak 42.8 GB). GPU utilization is 0.77 at K=3. The baseline differs from the other runs in Kit
   version and message encoding.
 
-On one Kit commit, `e4e5682`, with the same 126 task/layout pairs and one environment per Worker, K=1/G=1 took
-24,002.5 s (24 successes) and K=3/G=1 took 12,295.1 s (31 successes): a 1.95× elapsed-time ratio. Eleven paired
-layouts had different verdicts. The baseline here is K=1, not the autotuned K=2 above, and one pair of runs
-establishes neither outcome equivalence nor variance.
+On 2026-11-08, on one Kit commit, `e4e5682`, with the same 126 task/layout pairs and one environment per Worker,
+K=1/G=1 took 24,002.5 s (24 successes) and K=3/G=1 took 12,295.1 s (31 successes): a 1.95× elapsed-time ratio.
+Eleven paired layouts had different verdicts. The baseline here is K=1, not the autotuned K=2 above, and one
+pair of runs establishes neither outcome equivalence nor variance.
 
 ### 2026-11-08: `Simate_beta` with three environments per Worker
 
@@ -289,13 +289,16 @@ mean.
   2 GB of headroom.
 - **Real agent:** with GPT-6.1 Terra at max reasoning, K=4 evaluated layouts 0–47 in 5,585.6 s: 48/48 successes,
   30.9 episodes/h, 17,823 steps (3.19 steps/s) and 721 model requests, with a 38,803 MiB peak. Episodes took
-  326–494 s (median 387 s); a single-Worker `cover_blocks` episode took 366 s. Summed episode time is 3.39 times
-  the evaluation time. No single-Worker run of these 48 layouts exists, so this gain is an estimate.
-- **Several tables per process:** `num_envs` > 1 is faster but changes the camera images. RoboDojo renders each
-  camera type for all tables as one tiled render product, and with the scripted agent, 11/24 episodes at 24
-  tables ended at 44 steps, which native never produced. Rendering each camera separately removes most of the
-  difference, but 3/24 episodes at 8 tables still ended at 44 steps, and 24 tables (72 render products) fail to
-  allocate render resources. Physics state matched native to about 1e-8 in both cases.
+  326–494 s (median 387 s); the one `cover_blocks` episode of a single-Worker 42-task run with the same agent
+  took 366 s. Summed episode time is 3.39 times the evaluation time. No single-Worker run of these 48 layouts
+  exists, so this gain is an estimate.
+- **Several tables per process:** `num_envs` > 1 is faster but changes the camera images. These runs used an
+  experimental multi-table runtime that is not part of the Kit, which accepts an interactive Policy only with
+  one table per Worker. RoboDojo renders each camera type for all tables as one tiled render product, and with
+  the scripted agent, 11/24 episodes at 24 tables ended at 44 steps, which native never produced. Rendering each
+  camera separately removes most of the difference, but 3/24 episodes at 8 tables still ended at 44 steps, and
+  24 tables (72 render products) fail to allocate render resources. Physics state matched native to about 1e-8
+  in both cases.
 - **Tiled tables, speed only:** two processes × 24 tiled tables ran the same 48 layouts with GPT-6.1 Terra on
   another RTX 4090 48 GB (same 580.105.08 driver, video off, idle tables asleep). A tool-transport error on one
   agent's `finish` call stopped the run 1,987 s after launch. By then, 35 episodes had ended normally, all
