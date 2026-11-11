@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-10
+Updated: 2026-11-11
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -88,6 +88,8 @@ these timers do not establish verified Nsight hardware coverage.
 | RoboCasa365 | Yes; first native group after environment resets | Nsight not verified; worker wall timers recorded separately |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |
+
+The [RoboCasa365 epoch2 native correctness reference](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-epoch2-native-reference-20261111) completed on the restored RTX 4090 (driver 595.71.05, Xeon 8470Q with a 20-core quota) on 2026-11-11. Its 50 tasks × five selected episodes use a shared 128-step cap, full RGB and FP32/100-step DDPM. This is supporting correctness evidence, not a new profiling capture or throughput result. It adds no verified Nsight coverage and is never a speed denominator. The current-hardware SDK all-task comparison and expanded fixed-CLI K/G performance validation remain pending; that search is separate from SDK built-in autotune. The historical Findings below retain their original hardware and source attribution.
 
 ## How it works
 

@@ -476,3 +476,11 @@ checks are correctness evidence, not additional throughput gains. No inference
 algorithm, model precision or simulator-rule optimization is included. Repository
 acceptance still requires green CI on the final submitted heads; this performance
 report makes no CI or merge claim.
+
+## Restored-hardware follow-up — 2026-11-11
+
+The measurements above retain their original executable revisions, hardware and bounded K≤2/G≤1 search. They are not relabeled as results from the restored GPU/driver/20-core campaign.
+
+The [published epoch2 native supporting reference](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-epoch2-native-reference-20261111) covers all 50 tasks × five selected episodes with the shared 128-step cap: 250 unique records, 32,000 steps and three successes. One failed cleanup audit remains preserved and unselected; including its five episodes, actual execution is 255 episodes and 32,640 steps. All three release payloads were downloaded and fully verified. Native command time is a correctness-reference diagnostic, never a speedup denominator.
+
+The fresh resource-aware search uses independent fixed-CLI K/G arms and does not invoke SDK built-in autotune. It remains in progress; current-hardware SDK/native all-task agreement, repeated finalist selection, full selected/common-K/G arms and the post-full resource-frontier review are pending. No final new K/G, full-workload speedup or extension of the historical approximately 2.4× result is claimed. Full RGB, FP32, 100 DDPM steps and the corrected runtime remain unchanged.
