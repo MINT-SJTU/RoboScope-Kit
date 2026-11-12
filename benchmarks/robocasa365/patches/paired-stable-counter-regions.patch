@@ -1,0 +1,20 @@
+--- a/robocasa/models/fixtures/counter.py
++++ b/robocasa/models/fixtures/counter.py
+@@ -55,6 +55,8 @@
+ 
+         obj_x_percent (float): Percentage of the counter's width taken up by the interior object
+     """
++
++    _roboscope_reset_region_order = 'xml-insertion-v1'
+ 
+     def __init__(
+         self,
+@@ -810,7 +812,7 @@
+ 
+             if len(valid_geoms) > 0:
+                 # remove duplicates as needed
+-                valid_geoms = list(set(valid_geoms))
++                valid_geoms = list(dict.fromkeys(valid_geoms))
+ 
+             for g in valid_geoms:
+                 top_pos = s2a(g.get("pos"))

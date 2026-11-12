@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "robocasa": {
+      "repository": "https://github.com/robocasa/robocasa",
+      "revision": "3443cdf3dd20f9ae8ed41adba442059b506891d0",
+      "url": "https://codeload.github.com/robocasa/robocasa/tar.gz/3443cdf3dd20f9ae8ed41adba442059b506891d0",
+      "archive": "robocasa-3443cdf3dd20f9ae8ed41adba442059b506891d0.tar.gz",
+      "prefix": "robocasa-3443cdf3dd20f9ae8ed41adba442059b506891d0",
+      "bytes": 41979051,
+      "sha256": "da4b0931f0545db63793d66cf8894ac20ad3517511ffbb41b1e03aeda1e746ac"
+    },
+    "robosuite": {
+      "repository": "https://github.com/ARISE-Initiative/robosuite",
+      "revision": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "url": "https://codeload.github.com/ARISE-Initiative/robosuite/tar.gz/5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "archive": "robosuite-5ce6643f3092639d08f7b0f90ed1c6a84f50552c.tar.gz",
+      "prefix": "robosuite-5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "bytes": 260653994,
+      "sha256": "24330cf5265effb1b5733c7ea2afda0e68899abe4b3c3de39e40b7db2b1b432e"
+    }
+  }
+}
