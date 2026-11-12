@@ -222,6 +222,6 @@ Ask questions, share your results, and discuss new benchmarks in
 [Issues](https://github.com/MINT-SJTU/RoboScope-Kit/issues).
 
 WeChat users can also scan the QR code to join the RoboScope Kit group (the invitation is valid before
-November 12, 2026):
+November 19, 2026):
 
 <img src="docs/community-qr.png" alt="WeChat QR code for the RoboScope Kit community" width="240">
