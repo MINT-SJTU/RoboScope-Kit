@@ -63,7 +63,8 @@ and current-source prescribed-count results; neither catalog presence nor a pref
 The [frozen official demonstration repository](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628)
 contains 26 PPO files for the same eleven TaskIDs; fifteen are alternate controllers for existing
 tasks. Motion-planning demonstrations are not trained policy checkpoints. This selected inventory
-does not assert that no other public model is available.
+does not assert that no other public model is available. The
+[public checkpoint search](#public-checkpoint-search) records the result for each of the other 42 TaskIDs.
 
 ## Evaluation task definitions
 
@@ -124,6 +125,88 @@ does not assert that no other public model is available.
 | `UnitreeG1TransportBox-v1` | `unitree_g1_transport_box_state` | 100 | success_once | Author state PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/transport_box.py#L25) |
 | `UnitreeGo2-Reach-v1` | `unitree_go2_reach_state` | 200 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/quadruped/quadruped_reach.py#L191) |
 | `UnitreeH1Stand-v1` | `unitree_h1_stand_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/humanoid_stand.py#L67) |
+
+## Public checkpoint search
+
+On 2026-11-12, every TaskID without an official or author PPO entry (42 TaskIDs: 34 marked
+`public_checkpoint: missing`, eight NEWT candidates) was searched for a public checkpoint trained
+for that task and robot with a published non-zero result. A checkpoint for another task, robot or
+simulator does not qualify. "Found" records a candidate and the score its authors published; it
+does not establish acceptance on the pinned source. Each candidate still requires an independently
+configured native comparison at the prescribed episode count.
+
+Sources, all opened on that date:
+
+- **D**: [`haosulab/ManiSkill_Demonstrations`](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/main/demos)
+  `demos/<Task>/rl` on `main` (`d674485b`, 2025-07-06). It adds no `.pt` file for any of the 42 TaskIDs;
+  `PegInsertionSide-v1/rl` holds trajectories and a video only.
+- **B**: ManiSkill baselines at the pin (`examples/baselines/{ppo,sac,rfcl,rlpd,tdmpc2,bc,dp,act}`,
+  `ppo/baselines.sh`, `ppo/examples.sh`), the RL baselines documentation, task documentation pages,
+  and GitHub issues searched for `checkpoint`. `examples.sh` lists training commands, not weights.
+- **H**: Hugging Face model and dataset search for `maniskill`, every TaskID and robot/task keywords.
+- **P**: the ManiSkill3 paper ([arXiv 2410.00425](https://arxiv.org/abs/2410.00425)), the ManiSkill2 paper
+  ([arXiv 2302.04659](https://arxiv.org/abs/2302.04659)) and the SIMPLER paper ([arXiv 2405.05941](https://arxiv.org/abs/2405.05941), Table V).
+- **N**: [NEWT](https://github.com/nicklashansen/newt/tree/1d3fc058b81ddf8d36a5457c29ea407dd374c1b8) checkpoints and its
+  `csv/tdmpc2-singletask/tdmpc2_by_task.csv` final rows at 5M steps. NEWT normalizes Cartpole returns by
+  1000 and Hopper returns by 600; other tasks report success. It runs `mani_skill-nightly==2025.9.19.39`
+  and overrides some horizons, so its scores are not pinned-source results.
+- **T**: [TD-MPC2](https://huggingface.co/nicklashansen/tdmpc2) `maniskill2/*.pt` and `results/tdmpc2/*.csv`.
+- **R**: [RDT ManiSkill model](https://huggingface.co/robotics-diffusion-transformer/maniskill-model) and its README;
+  one checkpoint fine-tuned on five tasks, evaluated with `pd_joint_pos`, a render camera and 400 steps.
+- **S**: [SimplerEnv](https://github.com/simpler-env/SimplerEnv) (`maniskill3` branch) for the Bridge tasks.
+
+| Task | Finding | Candidate | Published result | Sources |
+| --- | --- | --- | --- | --- |
+| `AnymalC-Spin-v1` | None found | – | – | D, B, H, P, N |
+| `AssemblingKits-v1` | None found | – | ManiSkill2 `-v0` DAPG+PPO 0.00 | D, B, H, P, N |
+| `FMBAssembly1Easy-v1` | None found | – | – | D, B, H, P, N |
+| `MS-AntRun-v1` | Candidate; no usable published result | NEWT `ms-ant-run.pt` | NEWT reports success, which this task lacks: 0.0 | N |
+| `MS-AntWalk-v1` | Candidate; no usable published result | NEWT `ms-ant-walk.pt` | NEWT reports success, which this task lacks: 0.0 | N |
+| `MS-CartpoleBalance-v1` | Found | NEWT `ms-cartpole-balance.pt` | Return/1000 0.999 | N |
+| `MS-CartpoleSwingUp-v1` | Found | NEWT `ms-cartpole-swingup.pt` | Return/1000 0.991 | N |
+| `MS-HopperHop-v1` | Found | NEWT `ms-hopper-hop.pt` | Return/600 0.797 | N |
+| `MS-HopperStand-v1` | Found | NEWT `ms-hopper-stand.pt` | Return/600 0.806 | N |
+| `MS-HumanoidRun-v1` | None found | – | – | D, B, H, P, N, T (DM Control MuJoCo only) |
+| `MS-HumanoidStand-v1` | None found | – | – | D, B, H, P, N, T (DM Control MuJoCo only) |
+| `MS-HumanoidWalk-v1` | None found | – | – | D, B, H, P, N, T (DM Control MuJoCo only) |
+| `OpenCabinetDoor-v1` | None found | – | – | D, B, H, P, N |
+| `OpenCabinetDrawer-v1` | None found | – | – | D, B, H, P, N |
+| `PegInsertionSide-v1` | Candidate; different protocol | RDT five-task fine-tune | 13.2% success, non-default controller/camera/horizon | D, B, H, P, R, T |
+| `PickClutterYCB-v1` | None found | – | – | D, B, H, P, N, T |
+| `PickSingleYCB-v1` | ManiSkill2 only | TD-MPC2 `maniskill2/pick-ycb-*.pt` (`-v0`) | 0.8/0.8/0.5 success; NEWT fixed-object variants do not cover the task distribution | T, N, P |
+| `PlaceSphere-v1` | Found | NEWT `ms-place-sphere.pt` | Success 0.9 (NEWT horizon 25) | N, B |
+| `PlugCharger-v1` | Candidate; different protocol | RDT five-task fine-tune | 1.2% success, non-default controller/camera/horizon | D, B, H, P, R |
+| `PullCubeTool-v1` | Found | NEWT `ms-pull-cube-tool.pt` | Success 1.0 (`pd_ee_delta_pose`) | N, D |
+| `PutCarrotOnPlateInScene-v1` | Candidate; generalist model | Octo-small/base, RT-1-X | SIMPLER visual matching: 0.097/0.083/0.042 | S, P, H |
+| `PutEggplantInBasketScene-v1` | Candidate; generalist model | Octo-small/base, RT-1-X | SIMPLER visual matching: 0.569/0.431/0.000 | S, P, H |
+| `PutSpoonOnTableClothInScene-v1` | Candidate; generalist model | Octo-small/base, RT-1-X | SIMPLER visual matching: 0.472/0.125/0.000 | S, P, H |
+| `RotateSingleObjectInHandLevel0-v1` | None found | – | – | D, B, H, P, N |
+| `RotateSingleObjectInHandLevel1-v1` | None found | – | – | D, B, H, P, N |
+| `RotateSingleObjectInHandLevel2-v1` | None found | – | – | D, B, H, P, N |
+| `RotateSingleObjectInHandLevel3-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel0-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel1-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel2-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel3-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel4-v1` | None found | – | – | D, B, H, P, N |
+| `StackGreenCubeOnYellowCubeBakedTexInScene-v1` | Candidate; generalist model | Octo-small | SIMPLER visual matching: 0.042 (Octo-base and RT-1-X 0.000) | S, P, H |
+| `TriFingerRotateCubeLevel0-v1` | None found | – | – | D, B, H, P, N |
+| `TriFingerRotateCubeLevel1-v1` | None found | – | – | D, B, H, P, N |
+| `TriFingerRotateCubeLevel2-v1` | None found | – | – | D, B, H, P, N |
+| `TriFingerRotateCubeLevel3-v1` | None found | – | – | D, B, H, P, N |
+| `TriFingerRotateCubeLevel4-v1` | None found | – | – | D, B, H, P, N |
+| `TurnFaucet-v1` | ManiSkill2 only | TD-MPC2 `maniskill2/turn-faucet-*.pt` (`-v0`) | 1.0/0.9/1.0 success | T, P |
+| `UnitreeG1Stand-v1` | None found | – | – | D, B, H, P, N |
+| `UnitreeGo2-Reach-v1` | Candidate; unverified | Hugging Face `HexPlex0xFF/Maniskill-Unitree-GO2` | None; the model card states no task, controller or score | H |
+| `UnitreeH1Stand-v1` | None found | – | – | D, B, H, P, N |
+
+Summary: six TaskIDs have a task/robot-trained candidate with a published non-zero result, all from
+NEWT. Nine have candidates that do not yet meet the rule: two NEWT Ant actors without a published
+return, two RDT entries evaluated under a different protocol, four Bridge tasks with generalist
+models scored on the original SIMPLER backend, and one undocumented Go2 model. Two TaskIDs have
+ManiSkill2-only checkpoints. The other 25 TaskIDs have none, and they are not validated. Coverage
+gaps in the search: the PPO training report on wandb, the ManiSkill2-Learn model folder and the
+ManiSkill3 paper's per-task Bridge figure could not be read.
 
 ## Helpers and templates
 

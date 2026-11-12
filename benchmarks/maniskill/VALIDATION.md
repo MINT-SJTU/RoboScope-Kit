@@ -17,7 +17,7 @@ tasks retain their native metric without fabricated binary success. See the
 
 | Model family | Selected scope | Acceptance limit |
 |---|---|---|
-| Official state PPO | Eleven task-trained checkpoints, including the genuine 16D dual-Panda actors | Final-source, prescribed-count independent upstream comparison remains pending |
+| Official state PPO | Eleven task-trained checkpoints, including the genuine 16D dual-Panda actors | Prescribed-count native comparison matches exactly at `6dcbf53`; rates agree with the original evaluator at the same width ([results](#official-ppo-prescribed-count-results)) |
 | Author G1 PPO | TransportBox and PlaceAppleInBowl task/robot checkpoints | Author simulator/horizon differences and independent native comparison remain unresolved |
 | NEWT | Eight task/robot checkpoints: six control tasks, PlaceSphere and PullCubeTool | Current inference is the deterministic actor prior, not the author's default MPC evaluator; version, backend and horizon differences require validation |
 | Bridge Octo-small | Four original WidowX Bridge profiles | Provisional baseline; matching per-task training and competence are not established |
@@ -57,6 +57,7 @@ Stored-record replay is a CPU regression fixture, not a new model evaluation.
 | Scoring and shard arithmetic | [`fad25d36b5207d1ff47ee4cf8af68721f98241e0`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/fad25d36b5207d1ff47ee4cf8af68721f98241e0) | CPU replay of stored records and corrupted result documents | No simulator, model competence or throughput evidence |
 | Source review checks | [`f40fbe816ba2d4198ea799c03b78a016bb3caf1b`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/f40fbe816ba2d4198ea799c03b78a016bb3caf1b) | 270 existing pytest cases: 8.71 s; checks below | Precedes the model-scope cleanup; not final-head acceptance |
 | Retained-scope cleanup | Current candidate; source/check hashes bound externally at delivery | 270 existing pytest cases: 7.88 s; eleven-suite CPU factory/quick/reduced checks pass | No new GPU evaluation, runtime build or simulator self-test |
+| Official PPO prescribed count | [`6dcbf53dac517f4ab7bf55f3dc4cf042e716da20`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/6dcbf53dac517f4ab7bf55f3dc4cf042e716da20) | 1,100 episodes per side, exact record and per-step trajectory match; 403.8 s evaluation | Eleven official PPO tasks only; see below |
 
 Raw commands, source/check identities and regression fixtures remain outside Git.
 CPU regression receipts do not count any fixture model or TaskID toward acceptance.
@@ -67,6 +68,79 @@ SDK compatibility passed on the earlier
 that does not establish CI or simulator acceptance of a later source revision.
 The [`f40fbe8` workflow](https://github.com/MINT-SJTU/RoboScope-Kit/actions/runs/43158764888)
 still requires approval; the cleanup's eventual exact-head CI result must be checked separately.
+
+## Official PPO prescribed-count results
+
+Source `6dcbf53dac517f4ab7bf55f3dc4cf042e716da20` was built with `build-runtime.sh` into a new
+directory; the simulator self-test passed with Kit 0.8.0b36. The runtime manifest SHA-256 is
+`ca92cfe3621518d8fa88234bb0e308e4b692834e12b60f9e4afd5d2c6a9a784c`. Checkpoints are the eleven
+[official PPO files](../../examples/maniskill/official-models.json) at demonstration revision
+`3558f72cf99d51d04a6ac4779e88b3da4bbf1628`, verified by SHA-256. The suite is
+`official_ppo_state_v1`: 100 episodes per task, seeds 0-99, ten-lane groups, one Worker and one
+Policy replica, no autotune. The native side resolves each configuration from pinned upstream
+sources, uses the same checkpoints without Policy RPC, and runs each task in its own process.
+
+| Task | Success once | Success at end | Mean return | Control steps |
+| --- | ---: | ---: | ---: | ---: |
+| `PickCube-v1` | 100/100 | 100/100 | 43.74 | 5,000 |
+| `RollBall-v1` | 63/100 | 0/100 | 20.06 | 8,000 |
+| `PushT-v1` | 98/100 | 72/100 | 62.87 | 10,000 |
+| `LiftPegUpright-v1` | 100/100 | 50/100 | 39.82 | 5,000 |
+| `PokeCube-v1` | 70/100 | 36/100 | 38.04 | 5,000 |
+| `PullCube-v1` | 100/100 | 8/100 | 19.60 | 5,000 |
+| `PushCube-v1` | 100/100 | 24/100 | 23.56 | 5,000 |
+| `StackCube-v1` | 84/100 | 81/100 | 39.30 | 5,000 |
+| `TwoRobotPickCube-v1` | 95/100 | 95/100 | 80.11 | 10,000 |
+| `TwoRobotStackCube-v1` | 100/100 | 56/100 | 83.25 | 10,000 |
+| `AnymalC-Reach-v1` | 100/100 | 99/100 | 146.42 | 20,000 |
+| Total | 1,010/1,100 | 621/1,100 | – | 88,000 |
+
+SDK and native each produced 1,100 records with no duplicate or missing episode. Seeds, lanes,
+initial-state hashes, first actions, returns, success flags, steps and terminal masks match exactly,
+with zero tolerance. A second complete run recorded per-step observation and action hashes for
+every episode; all 1,100 trajectory files match on both sides. The 90 unsuccessful episodes are
+scored task outcomes: there were no Worker failures, retries or out-of-memory events.
+
+The timed run disables trajectory hashing. SDK evaluation takes 403.8 s (command 407.4 s):
+9,807 episodes/h and 217.0 control steps/s. Mean GPU busy is 33.7%, peak VRAM 4.66 GiB and mean
+CPU use 1.14 cores. Policy loading takes 1.56 s and the total Policy wait 19.5 s. Inside the
+evaluation, environment construction takes 20.3%, seeded resets 11.0%, rollout 53.5%,
+environment closing 6.2%, and Worker recycling between tasks 9.0%. The native run takes 386.1 s.
+
+### Comparison with the original evaluator
+
+The unmodified upstream `ppo.py --evaluate` ran each checkpoint with 100 evaluation environments
+and seeds 0, 1 and 2. Its reset schedule draws different initial states, so episodes cannot be
+paired. Rates are compared with a two-sided Fisher exact test. To separate seed sampling from
+protocol differences, the native harness also evaluated seeds 100-399 under the Kit protocol.
+
+| Task | Kit, seeds 0-99 | Kit, seeds 100-399 | Original evaluator (seed 0/1/2) | Fisher p, Kit 0-399 vs original |
+| --- | ---: | ---: | --- | ---: |
+| `PickCube-v1` | 100/100 | 300/300 | 100/100/100 | 1.0 |
+| `RollBall-v1` | 63/100 | 201/300 | 67/65/69 | 0.81 |
+| `PushT-v1` | 98/100 | 287/300 | 87/92/91 | 0.001 |
+| `LiftPegUpright-v1` | 100/100 | 299/300 | 100/100/100 | 1.0 |
+| `PokeCube-v1` | 70/100 | 220/300 | 79/75/76 | 0.22 |
+| `PullCube-v1` | 100/100 | 300/300 | 100/100/100 | 1.0 |
+| `PushCube-v1` | 100/100 | 300/300 | 100/100/98 | 0.18 |
+| `StackCube-v1` | 84/100 | 269/300 | 85/92/91 | 0.72 |
+| `TwoRobotPickCube-v1` | 95/100 | 292/300 | 94/98/98 | 1.0 |
+| `TwoRobotStackCube-v1` | 100/100 | 298/300 | 96/99/97 | 0.023 |
+| `AnymalC-Reach-v1` | 100/100 | 300/300 | 100/100/100 | 1.0 |
+
+Nine tasks agree with the original evaluator. `TwoRobotStackCube-v1` (99.5% against 97.3%) is
+not significant after correcting for eleven tasks. `PushT-v1` differs consistently: 96.3% under the
+Kit protocol against 90.0% in the original evaluator, p = 0.001, and every Kit seed block exceeds
+every original seed. The gap follows the vector width. The same unmodified evaluator with ten
+evaluation environments and seeds 0-29 succeeds in 286/300 episodes (95.3%). That agrees with the
+Kit protocol (p = 0.57) and differs from its own 100-environment result (p = 0.018). The Kit
+protocol freezes ten lanes, so its PushT rate is the ten-lane rate; it is not a Kit defect.
+
+The native harness's diagnostic `--reuse-environment` option is not safe for these comparisons.
+With it, `AnymalC-Reach-v1` seeds 200-299 fail in two of two attempts with a CUDA out-of-memory
+error in the contact impulse query of the first reset after the environment is reused; with a new
+environment per group the same seeds complete 100/100. The seed 200-299 AnymalC row above uses
+the per-group environment. The SDK always builds a new environment for each group.
 
 ## Scoring and shard correction
 
@@ -149,10 +223,10 @@ appropriate competence, complete records and exact-head CI.
 
 ## Timing and resource coverage
 
-This source-only correction batch has no new rollout timing or resource samples.
-Total/formal evaluation time, episodes/h, steps/s, inference/render/wait latency,
-GPU busy, SM/Tensor/RT throughput, average/peak VRAM, CPU use and task outcomes are
-therefore unavailable for the retained current-source scope. Do not reuse a
+The [official PPO results](#official-ppo-prescribed-count-results) report evaluation time,
+episodes/h, steps/s, Policy wait, GPU busy, peak VRAM and CPU use for the eleven official tasks.
+Other retained models have no current-source timing. SM/Tensor/RT throughput is unavailable:
+the machine denies GPU performance counters. Do not reuse a
 borrowed-policy cohort as that measurement. CPU wall spans can include
 asynchronous GPU work, and concurrent Worker times cannot be summed into
 application wall time. Issue #31 performance work remains separate.
