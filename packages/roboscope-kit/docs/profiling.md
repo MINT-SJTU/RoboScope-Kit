@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-05
+Updated: 2026-11-10
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -70,9 +70,12 @@ PY
 
 ## Coverage
 
-Capture starts when the Worker's `PolicyClient` opens the `episode` range, so only benchmarks that call the
-Policy through `PolicyClient` record anything. The Policy Server does not run under `nsys`: its own GPU time
+Capture starts when the Worker opens the `episode` range. Most workers do this through
+`PolicyClient`; RoboCasa365 keeps one range open around its complete native episode group. The Policy Server does not run under `nsys`: its own GPU time
 is not in the report, only the round-trip time of each request.
+RoboCasa365 opens that range after its group's environment resets and before
+Policy reset calls. Construction/reset timing uses separate worker wall timers;
+these timers do not establish verified Nsight hardware coverage.
 
 | Benchmark | Uses `PolicyClient` | Verified on hardware |
 |---|---|---|
@@ -82,6 +85,7 @@ is not in the report, only the round-trip time of each request.
 | RLBench | Yes | Not yet |
 | robomimic | Yes | Not yet |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
+| RoboCasa365 | Yes; first native group after environment resets | Nsight not verified; worker wall timers recorded separately |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |
 
@@ -101,5 +105,7 @@ is not in the report, only the round-trip time of each request.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
+- [RoboCasa365 all-task comparison](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robocasa365/approved250-native-20261109.md): RTX 4090, Kit b34, K=2/G=1 (2026-11-09);
+  serial Worker timers locate construction/reset/native steps as dominant intervals; Nsight and Policy Server GPU time are unverified.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).

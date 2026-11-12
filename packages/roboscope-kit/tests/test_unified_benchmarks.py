@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 import roboscope_kit
+from roboscope_kit import profiling
 from roboscope_kit.benchmark_specs import BenchmarkName
 from roboscope_kit.policy import PolicyCapabilities
 from roboscope_kit.runtime.benchmark.factories import BenchmarkRunRequest
@@ -66,6 +67,64 @@ def test_public_sdk_api_matches_supported_exports() -> None:
     assert all(hasattr(roboscope_kit, name) for name in PUBLIC_SDK_API)
     assert "runtime" not in PUBLIC_SDK_API
     assert "__version__" not in PUBLIC_SDK_API
+
+
+def test_policy_episode_group_preserves_lifecycle_and_nested_capture(monkeypatch: pytest.MonkeyPatch) -> None:
+    events = []
+    monkeypatch.setattr(profiling, "ENABLED", True)
+    monkeypatch.setattr(profiling, "episode_start", lambda: events.append("start"))
+    monkeypatch.setattr(profiling, "episode_end", lambda: events.append("end"))
+    client = roboscope_kit.PolicyClient("/unused-policy-socket")
+    monkeypatch.setattr(client, "_request", lambda operation, payload: events.append((operation, payload)))
+    first = roboscope_kit.EpisodeContext("slot-0", "task")
+    second = roboscope_kit.EpisodeContext("slot-1", "task")
+    with client.episode_group():
+        client.reset(first)
+        with client.episode_group():
+            client.reset(second)
+            client.end_episode(second.episode_id)
+        client.end_episode(first.episode_id)
+        assert events == [
+            "start", ("reset", {"context": first.to_dict()}), ("reset", {"context": second.to_dict()}),
+            ("end_episode", {"episode_id": second.episode_id}),
+            ("end_episode", {"episode_id": first.episode_id}),
+        ]
+    assert events[-1] == "end"
+    assert events.count("start") == events.count("end") == 1
+
+
+def test_policy_episode_group_closes_capture_after_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    events = []
+    monkeypatch.setattr(profiling, "ENABLED", True)
+    monkeypatch.setattr(profiling, "episode_start", lambda: events.append("start"))
+    monkeypatch.setattr(profiling, "episode_end", lambda: events.append("end"))
+    client = roboscope_kit.PolicyClient("/unused-policy-socket")
+    monkeypatch.setattr(client, "_request", lambda operation, payload: events.append(operation))
+    with (
+        pytest.raises(RuntimeError, match="inference failed"),
+        client.episode_group(),
+        client.episode_group(),
+    ):
+        raise RuntimeError("inference failed")
+    assert events == ["start", "end"]
+    context = roboscope_kit.EpisodeContext("next-episode", "task")
+    client.reset(context)
+    client.end_episode(context.episode_id)
+    assert events == ["start", "end", "start", "reset", "end_episode", "end"]
+
+
+def test_policy_episode_group_without_profiling_keeps_normal_calls(monkeypatch: pytest.MonkeyPatch) -> None:
+    events = []
+    monkeypatch.setattr(profiling, "ENABLED", False)
+    monkeypatch.setattr(profiling, "episode_start", lambda: pytest.fail("unexpected capture"))
+    monkeypatch.setattr(profiling, "episode_end", lambda: pytest.fail("unexpected capture"))
+    client = roboscope_kit.PolicyClient("/unused-policy-socket")
+    monkeypatch.setattr(client, "_request", lambda operation, payload: events.append(operation))
+    context = roboscope_kit.EpisodeContext("slot-0", "task")
+    with client.episode_group():
+        client.reset(context)
+        client.end_episode(context.episode_id)
+    assert events == ["reset", "end_episode"]
 
 
 def test_legacy_policy_capabilities_use_benchmark_action_default() -> None:
