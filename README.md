@@ -186,6 +186,7 @@ tuning, writing a Policy, CUDA MPS, and cross-instance sharding.
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
 | `examples/peract/` | A PerAct `Policy` example for RLBench, with PerAct's native `eval.py` runner and an episode-by-episode comparison |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
+| `examples/latency-policy/` | A synthetic latency-bound `Policy` for measuring RoboDojo concurrency |
 | `ci/` | Build, compatibility, and PyPI release scripts used by GitHub Actions |
 
 ## Contributing

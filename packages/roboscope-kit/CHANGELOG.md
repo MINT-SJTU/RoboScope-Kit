@@ -2,6 +2,38 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b46 - 2026-11-10
+
+- Honor a Policy's declared `observation_strides` on RoboDojo: `observe()` then receives every Nth control-step
+  observation, while rendering and video stay on every step. The default of 1 is unchanged. The XPolicyLab
+  example gains `--observation-stride`.
+- Evaluate a RoboDojo layout again, up to three passes per shard, when the simulator abandons it after a PhysX
+  break or an unstable reset. A fixed-layout shard used to come back short and cost the Worker its single
+  restart; a second such shard stopped the whole run. Each native log now keeps every attempt of its work item.
+- Stop a RoboDojo simulator that reports a Vulkan `ERROR_OUT_OF_DEVICE_MEMORY`, which otherwise waits in an
+  error dialog and hangs the run, and classify the Worker failure as an OOM, so the GPU's concurrency is
+  lowered and the shard requeued. Autotune now rejects such a probe as `worker_oom` instead of waiting for
+  its timeout.
+- Experimental: add the RoboDojo manifest default `envs_per_worker`, which runs several lockstep environments
+  in one simulator, one Kit episode each. The default of 1 is unchanged. A retry keeps the shard's environment
+  count by filling the batch with layouts already evaluated and discarding their new results; the last of the
+  three passes runs only the layouts still missing. Each episode records the environment count it ran with as
+  `evaluator_num_envs`.
+- Add an opt-in interactive RoboDojo Policy contract (`interactive_benchmarks`, `EpisodeControl`, `poll()` and
+  `episode_outcome()`) for waiting without simulation steps, ending an episode early, preserving native
+  observation metadata, and receiving the simulator's verdict. An interactive Policy runs one environment per
+  Worker; a batch request is rejected before the Policy is invoked, and the server stays ready.
+- Add the `max_workers_per_replica` Policy capability, which bounds the number of Workers sharing one replica.
+- Experimental: add `examples/pyrua/`, a PyRUA-Lean Policy example that uses the upstream RoboDojo agent and
+  tool bridge. It records the native RoboDojo run ID with each episode, so retries remain distinguishable,
+  allows the agent up to twelve minutes to finish after the simulator's verdict, and can share one local SAM3
+  service across Policy replicas.
+- Let the RoboDojo builder create a separate environment over a verified existing runtime
+  (`ROBODOJO_BASE_RUNTIME`) when disk space prevents a full independent installation; it records the reused
+  dependency provenance.
+- Add `examples/latency-policy/`, a synthetic Policy for measuring how a latency-bound workload scales with
+  concurrent episodes on RoboDojo.
+
 ## 0.8.0b35 - 2026-11-10
 
 - Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task

@@ -212,6 +212,10 @@ RoboTwin accepts a positive observation stride. The default is 1, so every new a
 observation. Randomized lighting, the viewer, video logging, and point-cloud observations always render
 every step, whatever stride you declare.
 
+RoboDojo accepts a positive observation stride too. It applies to `step_observation_updates`: `observe()`
+receives every Nth control-step observation, and `act()` still receives the first observation of each chunk.
+Rendering and video always run on every step.
+
 Concurrency (`K`) and replica count (`g`) are not capabilities; the runtime chooses them, or you fix them
 with `--concurrency` and `--replicas` (see [Automatic tuning](#automatic-tuning-kg)).
 
@@ -229,6 +233,20 @@ For RoboDojo, a Policy that needs observations between actions in a chunk can de
 The observation passed to `act()` starts each chunk; `observe()` receives the intermediate steps in order.
 Updates are synchronous by default. The RoboDojo manifest can opt into an experimental bounded queue;
 updates are drained before the next `act()` and before ending the episode.
+
+An interactive RoboDojo Policy can declare `interactive_benchmarks=("robodojo",)` and return
+`EpisodeControl("wait")` or `EpisodeControl("finish")` from `act()` or `poll(episode_id)`; import
+`EpisodeControl` from `roboscope_kit.policy`. The runtime polls without sending a duplicate observation
+or advancing the simulator while it waits. On finish it asks RoboDojo to judge the current scene and
+passes its verdict to `episode_outcome(episode_id, outcome)` before `end_episode()`. Native state and
+camera metadata accompany the canonical image features in `Observation.metadata["robodojo_native"]`.
+Interactive policies use `act()` and `poll()`, not `act_batch()`. They require one environment per Worker
+and cannot also declare `step_observation_updates`. See the experimental
+[PyRUA-Lean example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/pyrua), which can
+share one local SAM3 service across Policy replicas.
+
+A Policy can set `max_workers_per_replica` to bound the number of Workers sharing one replica; this is
+separate from the maximum inference batch size.
 
 ### Input preprocessing
 

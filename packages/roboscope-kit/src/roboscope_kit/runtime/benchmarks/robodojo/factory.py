@@ -100,4 +100,5 @@ class RoboDojoBenchmarkFactory:
             control_state_reuse=manifest.defaults.get("control_state_reuse", False),
             physics_threads=manifest.defaults.get("physics_threads"),
             observation_queue_size=manifest.defaults.get("observation_queue_size", 0),
+            envs_per_worker=manifest.defaults.get("envs_per_worker", 1),
         ))

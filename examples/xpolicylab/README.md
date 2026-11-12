@@ -134,3 +134,34 @@ discussion is in [#17](https://github.com/MINT-SJTU/RoboScope-Kit/issues/17).
 
 - Only `Simate_beta` has been compared with upstream. Other XPolicyLab policies use the same mapping.
 - RoboDojo episodes are not reproducible run to run, so compare runs statistically rather than episode by episode.
+
+## Skip observations the model never reads
+
+`--observation-stride N` makes the Policy declare `observation_strides={"robodojo": N}`, so `observe()` receives
+only every Nth control-step observation. Rendering and video still run on every step. Add it to the command in
+`roboscope-policy.json`:
+
+```json
+"--policy", "Simate_beta", "--observation-stride", "10"
+```
+
+`Simate_beta` reads the newest observation when it infers, at the start of each 10-step chunk, and history
+frames 20 control steps apart, so steps 1 to 9 of a chunk are stored and never read. With stride 10 the example
+sets `history_interval` to 2, in delivered observations, and the model sees the same frames: over 56 chunks
+(560 steps) the actions matched exactly, while a wrong interval of 3 differed by 0.104.
+
+The stride is refused unless `exec_chunk_size` and `history_interval` are divisible by it. Divisibility is only
+a guard. Before using a stride with another model, confirm that it reads observations only at those steps.
+
+## Cap the Policy's CPU threads
+
+PyTorch starts one thread per core the host reports, not per core the container may use. On a host with a CPU
+quota below its core count, the Policy's threads can throttle the whole container, simulators included. Prefix
+the command in `roboscope-policy.json` to cap them:
+
+```json
+"command": ["/usr/bin/env", "OMP_NUM_THREADS=4", "MKL_NUM_THREADS=4", "/path/to/python", "xpolicylab_policy.py", "..."]
+```
+
+On a 20-CPU quota with 208 reported cores, this removed the throttling and raised RoboDojo steps/s by about 10%
+at K=3; see [RoboDojo's throughput notes](../../benchmarks/robodojo/README.md#throughput).

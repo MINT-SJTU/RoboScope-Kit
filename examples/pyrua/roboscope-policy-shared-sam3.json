@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/path/to/pyrua-policy-env/bin/python",
+    "-I",
+    "/path/to/RoboScope-Kit/examples/pyrua/pyrua-shared-sam3-wrapper.py",
+    "--sam3-endpoint",
+    "http://127.0.0.1:8790",
+    "--policy",
+    "/path/to/RoboScope-Kit/examples/pyrua/pyrua_policy.py",
+    "--model",
+    "gpt-6.1-terra",
+    "--reasoning",
+    "max",
+    "--codex-bin",
+    "/path/to/codex",
+    "--result-dir",
+    "/path/to/pyrua-results"
+  ],
+  "cwd": "/path/to/RoboDojo"
+}

@@ -6,14 +6,22 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import math
 import os
+import signal
 import subprocess
 import uuid
 from pathlib import Path
 
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
+
+LAYOUT_PASSES = 3
+# Isaac reports a Vulkan allocation failure with this marker and then waits in an error dialog instead of
+# exiting, so the Worker watches the native log for it.
+OOM_MARKER = b"ERROR_OUT_OF_DEVICE_MEMORY"
+OOM_POLL_S = 5.0
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,12 +42,94 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--unpaced-render", action="store_true")
     parser.add_argument("--control-state-reuse", action="store_true")
     parser.add_argument("--physics-threads", type=int, choices=(1, 4, 8))
+    parser.add_argument("--envs-per-worker", type=int, default=1)
     parser.add_argument("--step-observation-updates", action="store_true")
+    parser.add_argument("--interactive-policy", action="store_true")
+    parser.add_argument("--observation-stride", type=int, default=1)
     parser.add_argument("--observation-queue-size", type=int, choices=range(0, 11), default=0)
     args = parser.parse_args()
     if args.observation_queue_size and not args.step_observation_updates:
         parser.error("observation overlap requires step observation updates")
+    if args.interactive_policy and (args.envs_per_worker != 1 or args.observation_queue_size):
+        parser.error("interactive policies require one environment and no observation overlap")
+    if args.envs_per_worker < 1:
+        parser.error("envs per worker must be positive")
+    if args.observation_stride < 1:
+        parser.error("observation stride must be positive")
     return args
+
+
+def _descendants(pid: int) -> list[int]:
+    children: dict[int, list[int]] = {}
+    for stat in Path("/proc").glob("[0-9]*/stat"):
+        try:
+            parent = int(stat.read_text().rsplit(")", 1)[1].split()[1])
+        except (OSError, IndexError, ValueError):
+            continue
+        children.setdefault(parent, []).append(int(stat.parent.name))
+    found, stack = [], [pid]
+    while stack:
+        for child in children.get(stack.pop(), []):
+            found.append(child)
+            stack.append(child)
+    return found
+
+
+def _run_once(command: list[str], root: Path, env: dict, log, log_path: Path) -> int:
+    log.flush()
+    position = log_path.stat().st_size
+    process = subprocess.Popen(command, cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT)
+    while True:
+        try:
+            return process.wait(timeout=OOM_POLL_S)
+        except subprocess.TimeoutExpired:
+            pass
+        with log_path.open("rb") as handle:
+            handle.seek(max(0, position - len(OOM_MARKER)))
+            chunk = handle.read()
+            position = handle.tell()
+        if OOM_MARKER in chunk:
+            for pid in [*_descendants(process.pid), process.pid]:
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(pid, signal.SIGKILL)
+            process.wait()
+            # The marker text makes the Kit classify this Worker failure as an OOM, which lowers the GPU's
+            # concurrency and requeues the shard instead of retrying it at the same concurrency.
+            raise RuntimeError(
+                f"RoboDojo simulator ran out of GPU memory: {OOM_MARKER.decode()}; see {log_path}"
+            )
+
+
+def _run_evaluator(command: list[str], root: Path, env: dict, log, log_path: Path) -> None:
+    # RoboDojo's resume manifest is keyed by run_id; preserve it across bounded
+    # restarts for the upstream PhysX fatal-restart exit codes.
+    for attempt in range(4):
+        returncode = _run_once(command, root, env, log, log_path)
+        if returncode == 0:
+            return
+        if returncode not in (99, 134, 139, -6, -11) or attempt == 3:
+            log.flush()
+            with log_path.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                handle.seek(max(0, handle.tell() - 8192))
+                tail = handle.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"RoboDojo evaluator exited {returncode}; see {log_path}\n{tail}")
+
+
+def _layout_rows(result_path: Path, layouts: list[int]) -> dict[int, dict]:
+    """Rows of one evaluator pass by layout; each must be one of the requested layouts, at most once."""
+
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    details = payload.get("details")
+    if not isinstance(details, dict) or payload.get("eval_time") != len(details):
+        raise RuntimeError(f"RoboDojo returned an inconsistent result; see {result_path}")
+    rows = list(details.values())
+    ids = [row.get("layout_id") if isinstance(row, dict) else None for row in rows]
+    if len(set(ids)) != len(ids) or not set(ids) <= set(layouts):
+        raise RuntimeError(
+            f"RoboDojo returned incorrect layout IDs; expected a subset of {layouts}, got {ids}"
+        )
+    return {int(row["layout_id"]): row for row in rows}
 
 
 def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
@@ -56,9 +146,11 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         )
 
     root = args.benchmark_root.resolve()
-    run_id = f"roboscope-{uuid.uuid4().hex}"
-    output = root / "eval_result/RoboDojo" / task / "RoboScopeKit/arx_x5" / f"{seed}_roboscope" / run_id
-    result_path = output / "_result.json"
+    if args.envs_per_worker > 1:
+        deploy = root / "XPolicyLab/policy/RoboScopeKit/deploy.yml"
+        if "eval_batch: true" not in deploy.read_text(encoding="utf-8").splitlines():
+            # RoboDojo silently forces one environment without it; rebuild with build-runtime.sh.
+            raise RuntimeError(f"envs_per_worker > 1 requires eval_batch: true in {deploy}")
     logs = args.output_dir / "native-logs"
     logs.mkdir(parents=True, exist_ok=True)
     log_path = logs / f"worker-{args.worker_id:03d}-{item.item_id}.log"
@@ -73,10 +165,9 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         "ROBOSCOPE_POLICY_ENCODING": "msgpack",
         "ROBOSCOPE_ROBODOJO_ACTION_REPRESENTATION": args.action_representation,
         "ROBOSCOPE_ROBODOJO_STEP_UPDATES": "1" if args.step_observation_updates else "0",
+        "ROBOSCOPE_ROBODOJO_INTERACTIVE": "1" if getattr(args, "interactive_policy", False) else "0",
         "ROBOSCOPE_ROBODOJO_OBSERVATION_QUEUE_SIZE": str(args.observation_queue_size),
-        "ROBODOJO_RUN_ID": run_id,
-        "ROBODOJO_LAYOUT_IDS": json.dumps(list(range(start, start + count))),
-        "EVAL_NUM": str(count),
+        "ROBOSCOPE_ROBODOJO_OBSERVATION_STRIDE": str(args.observation_stride),
         # The caller has explicitly accepted the same EULA above.
         "ACCEPT_EULA": "Y",
     }
@@ -102,37 +193,53 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         "--protocol", "ws", "--policy_server_url", "ws://localhost:1",
         "--additional_info", "roboscope", "--seed", str(seed), "--host", "localhost", "--headless",
     ]
-    # RoboDojo's resume manifest is keyed by run_id; preserve it across bounded
-    # restarts for the upstream PhysX fatal-restart exit codes.
-    with log_path.open("w", encoding="utf-8") as log:
-        for attempt in range(4):
-            completed = subprocess.run(command, cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT)
-            if completed.returncode == 0:
-                break
-            if completed.returncode not in (99, 134, 139, -6, -11) or attempt == 3:
-                log.flush()
-                with log_path.open("rb") as handle:
-                    handle.seek(0, os.SEEK_END)
-                    handle.seek(max(0, handle.tell() - 8192))
-                    tail = handle.read().decode("utf-8", errors="replace")
-                raise RuntimeError(
-                    f"RoboDojo evaluator exited {completed.returncode}; see {log_path}\n{tail}"
-                )
-
-    if not result_path.is_file():
-        raise RuntimeError(f"RoboDojo did not write results; see {log_path}")
-    payload = json.loads(result_path.read_text(encoding="utf-8"))
-    details = payload.get("details")
-    if not isinstance(details, dict) or payload.get("eval_time") != count:
-        raise RuntimeError(f"RoboDojo returned an incomplete shard; see {result_path}")
-    rows = list(details.values())
-    ids = [row.get("layout_id") for row in rows if isinstance(row, dict)]
+    # RoboDojo abandons a layout whose physics breaks and, with no spare seeds in a fixed shard,
+    # returns without it. Evaluate the missing layouts again, so the shard keeps its layout set.
     expected = list(range(start, start + count))
-    if len(rows) != count or len(set(ids)) != count or sorted(ids) != expected:
-        raise RuntimeError(f"RoboDojo returned incorrect layout IDs; expected {expected}, got {ids}")
+    evaluator_envs = min(args.envs_per_worker, count)
+    rows: dict[int, dict] = {}
+    envs_by_layout: dict[int, int] = {}
+    result_paths = []
+    # Append, so a Worker that retries this item keeps the failed attempt's log.
+    with log_path.open("a", encoding="utf-8") as log:
+        for attempt in range(LAYOUT_PASSES):
+            missing = [layout for layout in expected if layout not in rows]
+            # Fill a short retry with layouts already evaluated, so the simulator keeps its environment
+            # count; their new rows are discarded. The missing layouts go first, into other env slots.
+            # Some layouts reset unstably only alongside others (make_kong layout 1 with three
+            # environments), so the last pass runs what is still missing on its own; each record keeps
+            # the environment count it ran with.
+            envs = evaluator_envs if attempt < LAYOUT_PASSES - 1 else min(evaluator_envs, len(missing))
+            done = [layout for layout in expected if layout in rows]
+            requested = missing + done[: max(0, envs - len(missing))]
+            run_id = f"roboscope-{uuid.uuid4().hex}"
+            result_path = (
+                root / "eval_result/RoboDojo" / task / "RoboScopeKit/arx_x5" / f"{seed}_roboscope" / run_id
+                / "_result.json"
+            )
+            env.update({
+                "ROBODOJO_RUN_ID": run_id,
+                "ROBODOJO_LAYOUT_IDS": json.dumps(requested),
+                "EVAL_NUM": str(len(requested)),
+            })
+            command[command.index("--num_envs") + 1] = str(envs)
+            _run_evaluator(command, root, env, log, log_path)
+            if not result_path.is_file():
+                raise RuntimeError(f"RoboDojo did not write results; see {log_path}")
+            result_paths.append(str(result_path))
+            new_rows = _layout_rows(result_path, requested)
+            for layout in missing:
+                if layout in new_rows:
+                    rows[layout], envs_by_layout[layout] = new_rows[layout], envs
+            if len(rows) == count:
+                break
+        else:
+            raise RuntimeError(
+                f"RoboDojo returned an incomplete shard after {LAYOUT_PASSES} passes; "
+                f"missing layouts {[layout for layout in expected if layout not in rows]}; see {result_paths}"
+            )
     records = []
-    for row in rows:
-        layout = int(row["layout_id"])
+    for layout, row in sorted(rows.items()):
         success, steps = row.get("success"), row.get("roboscope_steps")
         score, elapsed = row.get("score"), row.get("roboscope_elapsed_s")
         if (type(success) is not bool or type(steps) is not int or steps < 0
@@ -144,14 +251,16 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
             success=success,
             steps=steps,
             elapsed_s=float(elapsed),
-            metadata={"task": task, "layout_id": layout, "score": float(score)},
+            metadata={"task": task, "layout_id": layout, "score": float(score),
+                      "evaluator_num_envs": envs_by_layout[layout]},
         ))
     return WorkResult(
         item_id=item.item_id,
         group_id=item.group_id,
         worker_id=args.worker_id,
         records=tuple(records),
-        metadata={"task": task, "result_path": str(result_path), "log_path": str(log_path)},
+        metadata={"task": task, "result_paths": result_paths, "log_path": str(log_path),
+                  "evaluator_num_envs": evaluator_envs},
     )
 
 

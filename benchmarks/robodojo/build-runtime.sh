@@ -25,6 +25,9 @@ for package in cmake build-essential ffmpeg; do
     exit 3
   }
 done
+if [[ -n "${ROBODOJO_BASE_RUNTIME:-}" ]]; then
+  exec bash "${BUILDER_DIR}/build-reused-runtime.sh" "$1" "${ROBODOJO_BASE_RUNTIME}"
+fi
 mkdir -p "$1"
 INSTALL_ROOT="$(cd -- "$1" && pwd -P)"
 SOURCE_ROOT="${INSTALL_ROOT}/RoboDojo"
