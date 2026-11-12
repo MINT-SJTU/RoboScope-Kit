@@ -2,24 +2,28 @@
   "groot_revision": "1b018839a6da865dffecd3185fe054211bc71270",
   "archives": {
     "textures": {
-      "url": "https://utexas.box.com/shared/static/otdsyfjontk17jdp24bkhy2hgalofbh4.zip",
-      "bytes": 538397915,
-      "sha256": "d36bf23cec4ce33c83eb59dfd34faeb13d8f45f9844866a654569659fc9be23d"
+      "url": "https://huggingface.co/datasets/Livfour/robocasa-assets/resolve/69f7446f5f0f763971cabeb8b77026fcecced17c/textures.zip",
+      "bytes": 537964463,
+      "sha256": "e6e9fe1ae4dfdaeb7fe037859926d187c3cdaabdca7afdaa542ed82b943e318c",
+      "upstream_url": "https://utexas.box.com/shared/static/otdsyfjontk17jdp24bkhy2hgalofbh4.zip"
     },
     "fixtures": {
-      "url": "https://utexas.box.com/shared/static/pobhbsjyacahg2mx8x4rm5fkz3wlmyzp.zip",
-      "bytes": 472441720,
-      "sha256": "27905b494e7bf12826a8d67c167c73d95eade467841f5d2ddbdd87efc15b4c5a"
+      "url": "https://huggingface.co/datasets/Livfour/robocasa-assets/resolve/69f7446f5f0f763971cabeb8b77026fcecced17c/fixtures.zip",
+      "bytes": 472623824,
+      "sha256": "bd993f47d0ae5f5f3d89cf5f9fc28d55ceb878359c49136d30052de0bb1ef231",
+      "upstream_url": "https://utexas.box.com/shared/static/pobhbsjyacahg2mx8x4rm5fkz3wlmyzp.zip"
     },
     "objaverse": {
-      "url": "https://utexas.box.com/shared/static/ejt1kc2v5vhae1rl4k5697i4xvpbjcox.zip",
-      "bytes": 2115607481,
-      "sha256": "519f989588c7e67f818ee823e1abeb7e08a34d9ec4977395a712dc8ce80c284c"
+      "url": "https://huggingface.co/datasets/Livfour/robocasa-assets/resolve/69f7446f5f0f763971cabeb8b77026fcecced17c/objaverse.zip",
+      "bytes": 2164109015,
+      "sha256": "4ecba30e93e3c600d5dcfac1395ba9ae720aa67abd6b3c734e9c18768d890b84",
+      "upstream_url": "https://utexas.box.com/shared/static/ejt1kc2v5vhae1rl4k5697i4xvpbjcox.zip"
     },
     "generative_textures": {
-      "url": "https://utexas.box.com/shared/static/gf9nkadvfrowkb9lmkcx58jwt4d6c1g3.zip",
-      "bytes": 593204309,
-      "sha256": "a90d8ce74511120b19c859b326e3263e86be0a32eab10d6877e8a002d1b98c3d"
+      "url": "https://huggingface.co/datasets/Livfour/robocasa-assets/resolve/69f7446f5f0f763971cabeb8b77026fcecced17c/generative_textures.zip",
+      "bytes": 592364615,
+      "sha256": "0d8e3dc05580f43601ccb82c1aa43056ffcb3f371933ad8863d0021587b071fe",
+      "upstream_url": "https://utexas.box.com/shared/static/gf9nkadvfrowkb9lmkcx58jwt4d6c1g3.zip"
     },
     "lightwheel": {
       "url": "https://huggingface.co/datasets/nvidia/PhysicalAI-DigitalCousin-Assets/resolve/1b018839a6da865dffecd3185fe054211bc71270/lightwheel.zip",

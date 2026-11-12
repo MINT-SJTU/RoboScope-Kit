@@ -15,7 +15,7 @@ with, the Policy file, and the configuration merged into the checkpoint's `confi
 | [`libero_pro/`](libero_pro/demo.yaml) | [`StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1`](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | the 16 `libero_{goal,spatial,10,object}_{object,swap,lan,task}` suites | `7e4a473` | `starvla_policy.py` |
 | [`libero_plus/`](libero_plus/demo.yaml) | [`StarVLA/Qwen3-VL-OFT-LIBERO-4in1`](https://huggingface.co/StarVLA/Qwen3-VL-OFT-LIBERO-4in1) | `libero_spatial`, `libero_object`, `libero_goal`, `libero_10` | `985c223` | `starvla_policy.py` |
 | [`robotwin/`](robotwin/demo.yaml) | [`StarVLA/Qwen3-VL-OFT-Robotwin2`](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robotwin2) | `demo_clean`, `demo_randomized` | `7e4a473` | `starvla_policy.py` |
-| [`robocasa/`](robocasa/demo.yaml) | [`StarVLA/Qwen3-VL-OFT-Robocasa`](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robocasa) | `tabletop` | `985c223` | `starvla_policy.py` |
+| [`robocasa/`](robocasa/demo.yaml) | [`StarVLA/Qwen3-VL-OFT-Robocasa`](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robocasa) | `tabletop` | `985c223` | `starvla_robocasa_policy.py` |
 | [`calvin/`](calvin/demo.yaml) | [`Simplicissimus-S/StarVLA-QwenGR00T_Qwen2.5-VL-3B-Instruct-Action_calvin_D_D`](https://huggingface.co/Simplicissimus-S/StarVLA-QwenGR00T_Qwen2.5-VL-3B-Instruct-Action_calvin_D_D) | `task_D_D` | `985c223` | `starvla_policy.py` |
 | [`metaworld/`](metaworld/demo.yaml) | [`MINT-SJTU/starvla_metaworld_qwenpiv3_baseline_finetune`](https://huggingface.co/MINT-SJTU/starvla_metaworld_qwenpiv3_baseline_finetune) | `mt50` | `985c223` | `starvla_policy.py` |
 
@@ -50,7 +50,8 @@ below are placeholders.
    ```
 
 4. Edit the Policy process contract: [`libero/roboscope-policy.json`](libero/roboscope-policy.json) for the
-   LIBERO demo, [`roboscope-policy.json`](roboscope-policy.json) for every other demo. Replace the
+   LIBERO demo, [`robocasa/roboscope-policy.json`](robocasa/roboscope-policy.json) for RoboCasa, and
+   [`roboscope-policy.json`](roboscope-policy.json) for every other demo. Replace the
    `/path/to/...` placeholders: `command[0]` is the absolute path of the `starVLA` environment's Python,
    `command[1]` the absolute path of the Policy file in this directory, and `cwd` the StarVLA checkout. The
    runtime checks that `command[0]` is an executable file and `cwd` an existing directory before every run.
@@ -73,18 +74,26 @@ Policy's working directory (the contract's `cwd`); set `STARVLA_ROOT` to use ano
 loads offline and stops if the snapshot lacks its base-model metadata; for a snapshot you exported yourself,
 fetch it with `python starvla_base_assets.py <run-snapshot>`.
 
+The RoboCasa Policy launcher limits CPU work in each inference replica to one thread by default, leaving
+CPU time available for concurrent simulators. Set `ROBOSCOPE_POLICY_CPU_THREADS` to a positive integer
+before starting the benchmark to choose a different budget. After loading, it also asks the operating system
+to release clean cached pages of that checkpoint when supported; subsequent loads may need to read the file
+again. The hint is optional and does not change the checkpoint or the Policy's actions.
+
 ## Files
 
 | File | Purpose |
 | --- | --- |
 | `starvla_policy.py` | The `Policy`: loads one StarVLA run snapshot, preprocesses observations, returns action chunks |
 | `starvla_libero_policy.py` | The LIBERO `Policy` of the technical report: follows the StarVLA `eaa51c4` LIBERO client |
+| `starvla_robocasa_policy.py` | Starts the same Policy with a CPU-thread budget for RoboCasa and disables the Albumentations update check by default |
 | `starvla_full_checkpoint.py` | Builds the StarVLA framework from `config.yaml` and strictly loads one full checkpoint |
 | `starvla_base_assets.py` | Fetches the Qwen base-model metadata the framework needs to build, from Hugging Face |
 | `prepare_snapshot.py` | Builds a demo's run snapshot from its `demo.yaml` |
 | `export_starvla_eval_run.py` | Exports your own training run as a self-contained snapshot with relative resource paths |
 | `roboscope-policy.json` | Policy process contract, passed to the runtime with `--policy-config` |
 | `libero/roboscope-policy.json` | Policy process contract of the LIBERO demo |
+| `robocasa/roboscope-policy.json` | Policy process contract of the RoboCasa demo |
 
 
 ## Behavior

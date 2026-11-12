@@ -5,7 +5,7 @@ set -Eeuo pipefail
 #
 #   <install-dir>/
 #     benchmark-manifest.json   this directory's manifest; runtime paths are relative to it
-#     env/                      conda environment (CPython 3.10), runtime.python = env/bin/python
+#     env/                      conda environment (CPython 3.11), runtime.python = env/bin/python
 #     robocasa_runtime_deps/    editable robocasa and robosuite checkouts, plus the kitchen
 #                               and GR1 assets inside the robocasa checkout
 #     starVLA/                  pinned StarVLA tree, runtime.benchmark_root
@@ -25,10 +25,9 @@ set -Eeuo pipefail
 # checkouts (verified against their pins), the extracted assets and the StarVLA tree.
 #
 # Both pin files are committed next to this script:
-#   conda-specs.txt           exact name-version-build strings recovered from the
-#                             original runtime's conda-meta directory
-#   runtime-requirements.txt  exact pip versions recovered from the original
-#                             runtime's top-level *.dist-info directories
+#   conda-specs.txt           exact name-version-build strings of the CPython 3.11
+#                             conda packages
+#   runtime-requirements.txt  exact pip versions of every simulator distribution
 #
 # The original runtime installed robocasa and robosuite as editable checkouts under
 # robocasa_runtime_deps/ rather than from an index. Both were located by matching
@@ -41,6 +40,11 @@ set -Eeuo pipefail
 #                                 and cannot be imported in this environment.
 #   robosuite                     ARISE-Initiative/robosuite at tag v1.5.1, 1270
 #                                 files byte-identical.
+#
+# The robocasa checkout carries one source patch, applied after checkout
+# below: the Tabletop base stores and later mutates its caller's distractor
+# configuration, so a second environment built in the same process can see a
+# different scene. The patch deep-copies it per environment.
 #
 # The StarVLA tree is separate: the kit's worker imports
 # examples/simBenchmarks/Robocasa_tabletop/eval_files/simulation_env.py from it.
@@ -81,8 +85,8 @@ for required in "${CONDA_SPECS}" "${REQUIREMENTS}" "${MANIFEST}" "${ASSET_INPUTS
     exit 3
   }
 done
-grep -q '^python-3\.10\.' "${CONDA_SPECS}" || {
-  echo "RoboCasa conda specs must pin CPython 3.10" >&2
+grep -q '^python-3\.11\.' "${CONDA_SPECS}" || {
+  echo "RoboCasa conda specs must pin CPython 3.11" >&2
   exit 3
 }
 for pin in "robocasa==0.2.0" "robosuite==1.5.1" "mujoco==" "numpy==1.26.4"; do
@@ -135,9 +139,9 @@ trap 'rm -rf -- "${STAGING}"' EXIT
 # conda-specs.txt keeps the exact conda-meta directory names, which use the
 # legacy name-version-build form. conda understands that spelling but micromamba
 # parses the whole string as a package name, so normalise to name=version=build
-# before handing the specs to either solver. The recovered build strings
-# resolve only from the defaults channel, so that is the channel the original
-# environment was built from.
+# before handing the specs to either solver. The build strings resolve only from
+# the defaults channel, and --override-channels keeps a host's .condarc channels
+# from deciding what they resolve to.
 readarray -t CONDA_PACKAGES < <(python3 - "${CONDA_SPECS}" <<'INNER'
 import re
 import sys
@@ -163,17 +167,15 @@ INNER
 }
 
 if [[ ! -x "${ENV_PYTHON}" ]]; then
-  "${CONDA_BIN}" create --yes --quiet -c defaults --prefix "${ENV_PREFIX}" "${CONDA_PACKAGES[@]}"
+  "${CONDA_BIN}" create --yes --quiet --override-channels -c defaults --prefix "${ENV_PREFIX}" "${CONDA_PACKAGES[@]}"
 fi
-# --no-deps: the recovered lock is the complete set of distributions the original
-# environment had, so installing with dependency resolution can only substitute
-# versions. opencv-python 5.0.0.93 requires numpy>=2 while the lock pins numpy
-# 1.26.4; that state is what ran, so it is reproduced rather than resolved.
+# --no-deps: the lock is the complete set of distributions the environment has,
+# so installing with dependency resolution can only substitute versions.
 # robocasa and robosuite come from the editable checkouts under robocasa_runtime_deps,
 # so neither can be resolved from an index. Install the lock without both.
 grep -v -e '^robocasa==' -e '^robosuite==' "${REQUIREMENTS}" > "${STAGING}/requirements.txt"
 PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir --no-deps \
-  --requirement "${STAGING}/requirements.txt"
+  --index-url https://pypi.org/simple --requirement "${STAGING}/requirements.txt"
 
 # Clone a pinned checkout once, then insist it is still at the pin on every run.
 # An abbreviated pin is accepted so it reads the way it is usually quoted.
@@ -192,6 +194,48 @@ pinned_checkout() {
 install -d -m 0755 "${DEPS_ROOT}"
 pinned_checkout "${ROBOCASA_REPO_URL}" "${ROBOCASA_REPO_COMMIT}" "${ROBOCASA_ROOT}"
 pinned_checkout "${ROBOSUITE_REPO_URL}" "${ROBOSUITE_REPO_COMMIT}" "${ROBOSUITE_ROOT}"
+
+# Patch the pinned robocasa source. The patch applies only to the exact upstream file
+# and is idempotent: an already patched file is verified by reversing the patch, so a
+# re-run accepts it and anything else stops the build. The record lists every patch.
+python3 - "${ROBOCASA_ROOT}" "${ROBOCASA_REPO_COMMIT}" <<'PY'
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+relative = "robocasa/environments/tabletop/tabletop.py"
+path = root / relative
+upstream_sha256 = "028e168561bb6a2b3b49c6c6fba12d33c009ef8e9c1dfd5eb64913866a9218c2"
+before = "        self.distractor_config = distractor_config\n"
+after = "        self.distractor_config = deepcopy(distractor_config)\n"
+
+
+def sha256(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+text = path.read_text()
+if text.count(before) == 1 and sha256(text) == upstream_sha256:
+    text = text.replace(before, after, 1)
+    path.write_text(text)
+elif text.count(after) != 1 or sha256(text.replace(after, before, 1)) != upstream_sha256:
+    raise SystemExit(f"{relative} is not the pinned upstream source; cannot apply the distractor patch")
+record = {
+    "upstream_commit": sys.argv[2],
+    "patches": [
+        {
+            "path": relative,
+            "upstream_sha256": upstream_sha256,
+            "patched_sha256": sha256(text),
+            "purpose": "Deep-copy the distractor configuration per environment",
+        }
+    ],
+}
+(root / "roboscope-runtime-patches.json").write_text(json.dumps(record, indent=2) + "\n")
+print("RoboCasa distractor configuration patch verified")
+PY
 PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir --no-deps \
   --no-build-isolation -e "${ROBOCASA_ROOT}"
 PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir --no-deps \

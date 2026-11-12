@@ -67,8 +67,10 @@ def main():
     if set(gr1) != {"lightwheel", "sketchfab"}:
         raise RuntimeError("The pinned GR1 asset registries are incomplete")
     registry.update(gr1)
+    # The upstream kitchen archives on Box are gone; the lock downloads checksum-pinned
+    # replacements and records the upstream URL it stands in for.
     for name, config in registry.items():
-        if config["url"] != inputs["archives"][name]["url"]:
+        if config["url"] != inputs["archives"][name].get("upstream_url", inputs["archives"][name]["url"]):
             raise RuntimeError(f"Upstream asset URL differs from the lock: {name}")
     with ThreadPoolExecutor(max_workers=4) as pool:
         futures = {name: pool.submit(download_file, cache, name + ".zip", item)

@@ -2,6 +2,22 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b50 - 2026-11-10
+
+- Speed up RoboCasa evaluation by skipping discarded intermediate observation conversions when video is
+  off while preserving camera sampling, physics, rewards, success checks, and the render cache. Set
+  `defer_observations: false` for per-step conversion, which video evaluation always uses.
+- Seed task construction and episode resets independently of Worker scheduling. Schedule episodes in
+  configurable groups, optionally order tasks by a complete priority list, and recycle Workers after a
+  configurable number of records. Episode and task results record seeds, encoding, and timing details;
+  episode steps count the native steps actually executed.
+- Prefer negotiated MessagePack for RoboCasa Policy requests. The StarVLA RoboCasa launcher limits CPU
+  threads, hints that clean checkpoint pages can be reclaimed, and disables the Albumentations update
+  check by default while respecting an explicitly supplied `NO_ALBUMENTATIONS_UPDATE` value.
+- Rebuild the RoboCasa runtime with CPython 3.11 and its pinned simulator packages. The builder records
+  a distractor-copy patch, uses checksum-pinned replacements for unavailable kitchen-asset archives,
+  and specifies the conda channel and pip index. Scores from earlier runtimes are not comparable.
+
 ## 0.8.0b35 - 2026-11-10
 
 - Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task

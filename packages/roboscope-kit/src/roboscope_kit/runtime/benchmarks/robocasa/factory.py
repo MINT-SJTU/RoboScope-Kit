@@ -94,6 +94,16 @@ class RoboCasaBenchmarkFactory:
         episodes: int,
     ) -> RoboCasaBenchmarkAdapter:
         self.validate_suite(request.suite)
+        priority = manifest.defaults.get("task_priority_order")
+        if priority is not None:
+            if not isinstance(priority, list) or not all(isinstance(name, str) for name in priority):
+                raise ValueError("RoboCasa task_priority_order must be a list of task names")
+            suite_names = {name for name, _ in ROBOCASA_TABLETOP_TASKS}
+            if len(priority) != len(suite_names) or set(priority) != suite_names:
+                raise ValueError("RoboCasa task_priority_order must list every suite task exactly once")
+        recycle_after = manifest.defaults.get("recycle_after_records", 10)
+        if type(recycle_after) is not int or recycle_after < 1:
+            raise ValueError("RoboCasa recycle_after_records must be a positive integer")
         return RoboCasaBenchmarkAdapter(
             RoboCasaRuntimeConfig(
                 python=manifest.runtime_path("python"),
@@ -101,11 +111,16 @@ class RoboCasaBenchmarkFactory:
                 suite=request.suite,
                 tasks=tasks,
                 episodes_per_task=episodes,
+                episode_shard_size=int(manifest.defaults.get("episode_shard_size", 10)),
                 action_steps=int(manifest.defaults.get("action_steps", 12)),
                 max_episode_steps=int(manifest.defaults.get("max_episode_steps", 720)),
                 save_videos=bool(manifest.defaults.get("save_videos", False)) and not request.quick_test,
                 cpu_threads=int(manifest.defaults.get("client_cpu_threads", 1)),
                 render_backend=str(manifest.defaults.get("render_backend", "egl")),
+                seed=int(manifest.defaults.get("seed", 42)),
+                defer_observations=bool(manifest.defaults.get("defer_observations", True)),
+                task_priority_order=tuple(priority) if priority is not None else None,
+                recycle_after_records=recycle_after,
             )
         )
 

@@ -104,24 +104,38 @@ class RoboCasaRuntimeConfig:
     suite: str
     tasks: tuple[tuple[str, str], ...]
     episodes_per_task: int
+    episode_shard_size: int = 10
     action_steps: int = 12
     max_episode_steps: int = 720
     save_videos: bool = False
     cpu_threads: int = 1
     render_backend: str = "egl"
+    seed: int = 42
+    defer_observations: bool = True
+    task_priority_order: tuple[str, ...] | None = None
+    recycle_after_records: int = 10
 
     def __post_init__(self) -> None:
         if self.suite != ROBOCASA_TABLETOP_SUITE:
             raise ValueError(f"unsupported RoboCasa suite: {self.suite}")
-        if not self.tasks or self.episodes_per_task < 1:
-            raise ValueError("RoboCasa tasks and episodes must be positive")
+        if not self.tasks or self.episodes_per_task < 1 or self.episode_shard_size < 1:
+            raise ValueError("RoboCasa tasks, episodes, and episode_shard_size must be positive")
         if self.action_steps < 1 or self.max_episode_steps < 1 or self.cpu_threads < 1:
             raise ValueError("RoboCasa action steps, episode steps, and CPU threads must be positive")
         if self.render_backend != "egl":
             raise ValueError("RoboCasa SDK evaluation currently requires EGL rendering")
+        if not 0 <= self.seed < 2**32:
+            raise ValueError("RoboCasa seed must be an unsigned 32-bit integer")
         names = [name for name, _ in self.tasks]
         if len(names) != len(set(names)):
             raise ValueError("RoboCasa task names must be unique")
+        if type(self.recycle_after_records) is not int or self.recycle_after_records < 1:
+            raise ValueError("RoboCasa recycle_after_records must be positive")
+        if self.task_priority_order is not None:
+            if len(self.task_priority_order) != len(set(self.task_priority_order)):
+                raise ValueError("RoboCasa task priority names must be unique")
+            if not set(names).issubset(self.task_priority_order):
+                raise ValueError("RoboCasa task priority must cover all selected tasks")
 
 
 class RoboCasaBenchmarkAdapter:
@@ -129,20 +143,31 @@ class RoboCasaBenchmarkAdapter:
         self.config = config
 
     def work_items(self) -> Sequence[WorkItem]:
-        return tuple(
-            WorkItem(
-                ordinal=index,
-                item_id=f"{self.config.suite}-{task_name}",
-                group_id=task_name,
-                payload={
-                    "task_name": task_name,
-                    "env_name": env_name,
-                    "episodes": self.config.episodes_per_task,
-                },
-                expected_results=self.config.episodes_per_task,
-            )
-            for index, (task_name, env_name) in enumerate(self.config.tasks)
-        )
+        items = []
+        total = self.config.episodes_per_task
+        tasks = self.config.tasks
+        if self.config.task_priority_order is not None:
+            rank = {name: index for index, name in enumerate(self.config.task_priority_order)}
+            tasks = tuple(sorted(tasks, key=lambda task: rank[task[0]]))
+        for start in range(0, total, self.config.episode_shard_size):
+            count = min(self.config.episode_shard_size, total - start)
+            for task_name, env_name in tasks:
+                item_id = f"{self.config.suite}-{task_name}-episodes-{start:04d}-{start + count:04d}"
+                items.append(
+                    WorkItem(
+                        ordinal=len(items),
+                        item_id=item_id,
+                        group_id=item_id,
+                        payload={
+                            "task_name": task_name,
+                            "env_name": env_name,
+                            "episode_start": start,
+                            "episodes": count,
+                        },
+                        expected_results=count,
+                    )
+                )
+        return tuple(items)
 
     def worker_process(self, context: WorkerContext) -> ProcessSpec:
         threads = str(self.config.cpu_threads)
@@ -166,6 +191,11 @@ class RoboCasaBenchmarkAdapter:
             str(self.config.action_steps),
             "--max-episode-steps",
             str(self.config.max_episode_steps),
+            "--seed",
+            str(self.config.seed),
+            "--recycle-after-records",
+            str(self.config.recycle_after_records),
+            *(("--no-defer-observations",) if not self.config.defer_observations else ()),
             *(("--disable-video",) if not self.config.save_videos else ()),
         )
         return ProcessSpec(
@@ -188,6 +218,9 @@ class RoboCasaBenchmarkAdapter:
                 "OPENBLAS_NUM_THREADS": threads,
                 "NUMEXPR_NUM_THREADS": threads,
                 "TOKENIZERS_PARALLELISM": "false",
+                "ROBOSCOPE_POLICY_ENCODING": os.environ.get("ROBOSCOPE_POLICY_ENCODING", "msgpack"),
+                # Upstream novel-task generation hashes class names at import.
+                "PYTHONHASHSEED": str(self.config.seed),
                 "PYTHONDONTWRITEBYTECODE": "1",
             },
         )
@@ -215,9 +248,16 @@ class RoboCasaBenchmarkAdapter:
             "bound_hint": "gpu_infer",
             "task_count": len(self.config.tasks),
             "episodes_per_task": self.config.episodes_per_task,
+            "episode_shard_size": self.config.episode_shard_size,
             "action_steps": self.config.action_steps,
             "max_episode_steps": self.config.max_episode_steps,
             "video_logging": self.config.save_videos,
+            "seed": self.config.seed,
+            "defer_observations": self.config.defer_observations and not self.config.save_videos,
+            "task_priority_order": (
+                list(self.config.task_priority_order) if self.config.task_priority_order else None
+            ),
+            "recycle_after_records": self.config.recycle_after_records,
         }
 
 

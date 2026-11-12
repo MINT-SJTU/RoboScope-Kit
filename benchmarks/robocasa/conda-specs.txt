@@ -1,9 +1,8 @@
-# Recovered RoboCasa conda package set (Linux x86_64, CPython 3.10.20).
+# RoboCasa runtime conda inputs (Linux x86_64, CPython 3.11.14).
 #
-# Provenance: conda-meta/*.json directory names recorded by the 2026-09-02
-# read-only inventory of the original, since lost, runtime. Each line is the
-# exact name-version-build string conda recorded, so the environment can be
-# recreated with the same solver input as the original.
+# Migrated from the recovered CPython 3.10.20 package set to the kit's Python 3.11
+# baseline: the same packages and versions, with the interpreter and its py311 builds.
+# The simulator distributions are pinned in runtime-requirements.txt.
 
 _libgcc_mutex-0.1-main
 _openmp_mutex-5.1-52_gnu
@@ -21,16 +20,16 @@ libxcb-1.17.0-h9b100fa_0
 libzlib-1.3.2-h47b2149_0
 ncurses-6.5-h7934f7d_0
 openssl-3.5.7-h1b28b03_0
-packaging-26.0-py310h06a4308_0
+packaging-26.0-py311h06a4308_0
 pip-26.1.2-pyhc872135_0
 pthread-stubs-0.3-h0ce48e5_1
-python-3.10.20-h17756b0_1
+python-3.11.14-h56af48b_1
 readline-8.3-hc2a1206_0
-setuptools-82.0.1-py310h06a4308_0
+setuptools-82.0.1-py311h06a4308_0
 sqlite-3.53.2-h795bf6d_0
 tk-8.6.15-h54e0aa7_0
 tzdata-2026b-he532380_0
-wheel-0.47.0-py310h06a4308_0
+wheel-0.47.0-py311h06a4308_0
 xorg-libx11-1.8.12-h9b100fa_1
 xorg-libxau-1.0.12-h9b100fa_0
 xorg-libxdmcp-1.1.5-h9b100fa_0
