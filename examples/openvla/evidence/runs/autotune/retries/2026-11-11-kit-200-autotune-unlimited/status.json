@@ -1,0 +1,31 @@
+{
+  "stage": "stopped",
+  "completed": [],
+  "started_unix_s": 1794382712.4118004,
+  "pid": 2248,
+  "suite": "spatial",
+  "updated_unix_s": 1794382712.493308,
+  "command": [
+    "/root/autodl-tmp/openvla-kit-20261109/runtime/env/bin/python",
+    "-m",
+    "roboscope_kit.runtime.benchmark",
+    "--benchmark",
+    "libero",
+    "--suite",
+    "libero_spatial",
+    "--checkpoint-source",
+    "/root/autodl-fs/Kit-Models/openvla/spatial",
+    "--benchmark-manifest",
+    "/root/autodl-tmp/openvla-kit-200-autotune-unlimited-seed7-20261111/benchmark-manifest.json",
+    "--policy-config",
+    "/root/autodl-tmp/openvla-kit-200-autotune-unlimited-seed7-20261111/roboscope-policy.json",
+    "--episodes",
+    "5",
+    "--autotune-strategy",
+    "diagonal",
+    "--output-dir",
+    "/root/autodl-tmp/openvla-kit-200-autotune-unlimited-seed7-20261111/libero_spatial"
+  ],
+  "stop_reason": "User requested stop",
+  "stopped_unix_s": 1794385202.2672458
+}

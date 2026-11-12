@@ -1,0 +1,295 @@
+{
+  "sdk_version": 1,
+  "runtime": {
+    "output_dir": "/root/autodl-tmp/openvla-paired-diagnostics-20261111/goal-kit",
+    "gpu_devices": [
+      "0"
+    ],
+    "replicas": 2,
+    "concurrency": 2,
+    "base_port": 16694,
+    "ready_timeout_s": 1800.0,
+    "poll_interval_s": 0.2,
+    "probe_limits": null,
+    "shard_index": null,
+    "shard_count": null,
+    "shard_episodes": 500,
+    "shard_build": null,
+    "profile": false
+  },
+  "phase_timings": {
+    "policy_load_s": 98.33559116348624,
+    "runtime_prepare_s": 1.0071120131760836,
+    "evaluation_s": 238.28813115134835
+  },
+  "item_timeline": {
+    "completion_s": {
+      "task-0000-episodes-0002-0003": 42.46978106535971,
+      "task-0000-episodes-0003-0004": 98.25928993336856,
+      "task-0004-episodes-0001-0002": 108.2915774397552,
+      "task-0009-episodes-0002-0003": 161.49512904323637,
+      "task-0000-episodes-0004-0005": 162.90122613497078,
+      "task-0009-episodes-0003-0004": 211.92696545273066,
+      "task-0005-episodes-0004-0005": 212.93104402534664,
+      "task-0008-episodes-0004-0005": 238.28409953601658
+    },
+    "worker_id": {
+      "task-0004-episodes-0001-0002": 1,
+      "task-0000-episodes-0002-0003": 0,
+      "task-0009-episodes-0002-0003": 1,
+      "task-0000-episodes-0003-0004": 0,
+      "task-0009-episodes-0003-0004": 1,
+      "task-0000-episodes-0004-0005": 0,
+      "task-0005-episodes-0004-0005": 0,
+      "task-0008-episodes-0004-0005": 1
+    }
+  },
+  "record_success": {
+    "task-0004-episode-0001": false,
+    "task-0000-episode-0002": true,
+    "task-0009-episode-0002": true,
+    "task-0000-episode-0003": true,
+    "task-0009-episode-0003": true,
+    "task-0000-episode-0004": true,
+    "task-0005-episode-0004": true,
+    "task-0008-episode-0004": true
+  },
+  "inference": {
+    "adapter": "PolicyProcessAdapter",
+    "benchmark": "libero",
+    "suite": "libero_goal",
+    "checkpoint_path": "/root/autodl-tmp/openvla-diagnostic-model-cache-20261111/goal",
+    "load_timeout_s": 1800.0,
+    "replica_vram_bytes": {
+      "0": 15584985088,
+      "1": 15584985088
+    },
+    "replicas": {
+      "0": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_goal"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      },
+      "1": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_goal"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      }
+    },
+    "execution_contract": {
+      "benchmark": "libero",
+      "action_representation": "libero.delta-eef-v1",
+      "action_representation_source": "policy",
+      "observation_stride": 1,
+      "observation_stride_source": "safe_default",
+      "step_observation_updates": false
+    }
+  },
+  "policy_io": {
+    "benchmark": "libero",
+    "action_representation": "libero.delta-eef-v1",
+    "action_representation_source": "policy",
+    "observation_stride": 1,
+    "observation_stride_source": "safe_default",
+    "step_observation_updates": false
+  },
+  "benchmark": {
+    "adapter": "LiberoBenchmarkAdapter",
+    "benchmark": "libero",
+    "suite": "libero_goal",
+    "protocol": "roboscope-policy-v1",
+    "bound_hint": "gpu_infer",
+    "task_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "episodes_per_task": 5,
+    "seed": 7,
+    "render_backend": "egl"
+  },
+  "result": {
+    "state": "complete",
+    "episodes": 8,
+    "successes": 7,
+    "failures": 1,
+    "total_steps": 1251,
+    "total_episodes": 8,
+    "success_rate": 0.875,
+    "completed_items": 8,
+    "elapsed_s": 240.55612195655704,
+    "steps_per_s": 5.200449649025864,
+    "episodes_per_s": 0.03325627273557707,
+    "steady_steps_per_s": 5.573480472436041,
+    "steady_window": {
+      "steps_per_s": 5.573480472436041,
+      "workers": 2,
+      "measured_workers": 2,
+      "measured_items": 5,
+      "window_s": 104.63946658559144
+    }
+  },
+  "official_result": {
+    "tasks": [
+      {
+        "task_id": 0,
+        "task_description": "open the middle drawer of the cabinet",
+        "episodes": 3,
+        "successes": 3,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 1,
+        "task_description": "",
+        "episodes": 0,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 2,
+        "task_description": "",
+        "episodes": 0,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 3,
+        "task_description": "",
+        "episodes": 0,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 4,
+        "task_description": "put the bowl on top of the cabinet",
+        "episodes": 1,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 5,
+        "task_description": "push the plate to the front of the stove",
+        "episodes": 1,
+        "successes": 1,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 6,
+        "task_description": "",
+        "episodes": 0,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 7,
+        "task_description": "",
+        "episodes": 0,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 8,
+        "task_description": "put the bowl on the plate",
+        "episodes": 1,
+        "successes": 1,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 9,
+        "task_description": "put the wine bottle on the rack",
+        "episodes": 2,
+        "successes": 2,
+        "success_rate": 1.0
+      }
+    ],
+    "runtime_metrics": {
+      "inference_wait_s": 403.42399392463267,
+      "episode_elapsed_s": 436.3140092547983,
+      "inference_wait_ratio": 0.9246184751520125
+    }
+  },
+  "resources": {
+    "elapsed_s": 240.55612195655704,
+    "cpu": {
+      "cpu_cores": 1.9746936146808458,
+      "throttle_time_ratio": 0.0,
+      "throttle_period_ratio": 0.0
+    },
+    "gpu": {
+      "mean_utilization": 0.8302147971360382,
+      "peak_memory_bytes": 33074184192.0,
+      "gpu_util_avg": {
+        "0": 83.02147971360382
+      },
+      "gpu_util_max": {
+        "0": 100.0
+      },
+      "gpu_mem_mib_max": {
+        "0": 31542.0
+      }
+    },
+    "gpu_samples": 419
+  },
+  "recovery": {
+    "worker_failures": [],
+    "planned_recycles": 0,
+    "oom_events": 0,
+    "initial_workers_per_gpu": {
+      "0": 2
+    },
+    "final_workers_per_gpu": {
+      "0": 2
+    }
+  },
+  "autotune": {
+    "k": 2,
+    "g": 2,
+    "mode": "fixed"
+  },
+  "cuda_mps": {
+    "enabled": false
+  }
+}

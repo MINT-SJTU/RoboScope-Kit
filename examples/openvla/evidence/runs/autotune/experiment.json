@@ -1,0 +1,64 @@
+{
+  "arm": "kit",
+  "profile": "autotune",
+  "global_seed": 7,
+  "environment_seed": 7,
+  "episodes_per_suite": 50,
+  "total_episodes": 200,
+  "tasks": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "initial_states": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "concurrency": null,
+  "replicas": null,
+  "video": false,
+  "diagnostic_trace": false,
+  "mps": false,
+  "autotune": true,
+  "source_commit": "b432786",
+  "policy_sha256": "edc63b398ebeb12ee75bfeb60b2b91a9a1493e3502340adb77e76041f177ee58",
+  "build": {
+    "profile": "openvla-kit",
+    "python": "3.11.15 (main, May 10 2026, 19:28:18) [Clang 22.1.3 ]",
+    "libero_commit": "8f1084e3132a39270c3a13ebe37270a43ece2a01",
+    "python_executable_sha256": "6759dcc6aa5a3fe3377349092f92f6700f1f79017294c1d0085009eb8802cb1e",
+    "packages": {
+      "roboscope-kit": "0.8.0b33",
+      "torch": "2.2.0",
+      "transformers": "4.40.1",
+      "tensorflow": "2.15.0",
+      "flash-attn": "2.5.5",
+      "libero": "0.1.0",
+      "robosuite": "1.4.1",
+      "mujoco": "3.2.3",
+      "numpy": "1.24.4"
+    },
+    "build_inputs_sha256": {
+      "requirements.lock": "fb9e02d130e1aca67cce8f7209859a0a36365697713f779fb105b9f91ac0e717",
+      "requirements.in": "ea69bdd179ad4aef9c256e3d4c32821f17aec9d34cb541bf51705ff6ad737b8e",
+      "build-runtime.sh": "599e139ebd3d5fb4850da3d253428aa3be535479229283ffd1f7e496f54513bd"
+    }
+  },
+  "hardware": "uuid, name, driver_version, memory.total [MiB]\nGPU-b1cbe052-1f16-ed98-23b2-360932814004, NVIDIA GeForce RTX 4090, 595.71.05, 49140 MiB\n",
+  "timing_note": "SDK phases plus buffered numeric request timings, allocator peaks and native resource sampler with SDK stage labels. Service boundaries remain distinct from native. No images, actions, video or page warming.",
+  "measurement_sha256": {
+    "launch.py": "1e63cbf5f8be79eb5a4e19607db3d707eb38cb43736a9da9beed34a108342d14",
+    "measured_policy.py": "71824b4156ccf0845d2813e261029f4483a811be1109b4d569e44995e030cc01",
+    "resource_sampler.py": "ff0a2ca574a75755ffd16385bbd8713ea08441997811371ea3d731a29daeda47"
+  }
+}

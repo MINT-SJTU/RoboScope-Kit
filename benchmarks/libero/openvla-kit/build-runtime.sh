@@ -11,6 +11,9 @@ mkdir -p -- "$1"
 INSTALL_DIR="$(cd -- "$1" && pwd -P)"
 PYTHON="${INSTALL_DIR}/env/bin/python"
 INDEX_URL="${OPENVLA_INDEX_URL:-https://pypi.org/simple}"
+SOURCE_URL="${LIBERO_URL:-https://github.com/Lifelong-Robot-Learning/LIBERO}"
+SOURCE_REF="8f1084e3132a39270c3a13ebe37270a43ece2a01"
+SOURCE_ROOT="${INSTALL_DIR}/LIBERO"
 FLASH_WHEEL=flash_attn-2.5.5+cu122torch2.2cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
 FLASH_SHA256=beb6cb7d86f348636b7fb10ec40bbcd0452d45e83c1833931b517a794e98957c
 CACHE="${DOWNLOAD_CACHE:-${INSTALL_DIR}/downloads}"
@@ -23,13 +26,28 @@ fi
 "${PYTHON}" -c 'import sys; assert sys.version_info[:3] == (3, 11, 15), sys.version'
 uv pip sync --python "${PYTHON}" --index-url "${INDEX_URL}" --require-hashes "${SCRIPT_DIR}/requirements.lock"
 
-SOURCE_CACHE_ARGS=()
-if [[ -n "${LIBERO_SOURCE_CACHE:-}" ]]; then
-  SOURCE_CACHE_ARGS=(--cache "${LIBERO_SOURCE_CACHE}")
+if [[ -d "${SOURCE_ROOT}" ]]; then
+  ACTUAL_REF="$(git -C "${SOURCE_ROOT}" rev-parse HEAD)"
+  if [[ "${ACTUAL_REF}" != "${SOURCE_REF}" ]]; then
+    echo "${SOURCE_ROOT} is at ${ACTUAL_REF}, expected ${SOURCE_REF}; remove it to rebuild" >&2
+    exit 4
+  fi
+else
+  STAGING="$(mktemp -d "${INSTALL_DIR}/.build.XXXXXX")"
+  trap 'rm -rf -- "${STAGING}"' EXIT
+  git clone --quiet --no-checkout "${SOURCE_URL}" "${STAGING}/LIBERO"
+  git -C "${STAGING}/LIBERO" checkout --quiet --detach "${SOURCE_REF}"
+  mv -- "${STAGING}/LIBERO" "${SOURCE_ROOT}"
 fi
-"${PYTHON}" "${SCRIPT_DIR}/materialize_source.py" "${SCRIPT_DIR}/libero-source.json" \
-  "${INSTALL_DIR}/LIBERO" "${SOURCE_CACHE_ARGS[@]}"
-uv pip install --python "${PYTHON}" --no-deps --no-build-isolation "${INSTALL_DIR}/LIBERO"
+for relative in setup.py libero/libero/__init__.py libero/libero/benchmark/__init__.py \
+  libero/libero/bddl_files libero/libero/init_files libero/libero/assets/scenes \
+  libero/libero/assets/textures libero/libero/assets/serving_region.xml; do
+  if [[ ! -e "${SOURCE_ROOT}/${relative}" ]]; then
+    echo "LIBERO source tree is missing ${relative}" >&2
+    exit 5
+  fi
+done
+uv pip install --python "${PYTHON}" --no-deps --no-build-isolation "${SOURCE_ROOT}"
 uv pip install --python "${PYTHON}" --no-deps "${REPO_ROOT}/packages/roboscope-kit"
 if [[ ! -f "${CACHE}/${FLASH_WHEEL}" ]]; then
   if ! curl --fail --location --retry 2 --connect-timeout 20 \
@@ -61,7 +79,6 @@ from roboscope_kit.runtime.benchmarks.libero.adapter import write_libero_config
 root, inputs = map(Path, sys.argv[1:])
 write_libero_config(root / "config/config.yaml", root / "LIBERO")
 manifest = json.loads((inputs.parent / "benchmark-manifest.json").read_text())
-manifest["defaults"]["ready_timeout_s"] = 1800
 (root / "benchmark-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 build = {
     "profile": "openvla-kit", "python": sys.version,

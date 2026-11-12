@@ -1,0 +1,24 @@
+{
+  "item_id": "task-0005-episodes-0001-0002",
+  "group_id": "task-0005",
+  "worker_id": 1,
+  "records": [
+    {
+      "record_id": "task-0005-episode-0001",
+      "success": true,
+      "steps": 95,
+      "elapsed_s": 35.09361435472965,
+      "metadata": {
+        "task_id": 5,
+        "episode_index": 1
+      }
+    }
+  ],
+  "metadata": {
+    "suite": "libero_spatial",
+    "task_id": 5,
+    "task_description": "pick up the black bowl on the ramekin and place it on the plate",
+    "elapsed_s": 36.295434299856424,
+    "inference_wait_s": 31.74932323023677
+  }
+}

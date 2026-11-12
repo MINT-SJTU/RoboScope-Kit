@@ -1,0 +1,22 @@
+[
+  "/root/autodl-tmp/openvla-kit-20261109/runtime/env/bin/python",
+  "/root/autodl-tmp/openvla-paired-diagnostics-20261111/source/kit_entry.py",
+  "--benchmark",
+  "libero",
+  "--suite",
+  "libero_goal",
+  "--checkpoint-source",
+  "/root/autodl-tmp/openvla-diagnostic-model-cache-20261111/goal",
+  "--benchmark-manifest",
+  "/root/autodl-tmp/openvla-paired-diagnostics-20261111/kit-manifest.json",
+  "--policy-config",
+  "/root/autodl-tmp/openvla-paired-diagnostics-20261111/policy.json",
+  "--episodes",
+  "5",
+  "--concurrency",
+  "2",
+  "--replicas",
+  "2",
+  "--output-dir",
+  "/root/autodl-tmp/openvla-paired-diagnostics-20261111/goal-kit"
+]

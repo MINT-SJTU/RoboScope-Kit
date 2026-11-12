@@ -1,0 +1,24 @@
+{
+  "item_id": "task-0006-episodes-0001-0002",
+  "group_id": "task-0006",
+  "worker_id": 0,
+  "records": [
+    {
+      "record_id": "task-0006-episode-0001",
+      "success": false,
+      "steps": 520,
+      "elapsed_s": 198.1519236676395,
+      "metadata": {
+        "task_id": 6,
+        "episode_index": 1
+      }
+    }
+  ],
+  "metadata": {
+    "suite": "libero_10",
+    "task_id": 6,
+    "task_description": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+    "elapsed_s": 199.3426659349352,
+    "inference_wait_s": 185.99894912168384
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "case": "task-0007-episode-0000",
+  "suite": "libero_spatial",
+  "scope": "open-loop replay, no model inference",
+  "success": true,
+  "executed_steps": 112,
+  "native_reference_steps": 112,
+  "first_image_difference_from_native_float32_replay": null,
+  "all_observations_match": true,
+  "python": "3.11.15 (main, May 10 2026, 19:28:18) [Clang 22.1.3 ]",
+  "worker_source": "/root/autodl-tmp/openvla-kit-20261109/runtime/env/lib/python3.11/site-packages/roboscope_kit/runtime/benchmarks/libero/worker.py"
+}

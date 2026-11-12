@@ -1,0 +1,153 @@
+{
+  "prepared_date": "2026-11-12",
+  "run_ids": {
+    "historical_native": "openvla-native-200-seed7-20261109",
+    "historical_kit": "openvla-kit-200-fixed2g2-seed7-20261110",
+    "diagnostic": "openvla-paired-diagnostics-20261111"
+  },
+  "actual_run_source": {
+    "kit_commit": "b432786",
+    "kit_package": "0.8.0b33",
+    "native_evaluator": "c8f03f48af692657d3060c19588038c7220e9af9",
+    "model_code": "47a0ec7fc4ec123775a391911046cf33cf9ed83f"
+  },
+  "suite_results": [
+    {
+      "suite": "libero_spatial",
+      "historical_pairs": 50,
+      "historical_native_successes": 43,
+      "historical_kit_successes": 40,
+      "historical_disagreements": 9,
+      "diagnostic_pairs": 9,
+      "diagnostic_native_successes": 4,
+      "diagnostic_kit_successes": 4,
+      "diagnostic_disagreements": 2,
+      "native_outcome_changes": 6,
+      "kit_outcome_changes": 3
+    },
+    {
+      "suite": "libero_object",
+      "historical_pairs": 50,
+      "historical_native_successes": 42,
+      "historical_kit_successes": 44,
+      "historical_disagreements": 6,
+      "diagnostic_pairs": 6,
+      "diagnostic_native_successes": 2,
+      "diagnostic_kit_successes": 6,
+      "diagnostic_disagreements": 4,
+      "native_outcome_changes": 0,
+      "kit_outcome_changes": 2
+    },
+    {
+      "suite": "libero_goal",
+      "historical_pairs": 50,
+      "historical_native_successes": 33,
+      "historical_kit_successes": 39,
+      "historical_disagreements": 8,
+      "diagnostic_pairs": 8,
+      "diagnostic_native_successes": 7,
+      "diagnostic_kit_successes": 7,
+      "diagnostic_disagreements": 2,
+      "native_outcome_changes": 6,
+      "kit_outcome_changes": 0
+    },
+    {
+      "suite": "libero_10",
+      "historical_pairs": 50,
+      "historical_native_successes": 28,
+      "historical_kit_successes": 23,
+      "historical_disagreements": 13,
+      "diagnostic_pairs": 13,
+      "diagnostic_native_successes": 10,
+      "diagnostic_kit_successes": 2,
+      "diagnostic_disagreements": 10,
+      "native_outcome_changes": 1,
+      "kit_outcome_changes": 2
+    }
+  ],
+  "verification": {
+    "historical_unique_pairs": 200,
+    "historical_task_state_sets_match": true,
+    "historical_completed_records_match_kit_result": true,
+    "historical_step_sums_match_native_summary_and_kit_result": true,
+    "historical_disagreement_identities_equal_diagnostic_selection": true,
+    "diagnostic_unique_pairs": 36,
+    "diagnostic_outcomes_and_steps_match_raw_records": true,
+    "diagnostic_step_indices_contiguous": true,
+    "diagnostic_steps": {
+      "native": 8854,
+      "kit": 9906
+    },
+    "first_raw_crop_and_action_divergences_recomputed_from_jsonl": true,
+    "worker_actions_equal_policy_actions": true
+  },
+  "key_findings": {
+    "initial_state_arrays_equal": 36,
+    "initial_images_equal": 33,
+    "different_initial_images": [
+      {
+        "suite": "spatial",
+        "episode_id": "task-0008-episode-0002"
+      },
+      {
+        "suite": "spatial",
+        "episode_id": "task-0008-episode-0003"
+      },
+      {
+        "suite": "10",
+        "episode_id": "task-0009-episode-0004"
+      }
+    ],
+    "remaining_outcome_disagreements": 18,
+    "preprocessing_milestones_checked": 34,
+    "cpu_outputs_match_native": true,
+    "different_color_components_min": 1,
+    "different_color_components_max": 3,
+    "max_abs_color_difference": 1,
+    "action_replay": [
+      {
+        "mode": "native_precision",
+        "first_image_difference_from_native_trace": null,
+        "executed_steps": 112,
+        "success": true,
+        "scope": "open-loop replay of recorded actions; no model or feedback recomputation"
+      },
+      {
+        "mode": "float32",
+        "first_image_difference_from_native_trace": 7,
+        "executed_steps": 112,
+        "success": true,
+        "scope": "open-loop replay of recorded actions; no model or feedback recomputation"
+      }
+    ],
+    "kit_worker_float32_replay": {
+      "case": "task-0007-episode-0000",
+      "suite": "libero_spatial",
+      "scope": "open-loop replay, no model inference",
+      "success": true,
+      "executed_steps": 112,
+      "native_reference_steps": 112,
+      "first_image_difference_from_native_float32_replay": null,
+      "all_observations_match": true,
+      "python": "3.11.15 (main, May 10 2026, 19:28:18) [Clang 22.1.3 ]"
+    },
+    "long_9_4_initial_body_position_max_coordinate_difference_m": 0.007171613740901356
+  },
+  "paired_comparison_scope": {
+    "historical_native_rollouts": 200,
+    "historical_kit_2x2_rollouts": 200,
+    "diagnostic_native_rollouts": 36,
+    "diagnostic_kit_rollouts": 36,
+    "total_rollouts": 472
+  },
+  "report_scope": {
+    "full_evaluation_configurations": 5,
+    "full_evaluation_episodes": 1000,
+    "completed_autotune_formal_suites": 3,
+    "autotune_formal_episodes": 150,
+    "diagnostic_pairs": 36,
+    "diagnostic_rollouts": 72,
+    "total_formal_and_diagnostic_rollouts": 1222,
+    "probe_and_open_loop_replay_counts": "Recorded separately; excluded from these totals."
+  }
+}

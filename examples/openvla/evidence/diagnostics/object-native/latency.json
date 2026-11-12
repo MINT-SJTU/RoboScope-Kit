@@ -1,0 +1,27 @@
+{
+  "service_ms": {
+    "count": 399,
+    "mean": 176.79614502759208,
+    "p50": 172.7305520325899,
+    "p95": 182.82560463994741,
+    "p99": 202.3280205577607,
+    "max": 633.0970339477062
+  },
+  "service_after_first_request_ms": {
+    "count": 398,
+    "mean": 175.64966038206416,
+    "p50": 172.7291252464056,
+    "p95": 182.6462384313345,
+    "p99": 198.26943084597576,
+    "max": 288.16962242126465
+  },
+  "first_request_ms": 633.0970339477062,
+  "failed_requests": 0,
+  "boundary": "upstream get_action: crop, prompt, processor, H2D, predict_action and CPU action; excludes JPEG/resize",
+  "synchronization": "no additional CUDA synchronization; native predict_action returns a CPU NumPy action",
+  "first_input_digest_cost": "first request of each episode records input hashes inside the service boundary",
+  "diagnostic_trace": true,
+  "queue_wait_ms": null,
+  "transport_ms": null,
+  "unavailable_reason": "native serial path has no socket queue"
+}

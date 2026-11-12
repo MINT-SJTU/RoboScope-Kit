@@ -1,0 +1,24 @@
+{
+  "item_id": "task-0003-episodes-0000-0001",
+  "group_id": "task-0003",
+  "worker_id": 0,
+  "records": [
+    {
+      "record_id": "task-0003-episode-0000",
+      "success": true,
+      "steps": 165,
+      "elapsed_s": 61.061639692634344,
+      "metadata": {
+        "task_id": 3,
+        "episode_index": 0
+      }
+    }
+  ],
+  "metadata": {
+    "suite": "libero_object",
+    "task_id": 3,
+    "task_description": "pick up the bbq sauce and place it in the basket",
+    "elapsed_s": 61.998009299859405,
+    "inference_wait_s": 56.86980006285012
+  }
+}

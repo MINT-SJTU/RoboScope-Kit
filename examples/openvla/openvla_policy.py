@@ -26,7 +26,7 @@ CODE_REVISION = "47a0ec7fc4ec123775a391911046cf33cf9ed83f"
 SUITES = ("libero_spatial", "libero_object", "libero_goal", "libero_10")
 
 
-def prepare_image(canonical: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def prepare_image(canonical: np.ndarray) -> np.ndarray:
     """Match upstream JPEG/Lanczos resize and its 90%-area TensorFlow crop.
 
     Kit already rotated the primary camera by 180 degrees. Do not rotate it again.
@@ -35,17 +35,18 @@ def prepare_image(canonical: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
     if canonical.dtype != np.uint8 or canonical.shape != (256, 256, 3):
         raise ValueError("OpenVLA expects Kit's uint8 256x256 RGB primary camera")
-    image = tf.image.encode_jpeg(canonical)
-    image = tf.io.decode_image(image, expand_animations=False, dtype=tf.uint8)
-    image = tf.image.resize(image, (224, 224), method="lanczos3", antialias=True)
-    resized = tf.cast(tf.clip_by_value(tf.round(image), 0, 255), tf.uint8).numpy()
-    image = tf.image.convert_image_dtype(tf.convert_to_tensor(resized), tf.float32)
-    side = tf.reshape(tf.clip_by_value(tf.sqrt(0.9), 0, 1), (1,))
-    offset = (1 - side) / 2
-    boxes = tf.stack([offset, offset, offset + side, offset + side], axis=1)
-    image = tf.image.crop_and_resize(tf.expand_dims(image, 0), boxes, tf.range(1), (224, 224))[0]
-    image = tf.image.convert_image_dtype(tf.clip_by_value(image, 0, 1), tf.uint8, saturate=True)
-    return resized, image.numpy()
+    with tf.device("/CPU:0"):
+        image = tf.image.encode_jpeg(canonical)
+        image = tf.io.decode_image(image, expand_animations=False, dtype=tf.uint8)
+        image = tf.image.resize(image, (224, 224), method="lanczos3", antialias=True)
+        resized = tf.cast(tf.clip_by_value(tf.round(image), 0, 255), tf.uint8).numpy()
+        image = tf.image.convert_image_dtype(tf.convert_to_tensor(resized), tf.float32)
+        side = tf.reshape(tf.clip_by_value(tf.sqrt(0.9), 0, 1), (1,))
+        offset = (1 - side) / 2
+        boxes = tf.stack([offset, offset, offset + side, offset + side], axis=1)
+        image = tf.image.crop_and_resize(tf.expand_dims(image, 0), boxes, tf.range(1), (224, 224))[0]
+        image = tf.image.convert_image_dtype(tf.clip_by_value(image, 0, 1), tf.uint8, saturate=True)
+        return image.numpy()
 
 
 def environment_action(model_action: np.ndarray) -> np.ndarray:
@@ -65,6 +66,9 @@ class OpenVLAPolicy(Policy):
     def load(self, context: SessionContext) -> PolicyCapabilities:
         if context.benchmark.name != "libero" or context.benchmark.suite not in SUITES:
             raise ValueError("This Policy supports the four fine-tuned OpenVLA LIBERO suites only")
+        import tensorflow as tf
+
+        tf.config.set_visible_devices([], "GPU")
         import torch
         from transformers import (
             AutoImageProcessor,
@@ -126,7 +130,7 @@ class OpenVLAPolicy(Policy):
         if observation.episode_id not in self.episodes:
             raise ValueError(f"Unknown episode {observation.episode_id}")
         canonical = np.asarray(observation.features["images.primary"])
-        _resized, cropped = prepare_image(canonical)
+        cropped = prepare_image(canonical)
         instruction = str(observation.features["language.instruction"])
         prompt = f"In: What action should the robot take to {instruction.lower()}?\nOut:"
         inputs = self.processor(prompt, Image.fromarray(cropped).convert("RGB"))

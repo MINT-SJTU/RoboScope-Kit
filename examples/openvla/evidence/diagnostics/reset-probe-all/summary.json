@@ -1,0 +1,392 @@
+[
+  {
+    "case": "spatial-task-1-state-3",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.011451126040015473,
+      "flat_stove_1_main": 0.007317250149150327
+    },
+    "initial_image_changed_pixels": 8595,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "spatial-task-3-state-2",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.013075859325755881,
+      "flat_stove_1_main": 0.005306540201883128
+    },
+    "initial_image_changed_pixels": 8848,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "spatial-task-4-state-3",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.016073223063346596,
+      "flat_stove_1_main": 0.014696918668345736
+    },
+    "initial_image_changed_pixels": 8358,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "spatial-task-5-state-1",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.009882813089729927,
+      "flat_stove_1_main": 0.01052308307850392
+    },
+    "initial_image_changed_pixels": 8904,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "spatial-task-6-state-3",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.01515494915051377,
+      "flat_stove_1_main": 0.011451126040015453
+    },
+    "initial_image_changed_pixels": 8875,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "spatial-task-7-state-0",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "spatial-task-8-state-1",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.010024213573512275,
+      "flat_stove_1_main": 0.015318807714889584
+    },
+    "initial_image_changed_pixels": 8896,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "spatial-task-8-state-2",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.005832391539217015,
+      "flat_stove_1_main": 0.0027720208060384903
+    },
+    "initial_image_changed_pixels": 6519,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "spatial-task-8-state-3",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.011451126040015473,
+      "flat_stove_1_main": 0.007317250149150327
+    },
+    "initial_image_changed_pixels": 8595,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "object-task-2-state-4",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "object-task-3-state-0",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "object-task-3-state-2",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "object-task-6-state-0",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "object-task-6-state-4",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "object-task-8-state-4",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "goal-task-0-state-2",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.005306540201883119,
+      "flat_stove_1_main": 0.005832391539217022,
+      "wine_rack_1_main": 0.002772020806038461
+    },
+    "initial_image_changed_pixels": 11250,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "goal-task-0-state-3",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.01515494915051375,
+      "flat_stove_1_main": 0.011451126040015453,
+      "wine_rack_1_main": 0.007317250149150391
+    },
+    "initial_image_changed_pixels": 14195,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "goal-task-0-state-4",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.014461537379834376,
+      "flat_stove_1_main": 0.013503569910726798,
+      "wine_rack_1_main": 0.013205757263965322
+    },
+    "initial_image_changed_pixels": 14203,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "goal-task-4-state-1",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.010523083078503926,
+      "flat_stove_1_main": 0.010024213573512302,
+      "wine_rack_1_main": 0.015318807714889618
+    },
+    "initial_image_changed_pixels": 13539,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "goal-task-5-state-4",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.014461537379834376,
+      "flat_stove_1_main": 0.013503569910726798,
+      "wine_rack_1_main": 0.013205757263965322
+    },
+    "initial_image_changed_pixels": 14203,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "goal-task-8-state-4",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.014461537379834376,
+      "flat_stove_1_main": 0.013503569910726798,
+      "wine_rack_1_main": 0.013205757263965322
+    },
+    "initial_image_changed_pixels": 14203,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "goal-task-9-state-2",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.005306540201883119,
+      "flat_stove_1_main": 0.005832391539217022,
+      "wine_rack_1_main": 0.002772020806038461
+    },
+    "initial_image_changed_pixels": 11250,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "goal-task-9-state-3",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "wooden_cabinet_1_main": 0.01515494915051375,
+      "flat_stove_1_main": 0.011451126040015453,
+      "wine_rack_1_main": 0.007317250149150391
+    },
+    "initial_image_changed_pixels": 14195,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-0-state-2",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-1-state-1",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-1-state-2",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-2-state-0",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-2-state-1",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "flat_stove_1_main": 0.00304746535939578
+    },
+    "initial_image_changed_pixels": 2689,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-2-state-2",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "flat_stove_1_main": 0.004715344502039561
+    },
+    "initial_image_changed_pixels": 3101,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-4-state-3",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-6-state-1",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-7-state-0",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-7-state-1",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {},
+    "initial_image_changed_pixels": 0,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": true,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-8-state-1",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "flat_stove_1_main": 0.008231075285955205
+    },
+    "initial_image_changed_pixels": 3237,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-9-state-3",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "microwave_1_main": 0.011949761461229886
+    },
+    "initial_image_changed_pixels": 3544,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  },
+  {
+    "case": "10-task-9-state-4",
+    "qpos_equal": true,
+    "changed_model_body_positions_m": {
+      "microwave_1_main": 0.014023624373722895
+    },
+    "initial_image_changed_pixels": 4279,
+    "initial_image_total_pixels": 65536,
+    "isolated_matches_historical": false,
+    "prior_resets_matches_historical": true
+  }
+]

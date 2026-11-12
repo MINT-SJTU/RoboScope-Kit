@@ -1,0 +1,85 @@
+{
+  "checkpoint": "/root/autodl-tmp/openvla-diagnostic-model-cache-20261111/10",
+  "revision": "80970322773f81baa2e22fe495d0487b93a05cfa",
+  "files": {
+    "config.json": {
+      "size": 3528,
+      "mtime_ns": 1794387828192570784,
+      "sha256": "f1119b0e0d6c93f10fbd0ad1996c3bff5a7bbb18040d8b2b828c69d302eacd4d",
+      "hub_etag": "d6e1fc630c9fd92c626d7f1c19cc9b074814a7e2"
+    },
+    "dataset_statistics.json": {
+      "size": 2129,
+      "mtime_ns": 1794387828232585438,
+      "sha256": "54ca346948d5e62e9519a9ed93e45f0a069b9ec997ad1f48f1d8867d4d2d86d2",
+      "hub_etag": "110dd3b99faa604df07e99151ae57eb2f6c1bd4c"
+    },
+    "generation_config.json": {
+      "size": 136,
+      "mtime_ns": 1794387828264597163,
+      "sha256": "67fbe17b12e8beb5be98eb911483971cc78589e51a37ac0cce9cd499d06a8bf1",
+      "hub_etag": "2cefc1e51e6ccfe846d2b509ced403df73a8efe2"
+    },
+    "model-00001-of-00004.safetensors": {
+      "size": 4925122448,
+      "mtime_ns": 1794388148665049182,
+      "sha256": "72f7196d8768c104073d7e9104ad8023cb27727191de1a490612886428b18c51",
+      "hub_etag": "72f7196d8768c104073d7e9104ad8023cb27727191de1a490612886428b18c51"
+    },
+    "model-00002-of-00004.safetensors": {
+      "size": 4947392496,
+      "mtime_ns": 1794388448284720563,
+      "sha256": "92a60a88c7dad2ba1fccc4acbebef98fc7a894891bc49f2e21cfbf1600daf413",
+      "hub_etag": "92a60a88c7dad2ba1fccc4acbebef98fc7a894891bc49f2e21cfbf1600daf413"
+    },
+    "model-00003-of-00004.safetensors": {
+      "size": 4947417456,
+      "mtime_ns": 1794388729509062216,
+      "sha256": "12b45ae85535565148907e379d6f35bcba83b9497006ff3b66658fa412ffac85",
+      "hub_etag": "12b45ae85535565148907e379d6f35bcba83b9497006ff3b66658fa412ffac85"
+    },
+    "model-00004-of-00004.safetensors": {
+      "size": 262668432,
+      "mtime_ns": 1794388748994874356,
+      "sha256": "d3b8e759db56b86709c56f8d156952415dd64e101feccfd01e701487041dd8c1",
+      "hub_etag": "d3b8e759db56b86709c56f8d156952415dd64e101feccfd01e701487041dd8c1"
+    },
+    "model.safetensors.index.json": {
+      "size": 94764,
+      "mtime_ns": 1794388749114885671,
+      "sha256": "ca8b53fed8133ee2afcd2fc483de8febf7f5bb0f6bcb09f91189772e59e8f659",
+      "hub_etag": "bd7cc8ff8070ead248023feae55303f5a3b900d1"
+    },
+    "preprocessor_config.json": {
+      "size": 1690,
+      "mtime_ns": 1794388749158889821,
+      "sha256": "52ca6dd7fb31a2757658f94775b659553bc3532ab04babef02779387b3dec214",
+      "hub_etag": "c804c0dfcb9655fe2933d2fe20ec3a210068bb82"
+    },
+    "special_tokens_map.json": {
+      "size": 552,
+      "mtime_ns": 1794388749194893216,
+      "sha256": "cb90ee5cf5793aa444039af9795b00db59d3fef8942e7eca9cf1990bab370d61",
+      "hub_etag": "ab75c8e0a22550f0667501a0c52758f071a9efd8"
+    },
+    "tokenizer.json": {
+      "size": 1842976,
+      "mtime_ns": 1794388749322905288,
+      "sha256": "8f5e2869e1807b8bb3c7717a294539c37e9de5d728ad60e31ef57e83cc5ea527",
+      "hub_etag": "591f1fc6ff695d967513100f707e66d5bf731414"
+    },
+    "tokenizer.model": {
+      "size": 499723,
+      "mtime_ns": 1794388749846954706,
+      "sha256": "9e556afd44213b6bd1be2b850ebbbd98f5481437a8021afaf58ee7fb1818d347",
+      "hub_etag": "9e556afd44213b6bd1be2b850ebbbd98f5481437a8021afaf58ee7fb1818d347"
+    },
+    "tokenizer_config.json": {
+      "size": 1212,
+      "mtime_ns": 1794388749886958478,
+      "sha256": "0d9176185eb68a54a7be757961c1957b979920cc81339c4def0202dae5b602bc",
+      "hub_etag": "7566269cef6fd7301700397bcc988fcab8ca0e52"
+    }
+  },
+  "original_checkpoint": "/autodl-fs/data/Kit-Models/openvla/10"
+}

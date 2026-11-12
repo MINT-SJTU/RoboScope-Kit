@@ -1,0 +1,4037 @@
+{
+  "source_root": "/root/autodl-tmp/openvla-native-200-seed7-20261109",
+  "episodes": [
+    {
+      "task_id": 7,
+      "task": {
+        "name": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate",
+        "language": "pick up the black bowl on the stove and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl on the stove and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate.bddl",
+          "sha256": "dd11837141a30d874ebbbfaae20e91ecc67ec85ab3872ceb4cff3abfcbef7cb0"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate.pruned_init",
+          "sha256": "ea9cba2814bc166f3682f3f5a97329467839bcf584069cd419191b6c17adae25"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 0,
+      "episode_id": "task-0007-episode-0000",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 112,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7684300.275509778,
+      "started_unix_s": 1794216312.5147598,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "501105aff4e1897d96cac0d0ee69fc702ad209e317511807e27df8b421ae1f2a"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "8ce4a1598340db8829a2cd45a8eccf645b56eb1c32d24d25a29eb6201a2de6da"
+      },
+      "last_step_monotonic_s": 7684325.318919057,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "b0a6bab35844a5729530cf0358249523cf2a19f8fe0f1876c717e56623ead041"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl on the stove and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "b585590cd95400e328e3506ad3052a48c944ddd81ba0b3f679f3269f1492a3d0"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "ff2a198308f10275450649fb83eef44f4d57570e482ce6435b03c1b6146f7eb7"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "a06193a4ca9f98fdabd09209b03e2f4f7a3a64b6693c0236161192eb4671b269"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "d4ada42820b20e64b455790b5448fac1892407b6e2c2bc55bbd12a43e209ffd7"
+        }
+      },
+      "first_environment_action": [
+        -0.0029850299042814,
+        -0.6585924403340209,
+        -0.24463235420339247,
+        0.03315756399841868,
+        4.201572315365443e-05,
+        0.00012604848426930881,
+        -1.0
+      ],
+      "elapsed_s": 25.043545505031943,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 1,
+      "task": {
+        "name": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate",
+        "language": "pick up the black bowl next to the ramekin and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl next to the ramekin and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate.bddl",
+          "sha256": "53a7516571412a2f46a27cbf8482d3b76dbad4221858c8f6b565d506c274e61d"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate.pruned_init",
+          "sha256": "9b6927b6ef03460ab055141e1a1154ad85e5e290058d8ed3a8a314aff911f864"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 3,
+      "episode_id": "task-0001-episode-0003",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 220,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7683528.665093573,
+      "started_unix_s": 1794215540.9043436,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "9cdfce0fe3434dc2c261272bc32dd3b56956de7c14e1e6d4c8a76aa7323e0f4d"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "359e694a6add334ed8cfd64fcb63a6338acccbc031a59c731b651e85e52b8081"
+      },
+      "last_step_monotonic_s": 7683576.252392808,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "5f8a1923e7bf46c968c83b3b1314cc3334849a336185a084cd8056955bd0cc78"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl next to the ramekin and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "186ecbaf3f653cc88871cd27d73a709e5d35571d66c7c83930525e2ac05c357e"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            32
+          ],
+          "dtype": "int64",
+          "sha256": "3193a7a8aa44ce8e14d9dca2bc357417041025aace21ea156b522337fcae5fda"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            32
+          ],
+          "dtype": "int64",
+          "sha256": "6ba64591dc5d5fa6ab9e575602829ad02f0fe517616bda69e4fe87b55b9d9836"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "f97b3fac2ffea4d407f30fb795cd8d4092183cc762e454cc8e49ac70d4d0d92c"
+        }
+      },
+      "first_environment_action": [
+        0.3204098224838573,
+        0.4930252245828217,
+        -0.0026785731315612793,
+        -0.014850840060149917,
+        -0.03004201691524655,
+        0.005302519044455334,
+        -1.0
+      ],
+      "elapsed_s": 47.5874332729727,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 3,
+      "task": {
+        "name": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate",
+        "language": "pick up the black bowl on the cookie box and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl on the cookie box and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate.bddl",
+          "sha256": "3d4ccf070c3d9883ae0676f2d888588f98c696ddad71b7694f47c379fc99ef36"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate.pruned_init",
+          "sha256": "0627f5f5ce3ef23be546571012be8ef603d93bcb4032bc80feb34937ba580140"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 2,
+      "episode_id": "task-0003-episode-0002",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 220,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7683785.942715787,
+      "started_unix_s": 1794215798.1819658,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "1b7b03eb038b60bd3d265226a1f5832c44ebb968731ac264f8983ceebb1774e5"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "9c06ff43ef6cd2ad89582a9c1d802cf3d039ee0a3186af3f2b7f39bf174976f5"
+      },
+      "last_step_monotonic_s": 7683834.671602457,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "3acc5be67f840e6b9b0b265e958040dc0c0dcaf26267707e82b1e22eb4182b8e"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl on the cookie box and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "35690bfab671aa07bd09f632556b29e56a03c29a1efa0cb64412d196552e939a"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "790ba6fb40bfb9c9fb5a87b6ceed38a553bb117443a276dfbd7f2282a4345404"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "a06193a4ca9f98fdabd09209b03e2f4f7a3a64b6693c0236161192eb4671b269"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "193123e039a75fa95b71946bc2b2e8dcdc02f1f4673354bfcad149928bf58f4b"
+        }
+      },
+      "first_environment_action": [
+        0.6834040445521764,
+        0.6377311091797024,
+        0.15129201482324017,
+        4.831982009551039e-05,
+        -0.0210168071237265,
+        0.00012604848426930881,
+        -1.0
+      ],
+      "elapsed_s": 48.72904830425978,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 4,
+      "task": {
+        "name": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate",
+        "language": "pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate.bddl",
+          "sha256": "4371189e11d9fd29bb548ab9a8adcd741bb0ce41bb66c612672d0e8cb29a52a9"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate.pruned_init",
+          "sha256": "deef3df529e0bb57658b973bbb3baf02b02922db065c025a73ebfcd11eb54d46"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 3,
+      "episode_id": "task-0004-episode-0003",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 220,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7683990.027691698,
+      "started_unix_s": 1794216002.2669418,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "7e950b4903eb62f247605b60952d62aca17222446e05c299de3d8b615756a2fb"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "7cdda678752636fa95351fdd3de1f005296f667b3a7b6e7de5c2a8597c595ece"
+      },
+      "last_step_monotonic_s": 7684039.283569884,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "4773dc09fba8ccf4f9f1668028341d094d23c51ff94e829a4439bd50966380c0"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "39a241cf9a87059cce355dbdc97fda572b38f6e778c0ef30759a18d22097a10a"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            35
+          ],
+          "dtype": "int64",
+          "sha256": "82e4af561ff6580335d25f576850261e4ab5d2fa3924758773a6078ec6db9cb0"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            35
+          ],
+          "dtype": "int64",
+          "sha256": "036b147c383432a13cea95c541458cf67bddf7b07752c4afb92585284e9b36a2"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "fcc967610f636b93d58e2f2aabf08e0940015c634120d13a81e9e3bca74c2e05"
+        }
+      },
+      "first_environment_action": [
+        0.6306048849786029,
+        -0.06168066637188785,
+        0.37858193037556664,
+        -0.029749999940395344,
+        0.024109241833873807,
+        -0.027050421956707454,
+        -1.0
+      ],
+      "elapsed_s": 49.25603284034878,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 5,
+      "task": {
+        "name": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate",
+        "language": "pick up the black bowl on the ramekin and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl on the ramekin and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate.bddl",
+          "sha256": "10239815a9d18ad53e09365d453a362ee54d29ca276e04eef411cf1db8d72940"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate.pruned_init",
+          "sha256": "2d2c50b7dcbf861fffa94d576f217ed34153e57487010d7a109a220d4d97189b"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 1,
+      "episode_id": "task-0005-episode-0001",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 99,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7684094.75896648,
+      "started_unix_s": 1794216106.9982164,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "7e74f7975ea3899ecb94c8bee1f302127d74c600d13393826d7537db89bf9cc1"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "8cda95e7fec9ecf3fc9472153ec231175e9a5dcc6ad597317be5d60826ed8576"
+      },
+      "last_step_monotonic_s": 7684117.684407385,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "ec32ced8cd5b34e70fe5d8609deb04d1c4ca80f9aa04befee165e7ea49fb2ccc"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl on the ramekin and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "3c4daf999922db38872464af37857eb6b779a50bfb3a012c5d9d75ffc083c70c"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            31
+          ],
+          "dtype": "int64",
+          "sha256": "4517cd7283b5d6218388cde192ca74007f44aff3a3b427067284f66a9b37fc2d"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            31
+          ],
+          "dtype": "int64",
+          "sha256": "88986881ba52ad36b430e41cd24497b9cf9a64f8e6a979290ebdee36b1b6f85c"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "69f9d5ce21cb554918a0fbb2656aa6a45736bc2f4336a86709c0291b6814b63f"
+        }
+      },
+      "first_environment_action": [
+        -0.0029850299042814,
+        0.281995809545704,
+        -0.0026785731315612793,
+        4.831982009551039e-05,
+        4.201572315365443e-05,
+        0.00012604848426930881,
+        -1.0
+      ],
+      "elapsed_s": 22.925595299340785,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 6,
+      "task": {
+        "name": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate",
+        "language": "pick up the black bowl next to the cookie box and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl next to the cookie box and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate.bddl",
+          "sha256": "566c65596f3472e752e6522817bff51bbf3ce5159d7bec1d3554e5ead46b1e55"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate.pruned_init",
+          "sha256": "ab86fb7b5942dc0fec762eae57e72bf636106b1c10ad8ce57227723d8eb9a81b"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 3,
+      "episode_id": "task-0006-episode-0003",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 113,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7684250.12235794,
+      "started_unix_s": 1794216262.361608,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "d19a9fb4d0ecb282facdf60aeb779a54566f6650fa8886721c253c21e5b4411c"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "10da988e0765a4ba5bd66baf778d62588d851075e7001f0489adf2e7033f8494"
+      },
+      "last_step_monotonic_s": 7684275.575399445,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "a84236b2b49a379b0db66380b8e182dd2612d14f280407b874be2adb6a00e4ef"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl next to the cookie box and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "0888c4a723a5374722568af4e3091338a9fec969853c0734c78ff3d20766702c"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            31
+          ],
+          "dtype": "int64",
+          "sha256": "a2849c130c64ede7f0ed6d09a53c466a7fbf138fdfd9f92d9dc520782e59339f"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            31
+          ],
+          "dtype": "int64",
+          "sha256": "88986881ba52ad36b430e41cd24497b9cf9a64f8e6a979290ebdee36b1b6f85c"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "c3e61ea543fa5c5ef8f8225b40a8e5de349e40feb7d8d879dafb68dc91fa5204"
+        }
+      },
+      "first_environment_action": [
+        0.6438046748719962,
+        -0.0013865477898541423,
+        -0.0026785731315612793,
+        -0.0024348734932787275,
+        -0.013495798964126449,
+        0.07647898924701352,
+        -1.0
+      ],
+      "elapsed_s": 25.4531854884699,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 8,
+      "task": {
+        "name": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
+        "language": "pick up the black bowl next to the plate and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl next to the plate and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.bddl",
+          "sha256": "c8fbb9effa27b947d04d26862d75273d93cac1806734e53836cd472a08aec1fe"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.pruned_init",
+          "sha256": "f43df2d80042130ac8770590d83f1a1e6fd4df7479aebc392aa2ed6e3bd0b83e"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 1,
+      "episode_id": "task-0008-episode-0001",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 119,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7684470.712256491,
+      "started_unix_s": 1794216482.9515066,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "50873b51eb943c92ce71438551a26675e253fe37622918167c060a16477577f7"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "367b8f19c2d7735df8c79f95234b666c4fc2bc9a35063387acb8a339f9801f9a"
+      },
+      "last_step_monotonic_s": 7684497.041116685,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "492a58810f7fd43b92acdfa5adf0733e76e0f0139d484df62c0c5d01f416101f"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl next to the plate and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "b38d4b2d9b9f19811323a495b084b1ee546d4267df0a1a3eb9ea9602d7c51828"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "079b4e97548c5e892cae5ffe2d8ad4be9dda858a29cbdee4c02c47a373b42e88"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "a06193a4ca9f98fdabd09209b03e2f4f7a3a64b6693c0236161192eb4671b269"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "861e64ae037baa10a780ad47e6af0751e732dae6171c218f779164f550d99c51"
+        }
+      },
+      "first_environment_action": [
+        0.2082116083900133,
+        0.2639075739710939,
+        0.06330882170621077,
+        4.831982009551039e-05,
+        4.201572315365443e-05,
+        0.00789075432454836,
+        -1.0
+      ],
+      "elapsed_s": 26.32895484007895,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 8,
+      "task": {
+        "name": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
+        "language": "pick up the black bowl next to the plate and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl next to the plate and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.bddl",
+          "sha256": "c8fbb9effa27b947d04d26862d75273d93cac1806734e53836cd472a08aec1fe"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.pruned_init",
+          "sha256": "f43df2d80042130ac8770590d83f1a1e6fd4df7479aebc392aa2ed6e3bd0b83e"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 2,
+      "episode_id": "task-0008-episode-0002",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 103,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7684497.042212762,
+      "started_unix_s": 1794216509.2814627,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "4463e2e153ce61661d48384171f0532d4eb4c45158ab9c0325012e26c0a9d830"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "fe00b6a8937b24df8ad7808683d00ef60d8900184bb8bd5947d0d99af2b786b1"
+      },
+      "last_step_monotonic_s": 7684519.009946835,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "ae38b58f3086d8298a8b771a3d103af63af8fff2916e198dc802d55293049d69"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl next to the plate and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "bc416804183f3535c50d4d4a45a6ecbaad6c0e4f0e69bc30ed636660ff0f1851"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "079b4e97548c5e892cae5ffe2d8ad4be9dda858a29cbdee4c02c47a373b42e88"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "a06193a4ca9f98fdabd09209b03e2f4f7a3a64b6693c0236161192eb4671b269"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "00fb9c86dd084252f41f288f48e8e5b621f84a951f50dc376098d41deb423e2c"
+        }
+      },
+      "first_environment_action": [
+        0.08281360440277596,
+        0.23376051468007697,
+        0.08530461998546834,
+        4.831982009551039e-05,
+        4.201572315365443e-05,
+        0.00012604848426930881,
+        -1.0
+      ],
+      "elapsed_s": 21.96780767571181,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 8,
+      "task": {
+        "name": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
+        "language": "pick up the black bowl next to the plate and place it on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_spatial",
+        "bddl_file": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.bddl",
+        "init_states_file": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.pruned_init"
+      },
+      "instruction": "pick up the black bowl next to the plate and place it on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_spatial/pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.bddl",
+          "sha256": "c8fbb9effa27b947d04d26862d75273d93cac1806734e53836cd472a08aec1fe"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_spatial/pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate.pruned_init",
+          "sha256": "f43df2d80042130ac8770590d83f1a1e6fd4df7479aebc392aa2ed6e3bd0b83e"
+        }
+      },
+      "suite": "libero_spatial",
+      "initial_state_index": 3,
+      "episode_id": "task-0008-episode-0003",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 96,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7684519.010941444,
+      "started_unix_s": 1794216531.2501917,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          92
+        ],
+        "dtype": "float64",
+        "sha256": "8d1fbf0d1785c75002a47f290b3b6d195d3a26b8c9a86cf95512ba804fd36d4b"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "0df7e5f09a25776a2712bda0de0af237c901f099867830972982c3f70fd4b19f"
+      },
+      "last_step_monotonic_s": 7684540.030263624,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "cf377c5858d0643a0d61feded68a6e0594863abdcf544a2f076495436b5c38e9"
+      },
+      "unnorm_key": "libero_spatial",
+      "first_prompt": "In: What action should the robot take to pick up the black bowl next to the plate and place it on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "666cc3ea2e4f7b29745d7b52f3a4ed009e1bac829382b9dc135aa13cea9cccde"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "079b4e97548c5e892cae5ffe2d8ad4be9dda858a29cbdee4c02c47a373b42e88"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            30
+          ],
+          "dtype": "int64",
+          "sha256": "a06193a4ca9f98fdabd09209b03e2f4f7a3a64b6693c0236161192eb4671b269"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "aafacef682c354424e2978d0c9639d4f6c06fe005c4899781f8df59236a36637"
+        }
+      },
+      "first_environment_action": [
+        -0.0029850299042814,
+        -0.0013865477898541423,
+        -0.032006304170571154,
+        0.010808824178050555,
+        4.201572315365443e-05,
+        0.00012604848426930881,
+        -1.0
+      ],
+      "elapsed_s": 21.019449594430625,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 2,
+      "task": {
+        "name": "pick_up_the_salad_dressing_and_place_it_in_the_basket",
+        "language": "pick up the salad dressing and place it in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_object",
+        "bddl_file": "pick_up_the_salad_dressing_and_place_it_in_the_basket.bddl",
+        "init_states_file": "pick_up_the_salad_dressing_and_place_it_in_the_basket.pruned_init"
+      },
+      "instruction": "pick up the salad dressing and place it in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_object/pick_up_the_salad_dressing_and_place_it_in_the_basket.bddl",
+          "sha256": "024978e9e8f43a49b49d0965f4f426d364ce056307f0fcf5733dc4682fac437a"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_object/pick_up_the_salad_dressing_and_place_it_in_the_basket.pruned_init",
+          "sha256": "6f6793ee550419a4a79dcb6ac83a9ba7bbf5e76e92fef26b82b6a7a10f72b04a"
+        }
+      },
+      "suite": "libero_object",
+      "initial_state_index": 4,
+      "episode_id": "task-0002-episode-0004",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 125,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7685525.786543649,
+      "started_unix_s": 1794217538.0257938,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          110
+        ],
+        "dtype": "float64",
+        "sha256": "3221a995bc04447c6b25aa5d4014f38d6cc8a68938b2610ba6ed52624ee202e2"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "779eb4a1ae6ebc1923639d3f2067b01f18679a5be53cc207346a515546d299b1"
+      },
+      "last_step_monotonic_s": 7685551.784801579,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "a30fc6937f8fb7af21f9fa2770f37c3637f2b476bde0effc6371ae241895d2a5"
+      },
+      "unnorm_key": "libero_object",
+      "first_prompt": "In: What action should the robot take to pick up the salad dressing and place it in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "c53cd8ff33e7310c85ee29ee5af919f2094a26d54fe4faf2ffb4d47858461a82"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            27
+          ],
+          "dtype": "int64",
+          "sha256": "ea881aace3193c80d41d811f8fc5809383b325a29e23b025de2ab8c18c1822ce"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            27
+          ],
+          "dtype": "int64",
+          "sha256": "df73626ca9ef228183ab01ba4210dd2db847e7b38680f2e78e23ada2cc818f87"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "2abe49a17084ea06d2fe65f9d4732d945b175d4318a9f41a3ca2b6ce03b9bc27"
+        }
+      },
+      "first_environment_action": [
+        0.2137552600280911,
+        -0.002584043671103098,
+        0.0,
+        -0.01602731025686452,
+        0.012945377256940394,
+        -0.00743697780896635,
+        -1.0
+      ],
+      "elapsed_s": 25.998382210731506,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 3,
+      "task": {
+        "name": "pick_up_the_bbq_sauce_and_place_it_in_the_basket",
+        "language": "pick up the bbq sauce and place it in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_object",
+        "bddl_file": "pick_up_the_bbq_sauce_and_place_it_in_the_basket.bddl",
+        "init_states_file": "pick_up_the_bbq_sauce_and_place_it_in_the_basket.pruned_init"
+      },
+      "instruction": "pick up the bbq sauce and place it in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_object/pick_up_the_bbq_sauce_and_place_it_in_the_basket.bddl",
+          "sha256": "8a7e37b76fce5621e649e260dbcfcec7ce2f9a055ca09a4f1ebaf5ca74a739c2"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_object/pick_up_the_bbq_sauce_and_place_it_in_the_basket.pruned_init",
+          "sha256": "c524077b0c23006f28fc06760a5b5ab37eee67287b5329e84a34b0a8bd599b4a"
+        }
+      },
+      "suite": "libero_object",
+      "initial_state_index": 0,
+      "episode_id": "task-0003-episode-0000",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 280,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7685552.723629356,
+      "started_unix_s": 1794217564.9628794,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          110
+        ],
+        "dtype": "float64",
+        "sha256": "65b4e812d49c1bc043dd16e4226442779ebaaf106dca39030d9a8576460bc091"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "13323b9c73bf65fc402214a326207cb5a5266b39ebb1dfce86bf7d52a39d4780"
+      },
+      "last_step_monotonic_s": 7685608.549450825,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "46c31891e7a202e9e2770aa7cc8330480ef8191fb02555d60645b658f4182bd6"
+      },
+      "unnorm_key": "libero_object",
+      "first_prompt": "In: What action should the robot take to pick up the bbq sauce and place it in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "0c3cf12893aa8639595fe3a621a13c4ba7d61c4fea80f376ecb38531c082f330"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            28
+          ],
+          "dtype": "int64",
+          "sha256": "391f7c0b5dcb69c68de3343a3ac507f4e59d4ff816cae5bc2db2c51d42fd3e96"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            28
+          ],
+          "dtype": "int64",
+          "sha256": "f08c1a12407ba17e3e4e8899e0617198bdbf4b319bb8ee8d722f17dd75c64c95"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "1a8c8081909c00c19736e748d2aa24b88ae83304a5f3031f820b0ee1420d1ca0"
+        }
+      },
+      "first_environment_action": [
+        0.05626576577915865,
+        -0.002584043671103098,
+        0.0,
+        -0.02550630189624488,
+        0.0004411758307148461,
+        0.00029411463468684285,
+        -1.0
+      ],
+      "elapsed_s": 55.82598278205842,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 3,
+      "task": {
+        "name": "pick_up_the_bbq_sauce_and_place_it_in_the_basket",
+        "language": "pick up the bbq sauce and place it in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_object",
+        "bddl_file": "pick_up_the_bbq_sauce_and_place_it_in_the_basket.bddl",
+        "init_states_file": "pick_up_the_bbq_sauce_and_place_it_in_the_basket.pruned_init"
+      },
+      "instruction": "pick up the bbq sauce and place it in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_object/pick_up_the_bbq_sauce_and_place_it_in_the_basket.bddl",
+          "sha256": "8a7e37b76fce5621e649e260dbcfcec7ce2f9a055ca09a4f1ebaf5ca74a739c2"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_object/pick_up_the_bbq_sauce_and_place_it_in_the_basket.pruned_init",
+          "sha256": "c524077b0c23006f28fc06760a5b5ab37eee67287b5329e84a34b0a8bd599b4a"
+        }
+      },
+      "suite": "libero_object",
+      "initial_state_index": 2,
+      "episode_id": "task-0003-episode-0002",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 137,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7685664.918794009,
+      "started_unix_s": 1794217677.158044,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          110
+        ],
+        "dtype": "float64",
+        "sha256": "535fdf87422bbcc1e3820d60230c2282e5bc33e9f5abce92c3c02593c4fc47f0"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "99ff8cfc97f99036078d1aaedc560ea1822975d7b6c74e198009375bd5f9d186"
+      },
+      "last_step_monotonic_s": 7685693.128739406,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "eae8ded9dc6e3617fbff14185806b089d1a28539db86b852afafa277ab4298c5"
+      },
+      "unnorm_key": "libero_object",
+      "first_prompt": "In: What action should the robot take to pick up the bbq sauce and place it in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "92f05b08af9ad74651772600a8258a3664fe67dabc971862e8cfeed3c7bf475d"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            28
+          ],
+          "dtype": "int64",
+          "sha256": "391f7c0b5dcb69c68de3343a3ac507f4e59d4ff816cae5bc2db2c51d42fd3e96"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            28
+          ],
+          "dtype": "int64",
+          "sha256": "f08c1a12407ba17e3e4e8899e0617198bdbf4b319bb8ee8d722f17dd75c64c95"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "3f5c98150f3858fa56577ee7972316f9924128d8f6ff1ca8367effe395ddec19"
+        }
+      },
+      "first_environment_action": [
+        0.001959043624354395,
+        -0.002584043671103098,
+        0.0,
+        -3.151186541014428e-05,
+        0.003567226187271233,
+        0.00029411463468684285,
+        -1.0
+      ],
+      "elapsed_s": 28.210055355913937,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 6,
+      "task": {
+        "name": "pick_up_the_butter_and_place_it_in_the_basket",
+        "language": "pick up the butter and place it in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_object",
+        "bddl_file": "pick_up_the_butter_and_place_it_in_the_basket.bddl",
+        "init_states_file": "pick_up_the_butter_and_place_it_in_the_basket.pruned_init"
+      },
+      "instruction": "pick up the butter and place it in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.bddl",
+          "sha256": "5d8053b40ff33246fdbcc38548db84032c6bb647b4b88b6646d9cf6b73a5006c"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.pruned_init",
+          "sha256": "f0925a8653c5902c5a4d78a2053365382ad7d05be7f059abe19c2004ffc5dc59"
+        }
+      },
+      "suite": "libero_object",
+      "initial_state_index": 0,
+      "episode_id": "task-0006-episode-0000",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 280,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7686104.275751473,
+      "started_unix_s": 1794218116.5150015,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          110
+        ],
+        "dtype": "float64",
+        "sha256": "bad9bba0fbdf574e67aa4f37c8ec45b157b0f587a4f1c255fef5f0c2c146998d"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "a34823312f4bd06405c9492f003d200a7afdd5fbaf7a65320da8f5cf15db3b65"
+      },
+      "last_step_monotonic_s": 7686160.179125499,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "08523d024f797d897a66499df827bc37953fc7ae793f9c568776a6558adb6b70"
+      },
+      "unnorm_key": "libero_object",
+      "first_prompt": "In: What action should the robot take to pick up the butter and place it in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "cede469caa03ee5b985e5e7f17c558570cd70e6e01b655b8122878af19341818"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            25
+          ],
+          "dtype": "int64",
+          "sha256": "e3981ebf35e9c9f329f1d256e7d071ea0c0178d480074ffad88daf6baaa76091"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            25
+          ],
+          "dtype": "int64",
+          "sha256": "9060d7baa74e0778cf6c0a534a56f8e914c6e6118c28b9328dfbc42962fa69c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "554e93d91fd0a3629a4806788fc957f28b8b7cc2dadd69061337b1ba8e69ae6c"
+        }
+      },
+      "first_environment_action": [
+        0.03997374913271734,
+        0.010903351447161369,
+        0.007352941176470562,
+        -0.0065483186174841584,
+        0.043163864036985466,
+        0.00029411463468684285,
+        -1.0
+      ],
+      "elapsed_s": 55.9035364324227,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 6,
+      "task": {
+        "name": "pick_up_the_butter_and_place_it_in_the_basket",
+        "language": "pick up the butter and place it in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_object",
+        "bddl_file": "pick_up_the_butter_and_place_it_in_the_basket.bddl",
+        "init_states_file": "pick_up_the_butter_and_place_it_in_the_basket.pruned_init"
+      },
+      "instruction": "pick up the butter and place it in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.bddl",
+          "sha256": "5d8053b40ff33246fdbcc38548db84032c6bb647b4b88b6646d9cf6b73a5006c"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_object/pick_up_the_butter_and_place_it_in_the_basket.pruned_init",
+          "sha256": "f0925a8653c5902c5a4d78a2053365382ad7d05be7f059abe19c2004ffc5dc59"
+        }
+      },
+      "suite": "libero_object",
+      "initial_state_index": 4,
+      "episode_id": "task-0006-episode-0004",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 280,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7686267.061990621,
+      "started_unix_s": 1794218279.3012412,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          110
+        ],
+        "dtype": "float64",
+        "sha256": "3488e4309b87d897a16bec8e958daf5b46e048164989668f0469c7312c48b46a"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "a25b6978608b3ad2614383ee2780e4ace2d5b6d2f89e9bb3df358576a9383dae"
+      },
+      "last_step_monotonic_s": 7686323.409359655,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "0e844bd1411b3772075507cc49af057e6555aaf441c7dd38adcda3fe795cbd6d"
+      },
+      "unnorm_key": "libero_object",
+      "first_prompt": "In: What action should the robot take to pick up the butter and place it in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "fd67287ae4b1e8ad8f52fdb63a220ba68726d9f0d42f0752d307b5951f793130"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            25
+          ],
+          "dtype": "int64",
+          "sha256": "e3981ebf35e9c9f329f1d256e7d071ea0c0178d480074ffad88daf6baaa76091"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            25
+          ],
+          "dtype": "int64",
+          "sha256": "9060d7baa74e0778cf6c0a534a56f8e914c6e6118c28b9328dfbc42962fa69c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "dbfa24dea0b9afd52fd10fbfb0e6f1bd651fd4417b5f54b98fa9f418adea2c7f"
+        }
+      },
+      "first_environment_action": [
+        0.2463392933209737,
+        -0.09025211193982297,
+        0.007352941176470562,
+        -0.04090966331023796,
+        0.07963445153014334,
+        0.06890756007210883,
+        1.0
+      ],
+      "elapsed_s": 56.347522306255996,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 8,
+      "task": {
+        "name": "pick_up_the_chocolate_pudding_and_place_it_in_the_basket",
+        "language": "pick up the chocolate pudding and place it in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_object",
+        "bddl_file": "pick_up_the_chocolate_pudding_and_place_it_in_the_basket.bddl",
+        "init_states_file": "pick_up_the_chocolate_pudding_and_place_it_in_the_basket.pruned_init"
+      },
+      "instruction": "pick up the chocolate pudding and place it in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_object/pick_up_the_chocolate_pudding_and_place_it_in_the_basket.bddl",
+          "sha256": "674ceabc400b7b16d46e8eaf678709d4a633235c7e0a80233775044fe38b19b0"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_object/pick_up_the_chocolate_pudding_and_place_it_in_the_basket.pruned_init",
+          "sha256": "1124189363e76609da182dd92217cd02c41be58e88c42e3949d23ba160da75a5"
+        }
+      },
+      "suite": "libero_object",
+      "initial_state_index": 4,
+      "episode_id": "task-0008-episode-0004",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 280,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7686602.988021742,
+      "started_unix_s": 1794218615.2272718,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          110
+        ],
+        "dtype": "float64",
+        "sha256": "56366d35e30e9b5f32ccc67d7028346ac61338322ff63fae3d60994d04799fe3"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "b4eb86e9e56d6fac9ac1216ee1da329a00948d273c0e9405ee6b6c333d023701"
+      },
+      "last_step_monotonic_s": 7686658.226410386,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "29dc3da8a312ec6505b500a7efa99368842080e7720c4c6230025c67575e7b33"
+      },
+      "unnorm_key": "libero_object",
+      "first_prompt": "In: What action should the robot take to pick up the chocolate pudding and place it in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "17c7b06f0dd64d6f7d9772d5d8627e504d15608d661883e457cf11bc288acc98"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "cc3c31e9b8788e3240fc2fb2d646e562bf1f4499718002fbfb60a724376ea2b2"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "dbc98745bb89574fe808968d7aafdc064cc3716ca2659f29141f428aa5be64c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "0b7b63a9bb6843eb068405bdb92e821e15141151a9c730bdde78d4166c07075e"
+        }
+      },
+      "first_environment_action": [
+        0.20832458781261065,
+        -0.002584043671103098,
+        0.007352941176470562,
+        -0.02017436909909342,
+        0.06504621653288017,
+        0.00029411463468684285,
+        -1.0
+      ],
+      "elapsed_s": 55.238509967923164,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 0,
+      "task": {
+        "name": "open_the_middle_drawer_of_the_cabinet",
+        "language": "open the middle drawer of the cabinet",
+        "problem": "Libero",
+        "problem_folder": "libero_goal",
+        "bddl_file": "open_the_middle_drawer_of_the_cabinet.bddl",
+        "init_states_file": "open_the_middle_drawer_of_the_cabinet.pruned_init"
+      },
+      "instruction": "open the middle drawer of the cabinet",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_goal/open_the_middle_drawer_of_the_cabinet.bddl",
+          "sha256": "832ab48ec476807c767e8985666e295700f92d1f8daeae1c34eee1e75293769b"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_goal/open_the_middle_drawer_of_the_cabinet.pruned_init",
+          "sha256": "977efe1216bee72bb4e9fa9ec4be1bcfe37fb00ece815eac117feba019b34b9f"
+        }
+      },
+      "suite": "libero_goal",
+      "initial_state_index": 2,
+      "episode_id": "task-0000-episode-0002",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 300,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7687385.956946371,
+      "started_unix_s": 1794219398.1961966,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          79
+        ],
+        "dtype": "float64",
+        "sha256": "221658d3c5c68a7d9d4606eee6e2dedfc8a847525fd96da47b17615374007fe9"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "8eceef674ed9428c8f6a6c1ac3208c1edc0720ece8d65fe6be5d4acc6acd7b5a"
+      },
+      "last_step_monotonic_s": 7687444.595144722,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "57dae4b008e4ac84ede65319a056169922291297d01cff064e91d39b5c06a037"
+      },
+      "unnorm_key": "libero_goal",
+      "first_prompt": "In: What action should the robot take to open the middle drawer of the cabinet?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "6ac020f6431944f40e07e0dc74d399e40cb8fe71a9a731eec3a1b00b66edcd69"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            22
+          ],
+          "dtype": "int64",
+          "sha256": "5e896706fbf2d694ca64720d03651a9f8c2e20a9665f7c06b13644d8fb0d744f"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            22
+          ],
+          "dtype": "int64",
+          "sha256": "8f37100bb82b8f78575975ccf96996da3386e3d237e435ac32f498d5c8d6a46b"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "a2d0cf3dcdb06e4e7dd6d4976af9e6f40716d1ebd8c29df1c2e332f27dae7a94"
+        }
+      },
+      "first_environment_action": [
+        0.4567752042237452,
+        -0.26206933517082065,
+        0.0,
+        -0.0001743721319179825,
+        0.029703788897570443,
+        0.1688845586294637,
+        -1.0
+      ],
+      "elapsed_s": 58.638320532627404,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 0,
+      "task": {
+        "name": "open_the_middle_drawer_of_the_cabinet",
+        "language": "open the middle drawer of the cabinet",
+        "problem": "Libero",
+        "problem_folder": "libero_goal",
+        "bddl_file": "open_the_middle_drawer_of_the_cabinet.bddl",
+        "init_states_file": "open_the_middle_drawer_of_the_cabinet.pruned_init"
+      },
+      "instruction": "open the middle drawer of the cabinet",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_goal/open_the_middle_drawer_of_the_cabinet.bddl",
+          "sha256": "832ab48ec476807c767e8985666e295700f92d1f8daeae1c34eee1e75293769b"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_goal/open_the_middle_drawer_of_the_cabinet.pruned_init",
+          "sha256": "977efe1216bee72bb4e9fa9ec4be1bcfe37fb00ece815eac117feba019b34b9f"
+        }
+      },
+      "suite": "libero_goal",
+      "initial_state_index": 3,
+      "episode_id": "task-0000-episode-0003",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 300,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7687444.597060041,
+      "started_unix_s": 1794219456.83631,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          79
+        ],
+        "dtype": "float64",
+        "sha256": "36ef92133a0b1fdc325122cea1e9804551985aedb8f2d1ca9860bc47e7b3cc6c"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "530d589043044762773c8bb74b31cc72b4f7b43dbaabf42b39686c12b85960af"
+      },
+      "last_step_monotonic_s": 7687503.528680694,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "ff9cad5039378c1fd7bca5dbc9c9fd714758fb4c8dfe90bc4929697e716547c3"
+      },
+      "unnorm_key": "libero_goal",
+      "first_prompt": "In: What action should the robot take to open the middle drawer of the cabinet?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "f22f534a7d155fe135201ee340ec976e20bccdd0e9af75b2dafada2eff421383"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            22
+          ],
+          "dtype": "int64",
+          "sha256": "5e896706fbf2d694ca64720d03651a9f8c2e20a9665f7c06b13644d8fb0d744f"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            22
+          ],
+          "dtype": "int64",
+          "sha256": "8f37100bb82b8f78575975ccf96996da3386e3d237e435ac32f498d5c8d6a46b"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "f199f6ff657fce3238f4989667771bd1a049c27a2b1f40822227fe60e0f164a4"
+        }
+      },
+      "first_environment_action": [
+        0.33570377417639174,
+        -0.11179622715594728,
+        0.07352941176470584,
+        -0.0001743721319179825,
+        0.155439085820142,
+        0.08040573501674567,
+        -1.0
+      ],
+      "elapsed_s": 58.93178503960371,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 0,
+      "task": {
+        "name": "open_the_middle_drawer_of_the_cabinet",
+        "language": "open the middle drawer of the cabinet",
+        "problem": "Libero",
+        "problem_folder": "libero_goal",
+        "bddl_file": "open_the_middle_drawer_of_the_cabinet.bddl",
+        "init_states_file": "open_the_middle_drawer_of_the_cabinet.pruned_init"
+      },
+      "instruction": "open the middle drawer of the cabinet",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_goal/open_the_middle_drawer_of_the_cabinet.bddl",
+          "sha256": "832ab48ec476807c767e8985666e295700f92d1f8daeae1c34eee1e75293769b"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_goal/open_the_middle_drawer_of_the_cabinet.pruned_init",
+          "sha256": "977efe1216bee72bb4e9fa9ec4be1bcfe37fb00ece815eac117feba019b34b9f"
+        }
+      },
+      "suite": "libero_goal",
+      "initial_state_index": 4,
+      "episode_id": "task-0000-episode-0004",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 300,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7687503.530640212,
+      "started_unix_s": 1794219515.769892,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          79
+        ],
+        "dtype": "float64",
+        "sha256": "8d21166d2268969f06ab02bd0fe9fd4e70a2719bcd01e9b13e0d2c0f54c5dcb5"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "91f601fc5a27b11bcb8658833297129aa6f409e3c30a6f5624b0b0536e5b805a"
+      },
+      "last_step_monotonic_s": 7687563.314801412,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "356e5b1f391e033990d26a5e35e1d265c71a8ae0b91f7f3d8ba46062fcdda262"
+      },
+      "unnorm_key": "libero_goal",
+      "first_prompt": "In: What action should the robot take to open the middle drawer of the cabinet?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "19a62ae70f6e3ccf5068affef0ba24f12de16d891e8bb4514e6938ae563f14c9"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            22
+          ],
+          "dtype": "int64",
+          "sha256": "5e896706fbf2d694ca64720d03651a9f8c2e20a9665f7c06b13644d8fb0d744f"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            22
+          ],
+          "dtype": "int64",
+          "sha256": "8f37100bb82b8f78575975ccf96996da3386e3d237e435ac32f498d5c8d6a46b"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "9e89501ba9b30202679383ce0ecf208db8e91ea7c8d44cee347cc49fbe6965f8"
+        }
+      },
+      "first_environment_action": [
+        0.2929726812185025,
+        -0.0007247994927799262,
+        0.0,
+        -0.005737397279225148,
+        0.06826261328715902,
+        -2.9559176634358364e-05,
+        -1.0
+      ],
+      "elapsed_s": 59.78429234586656,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 4,
+      "task": {
+        "name": "put_the_bowl_on_top_of_the_cabinet",
+        "language": "put the bowl on top of the cabinet",
+        "problem": "Libero",
+        "problem_folder": "libero_goal",
+        "bddl_file": "put_the_bowl_on_top_of_the_cabinet.bddl",
+        "init_states_file": "put_the_bowl_on_top_of_the_cabinet.pruned_init"
+      },
+      "instruction": "put the bowl on top of the cabinet",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_goal/put_the_bowl_on_top_of_the_cabinet.bddl",
+          "sha256": "2ffba859a154f50c3c99ffb3420743fa5aa65c70bf7d4cd26f5bc81d07be5713"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_goal/put_the_bowl_on_top_of_the_cabinet.pruned_init",
+          "sha256": "c0b7baf82f36f5304488bac91d788800a1c93d0a9fd19a73f448992d5366e145"
+        }
+      },
+      "suite": "libero_goal",
+      "initial_state_index": 1,
+      "episode_id": "task-0004-episode-0001",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 106,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7688037.02787607,
+      "started_unix_s": 1794220049.267126,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          79
+        ],
+        "dtype": "float64",
+        "sha256": "a24dd942d9f6deb711a6954ba2dbccbfc86fa8b5b573ae8a376087b051fe62a0"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "018874d8bd5465855a12351b8c834e2d3297369986925b01cb04a63296ab4be8"
+      },
+      "last_step_monotonic_s": 7688059.133789774,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "3898467fcb924e62f99c95a473713e54ec4313b47def7cbcc0bc29f065250533"
+      },
+      "unnorm_key": "libero_goal",
+      "first_prompt": "In: What action should the robot take to put the bowl on top of the cabinet?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "67083cc0ff30dc249fc27c60d586bb640b02933b43d167b47dbef6c581faca60"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            23
+          ],
+          "dtype": "int64",
+          "sha256": "5a4978da8e2ad9633f83b8b134938721668decceb1d4efc13bf29947681dac5d"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            23
+          ],
+          "dtype": "int64",
+          "sha256": "23167a3479d57167d90baa090e22256eacb0be4c607df2d4ce0a7234a80aa4cc"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "7c2c6b38329c31cc104426e07326c9d4e27d0513cfb7fea3e620a83043203d34"
+        }
+      },
+      "first_environment_action": [
+        0.0009768793395921183,
+        0.34555671028062407,
+        0.0,
+        -0.0001743721319179825,
+        -0.00047268236384673257,
+        -0.010083970950806848,
+        -1.0
+      ],
+      "elapsed_s": 22.105997283011675,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 5,
+      "task": {
+        "name": "push_the_plate_to_the_front_of_the_stove",
+        "language": "push the plate to the front of the stove",
+        "problem": "Libero",
+        "problem_folder": "libero_goal",
+        "bddl_file": "push_the_plate_to_the_front_of_the_stove.bddl",
+        "init_states_file": "push_the_plate_to_the_front_of_the_stove.pruned_init"
+      },
+      "instruction": "push the plate to the front of the stove",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_goal/push_the_plate_to_the_front_of_the_stove.bddl",
+          "sha256": "26f22f8ad39a4b2b344b049115c45661a877fa0b4821fb78246725e7e87d8c0b"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_goal/push_the_plate_to_the_front_of_the_stove.pruned_init",
+          "sha256": "794beed679b18bbd7d9fb851c81877a974915ad63addff2d5ac5af0607fafac9"
+        }
+      },
+      "suite": "libero_goal",
+      "initial_state_index": 4,
+      "episode_id": "task-0005-episode-0004",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 300,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7688298.554361369,
+      "started_unix_s": 1794220310.7936115,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          79
+        ],
+        "dtype": "float64",
+        "sha256": "71116ae4b43c3c11ec4fb932fdfabd0a923cb3669b4f8508a96fa58284f2afa6"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "e825ad4bcc931553c4fe0c7ebed6137c9ec52fdc360ef6fcf397373e20cae9cf"
+      },
+      "last_step_monotonic_s": 7688359.561128888,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "8258d8588df4774b21d11605424899d35f972f56fdbcdc8e3abf857977dcfa8a"
+      },
+      "unnorm_key": "libero_goal",
+      "first_prompt": "In: What action should the robot take to push the plate to the front of the stove?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "3b3bf28e3b30344c6823adf88cb45c89c1504a8804b00cf1234ea0edd5d8bfba"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            24
+          ],
+          "dtype": "int64",
+          "sha256": "b9b7193b05177ab348cd059981019d0a10f7b35cbeeb6b79730105a365bae495"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            24
+          ],
+          "dtype": "int64",
+          "sha256": "d335b3bc1461ed30f75513e7c17ed90d15c756ef02e8911aee0c66b1bddaf425"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "002aa10eab165ad8631fb66af7fc9eb851bedfc0e3790a96eef8dd5dff855cec"
+        }
+      },
+      "first_environment_action": [
+        0.09356091408168565,
+        -0.0007247994927799262,
+        -0.05882352941176472,
+        -0.0001743721319179825,
+        0.002880258887421855,
+        -2.9559176634358364e-05,
+        -1.0
+      ],
+      "elapsed_s": 61.00690122228116,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 8,
+      "task": {
+        "name": "put_the_bowl_on_the_plate",
+        "language": "put the bowl on the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_goal",
+        "bddl_file": "put_the_bowl_on_the_plate.bddl",
+        "init_states_file": "put_the_bowl_on_the_plate.pruned_init"
+      },
+      "instruction": "put the bowl on the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_goal/put_the_bowl_on_the_plate.bddl",
+          "sha256": "358b7781437e412c67d6a7648c1c28796b6b1bf117a25e61316cb8dfeb940e5b"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_goal/put_the_bowl_on_the_plate.pruned_init",
+          "sha256": "ef3466ffad734754dc40eba1f6f5712e37aa46b9692c595e0da34f16d3a0c668"
+        }
+      },
+      "suite": "libero_goal",
+      "initial_state_index": 4,
+      "episode_id": "task-0008-episode-0004",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 300,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7688712.237266517,
+      "started_unix_s": 1794220724.476517,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          79
+        ],
+        "dtype": "float64",
+        "sha256": "37a6335a9df3d3d5a8fa5a41f6ddfb9097309c755a561166b5d4557ada91bf1f"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "2b164450ceadfd8a281708470e49e149fa8eea33dd9b358dcf8d98108bec840b"
+      },
+      "last_step_monotonic_s": 7688775.459066094,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "de8ca8caca9107f12ed96ba1b3be78e737256c32a646dd13ea0c707ecef1684f"
+      },
+      "unnorm_key": "libero_goal",
+      "first_prompt": "In: What action should the robot take to put the bowl on the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "cc55497f440f6820d2bd0061f345f6c5e0040e75b25908cc60c29b6d79dbb5d7"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            21
+          ],
+          "dtype": "int64",
+          "sha256": "7caf620a58efa1f24ba75b7cdcefe2508e74f56e975b3c829f87d69046e318d5"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            21
+          ],
+          "dtype": "int64",
+          "sha256": "7b0f2fad20a85cf0019788e98b3bf0246e7c45861e5741368767c361c16c2392"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "f6c0b1ef2518c8033bd6f38b9b2178afc338dbaf6a62251023caa53edd18ec82"
+        }
+      },
+      "first_environment_action": [
+        0.3214600765237621,
+        0.23448528261745682,
+        0.0,
+        -0.0252079852948002,
+        -0.00047268236384673257,
+        -0.03019279449915184,
+        -1.0
+      ],
+      "elapsed_s": 63.2219573976472,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 9,
+      "task": {
+        "name": "put_the_wine_bottle_on_the_rack",
+        "language": "put the wine bottle on the rack",
+        "problem": "Libero",
+        "problem_folder": "libero_goal",
+        "bddl_file": "put_the_wine_bottle_on_the_rack.bddl",
+        "init_states_file": "put_the_wine_bottle_on_the_rack.pruned_init"
+      },
+      "instruction": "put the wine bottle on the rack",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_goal/put_the_wine_bottle_on_the_rack.bddl",
+          "sha256": "3d3ee18139056aa3780572cde17b1c50dc20ae0d299403f65e514e8471ba0e8e"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_goal/put_the_wine_bottle_on_the_rack.pruned_init",
+          "sha256": "fa09aa4ade871c1c6be3dd8c93eb3437ea15190fd7dc73b8c986c8d2d3cfb062"
+        }
+      },
+      "suite": "libero_goal",
+      "initial_state_index": 2,
+      "episode_id": "task-0009-episode-0002",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 300,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7688830.021502361,
+      "started_unix_s": 1794220842.2607527,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          79
+        ],
+        "dtype": "float64",
+        "sha256": "dda954afd150660760d0fb98ac9ba4a26f0cbc8b96385242673145d8aef60a35"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "cdf40e5db1fe4a6aa7367c042625a441c8618e8a28a81656cacfb10d23f16a4b"
+      },
+      "last_step_monotonic_s": 7688891.580792219,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "c65d93506159070cf45c20f6eeed00ddd32011b920488778e6b4cb2f609e5ff4"
+      },
+      "unnorm_key": "libero_goal",
+      "first_prompt": "In: What action should the robot take to put the wine bottle on the rack?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "9cfd57b006bc21e077df97f1f9bfb345d37d701d67755367ad2c9e6f518e229f"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            23
+          ],
+          "dtype": "int64",
+          "sha256": "abecc075932dad14f1d0289749608c0acb6086cd4a5980edd71626a2cfce2bae"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            23
+          ],
+          "dtype": "int64",
+          "sha256": "23167a3479d57167d90baa090e22256eacb0be4c607df2d4ce0a7234a80aa4cc"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "52d8d0d51a690342be2807536461dcd3f4e1f2326fb831815f4f0476a94ad43e"
+        }
+      },
+      "first_environment_action": [
+        0.15765755351851962,
+        -0.0007247994927799262,
+        0.0,
+        -0.0001743721319179825,
+        0.007909670764324722,
+        -2.9559176634358364e-05,
+        -1.0
+      ],
+      "elapsed_s": 61.55943873524666,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 9,
+      "task": {
+        "name": "put_the_wine_bottle_on_the_rack",
+        "language": "put the wine bottle on the rack",
+        "problem": "Libero",
+        "problem_folder": "libero_goal",
+        "bddl_file": "put_the_wine_bottle_on_the_rack.bddl",
+        "init_states_file": "put_the_wine_bottle_on_the_rack.pruned_init"
+      },
+      "instruction": "put the wine bottle on the rack",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_goal/put_the_wine_bottle_on_the_rack.bddl",
+          "sha256": "3d3ee18139056aa3780572cde17b1c50dc20ae0d299403f65e514e8471ba0e8e"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_goal/put_the_wine_bottle_on_the_rack.pruned_init",
+          "sha256": "fa09aa4ade871c1c6be3dd8c93eb3437ea15190fd7dc73b8c986c8d2d3cfb062"
+        }
+      },
+      "suite": "libero_goal",
+      "initial_state_index": 3,
+      "episode_id": "task-0009-episode-0003",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 300,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7688891.582939975,
+      "started_unix_s": 1794220903.82219,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          79
+        ],
+        "dtype": "float64",
+        "sha256": "0b4176247c74d2e333911df93b570f265c4b2939ecd6ab0029219140772c7976"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "c39ad06187aa43ae7936252b3dde2a8cac49c64fe7d62c901110094965bbc8cd"
+      },
+      "last_step_monotonic_s": 7688951.796091091,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "7a711aa95a91fe9c95657c74c8b6ed15bb6f3f45a59d617d23d369bb9b997c63"
+      },
+      "unnorm_key": "libero_goal",
+      "first_prompt": "In: What action should the robot take to put the wine bottle on the rack?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "d142ac4c623d0795a538cf31c2bbd31adcd402a8fb5cfea6338ba62a51a31b99"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            23
+          ],
+          "dtype": "int64",
+          "sha256": "abecc075932dad14f1d0289749608c0acb6086cd4a5980edd71626a2cfce2bae"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            23
+          ],
+          "dtype": "int64",
+          "sha256": "23167a3479d57167d90baa090e22256eacb0be4c607df2d4ce0a7234a80aa4cc"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "25166c66c4eb870b32cf8d8a053ec05e586e63f6454656e0b9f858e5cc5d5454"
+        }
+      },
+      "first_environment_action": [
+        0.0009768793395921183,
+        -0.0007247994927799262,
+        0.0,
+        -0.0001743721319179825,
+        -0.00047268236384673257,
+        -2.9559176634358364e-05,
+        -1.0
+      ],
+      "elapsed_s": 60.21330085583031,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 0,
+      "task": {
+        "name": "LIVING_ROOM_SCENE2_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket",
+        "language": "put both the alphabet soup and the tomato sauce in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "LIVING_ROOM_SCENE2_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket.bddl",
+        "init_states_file": "LIVING_ROOM_SCENE2_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket.pruned_init"
+      },
+      "instruction": "put both the alphabet soup and the tomato sauce in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/LIVING_ROOM_SCENE2_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket.bddl",
+          "sha256": "2e661058917f683a25bce480015197f0a2c1911bcbc2b9dd9d947199069c9618"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/LIVING_ROOM_SCENE2_put_both_the_alphabet_soup_and_the_tomato_sauce_in_the_basket.pruned_init",
+          "sha256": "1899fe54c51e24a41d5f9e32254730d6777f4894ab68e0e873f1fa7ae2062030"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 2,
+      "episode_id": "task-0000-episode-0002",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 326,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7689739.969377196,
+      "started_unix_s": 1794221752.2086275,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          123
+        ],
+        "dtype": "float64",
+        "sha256": "be0c23f82748baf99eea1ecc4ff28eb82163945bc0bfffb509eeef0decced138"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "4c31891e0a26888f6d4d261a56882da46b29372c464384c030722c3123c739a1"
+      },
+      "last_step_monotonic_s": 7689805.371826907,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "96dfc51393076a9d9b4894baab5d30f5cb56381e4c9bf4fb6ac6acc09ca9c6a2"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put both the alphabet soup and the tomato sauce in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "92e878631f79702d76a53aad9a22d5ee4a7d86dc79993078aa30d186ce09dfbf"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            28
+          ],
+          "dtype": "int64",
+          "sha256": "552f014575f23dd9e63fa1e535c6f772275f8c4797073a1db3b10665fc468ef7"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            28
+          ],
+          "dtype": "int64",
+          "sha256": "f08c1a12407ba17e3e4e8899e0617198bdbf4b319bb8ee8d722f17dd75c64c95"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "051d6af5c6afdf9b17bc0a58a79afd6e929146495122912bca45144cffc0d218"
+        }
+      },
+      "first_environment_action": [
+        0.09587711446425484,
+        -0.2688813125385957,
+        0.00034138186305165963,
+        -0.00046428395252602617,
+        0.026244287530581167,
+        -0.007703771427565953,
+        -1.0
+      ],
+      "elapsed_s": 65.40261277649552,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 1,
+      "task": {
+        "name": "LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket",
+        "language": "put both the cream cheese box and the butter in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.bddl",
+        "init_states_file": "LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.pruned_init"
+      },
+      "instruction": "put both the cream cheese box and the butter in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.bddl",
+          "sha256": "3f552805c7ab34c44debcf38a48b8131d6fee3011dd86c039650b84e0f77d058"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.pruned_init",
+          "sha256": "f8ac06ea8f43bb328d40cba1e6a9767da2f8f5386fd7ff3f845c64a96bf6d2ce"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 1,
+      "episode_id": "task-0001-episode-0001",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 294,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7690028.629320035,
+      "started_unix_s": 1794222040.86857,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          123
+        ],
+        "dtype": "float64",
+        "sha256": "cd3e7f86ef217ee7b7d26cc505b3f56ea8f49664ef10f6749270dfcd39dd17a6"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "0761185c7e96b51892283fbe440c6712f59792670414bf31114f0ff3b7a9bc96"
+      },
+      "last_step_monotonic_s": 7690087.689403441,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "8182dcbf5aec2c11aef5e49705898ea632c51be33357f71fa2812f09915dd8b3"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put both the cream cheese box and the butter in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "455bf41d6b521eceb1afff4cc80ce7a55cbc8eb5a57499e8e500b4b195380528"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "971135c4374f04a22da9779b7b6a7dce99695443da1c8ce3c64000362e72ea52"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "dbc98745bb89574fe808968d7aafdc064cc3716ca2659f29141f428aa5be64c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "ccba0e88baa413e17d5a4de8ac20866791276a9e3d1d8b66f7836cd071253fbb"
+        }
+      },
+      "first_environment_action": [
+        0.013156526228960908,
+        -0.0019695450277890103,
+        0.00034138186305165963,
+        -0.00046428395252602617,
+        -0.00031470433169719647,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 59.060207339935005,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 1,
+      "task": {
+        "name": "LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket",
+        "language": "put both the cream cheese box and the butter in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.bddl",
+        "init_states_file": "LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.pruned_init"
+      },
+      "instruction": "put both the cream cheese box and the butter in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.bddl",
+          "sha256": "3f552805c7ab34c44debcf38a48b8131d6fee3011dd86c039650b84e0f77d058"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/LIVING_ROOM_SCENE2_put_both_the_cream_cheese_box_and_the_butter_in_the_basket.pruned_init",
+          "sha256": "f8ac06ea8f43bb328d40cba1e6a9767da2f8f5386fd7ff3f845c64a96bf6d2ce"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 2,
+      "episode_id": "task-0001-episode-0002",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 520,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7690087.691295594,
+      "started_unix_s": 1794222099.9305456,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          123
+        ],
+        "dtype": "float64",
+        "sha256": "ab6bf2ca98e96f1692d8ec7a5b7ec25eee1ea61c57d45c2816ac3dcc938ea3ee"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "a13b3e991ef3a19790a6301fa2b09713fc8523641abeee83596da1634c05fe6c"
+      },
+      "last_step_monotonic_s": 7690190.461315435,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "4048b487fdd7b84e3b7b7d00b0b29b6b344601d83d92bc1a091e2968805629b8"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put both the cream cheese box and the butter in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "26e167c5da14030e7fd0b4dc8c64269d774171e48d98b79101088bb163c8e621"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "971135c4374f04a22da9779b7b6a7dce99695443da1c8ce3c64000362e72ea52"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "dbc98745bb89574fe808968d7aafdc064cc3716ca2659f29141f428aa5be64c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "24cfe9f32809da1f83353c4c3e69c6a985615ea6f3da2f07cdf6d35940d09f89"
+        }
+      },
+      "first_environment_action": [
+        0.21168593799366664,
+        -0.1290703866996017,
+        0.00034138186305165963,
+        -0.005107141008564076,
+        -0.00031470433169719647,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 102.77016866859049,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 2,
+      "task": {
+        "name": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it",
+        "language": "turn on the stove and put the moka pot on it",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.bddl",
+        "init_states_file": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.pruned_init"
+      },
+      "instruction": "turn on the stove and put the moka pot on it",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.bddl",
+          "sha256": "491835cc2eb6956f7ce3d1ee4e266377116168fe453e6529fe105e3b0333635d"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.pruned_init",
+          "sha256": "02a8401f8d59f5447fc8c5a16f4c158dd8c426c3eaed6779927a2a53e9abf3c5"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 0,
+      "episode_id": "task-0002-episode-0000",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 242,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7690300.710258414,
+      "started_unix_s": 1794222312.9495087,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          47
+        ],
+        "dtype": "float64",
+        "sha256": "9ae67aa7e7dd9987ecd1f2930e2b061fb66a414dd94e4b575417356a556cbd90"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "7869c386d5516ba650b4736e3fc3e2e61106bb455d04eb41f54ad2980357623c"
+      },
+      "last_step_monotonic_s": 7690347.217510159,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "4fb05c89211b8b0a6be9a56433823aa202c475447a8afd0862e7d991777cd3cb"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to turn on the stove and put the moka pot on it?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "50dbfaa5c69e9da5944d75540da60aaa81cd7a89f096695eeb2df78d9db4dcc8"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            27
+          ],
+          "dtype": "int64",
+          "sha256": "b8e87ef32a91dc3b3dc37b3ef2ae1b60b94c403dc46fe9496a503df578effdea"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            27
+          ],
+          "dtype": "int64",
+          "sha256": "df73626ca9ef228183ab01ba4210dd2db847e7b38680f2e78e23ada2cc818f87"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "bad9eab96c9c3e51304e2d18ea5587bb4d61c52eb101176ac9ace082cd7c19f4"
+        }
+      },
+      "first_environment_action": [
+        0.0021271144642549533,
+        0.5382090320774153,
+        0.007011549963670594,
+        -0.00046428395252602617,
+        -0.019630334776990527,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 46.507365845143795,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 2,
+      "task": {
+        "name": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it",
+        "language": "turn on the stove and put the moka pot on it",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.bddl",
+        "init_states_file": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.pruned_init"
+      },
+      "instruction": "turn on the stove and put the moka pot on it",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.bddl",
+          "sha256": "491835cc2eb6956f7ce3d1ee4e266377116168fe453e6529fe105e3b0333635d"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.pruned_init",
+          "sha256": "02a8401f8d59f5447fc8c5a16f4c158dd8c426c3eaed6779927a2a53e9abf3c5"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 1,
+      "episode_id": "task-0002-episode-0001",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 262,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7690347.219100566,
+      "started_unix_s": 1794222359.4583507,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          47
+        ],
+        "dtype": "float64",
+        "sha256": "453d74e45f2f7141904a047d4237db1ee0b5576fe7a3f6c2cb4801e83bacb88a"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "36dbeed05af9171ee2412f63d3cc35c634728e05a6b49f34c0bd236b1971790c"
+      },
+      "last_step_monotonic_s": 7690397.621772063,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "ec1ba160821109c6f70e85da4be5868483afbda2eac847b6dbe495a49e181112"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to turn on the stove and put the moka pot on it?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "c02d46a7055a424d44af58cedbe71e54e772f9dcd31ea7ca1b479726fc2c84f5"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            27
+          ],
+          "dtype": "int64",
+          "sha256": "b8e87ef32a91dc3b3dc37b3ef2ae1b60b94c403dc46fe9496a503df578effdea"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            27
+          ],
+          "dtype": "int64",
+          "sha256": "df73626ca9ef228183ab01ba4210dd2db847e7b38680f2e78e23ada2cc818f87"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "88857fa02590583257dd0e67d8bccad901986c76de413915ffdd3da774e3b3a9"
+        }
+      },
+      "first_environment_action": [
+        0.0021271144642549533,
+        0.07429095997529878,
+        0.00034138186305165963,
+        -0.006035712419771688,
+        -0.00031470433169719647,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 50.40281080361456,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 2,
+      "task": {
+        "name": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it",
+        "language": "turn on the stove and put the moka pot on it",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.bddl",
+        "init_states_file": "KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.pruned_init"
+      },
+      "instruction": "turn on the stove and put the moka pot on it",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.bddl",
+          "sha256": "491835cc2eb6956f7ce3d1ee4e266377116168fe453e6529fe105e3b0333635d"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it.pruned_init",
+          "sha256": "02a8401f8d59f5447fc8c5a16f4c158dd8c426c3eaed6779927a2a53e9abf3c5"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 2,
+      "episode_id": "task-0002-episode-0002",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 361,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7690397.623571775,
+      "started_unix_s": 1794222409.8628218,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          47
+        ],
+        "dtype": "float64",
+        "sha256": "8227fd36ba47ae92020986ff9b090acd500ddadcc057c66b04f8afe6fb4de2bb"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "dab51a7e95976f1126182aaa233cea05585673bbe119382d40032adf1e22facb"
+      },
+      "last_step_monotonic_s": 7690466.985050376,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "a7aa78da697e088ed9f2f37a9eb66000d9685adaade07ac0c5fbff03e5be6e44"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to turn on the stove and put the moka pot on it?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "9218ad2249df39c6cedc78cdd321072c5b5db8c32015da57b762ac4c049989f5"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            27
+          ],
+          "dtype": "int64",
+          "sha256": "b8e87ef32a91dc3b3dc37b3ef2ae1b60b94c403dc46fe9496a503df578effdea"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            27
+          ],
+          "dtype": "int64",
+          "sha256": "df73626ca9ef228183ab01ba4210dd2db847e7b38680f2e78e23ada2cc818f87"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "655e21c7e3cb49b7abb098f7fe06bef3cc2740ad5cd3f1405027294776b7cac6"
+        }
+      },
+      "first_environment_action": [
+        0.0021271144642549533,
+        0.010740539139392324,
+        0.00034138186305165963,
+        -0.00046428395252602617,
+        -0.00031470433169719647,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 69.36159698199481,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 4,
+      "task": {
+        "name": "LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate_and_put_the_yellow_and_white_mug_on_the_right_plate",
+        "language": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate_and_put_the_yellow_and_white_mug_on_the_right_plate.bddl",
+        "init_states_file": "LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate_and_put_the_yellow_and_white_mug_on_the_right_plate.pruned_init"
+      },
+      "instruction": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate_and_put_the_yellow_and_white_mug_on_the_right_plate.bddl",
+          "sha256": "0c6749b920bff1e1efe47ffb0e0b801a3e6959a650e710f376dd2b812c74e865"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate_and_put_the_yellow_and_white_mug_on_the_right_plate.pruned_init",
+          "sha256": "b6f20784b381c75d715f4fdaadda1fb460cbe24adcbad76f381a009419b8474e"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 3,
+      "episode_id": "task-0004-episode-0003",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 242,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7691318.482955572,
+      "started_unix_s": 1794223330.7222054,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          84
+        ],
+        "dtype": "float64",
+        "sha256": "79a2ec18a6067d027a62de697a1931bf818dffc4dd7572c39c4426e122bd35d0"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "595606b084fd133bd759968b36ee61b1d33ca5de1b14ac221ea3894751ce3f6a"
+      },
+      "last_step_monotonic_s": 7691366.72509633,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "cb0a9273cf1066ffc238be7fd7614d12a9ee02dfae52c5cc4a8f717a37bfac77"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put the white mug on the left plate and put the yellow and white mug on the right plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "77ede2ff7bd89592a4ec2e766420520a978e6e7698fc397fbf85424721936ec8"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            35
+          ],
+          "dtype": "int64",
+          "sha256": "71482500e88eb84dd32eea4106efcf10e73e40c312385390a4cfd446913a86bc"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            35
+          ],
+          "dtype": "int64",
+          "sha256": "036b147c383432a13cea95c541458cf67bddf7b07752c4afb92585284e9b36a2"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "2fa3c9a4945da91aa74b758bd8e2329d4a8a829565356b802dd84a8da2af3b1c"
+        }
+      },
+      "first_environment_action": [
+        0.035215349758372594,
+        -0.05280988169651413,
+        -0.033009458640042455,
+        -0.00046428395252602617,
+        -0.00031470433169719647,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 48.242274574935436,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 6,
+      "task": {
+        "name": "LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate_and_put_the_chocolate_pudding_to_the_right_of_the_plate",
+        "language": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate_and_put_the_chocolate_pudding_to_the_right_of_the_plate.bddl",
+        "init_states_file": "LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate_and_put_the_chocolate_pudding_to_the_right_of_the_plate.pruned_init"
+      },
+      "instruction": "put the white mug on the plate and put the chocolate pudding to the right of the plate",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate_and_put_the_chocolate_pudding_to_the_right_of_the_plate.bddl",
+          "sha256": "dbc9464b424cdc9b771b92d0b8a8c185b1b539f6a4133b323dc858bcf8f6a9c2"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate_and_put_the_chocolate_pudding_to_the_right_of_the_plate.pruned_init",
+          "sha256": "6e811394c4ff9a43ae23515d8512e9b657c04344b94dd5baed121b595490514f"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 1,
+      "episode_id": "task-0006-episode-0001",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 392,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7691784.587173404,
+      "started_unix_s": 1794223796.8264234,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          71
+        ],
+        "dtype": "float64",
+        "sha256": "606fa88e4dcd86bf0c84c6c2954eb002166e93037b39e7ed893f0c41e7a15577"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "a1c13c0847583970a5f72f0e1377506a83d7cc4edda948f9a791073067cfc6f4"
+      },
+      "last_step_monotonic_s": 7691860.665350254,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "b97267acf3690b1c9ccfc6d2c774edcea63719b16a0d97cf50da3173fef5c6a8"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put the white mug on the plate and put the chocolate pudding to the right of the plate?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "6b7997064b4434c98244bb5f3651cb73904b1812b88b0dedbbde21008778169a"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            37
+          ],
+          "dtype": "int64",
+          "sha256": "66f6414391100df7a582bec41deb366ee971e652f59a1ae6a76cf271f0635056"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            37
+          ],
+          "dtype": "int64",
+          "sha256": "ec37504372901fc76c27a11cf01f4ea1f0b30ca7257611d71d54a1a85be99518"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "740fa416f0af5bac9658367334ae0debe561661057b605d40b35fe147c811153"
+        }
+      },
+      "first_environment_action": [
+        0.007641820346607875,
+        -0.16084559711755497,
+        0.00034138186305165963,
+        -0.00046428395252602617,
+        0.020208153016427033,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 76.07831433229148,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 7,
+      "task": {
+        "name": "LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket",
+        "language": "put both the alphabet soup and the cream cheese box in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.bddl",
+        "init_states_file": "LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.pruned_init"
+      },
+      "instruction": "put both the alphabet soup and the cream cheese box in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.bddl",
+          "sha256": "e27ab37f512fe42e35771d6130f531e6a9656929e7b4c60b348b81360cf5675d"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.pruned_init",
+          "sha256": "2113ea5923fcbbe1b57b428383934496072f062729d0b72d3021573d55d25abc"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 0,
+      "episode_id": "task-0007-episode-0000",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 232,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7692044.184806349,
+      "started_unix_s": 1794224056.4240563,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          84
+        ],
+        "dtype": "float64",
+        "sha256": "d02d4d5533fbcab414bfc49e4896182cd40e173dfa6316e39a2b418e902ae826"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "c5fedabfcdef6851eb76021463b3b20249f9be60c146a9adf0d69aeeb6273c1c"
+      },
+      "last_step_monotonic_s": 7692090.994561244,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "a6d5011aff8f25e5b20da24462469fa12f7facefc598cfbb98efa266655bf4f5"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put both the alphabet soup and the cream cheese box in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "0ba12c11081919b4cd7269765f53341459fb86c191d63913cbc6543910e97576"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "35b698bd5f701526edb80b0c55b16d314faec7a3449ea07a5ef303c990de3944"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "dbc98745bb89574fe808968d7aafdc064cc3716ca2659f29141f428aa5be64c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "00f3658412bed733991a0aa89081922856bb8b8a12841842b178b9ef1799e967"
+        }
+      },
+      "first_environment_action": [
+        0.18411240858190192,
+        -0.0019695450277890103,
+        -0.026339290539423632,
+        -0.00046428395252602617,
+        -0.00031470433169719647,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 46.80989717319608,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 7,
+      "task": {
+        "name": "LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket",
+        "language": "put both the alphabet soup and the cream cheese box in the basket",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.bddl",
+        "init_states_file": "LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.pruned_init"
+      },
+      "instruction": "put both the alphabet soup and the cream cheese box in the basket",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.bddl",
+          "sha256": "e27ab37f512fe42e35771d6130f531e6a9656929e7b4c60b348b81360cf5675d"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/LIVING_ROOM_SCENE1_put_both_the_alphabet_soup_and_the_cream_cheese_box_in_the_basket.pruned_init",
+          "sha256": "2113ea5923fcbbe1b57b428383934496072f062729d0b72d3021573d55d25abc"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 1,
+      "episode_id": "task-0007-episode-0001",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 520,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7692090.996256814,
+      "started_unix_s": 1794224103.235507,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          84
+        ],
+        "dtype": "float64",
+        "sha256": "44f0d75550c414e622b03a43e56497e8c9bd0fe4a494c1d2b9c0c9625ed80120"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "6723d94c979f828c0b030c1e3bf427e7778a82f2b57a0fe498642544750145a9"
+      },
+      "last_step_monotonic_s": 7692192.798291698,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "19e2298799b1368c32310b103c3964bbb4a287b522057fadd73e3b18b59a2c28"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put both the alphabet soup and the cream cheese box in the basket?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "5d3e0d38d15c1b3de1b664ae070cf97a5c12910e0d1422ccc3873bdf61229534"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "35b698bd5f701526edb80b0c55b16d314faec7a3449ea07a5ef303c990de3944"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "dbc98745bb89574fe808968d7aafdc064cc3716ca2659f29141f428aa5be64c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "d20640b2b0c444934521cbce6e659e3afbf9797e64377007b051946d37c6bfb6"
+        }
+      },
+      "first_environment_action": [
+        0.4653624085819019,
+        -0.05916492378010474,
+        0.00034138186305165963,
+        -0.00046428395252602617,
+        0.026244287530581167,
+        -0.07816595622137482,
+        -1.0
+      ],
+      "elapsed_s": 101.80218512471765,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 8,
+      "task": {
+        "name": "KITCHEN_SCENE8_put_both_moka_pots_on_the_stove",
+        "language": "put both moka pots on the stove",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "KITCHEN_SCENE8_put_both_moka_pots_on_the_stove.bddl",
+        "init_states_file": "KITCHEN_SCENE8_put_both_moka_pots_on_the_stove.pruned_init"
+      },
+      "instruction": "put both moka pots on the stove",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/KITCHEN_SCENE8_put_both_moka_pots_on_the_stove.bddl",
+          "sha256": "ae1299a707d3e810096ad648948c517de40474bcdacca93a15e17d191e34454a"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/KITCHEN_SCENE8_put_both_moka_pots_on_the_stove.pruned_init",
+          "sha256": "44f992e911c84a1340589510ecdaf947a4872966f7678c8364d8bb5d13dc4dac"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 1,
+      "episode_id": "task-0008-episode-0001",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 445,
+      "settling_steps": 10,
+      "success": true,
+      "errors": [],
+      "started_monotonic_s": 7692573.27584455,
+      "started_unix_s": 1794224585.5150948,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          47
+        ],
+        "dtype": "float64",
+        "sha256": "cf1b859b0688c3c3ea64fba0ab5bd29b88ff7f28dc5893df4cb7564ac4db8cce"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "ea5c8c96bd4d844768e838034d0dacf9fe6e1478e7a28dd5922270c1205407e1"
+      },
+      "last_step_monotonic_s": 7692659.678841775,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "0d2a41056369194f371de730fc646fd9f1d4b7938b97e3fd5f54053582966170"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put both moka pots on the stove?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "9ed27d02f4b99f99f5d13779e64dfc6d5dce730df6933e8d3c8d000c5dcbd146"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            24
+          ],
+          "dtype": "int64",
+          "sha256": "8923802f240e653d6abc15da878cdb249262a01f3003c2cc91a58b74166a3ba3"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            24
+          ],
+          "dtype": "int64",
+          "sha256": "d335b3bc1461ed30f75513e7c17ed90d15c756ef02e8911aee0c66b1bddaf425"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "159bf20d3199733b79ca738ade20ffd16d5e60cb52a2f6099c62d1a2128a9c18"
+        }
+      },
+      "first_environment_action": [
+        0.09587711446425484,
+        -0.0019695450277890103,
+        0.00034138186305165963,
+        -0.00046428395252602617,
+        -0.00031470433169719647,
+        -0.0405861243313434,
+        -1.0
+      ],
+      "elapsed_s": 86.40314078051597,
+      "upstream_logged_success": true,
+      "end_reason": "success",
+      "completed": true
+    },
+    {
+      "task_id": 9,
+      "task": {
+        "name": "KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it",
+        "language": "put the yellow and white mug in the microwave and close it",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.bddl",
+        "init_states_file": "KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.pruned_init"
+      },
+      "instruction": "put the yellow and white mug in the microwave and close it",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.bddl",
+          "sha256": "456d145f92be049f445fc77673dc583d9d17ea7afe92f6ffcb2fd1fa5565d420"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.pruned_init",
+          "sha256": "6b75c8d4d1e1c40b5d99c78ceea380d99ccffb0a484a4cb2d3153488a0afbbe2"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 3,
+      "episode_id": "task-0009-episode-0003",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 520,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7693239.767139313,
+      "started_unix_s": 1794225252.0063896,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          47
+        ],
+        "dtype": "float64",
+        "sha256": "ac150060868f6d48b6b53f5d8f07e71e04d3ca8883ff52edae6b0f543c05659a"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "c5360cd80a55400faf0f7d6cec59f597306dc8962d66af35a925cac13b81f4c5"
+      },
+      "last_step_monotonic_s": 7693341.689622334,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "663beeef8b0af9b4081c164fe926b5ac007353a590acdffd44488b99cd7ee942"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put the yellow and white mug in the microwave and close it?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "0c5a9d62cdd436f0f41818c7515d9bbf04ee19f85af88c384e3cda4df04b3143"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "4e83c29cf031444c1833e60d350f4a1e45ab8f7f64aa93b3e19a1bcdfa26cd6e"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "dbc98745bb89574fe808968d7aafdc064cc3716ca2659f29141f428aa5be64c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "d83cce484ffb7a9ed9fc60599d9aff4ed636f9e1c87ad6e512f307f5160f1861"
+        }
+      },
+      "first_environment_action": [
+        0.05727417328778439,
+        -0.0019695450277890103,
+        0.00034138186305165963,
+        -0.00046428395252602617,
+        -0.00031470433169719647,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 101.9226174801588,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    },
+    {
+      "task_id": 9,
+      "task": {
+        "name": "KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it",
+        "language": "put the yellow and white mug in the microwave and close it",
+        "problem": "Libero",
+        "problem_folder": "libero_10",
+        "bddl_file": "KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.bddl",
+        "init_states_file": "KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.pruned_init"
+      },
+      "instruction": "put the yellow and white mug in the microwave and close it",
+      "input_files": {
+        "bddl": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/bddl_files/libero_10/KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.bddl",
+          "sha256": "456d145f92be049f445fc77673dc583d9d17ea7afe92f6ffcb2fd1fa5565d420"
+        },
+        "initial_states": {
+          "path": "/root/autodl-tmp/openvla-native-runtime/LIBERO/libero/libero/init_files/libero_10/KITCHEN_SCENE6_put_the_yellow_and_white_mug_in_the_microwave_and_close_it.pruned_init",
+          "sha256": "6b75c8d4d1e1c40b5d99c78ceea380d99ccffb0a484a4cb2d3153488a0afbbe2"
+        }
+      },
+      "suite": "libero_10",
+      "initial_state_index": 4,
+      "episode_id": "task-0009-episode-0004",
+      "global_seed": 7,
+      "environment_seed": 7,
+      "policy_steps": 520,
+      "settling_steps": 10,
+      "success": false,
+      "errors": [],
+      "started_monotonic_s": 7693341.692407492,
+      "started_unix_s": 1794225353.9316576,
+      "elapsed_boundary": "before env.reset through upstream video/log writes",
+      "initial_state": {
+        "shape": [
+          47
+        ],
+        "dtype": "float64",
+        "sha256": "e3ba923c504addfab7f0ef464e30c4de9e70f02106fdd714ce793dda722233f7"
+      },
+      "initial_primary_image": {
+        "shape": [
+          256,
+          256,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "7dd981b6f6c121b9dc7d86ad01cdceed28a39299719f18bf268f730b2ea5d1fd"
+      },
+      "last_step_monotonic_s": 7693443.614202793,
+      "first_resized_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "3737e512c52fa491cdf5b4396a82614a0fd842c107b1b97180ff4c4ef5a0df86"
+      },
+      "unnorm_key": "libero_10",
+      "first_prompt": "In: What action should the robot take to put the yellow and white mug in the microwave and close it?\nOut:",
+      "first_cropped_image": {
+        "shape": [
+          224,
+          224,
+          3
+        ],
+        "dtype": "uint8",
+        "sha256": "e463463ec12cedbe6e5d622d3c43d338e8240eae993f14b9fa51e89fe338bbc6"
+      },
+      "first_processor_inputs": {
+        "input_ids": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "4e83c29cf031444c1833e60d350f4a1e45ab8f7f64aa93b3e19a1bcdfa26cd6e"
+        },
+        "attention_mask": {
+          "shape": [
+            1,
+            29
+          ],
+          "dtype": "int64",
+          "sha256": "dbc98745bb89574fe808968d7aafdc064cc3716ca2659f29141f428aa5be64c5"
+        },
+        "pixel_values": {
+          "shape": [
+            1,
+            6,
+            224,
+            224
+          ],
+          "dtype": "float32",
+          "sha256": "5b8338677f47c805f70993a72e094a41b0c5b791e36b76284d8bdab181f1a963"
+        }
+      },
+      "first_environment_action": [
+        0.3109506438760197,
+        -0.0019695450277890103,
+        0.00034138186305165963,
+        -0.00046428395252602617,
+        0.026244287530581167,
+        -0.0006575529481850362,
+        -1.0
+      ],
+      "elapsed_s": 101.92192362155765,
+      "upstream_logged_success": false,
+      "end_reason": "horizon",
+      "completed": true
+    }
+  ]
+}

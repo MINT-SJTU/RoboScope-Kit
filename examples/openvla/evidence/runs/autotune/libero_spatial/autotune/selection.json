@@ -1,0 +1,206 @@
+{
+  "schema_version": 2,
+  "status": "complete",
+  "mode": "dynamic-probe",
+  "elapsed_s": 1337.2254808573052,
+  "limits": {
+    "strategy": "diagonal",
+    "throughput_estimator": "steady",
+    "candidate_timeout_s": 900.0,
+    "total_budget_s": 1800.0,
+    "maximum_success_rate_drop": 0.15
+  },
+  "candidates": [
+    {
+      "k": 1,
+      "g": 1,
+      "ramp": "k",
+      "status": "accepted",
+      "elapsed_s": 837.4385741734877,
+      "timeout_s": 900.0,
+      "progress": {
+        "completed_episodes": 10,
+        "expected_episodes": 10,
+        "successes": 8,
+        "failures": 2
+      },
+      "health": {
+        "requested_workers": 1,
+        "initial_workers": 1,
+        "final_workers": 1,
+        "worker_failures": 0,
+        "oom_events": 0,
+        "completed_episodes": 10,
+        "expected_episodes": 10,
+        "successes": 8,
+        "success_rate": 0.8
+      },
+      "metrics": {
+        "k": 1,
+        "g": 1,
+        "throughput": 4.561136195931567,
+        "cpu_cores": 1.1491467922485348,
+        "throttle_time_ratio": 0.0,
+        "gpu_utilization": 0.7015280464216634,
+        "vram_bytes": 16661872640,
+        "queue_wait_p95_ms": 0.0
+      }
+    },
+    {
+      "k": 2,
+      "g": 1,
+      "ramp": "k",
+      "status": "rejected",
+      "elapsed_s": 258.81813171878457,
+      "timeout_s": 900.0,
+      "progress": {
+        "completed_episodes": 10,
+        "expected_episodes": 10,
+        "successes": 8,
+        "failures": 2
+      },
+      "health": {
+        "requested_workers": 2,
+        "initial_workers": 2,
+        "final_workers": 2,
+        "worker_failures": 0,
+        "oom_events": 0,
+        "completed_episodes": 10,
+        "expected_episodes": 10,
+        "successes": 8,
+        "success_rate": 0.8,
+        "baseline_k": 1,
+        "baseline_successes": 8,
+        "baseline_episodes": 10,
+        "baseline_success_rate": 0.8,
+        "minimum_success_rate": 0.68,
+        "matched_episodes": 10,
+        "matched_success_rate": 0.8
+      },
+      "metrics": {
+        "k": 2,
+        "g": 1,
+        "throughput": 5.11048893533477,
+        "cpu_cores": 1.3732432707469764,
+        "throttle_time_ratio": 0.0,
+        "gpu_utilization": 0.7796982758620689,
+        "vram_bytes": 17235443712,
+        "queue_wait_p95_ms": 0.0
+      },
+      "stop_reason": "worker gain 12.0% at K=2 below knee 25.0%"
+    },
+    {
+      "k": 2,
+      "g": 2,
+      "ramp": "g",
+      "status": "accepted",
+      "elapsed_s": 240.96256600227207,
+      "timeout_s": 703.738855464384,
+      "progress": {
+        "completed_episodes": 10,
+        "expected_episodes": 10,
+        "successes": 8,
+        "failures": 2
+      },
+      "health": {
+        "requested_workers": 2,
+        "initial_workers": 2,
+        "final_workers": 2,
+        "worker_failures": 0,
+        "oom_events": 0,
+        "completed_episodes": 10,
+        "expected_episodes": 10,
+        "successes": 8,
+        "success_rate": 0.8,
+        "baseline_k": 1,
+        "baseline_successes": 8,
+        "baseline_episodes": 10,
+        "baseline_success_rate": 0.8,
+        "minimum_success_rate": 0.68,
+        "matched_episodes": 10,
+        "matched_success_rate": 0.8
+      },
+      "metrics": {
+        "k": 2,
+        "g": 2,
+        "throughput": 5.769455516914695,
+        "cpu_cores": 2.053509761031928,
+        "throttle_time_ratio": 0.0,
+        "gpu_utilization": 0.9156174334140436,
+        "vram_bytes": 33319550976,
+        "queue_wait_p95_ms": 0.0
+      }
+    }
+  ],
+  "k": 2,
+  "g": 2,
+  "bound_hint": "gpu_infer",
+  "workers_per_replica": 1.0,
+  "stop_reason": "worker gain 12.0% at K=2 below knee 25.0%; K=3, g=3 predicted GPU memory 46.1 GiB on the busiest GPU above 46.0 GiB",
+  "path": [
+    {
+      "k": 2,
+      "g": 1,
+      "gain": 0.12044208192976402,
+      "required_gain": 0.25
+    },
+    {
+      "k": 2,
+      "g": 2,
+      "gain": 0.2649162991582934
+    }
+  ],
+  "k_trials": [
+    {
+      "k": 1,
+      "g": 1,
+      "throughput": 4.561136195931567,
+      "cpu_cores": 1.1491467922485348,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.7015280464216634,
+      "vram_bytes": 16661872640,
+      "queue_wait_p95_ms": 0.0
+    }
+  ],
+  "g_trials": [
+    {
+      "k": 2,
+      "g": 2,
+      "throughput": 5.769455516914695,
+      "cpu_cores": 2.053509761031928,
+      "throttle_time_ratio": 0.0,
+      "gpu_utilization": 0.9156174334140436,
+      "vram_bytes": 33319550976,
+      "queue_wait_p95_ms": 0.0
+    }
+  ],
+  "concurrency_health": {
+    "requested_workers": 2,
+    "initial_workers": 2,
+    "final_workers": 2,
+    "worker_failures": 0,
+    "oom_events": 0,
+    "completed_episodes": 10,
+    "expected_episodes": 10,
+    "successes": 8,
+    "success_rate": 0.8,
+    "baseline_k": 1,
+    "baseline_successes": 8,
+    "baseline_episodes": 10,
+    "baseline_success_rate": 0.8,
+    "minimum_success_rate": 0.68,
+    "matched_episodes": 10,
+    "matched_success_rate": 0.8
+  },
+  "bounds": {
+    "gpu_count": 1,
+    "cpu_cores": 20.0,
+    "max_workers": 9,
+    "max_workers_hard": 64,
+    "max_replicas": 16,
+    "worker_cpu_cores": 2.0,
+    "vram_per_gpu_bytes": 51527024640,
+    "replica_vram_bytes": 15587082240
+  },
+  "strategy": "diagonal"
+}

@@ -1,0 +1,24 @@
+{
+  "item_id": "task-0001-episodes-0001-0002",
+  "group_id": "task-0001",
+  "worker_id": 1,
+  "records": [
+    {
+      "record_id": "task-0001-episode-0001",
+      "success": false,
+      "steps": 520,
+      "elapsed_s": 208.52236521802843,
+      "metadata": {
+        "task_id": 1,
+        "episode_index": 1
+      }
+    }
+  ],
+  "metadata": {
+    "suite": "libero_10",
+    "task_id": 1,
+    "task_description": "put both the cream cheese box and the butter in the basket",
+    "elapsed_s": 209.56381496600807,
+    "inference_wait_s": 195.34369835443795
+  }
+}

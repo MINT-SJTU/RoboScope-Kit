@@ -1,0 +1,124 @@
+{
+  "sdk_version": 1,
+  "benchmark": {
+    "adapter": "LiberoBenchmarkAdapter",
+    "benchmark": "libero",
+    "suite": "libero_goal",
+    "protocol": "roboscope-policy-v1",
+    "bound_hint": "gpu_infer",
+    "task_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "episodes_per_task": 5,
+    "seed": 7,
+    "render_backend": "egl"
+  },
+  "policy_io": {
+    "benchmark": "libero",
+    "action_representation": "libero.delta-eef-v1",
+    "action_representation_source": "policy",
+    "observation_stride": 1,
+    "observation_stride_source": "safe_default",
+    "step_observation_updates": false
+  },
+  "items": [
+    {
+      "ordinal": 0,
+      "item_id": "task-0004-episodes-0001-0002",
+      "group_id": "task-0004",
+      "payload": {
+        "task_id": 4,
+        "start_episode": 1,
+        "num_trials": 1
+      },
+      "expected_results": 1
+    },
+    {
+      "ordinal": 1,
+      "item_id": "task-0000-episodes-0002-0003",
+      "group_id": "task-0000",
+      "payload": {
+        "task_id": 0,
+        "start_episode": 2,
+        "num_trials": 1
+      },
+      "expected_results": 1
+    },
+    {
+      "ordinal": 2,
+      "item_id": "task-0009-episodes-0002-0003",
+      "group_id": "task-0009",
+      "payload": {
+        "task_id": 9,
+        "start_episode": 2,
+        "num_trials": 1
+      },
+      "expected_results": 1
+    },
+    {
+      "ordinal": 3,
+      "item_id": "task-0000-episodes-0003-0004",
+      "group_id": "task-0000",
+      "payload": {
+        "task_id": 0,
+        "start_episode": 3,
+        "num_trials": 1
+      },
+      "expected_results": 1
+    },
+    {
+      "ordinal": 4,
+      "item_id": "task-0009-episodes-0003-0004",
+      "group_id": "task-0009",
+      "payload": {
+        "task_id": 9,
+        "start_episode": 3,
+        "num_trials": 1
+      },
+      "expected_results": 1
+    },
+    {
+      "ordinal": 5,
+      "item_id": "task-0000-episodes-0004-0005",
+      "group_id": "task-0000",
+      "payload": {
+        "task_id": 0,
+        "start_episode": 4,
+        "num_trials": 1
+      },
+      "expected_results": 1
+    },
+    {
+      "ordinal": 6,
+      "item_id": "task-0005-episodes-0004-0005",
+      "group_id": "task-0005",
+      "payload": {
+        "task_id": 5,
+        "start_episode": 4,
+        "num_trials": 1
+      },
+      "expected_results": 1
+    },
+    {
+      "ordinal": 7,
+      "item_id": "task-0008-episodes-0004-0005",
+      "group_id": "task-0008",
+      "payload": {
+        "task_id": 8,
+        "start_episode": 4,
+        "num_trials": 1
+      },
+      "expected_results": 1
+    }
+  ],
+  "total_records": 8
+}

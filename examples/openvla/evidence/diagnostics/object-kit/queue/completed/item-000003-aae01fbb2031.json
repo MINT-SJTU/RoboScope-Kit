@@ -1,0 +1,24 @@
+{
+  "item_id": "task-0002-episodes-0004-0005",
+  "group_id": "task-0002",
+  "worker_id": 0,
+  "records": [
+    {
+      "record_id": "task-0002-episode-0004",
+      "success": true,
+      "steps": 112,
+      "elapsed_s": 40.01195858605206,
+      "metadata": {
+        "task_id": 2,
+        "episode_index": 4
+      }
+    }
+  ],
+  "metadata": {
+    "suite": "libero_object",
+    "task_id": 2,
+    "task_description": "pick up the salad dressing and place it in the basket",
+    "elapsed_s": 40.88735332712531,
+    "inference_wait_s": 37.0826860088855
+  }
+}

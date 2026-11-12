@@ -1,0 +1,298 @@
+{
+  "sdk_version": 1,
+  "runtime": {
+    "output_dir": "/root/autodl-tmp/openvla-paired-diagnostics-20261111/spatial-kit",
+    "gpu_devices": [
+      "0"
+    ],
+    "replicas": 2,
+    "concurrency": 2,
+    "base_port": 16694,
+    "ready_timeout_s": 1800.0,
+    "poll_interval_s": 0.2,
+    "probe_limits": null,
+    "shard_index": null,
+    "shard_count": null,
+    "shard_episodes": 500,
+    "shard_build": null,
+    "profile": false
+  },
+  "phase_timings": {
+    "policy_load_s": 96.91374333947897,
+    "runtime_prepare_s": 1.2069385442882776,
+    "evaluation_s": 285.50206031277776
+  },
+  "item_timeline": {
+    "completion_s": {
+      "task-0005-episodes-0001-0002": 39.26867078617215,
+      "task-0007-episodes-0000-0001": 82.59255416877568,
+      "task-0003-episodes-0002-0003": 112.90406532399356,
+      "task-0008-episodes-0001-0002": 118.32630814798176,
+      "task-0008-episodes-0002-0003": 196.8597011975944,
+      "task-0008-episodes-0003-0004": 202.48859627358615,
+      "task-0001-episodes-0003-0004": 238.87312414869666,
+      "task-0006-episodes-0003-0004": 279.0710783507675,
+      "task-0004-episodes-0003-0004": 285.5007173921913
+    },
+    "worker_id": {
+      "task-0007-episodes-0000-0001": 0,
+      "task-0005-episodes-0001-0002": 1,
+      "task-0008-episodes-0001-0002": 1,
+      "task-0003-episodes-0002-0003": 0,
+      "task-0008-episodes-0002-0003": 0,
+      "task-0001-episodes-0003-0004": 0,
+      "task-0004-episodes-0003-0004": 1,
+      "task-0006-episodes-0003-0004": 0,
+      "task-0008-episodes-0003-0004": 1
+    }
+  },
+  "record_success": {
+    "task-0007-episode-0000": false,
+    "task-0005-episode-0001": true,
+    "task-0008-episode-0001": false,
+    "task-0003-episode-0002": true,
+    "task-0008-episode-0002": false,
+    "task-0001-episode-0003": true,
+    "task-0004-episode-0003": false,
+    "task-0006-episode-0003": true,
+    "task-0008-episode-0003": false
+  },
+  "inference": {
+    "adapter": "PolicyProcessAdapter",
+    "benchmark": "libero",
+    "suite": "libero_spatial",
+    "checkpoint_path": "/root/autodl-tmp/openvla-diagnostic-model-cache-20261111/spatial",
+    "load_timeout_s": 1800.0,
+    "replica_vram_bytes": {
+      "0": 15584985088,
+      "1": 15584985088
+    },
+    "replicas": {
+      "0": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_spatial"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      },
+      "1": {
+        "supported_benchmarks": [
+          "libero"
+        ],
+        "required_features": [
+          "images.primary",
+          "language.instruction"
+        ],
+        "supported_suites": {
+          "libero": [
+            "libero_spatial"
+          ]
+        },
+        "max_batch_size": 1,
+        "supported_action_chunk_sizes": [
+          1
+        ],
+        "action_representations": {
+          "libero": "libero.delta-eef-v1"
+        },
+        "observation_strides": {},
+        "step_observation_updates": []
+      }
+    },
+    "execution_contract": {
+      "benchmark": "libero",
+      "action_representation": "libero.delta-eef-v1",
+      "action_representation_source": "policy",
+      "observation_stride": 1,
+      "observation_stride_source": "safe_default",
+      "step_observation_updates": false
+    }
+  },
+  "policy_io": {
+    "benchmark": "libero",
+    "action_representation": "libero.delta-eef-v1",
+    "action_representation_source": "policy",
+    "observation_stride": 1,
+    "observation_stride_source": "safe_default",
+    "step_observation_updates": false
+  },
+  "benchmark": {
+    "adapter": "LiberoBenchmarkAdapter",
+    "benchmark": "libero",
+    "suite": "libero_spatial",
+    "protocol": "roboscope-policy-v1",
+    "bound_hint": "gpu_infer",
+    "task_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "episodes_per_task": 5,
+    "seed": 7,
+    "render_backend": "egl"
+  },
+  "result": {
+    "state": "complete",
+    "episodes": 9,
+    "successes": 4,
+    "failures": 5,
+    "total_steps": 1485,
+    "total_episodes": 9,
+    "success_rate": 0.4444444444444444,
+    "completed_items": 9,
+    "elapsed_s": 288.0719947684556,
+    "steps_per_s": 5.154961353301983,
+    "episodes_per_s": 0.031242190020012023,
+    "steady_steps_per_s": 5.291452836909518,
+    "steady_window": {
+      "steps_per_s": 5.291452836909518,
+      "workers": 2,
+      "measured_workers": 2,
+      "measured_items": 6,
+      "window_s": 196.47852418199182
+    }
+  },
+  "official_result": {
+    "tasks": [
+      {
+        "task_id": 0,
+        "task_description": "",
+        "episodes": 0,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 1,
+        "task_description": "pick up the black bowl next to the ramekin and place it on the plate",
+        "episodes": 1,
+        "successes": 1,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 2,
+        "task_description": "",
+        "episodes": 0,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 3,
+        "task_description": "pick up the black bowl on the cookie box and place it on the plate",
+        "episodes": 1,
+        "successes": 1,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 4,
+        "task_description": "pick up the black bowl in the top drawer of the wooden cabinet and place it on the plate",
+        "episodes": 1,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 5,
+        "task_description": "pick up the black bowl on the ramekin and place it on the plate",
+        "episodes": 1,
+        "successes": 1,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 6,
+        "task_description": "pick up the black bowl next to the cookie box and place it on the plate",
+        "episodes": 1,
+        "successes": 1,
+        "success_rate": 1.0
+      },
+      {
+        "task_id": 7,
+        "task_description": "pick up the black bowl on the stove and place it on the plate",
+        "episodes": 1,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 8,
+        "task_description": "pick up the black bowl next to the plate and place it on the plate",
+        "episodes": 3,
+        "successes": 0,
+        "success_rate": 0.0
+      },
+      {
+        "task_id": 9,
+        "task_description": "",
+        "episodes": 0,
+        "successes": 0,
+        "success_rate": 0.0
+      }
+    ],
+    "runtime_metrics": {
+      "inference_wait_s": 493.39409498497844,
+      "episode_elapsed_s": 542.2873557154089,
+      "inference_wait_ratio": 0.9098388332032408
+    }
+  },
+  "resources": {
+    "elapsed_s": 288.0719947684556,
+    "cpu": {
+      "cpu_cores": 2.103440077495349,
+      "throttle_time_ratio": 0.0,
+      "throttle_period_ratio": 0.0
+    },
+    "gpu": {
+      "mean_utilization": 0.8197205588822355,
+      "peak_memory_bytes": 33735835648.0,
+      "gpu_util_avg": {
+        "0": 81.97205588822355
+      },
+      "gpu_util_max": {
+        "0": 100.0
+      },
+      "gpu_mem_mib_max": {
+        "0": 32173.0
+      }
+    },
+    "gpu_samples": 501
+  },
+  "recovery": {
+    "worker_failures": [],
+    "planned_recycles": 0,
+    "oom_events": 0,
+    "initial_workers_per_gpu": {
+      "0": 2
+    },
+    "final_workers_per_gpu": {
+      "0": 2
+    }
+  },
+  "autotune": {
+    "k": 2,
+    "g": 2,
+    "mode": "fixed"
+  },
+  "cuda_mps": {
+    "enabled": false
+  }
+}

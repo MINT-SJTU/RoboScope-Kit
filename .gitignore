@@ -14,9 +14,6 @@ sdk-dist/
 examples/xvla/X-VLA/
 examples/xvla/checkpoints/
 
-# Local server access details
-/server_info.txt
-
 # Local OpenVLA checkpoints, runtimes, and experiment artifacts
 examples/openvla/artifacts/
 examples/openvla/checkpoints/

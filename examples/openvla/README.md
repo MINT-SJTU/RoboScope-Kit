@@ -7,7 +7,7 @@ The example does not support the base OpenVLA checkpoint, `libero_90`, LIBERO-Pl
 ## Build the runtime
 
 Use Linux x86_64 with an NVIDIA GPU supporting BF16 and FlashAttention2, a compatible NVIDIA driver,
-`uv`, and `curl`. From this repository:
+`uv`, `git`, and `curl`. From this repository:
 
 ```bash
 bash benchmarks/libero/build-runtime.sh --openvla-kit /absolute/openvla-kit-runtime
@@ -15,8 +15,8 @@ bash benchmarks/libero/build-runtime.sh --openvla-kit /absolute/openvla-kit-runt
 
 The builder installs Python 3.11.15, the SDK, and hash-locked dependencies: torch 2.2.0,
 Transformers 4.40.1, TensorFlow 2.15.0, FlashAttention 2.5.5, robosuite 1.4.1, MuJoCo 3.2.3,
-and NumPy 1.24.4. The LIBERO source is pinned to `8f1084e3132a39270c3a13ebe37270a43ece2a01`;
-`openvla-kit/libero-source.json` and `materialize_source.py` verify every source file.
+and NumPy 1.24.4. The builder clones LIBERO with Git and checks out the pinned commit
+`8f1084e3132a39270c3a13ebe37270a43ece2a01`, using the same source as the default LIBERO builder.
 The builder writes a benchmark manifest and runs the SDK environment self-test. The self-test
 checks the simulator runtime; it does not load an OpenVLA checkpoint or run an episode.
 
@@ -32,11 +32,11 @@ creates an independent environment containing both the simulator and OpenVLA inf
 | MuJoCo / NumPy | 3.2.3 / 1.24.4 | Same |
 | PyTorch | 2.5.1+cpu, for simulator utilities | 2.2.0, with GPU inference dependencies |
 | OpenVLA inference stack | Not supplied by this simulator builder | Transformers 4.40.1, TensorFlow 2.15.0, FlashAttention 2.5.5 |
-| Default server readiness timeout | 300 seconds | 1,800 seconds |
+| Default server readiness timeout | 300 seconds | Same |
 
 The default CLI/Policy environment is separate from its Python 3.10 simulator Worker.
 The OpenVLA builder installs the Kit into its Python 3.11 environment and verifies Worker
-and model imports. It materializes the same pinned LIBERO source using file checksums,
+and model imports. It verifies the LIBERO checkout's commit and required source paths,
 locks dependency hashes, and verifies the FlashAttention wheel checksum. It does not
 change the default runtime's pins or the LIBERO Worker implementation.
 The historical native comparison used a third environment: CPython 3.10.13 with
@@ -44,7 +44,7 @@ robosuite 1.4.1 and MuJoCo 3.2.3, not the default Kit simulator environment.
 
 Optional build inputs:
 
-- `LIBERO_SOURCE_CACHE`: an existing LIBERO tree; only files matching the pinned inventory are reused.
+- `LIBERO_URL`: Git source URL or mirror; the pinned LIBERO commit remains fixed.
 - `DOWNLOAD_CACHE`: directory containing the checksum-verified FlashAttention wheel.
 - `OPENVLA_INDEX_URL`: Python package index; package versions and hashes remain fixed.
 
@@ -90,14 +90,27 @@ point to the example directory. Keep the repository and runtime at those paths w
 
 Run a bounded smoke evaluation in a new output directory:
 
+The builder retains the manifest's 300-second readiness timeout. For OpenVLA runs requiring
+longer checkpoint loading, create an evaluation manifest with a longer timeout in the same
+directory, so its relative runtime paths still resolve. The example below allows 1,800 seconds:
+
 ```bash
+/absolute/openvla-kit-runtime/env/bin/python - <<'PY'
+import json
+from pathlib import Path
+
+root = Path("/absolute/openvla-kit-runtime")
+manifest = json.loads((root / "benchmark-manifest.json").read_text())
+manifest["defaults"]["ready_timeout_s"] = 1800
+(root / "benchmark-manifest.openvla-eval.json").write_text(json.dumps(manifest, indent=2) + "\n")
+PY
+
 export HF_HOME=/absolute/openvla-hf-cache
 export OPENVLA_SEED=7
-export TF_FORCE_GPU_ALLOW_GROWTH=true
 /absolute/openvla-kit-runtime/env/bin/python -m roboscope_kit.runtime.benchmark \
   --benchmark libero --suite libero_spatial \
   --checkpoint-source /absolute/models/openvla/spatial \
-  --benchmark-manifest /absolute/openvla-kit-runtime/benchmark-manifest.json \
+  --benchmark-manifest /absolute/openvla-kit-runtime/benchmark-manifest.openvla-eval.json \
   --policy-config /absolute/roboscope-policy.json \
   --quick-test --output-dir /absolute/new-smoke-run
 ```
@@ -125,6 +138,8 @@ is a model outcome rather than a prerequisite for correct execution.
 The image pipeline follows the OpenVLA LIBERO helpers at source revision
 `c8f03f48af692657d3060c19588038c7220e9af9`: Kit already rotates the camera by 180 degrees, then the
 Policy applies JPEG encoding/decoding, TensorFlow Lanczos resize to 224x224, and a 90%-area center crop.
+TensorFlow preprocessing is explicitly placed on CPU, matching the native evaluator; the Policy
+disables TensorFlow GPU visibility before initialization. PyTorch model inference remains on GPU.
 Inference uses BF16, FlashAttention2, a lowercase instruction prompt, greedy decoding, suite-specific
 action unnormalization, and the OpenVLA gripper binarization/sign conversion.
 
@@ -133,8 +148,27 @@ the benchmark manifest. One inference call returns one control step, not a multi
 Multiple Workers may share a replica; requests to each standard Policy server execute serially.
 Increasing `--replicas` creates independent model processes rather than a batch of observations.
 
-## Validation evidence
+## Experiment results
 
-See [historical experiment records](EVIDENCE.md) for runtime versions, hardware,
-exact commands, raw outcomes and logs. These old-revision runs do not validate
-the current PR head; paired divergence and repeatability checks remain pending.
+The recorded evaluations use ten tasks per suite and initial-state indices 0–4 (50 episodes
+per suite). Kit 2/2 means two Workers and two Policy replicas on one GPU; Native runs serially.
+
+| Suite | Native successes | Kit 2/2 successes | Native formal time (min) | Kit 2/2 formal time (min) |
+| --- | --- | --- | --- | --- |
+| Spatial | 43/50 (86%) | 40/50 (80%) | 22.96 | 19.30 |
+| Object | 42/50 (84%) | 44/50 (88%) | 28.66 | 23.83 |
+| Goal | 33/50 (66%) | 39/50 (78%) | 29.11 | 21.73 |
+| Long (`libero_10`) | 28/50 (56%) | 23/50 (46%) | 64.20 | 59.35 |
+| Total | 146/200 (73%) | 146/200 (73%) | 144.93 | 124.21 |
+
+Formal time excludes checkpoint loading and other setup; see the [timing records](evidence/tables/performance-by-suite.csv)
+for loading and full command durations. These measurements used Kit `0.8.0b33`, source commit
+`b432786`, on November 9–10, 2026. Each path used one NVIDIA GeForce RTX 4090 reporting
+49,140 MiB; Native used driver `595.71.05` and Kit 2/2 used `580.105.08` on a different GPU.
+The CPU model was not recorded for these full evaluations; see [runtime and hardware records](evidence/reproduction/RUNS.md).
+The paired outcomes disagree on 36 episodes, so equal totals do not establish per-episode agreement
+or statistical equivalence. These are historical measurements, not a controlled speedup claim.
+
+See the [experiment results and analysis](evidence/README.md) for paired
+outcomes, executed steps, first observation/action differences, diagnostic
+findings, and the hardware and commands used in the experiments.

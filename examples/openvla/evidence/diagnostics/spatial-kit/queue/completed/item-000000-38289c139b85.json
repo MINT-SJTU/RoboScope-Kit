@@ -1,0 +1,24 @@
+{
+  "item_id": "task-0007-episodes-0000-0001",
+  "group_id": "task-0007",
+  "worker_id": 0,
+  "records": [
+    {
+      "record_id": "task-0007-episode-0000",
+      "success": false,
+      "steps": 220,
+      "elapsed_s": 78.50591661967337,
+      "metadata": {
+        "task_id": 7,
+        "episode_index": 0
+      }
+    }
+  ],
+  "metadata": {
+    "suite": "libero_spatial",
+    "task_id": 7,
+    "task_description": "pick up the black bowl on the stove and place it on the plate",
+    "elapsed_s": 79.58454808406532,
+    "inference_wait_s": 71.55722196213901
+  }
+}
