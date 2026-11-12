@@ -1,7 +1,8 @@
 # HORA native contact repeatability
 
-On 2026-11-11, b51/R12 used the unchanged HORA checkpoint, seed 0, K1/G1/N1 and
-the original 300-tick horizon. The strict observation comparison still **fails**;
+On 2026-11-11, source `42e6b24bbde9e26bfe714e92786d2891bfc37d4b` used the
+unchanged HORA checkpoint, seed 0, one Worker/Policy replica, vector width one
+and the original 300-tick horizon. The strict observation comparison still **fails**;
 no quantization or comparison tolerance was introduced.
 
 Twelve independent SDK/native runs completed: three per path for each of levels
@@ -58,7 +59,7 @@ identities remain outside Git, with verified local backups:
 - `hora-repeatability-r12-evidence.tar.gz`: SHA256 `c15d176fc8bf90893be61aa5a680c335c33674760fb93a4814a27ac0ad830c8a`.
 - `hora-followups-r12-evidence.tar.gz`: SHA256 `f4b274c03cb99db0d1898983d0570a24c71c715520f591b708186c977eb7b7ab`.
 
-The [native-review report](NATIVE_REVIEW_VALIDATION.md) tracks current build,
-coverage and publication status. These findings explain a native numerical floor;
+The [validation status](VALIDATION.md) tracks current source, coverage and publication.
+This borrowed HORA model also does not satisfy intended-task policy acceptance. These findings explain a native numerical floor;
 they do not turn the strict hash failures into passes or establish full benchmark
 acceptance.

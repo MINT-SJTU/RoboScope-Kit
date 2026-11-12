@@ -1,8 +1,9 @@
 """Run task-indexed PPO actors directly on native ManiSkill GPU tensors.
 
-The manifest, checkpoint, seed groups and task rules match the SDK path. There
-are no Policy RPCs. Formal time includes simulator lifecycle and bookkeeping;
-loading is reported separately. The original evaluator has its own launcher.
+Official PPO environments come from checksum-pinned upstream source and author
+checkpoint paths. Kit task selections and seed groups are checked against those
+independent configurations. No Policy RPCs are used. This harness retains explicit
+protocol overrides; the original evaluator has its own launcher.
 """
 
 # ruff: noqa: E402 -- retain heavyweight import/setup cost separately
@@ -24,16 +25,26 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from go2_reach_prior import project_native_action as project_go2_native_action
-from go2_reach_prior import project_native_actor_input as project_go2_native_input
-from ppo_model import load_model_bundle
-from pull_tool_prior import project_native_actor_input
+from ppo_model import checkpoint_records, load_model_bundle
+from upstream_ppo import (
+    CONFIGURATION_SOURCE,
+    SOURCE_REVISION,
+    require_matching_profile,
+    require_vector_groups,
+    resolve_official_profile,
+)
 
-PHYSX_SHA256 = "4c582a16509a71faf5592fe9708586dfcc7ab61ae932eabc1ddd81f290818706"
+# Verbose state snapshots sample the first two, midpoint and final episodes of
+# the standard 100-episode protocol; every episode still retains state hashes.
+DEFAULT_TRACE_EPISODE_INDICES = (0, 1, 49, 99)
 
 
 def native_environment(profile: dict, count: int):
-    """Build through upstream Gym and wrappers independently of the Kit worker."""
+    """Build Gym from a supplied profile; only the official caller resolves it independently.
+
+    Generic/Octo callers use manifest-configured diagnostic profiles, not this
+    entrypoint's independent official-PPO acceptance configuration.
+    """
     import gymnasium as gym
     import mani_skill.envs  # noqa: F401 -- register pinned upstream tasks
     from mani_skill.utils.wrappers.flatten import FlattenActionSpaceWrapper
@@ -41,6 +52,7 @@ def native_environment(profile: dict, count: int):
 
     kwargs = deepcopy(profile.get("env_kwargs", {}))
     simulation = kwargs.pop("sim_config", {})
+    kwargs.setdefault("reward_mode", profile.get("reward_mode"))
     for frequency in ("sim_freq", "control_freq"):
         if frequency in profile:
             simulation[frequency] = profile[frequency]
@@ -57,7 +69,7 @@ def native_environment(profile: dict, count: int):
         profile["task_id"], num_envs=count,
         control_mode=controller, obs_mode=profile["obs_mode"],
         sim_backend=profile["sim_backend"], render_backend=profile["render_backend"],
-        render_mode="rgb_array", sim_config=simulation,
+        render_mode=profile.get("render_mode", "rgb_array"), sim_config=simulation,
         sensor_configs=deepcopy(profile.get("sensor_configs", {})),
         max_episode_steps=profile["max_episode_steps"],
         reconfiguration_freq=profile["reconfiguration_freq"],
@@ -128,6 +140,10 @@ def run_task_processes(args: argparse.Namespace, profiles: tuple[dict, ...]) -> 
         if process.returncode:
             raise RuntimeError(f"Native task {profile['profile_id']} failed; see {log}")
         child = json.loads(output.read_text(encoding="utf-8"))
+        if (child.get("configuration_source") != CONFIGURATION_SOURCE
+                or child.get("paired_original_evaluator_acceptance") is not False):
+            message = f"Native task {profile['profile_id']} lacks independent configuration provenance"
+            raise RuntimeError(message)
         count = args.episodes or len(profile["seeds"])
         seeds = profile["seeds"][:count] if args.seed is None else list(range(args.seed, args.seed + count))
         expected = [(profile["profile_id"], index, seed) for index, seed in enumerate(seeds)]
@@ -158,6 +174,10 @@ def run_task_processes(args: argparse.Namespace, profiles: tuple[dict, ...]) -> 
     steps = sum(record["steps"] for record in records)
     result = {
         **children[0], "formal": False, "tasks": tasks, "records": records,
+        "configuration_source": CONFIGURATION_SOURCE, "paired_original_evaluator_acceptance": False,
+        "upstream_references": [
+            reference for child in children for reference in child["upstream_references"]
+        ],
         "episodes": len(records), "actual_simulation_steps": steps,
         "successes": sum(task["successes"] for task in scored_tasks) if scored_tasks else None,
         "success_rate": (
@@ -194,14 +214,17 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--runtime-home", type=Path)
     parser.add_argument("--episodes", type=int, help="Episodes per task; defaults to the manifest")
-    parser.add_argument("--num-envs", type=int, default=10)
+    parser.add_argument("--num-envs", type=int, help="Must match the frozen protocol.vector_envs")
     parser.add_argument("--seed", type=int, help="Optional diagnostic seed override")
     parser.add_argument("--reuse-environment", action="store_true")
-    parser.add_argument("--trace-episodes", type=int, nargs="*", default=[0, 1, 49, 99])
+    parser.add_argument(
+        "--trace-episodes", type=int, nargs="*", default=list(DEFAULT_TRACE_EPISODE_INDICES),
+    )
     parser.add_argument("--trajectory-dir", type=Path, help="Diagnostic per-step hashes outside timed runs")
     parser.add_argument("--profile-id", help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if args.num_envs < 1 or (args.episodes is not None and args.episodes < 1):
+    if ((args.num_envs is not None and args.num_envs < 1)
+            or (args.episodes is not None and args.episodes < 1)):
         parser.error("episodes and num-envs must be positive")
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -211,16 +234,19 @@ def main() -> None:
 
     # Select asset/PhysX locations before the first import of ManiSkill/SAPIEN.
     from roboscope_kit.runtime.benchmark.manifest import load_benchmark_manifest
-    from roboscope_kit.runtime.benchmarks.maniskill.profile import validate_profiles
+    from roboscope_kit.runtime.benchmarks.maniskill.profile import physx_library_sha256, validate_profiles
 
     manifest = load_benchmark_manifest(args.benchmark_manifest)
+    protocol = manifest.benchmark_protocols["maniskill"]
+    expected_physx_hash = physx_library_sha256(protocol)
     runtime_home = (args.runtime_home or manifest.runtime_path("home")).resolve(strict=True)
     library = runtime_home / ".sapien/physx/105.1-physx-5.3.1.patch0/libPhysXGpu_64.so"
-    if hashlib.sha256(library.read_bytes()).hexdigest() != PHYSX_SHA256:
+    if hashlib.sha256(library.read_bytes()).hexdigest() != expected_physx_hash:
         raise RuntimeError("Install-local PhysX GPU library differs from the pinned build")
     os.environ["HOME"] = str(runtime_home)
     os.environ["MS_ASSET_DIR"] = str(manifest.runtime_path("asset_dir"))
-    protocol = manifest.benchmark_protocols["maniskill"]
+    if protocol["maniskill_source_commit"] != SOURCE_REVISION:
+        raise ValueError("This independent PPO reference requires its pinned upstream revision")
     profiles = validate_profiles(protocol, args.suite)
     if args.profile_id is not None:
         profiles = tuple(profile for profile in profiles if profile["profile_id"] == args.profile_id)
@@ -232,6 +258,39 @@ def main() -> None:
         raise ValueError("This PPO native example accepts state profiles only")
     if args.episodes is not None and any(args.episodes > len(p["seeds"]) for p in profiles):
         raise ValueError("Requested episodes exceed the frozen manifest")
+    args.num_envs = require_vector_groups(
+        protocol, args.num_envs, [args.episodes or len(profile["seeds"]) for profile in profiles],
+    )
+    specifications = checkpoint_records(args.checkpoint)
+    resolved_profiles = []
+    references = []
+    for selected in profiles:
+        task_id = selected["task_id"]
+        if task_id not in specifications:
+            raise ValueError(f"No official PPO checkpoint configured for {task_id}")
+        independent, reference = resolve_official_profile(
+            manifest.runtime_path("benchmark_root"), task_id, specifications[task_id],
+        )
+        require_matching_profile(selected, independent)
+        # Reporting and externally frozen identities do not supply environment values.
+        reporting = {key: selected[key] for key in (
+            "profile_id", "instruction", "success_metric", "seeds", "episodes_per_task",
+        )}
+        resolved_profiles.append({**independent, **reporting})
+        count = args.episodes or len(selected["seeds"])
+        seeds = selected["seeds"][:count] if args.seed is None else list(range(args.seed, args.seed + count))
+        reference.update({
+            "profile_id": selected["profile_id"], "independent_environment": independent,
+            "kit_protocol_overrides": {
+                "vector_envs": args.num_envs, "episode_seeds": seeds,
+                "global_torch_numpy_seed": 0 if args.seed is None else args.seed,
+                "auto_reset": False, "scoring_metric": selected["success_metric"],
+                "reset_schedule": "one explicit frozen seed list per complete vector group",
+            },
+            "paired_original_evaluator_acceptance": False,
+        })
+        references.append(reference)
+    profiles = tuple(resolved_profiles)
     if len(profiles) > 1:
         run_task_processes(args, profiles)
         return
@@ -308,20 +367,7 @@ def main() -> None:
                 for step in range(horizon):
                     inference_started = time.perf_counter()
                     with torch.inference_mode():
-                        model_input = observation
-                        prefix = model.metadata.get("state_prefix_length")
-                        if prefix is not None:
-                            model_input = observation[:, :prefix]
-                        if model.metadata.get("state_projection") == "pull_cube_tool_workspace_target_v1":
-                            model_input = project_native_actor_input(observation)
-                        if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
-                            model_input = project_go2_native_input(observation)
-                        action = model.agent.actor_mean(model_input)
-                        bounds = model.metadata.get("action_clip_bounds")
-                        if bounds is not None:
-                            action = action.clamp(bounds[0], bounds[1])
-                        if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
-                            action = project_go2_native_action(action)
+                        action = model.agent.actor_mean(observation)
                     inference_host_s += time.perf_counter() - inference_started
                     if step == 0:
                         first_actions = action.detach().clone()
@@ -436,6 +482,7 @@ def main() -> None:
     success_records = [record for record in records if record["success_available"]]
     result = {
         "formal": False, "mode": "native_gpu_vectorized", "suite": args.suite,
+        "configuration_source": CONFIGURATION_SOURCE, "paired_original_evaluator_acceptance": False,
         "protocol": protocol["protocol_id"], "benchmark_manifest": str(manifest.path),
         "tasks": tasks, "num_envs": args.num_envs, "episodes": total_episodes,
         "actual_simulation_steps": actual_steps,
@@ -459,9 +506,10 @@ def main() -> None:
         "mean_return": sum(record["episode_return"] for record in records) / total_episodes,
         "environment_lifecycle": "persistent" if args.reuse_environment else "recreate_per_vector_group",
         "runtime_home": str(runtime_home), "asset_dir": os.environ["MS_ASSET_DIR"],
-        "physx_gpu_library_sha256": PHYSX_SHA256,
+        "physx_gpu_library_sha256": expected_physx_hash,
         "maniskill_source_revision": protocol["maniskill_source_commit"],
         "model_kind": "official_rl_trained_ppo_state", "precision": "float32",
+        "upstream_references": references,
         "trajectory_diagnostics": args.trajectory_dir is not None,
         "versions": {name: importlib.metadata.version(name) for name in ("mani_skill", "torch", "sapien")},
         "timing": {
@@ -478,8 +526,9 @@ def main() -> None:
             "Compare matching task/seed groups at the same N and verify input hashes, first actions "
             "and outcomes. Changing N can change initial inputs. Pure GPU actor latency is not "
             "measured by the asynchronous host-submission timer. No SDK RPC is used; the environment "
-            "is constructed directly with upstream Gym and wrappers. The original upstream evaluator "
-            "is exercised separately by run_upstream.py."
+            "uses independently resolved upstream task defaults and checkpoint controller names. "
+            "Seeding, width, scoring and auto-reset overrides are recorded explicitly; this is not "
+            "paired acceptance of the original upstream entrypoint exercised by run_upstream.py."
         ),
         "records": records,
     }

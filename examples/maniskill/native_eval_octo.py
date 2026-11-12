@@ -69,11 +69,11 @@ def main() -> None:
     parser.add_argument("--benchmark-manifest", type=Path, required=True)
     parser.add_argument("--suite", default="bridge_rgb_v1")
     parser.add_argument("--episodes", type=int)
-    parser.add_argument("--num-envs", type=int, default=10)
+    parser.add_argument("--num-envs", type=int, help="must match the frozen protocol.vector_envs")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--trajectory-dir", type=Path)
     args = parser.parse_args()
-    if args.num_envs < 1 or (args.episodes is not None and args.episodes < 1):
+    if (args.num_envs is not None and args.num_envs < 1) or (args.episodes is not None and args.episodes < 1):
         parser.error("Episode and environment counts must be positive")
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -81,9 +81,20 @@ def main() -> None:
     if args.trajectory_dir:
         args.trajectory_dir.mkdir(parents=True, exist_ok=False)
     from roboscope_kit.runtime.benchmark.manifest import load_benchmark_manifest
-    from roboscope_kit.runtime.benchmarks.maniskill.profile import validate_profiles
+    from roboscope_kit.runtime.benchmarks.maniskill.profile import (
+        physx_library_sha256,
+        validate_profiles,
+        vector_envs,
+    )
 
     manifest = load_benchmark_manifest(args.benchmark_manifest)
+    expected_physx_hash = physx_library_sha256(manifest.benchmark_protocols["maniskill"])
+    width = vector_envs(manifest.benchmark_protocols["maniskill"])
+    if args.num_envs is not None and args.num_envs != width:
+        raise ValueError("Native vector width differs from the frozen protocol")
+    args.num_envs = width
+    if args.episodes is not None and args.episodes % width:
+        raise ValueError("Native episodes must preserve complete protocol vector groups")
     profiles = validate_profiles(manifest.benchmark_protocols["maniskill"], args.suite)
     if any("diagnostic_step_limit" in profile for profile in profiles):
         raise ValueError("Diagnostic step limits require native_eval_policy.py")
@@ -91,10 +102,10 @@ def main() -> None:
     os.environ["HOME"] = str(runtime_home)
     os.environ["MS_ASSET_DIR"] = str(manifest.runtime_path("asset_dir"))
     import torch
-    from native_eval import PHYSX_SHA256, native_environment
+    from native_eval import native_environment
 
     library = runtime_home / ".sapien/physx/105.1-physx-5.3.1.patch0/libPhysXGpu_64.so"
-    if hashlib.sha256(library.read_bytes()).hexdigest() != PHYSX_SHA256:
+    if hashlib.sha256(library.read_bytes()).hexdigest() != expected_physx_hash:
         raise RuntimeError("Native Bridge PhysX library differs from its pinned build")
     if any(profile["obs_mode"] != "rgb+segmentation" for profile in profiles):
         raise ValueError("The native Octo example serves the Bridge visual profiles")
@@ -242,13 +253,14 @@ def main() -> None:
     successes = sum(task["successes"] for task in tasks)
     total_s = time.perf_counter() - started
     result = {
-        "mode": "native_gpu_vectorized", "protocol": "maniskill-v1",
+        "mode": "native_gpu_vectorized", "configuration_source": "kit_manifest_diagnostic",
+        "protocol": "maniskill-v1",
         "suite": args.suite, "model": "octo-small-1.0", "num_envs": args.num_envs,
         "model_kind": "public_oxe_pretrained_octo_small_bridge", "precision": "float32",
         "benchmark_manifest": str(manifest.path), "runtime_home": str(runtime_home),
         "asset_dir": os.environ["MS_ASSET_DIR"],
         "maniskill_source_revision": manifest.benchmark_protocols["maniskill"]["maniskill_source_commit"],
-        "physx_gpu_library_sha256": PHYSX_SHA256,
+        "physx_gpu_library_sha256": expected_physx_hash,
         "rng_protocol": "Independent init_rng=0 stream per episode, five initial key splits",
         "formal": False,
         "complete_named_suite": all(

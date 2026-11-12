@@ -110,4 +110,4 @@ and the new passing cohorts are retained in the
 
 Use the existing `ppo_policy.py` configuration and `canonical_prior_state_v1`.
 SDK/native cohort sizes, source versions and real-model results are recorded in the
-[native review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md).
+[native review](../../benchmarks/maniskill/VALIDATION.md).

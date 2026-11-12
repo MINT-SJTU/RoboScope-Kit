@@ -277,13 +277,13 @@ def main() -> None:
     parser.add_argument("--policy-class", required=True)
     parser.add_argument("--suite", required=True)
     parser.add_argument("--episodes", type=int)
-    parser.add_argument("--num-envs", type=int, default=1)
+    parser.add_argument("--num-envs", type=int, help="must match the frozen protocol.vector_envs")
     parser.add_argument("--trajectory-dir", type=Path)
     parser.add_argument("--runtime-home", type=Path)
     parser.add_argument("--profile-id", help=argparse.SUPPRESS)
     parser.add_argument("--episode-start", type=int, default=0, help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if (args.num_envs < 1 or args.episode_start < 0
+    if ((args.num_envs is not None and args.num_envs < 1) or args.episode_start < 0
             or (args.episodes is not None and args.episodes < 1)):
         parser.error("Episode and environment counts must be positive")
     if args.output.exists():
@@ -292,10 +292,21 @@ def main() -> None:
     if args.trajectory_dir:
         args.trajectory_dir.mkdir(parents=True, exist_ok=False)
     from roboscope_kit.runtime.benchmark.manifest import load_benchmark_manifest
-    from roboscope_kit.runtime.benchmarks.maniskill.profile import validate_profiles
+    from roboscope_kit.runtime.benchmarks.maniskill.profile import (
+        physx_library_sha256,
+        validate_profiles,
+        vector_envs,
+    )
 
     manifest = load_benchmark_manifest(args.benchmark_manifest)
     protocol = manifest.benchmark_protocols["maniskill"]
+    expected_physx_hash = physx_library_sha256(protocol)
+    width = vector_envs(protocol)
+    if args.num_envs is not None and args.num_envs != width:
+        raise ValueError("Native vector width differs from the frozen protocol")
+    args.num_envs = width
+    if (args.episodes is not None and args.episodes % width) or args.episode_start % width:
+        raise ValueError("Native episode selection must preserve complete protocol vector groups")
     profiles = validate_profiles(protocol, args.suite)
     if args.profile_id is not None:
         profiles = tuple(profile for profile in profiles if profile["profile_id"] == args.profile_id)
@@ -308,10 +319,10 @@ def main() -> None:
     os.environ["HOME"] = str(args.runtime_home or manifest.runtime_path("home"))
     os.environ["MS_ASSET_DIR"] = str(manifest.runtime_path("asset_dir"))
     import torch
-    from native_eval import PHYSX_SHA256, native_environment
+    from native_eval import native_environment
 
     library = Path(os.environ["HOME"]) / ".sapien/physx/105.1-physx-5.3.1.patch0/libPhysXGpu_64.so"
-    if hashlib.sha256(library.read_bytes()).hexdigest() != PHYSX_SHA256:
+    if hashlib.sha256(library.read_bytes()).hexdigest() != expected_physx_hash:
         raise RuntimeError("Native PhysX GPU library differs from the pinned build")
     torch.set_num_threads(1)
     torch.backends.cuda.matmul.allow_tf32 = False
@@ -523,7 +534,7 @@ def main() -> None:
     timing["end_to_end_s"] = time.perf_counter() - PROCESS_STARTED
     result = {
         "formal": False,
-        "mode": "native_gpu_vectorized",
+        "mode": "native_gpu_vectorized", "configuration_source": "kit_manifest_diagnostic",
         "protocol": protocol["protocol_id"],
         "suite": args.suite,
         "num_envs": args.num_envs,
@@ -539,7 +550,7 @@ def main() -> None:
         "policy_module": args.policy_module,
         "policy_class": args.policy_class,
         "benchmark_manifest": str(manifest.path),
-        "physx_gpu_library_sha256": PHYSX_SHA256,
+        "physx_gpu_library_sha256": expected_physx_hash,
     }
     args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({key: value for key, value in result.items() if key != "records"}, indent=2))

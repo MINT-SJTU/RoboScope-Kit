@@ -17,10 +17,9 @@ import time
 from pathlib import Path
 
 from ppo_model import checkpoint_records
+from upstream_ppo import SOURCE_REVISION, resolve_official_profile
 
-SOURCE_REVISION = "baab60ede2e89167c1b7aaed41a9aa8e690a9d1e"
 PPO_SOURCE_GIT_BLOB = "3eae2120f84445a0938efe7be41db79d2a821dac"
-PHYSX_SHA256 = "4c582a16509a71faf5592fe9708586dfcc7ab61ae932eabc1ddd81f290818706"
 
 
 def main() -> int:
@@ -40,7 +39,9 @@ def main() -> int:
         raise ValueError(f"No checkpoint configured for {args.task_id}")
     model = models[args.task_id]
     checkpoint = model["checkpoint"]
-    horizon = int(model["max_episode_steps"])
+    independent, reference = resolve_official_profile(runtime / "ManiSkill", args.task_id, model)
+    horizon = int(independent["max_episode_steps"])
+    controller = independent["control_mode"]
     python = runtime / "env/bin/python"
     entrypoint = runtime / "ManiSkill/examples/baselines/ppo/ppo.py"
     source = entrypoint.read_bytes()
@@ -50,15 +51,19 @@ def main() -> int:
     if hashlib.sha256(checkpoint.read_bytes()).hexdigest() != model["sha256"]:
         raise RuntimeError("The checkpoint differs from the declared PPO model")
     runtime_home = runtime / "home"
+    from roboscope_kit.runtime.benchmarks.maniskill.profile import physx_library_sha256
+
+    benchmark_manifest = json.loads((runtime / "benchmark-manifest.json").read_text(encoding="utf-8"))
+    expected_physx_hash = physx_library_sha256(benchmark_manifest["benchmark_protocols"]["maniskill"])
     physics = runtime_home / ".sapien/physx/105.1-physx-5.3.1.patch0/libPhysXGpu_64.so"
-    if hashlib.sha256(physics.read_bytes()).hexdigest() != PHYSX_SHA256:
+    if hashlib.sha256(physics.read_bytes()).hexdigest() != expected_physx_hash:
         raise RuntimeError("The install-local PhysX GPU library has changed")
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=False)
     command = [
         str(python), "-u", str(entrypoint),
         "--evaluate", "--checkpoint", str(checkpoint),
-        "--env-id", args.task_id, "--control-mode", model["control_mode"],
+        "--env-id", args.task_id, "--control-mode", controller,
         "--num-eval-envs", str(args.num_eval_envs), "--num-eval-steps", str(horizon),
         "--num-envs", "1", "--num-steps", str(horizon), "--total-timesteps", str(horizon),
         "--num-minibatches", "1", "--eval-freq", "25",
@@ -97,8 +102,14 @@ def main() -> int:
         "passed": valid, "exit_code": completed.returncode,
         "entrypoint": str(entrypoint), "source_revision": SOURCE_REVISION,
         "entrypoint_git_blob_sha1": actual_blob, "weight_sha256": model["sha256"],
-        "task_id": args.task_id, "control_mode": model["control_mode"],
-        "runtime_home": str(runtime_home), "physx_gpu_library_sha256": PHYSX_SHA256,
+        "task_id": args.task_id, "control_mode": controller,
+        "runtime_home": str(runtime_home), "physx_gpu_library_sha256": expected_physx_hash,
+        "upstream_reference": reference,
+        "explicit_evaluator_overrides": {
+            "seed": args.seed, "num_eval_envs": args.num_eval_envs,
+            "num_eval_steps": horizon, "control_mode": controller,
+            "source": "CLI seed/width and independently resolved task horizon/checkpoint controller",
+        },
         "num_eval_envs": args.num_eval_envs, "control_steps_per_env": horizon,
         "completed_evaluations": evaluated, "metrics": metrics,
         "process_wall_s": process_wall_s,

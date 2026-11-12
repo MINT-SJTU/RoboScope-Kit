@@ -31,20 +31,18 @@ LiftPegUpright and both dual-arm checkpoints use separate profiles for their req
 RGB task definitions do not establish trained RGB-policy acceptance. The four Bridge profiles
 also have the separate public [Octo-small visual example](../../examples/maniskill/OCTO.md).
 
-The [review validation](REVIEW_VALIDATION.md) records current-source 100-episode-per-task native
-comparisons for eleven state PPO tasks and four Bridge visual tasks. The table's public state PPO
-column identifies the state checkpoints; the Bridge tasks use the visual example instead.
-The [completion phase](COMPLETION_VALIDATION.md) selects real-policy references for 27 additional
-task IDs and distinguishes its five-step integration diagnostics from full-horizon comparisons.
-The [remaining-compatibility phase](REMAINING_COMPATIBILITY.md) adds real-policy/native five-step
-comparisons for Humanoid, Panda visual and G1 visual transfers, covering 51 of the 55 task IDs and
-16 of the original 18 tabletop RGB profiles. Four task IDs retain original-asset blockers:
-AssemblingKits, TurnFaucet, OpenCabinetDoor and OpenCabinetDrawer. Full benchmark acceptance remains
-incomplete while task, observation and controller profiles lack real-policy runs and matched native
-comparisons. Counts of distinct task IDs do not imply acceptance of every declared profile.
-All 55 evaluation tasks now have a selected real-model reference or explicit transfer candidate,
-including the separate MS-HAB Fetch depth profiles. This resolves the prior thirteen-model
-selection gap; it does not count asset-blocked scenes or unexecuted observation profiles as passed.
+The [validation status](VALIDATION.md) records historical execution, exact source identities,
+current checks and unresolved acceptance. The selected checkpoint inventory has eleven official PPO
+task entries and two author state PPO entries. The remaining 42 entries marked `Missing` are not
+validated by a selected intended-task checkpoint; this label does not prove that no public model
+exists elsewhere. Public checkpoint presence alone also does not establish nonzero task competence.
+
+Historical runs of transfer policies and alternative RGB/root/controller profiles do not validate
+the original selected state profile. Four TaskIDs still lack their original assets: AssemblingKits,
+TurnFaucet, OpenCabinetDoor and OpenCabinetDrawer. Details of six additional unresolved original
+state contracts are in the [compatibility notes](REMAINING_COMPATIBILITY.md). The complete requested
+scope remains open until acceptable models, independent native configuration and current-source
+prescribed-count evidence are available for the intended profiles.
 
 The [frozen official demonstration repository](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628)
 contains 26 PPO checkpoint files for those same eleven task IDs; the other fifteen files are
@@ -107,9 +105,9 @@ newly selected NEWT and transfer policies; the column below still describes only
 | `TurnFaucet-v1` | `turn_faucet_state` | 200 | success_once | Missing | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/turn_faucet.py#L24) |
 | `TwoRobotPickCube-v1` | `two_robot_pickcube_ppo_state` | 100 | success_once | Available | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/two_robot_pick_cube.py#L21) |
 | `TwoRobotStackCube-v1` | `two_robot_stackcube_ppo_state` | 100 | success_once | Available | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/two_robot_stack_cube.py#L22) |
-| `UnitreeG1PlaceAppleInBowl-v1` | `unitree_g1_place_apple_in_bowl_state` | 100 | success_once | Missing | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/humanoid_pick_place.py#L210) |
+| `UnitreeG1PlaceAppleInBowl-v1` | `unitree_g1_place_apple_in_bowl_state` | 100 | success_once | Author state PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/humanoid_pick_place.py#L210) |
 | `UnitreeG1Stand-v1` | `unitree_g1_stand_state` | 1000 | return | Missing | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/humanoid_stand.py#L100) |
-| `UnitreeG1TransportBox-v1` | `unitree_g1_transport_box_state` | 100 | success_once | Missing | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/transport_box.py#L25) |
+| `UnitreeG1TransportBox-v1` | `unitree_g1_transport_box_state` | 100 | success_once | Author state PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/transport_box.py#L25) |
 | `UnitreeGo2-Reach-v1` | `unitree_go2_reach_state` | 200 | success_once | Missing | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/quadruped/quadruped_reach.py#L191) |
 | `UnitreeH1Stand-v1` | `unitree_h1_stand_state` | 1000 | return | Missing | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/humanoid_stand.py#L67) |
 

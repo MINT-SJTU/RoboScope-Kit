@@ -376,7 +376,7 @@ when you need that guarantee.
 
 ManiSkill keeps return-scored profiles outside the success-rate denominator and merges each
 profile's return sum and sample count into a weighted mean. Its shards also bind checkpoint
-and Policy content identities; see the [ManiSkill scoring and shard protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/PROTOCOL.md#scoring-and-coverage).
+and Policy content identities; see the [ManiSkill scoring and shard protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md#scoring-and-coverage).
 
 ## Python support
 
@@ -426,31 +426,25 @@ your own dependencies.
 
 ## ManiSkill multi-task integration
 
-The `maniskill` adapter runs a pinned 55-task inventory through GPU vector environments and the
-existing Policy lifecycle. Strict original-horizon SDK/native cohorts passed for 66 profiles in b51/R12
-plus six additional canonical profiles in b52/R13, two in b55/R16 and LiftPeg4 in b56/R17: cumulative coverage is
-**75 profiles / 51 task IDs** across those source snapshots. Six available profiles lack compatible
-selected models and eight profiles belong to four asset-deferred
-tasks. These small cohorts do not establish 100-episode acceptance or acceptance of all 55 tasks.
-The [native-reference review](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md)
-records source identities, R13/R16/R17 N1/N2 checks and retained R11/R14/R15/HORA failures. Historical
-fifteen-task, 100-episode comparisons predate actual native-mask checking and retain their original scope.
-The [profile-gap report](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/REMAINING_COMPATIBILITY.md)
-separates model, asset and profile contracts; integration equality does not imply task competence.
-The [LiftCube actor prior](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/LIFTCUBE.md)
-passes targeted b56/R17 full-horizon N1 and N2 prefix checks on the existing LiftPeg4 profile;
-it adds profile coverage, with no new TaskID or claim of task competence.
+The `maniskill` adapter runs selected task, robot, observation and controller profiles in GPU vector
+Workers through the existing `Policy` lifecycle. Official PPO state examples and a Bridge visual
+Policy example provide pinned model-loading and comparison workflows. Each profile reports its
+native success metric or episode return; record-tree shard merging and result-only reduction retain
+that distinction.
 
-Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and select asset suites with
+The pinned inventory declares 55 TaskIDs. Full integration acceptance remains incomplete: compatible
+intended-task models, current-source prescribed-count evaluation and independent upstream comparison
+are still required. The [validation status](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md)
+separates recorded execution from accepted task/model coverage.
+
+Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and choose asset suites with
 `MANISKILL_ASSET_SUITES`. See the
 [build guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/README.md),
-[source inventory](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/TASK_INVENTORY.md),
-[protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/PROTOCOL.md),
-[PPO example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/README.md),
-[Octo example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/OCTO.md) and
-[review validation](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/REVIEW_VALIDATION.md).
-
-Issue 25 integration and issue 31 throughput optimization remain separate. Hardware validation uses a local candidate; merge/release status is tracked by GitHub and CI.
+[protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md),
+[task inventory](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/TASK_INVENTORY.md),
+[PPO example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/README.md) and
+[Octo example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/OCTO.md).
+Issue #25 integration and issue #31 throughput work remain separate.
 
 ## License
 

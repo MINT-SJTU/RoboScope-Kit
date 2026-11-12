@@ -5,7 +5,7 @@ for the existing `two_robot_pickcube_state` and `two_robot_stackcube_state` prof
 only `state.proprioception`, retains their native 8D `pd_ee_delta_pos` controller, and returns one
 action per tick. **R13 strict N1/N2 SDK/native comparisons passed at the original 100-tick
 horizons.** These are cross-task transfers, not task-trained dual-arm experts. The
-[current review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records cohort counts,
+[current review](../../benchmarks/maniskill/VALIDATION.md) records cohort counts,
 source identities and remaining acceptance gates.
 
 For TwoRobotPickCube, each arm uses the PushCube35 actor with its own measured joints/TCP, the
@@ -96,7 +96,7 @@ Kit Worker/RPC and constructs the original Gym tasks while loading this same Pol
   --suite dual_panda_transfer_state_v1 --checkpoint "$MODELS" \
   --policy-python "$PYTHON" \
   --policy-module /absolute/path/to/kit/examples/maniskill/dual_panda_policy.py \
-  --policy-class ManiSkillDualPandaPolicy --episodes 1 --num-envs 1 \
+  --policy-class ManiSkillDualPandaPolicy --episodes 10 --num-envs 10 \
   --output /path/to/evidence/dual-panda-native.json \
   --trajectory-dir /path/to/evidence/dual-panda-native-traces
 ```
@@ -115,3 +115,7 @@ observations, actual masks and outcomes matched exactly, with no worker failure/
 had zero task successes (0/2 and 0/4), so integration equality does not imply useful coordination
 or task competence. These samples do not establish success rates or 100-episode acceptance.
 Checkpoints, CPU receipts and raw trajectories remain outside Git.
+
+Current commands preserve the frozen ten-lane group. Earlier width-one/two measurements above
+remain historical source-specific evidence, not validation of this grouping. The generic native
+Policy diagnostic uses manifest configuration and is not independent upstream acceptance.

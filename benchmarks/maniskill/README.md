@@ -1,26 +1,15 @@
 # ManiSkill evaluation
 
-The `maniskill` adapter executes manifest-configured tasks through ManiSkill GPU vector
-environments and the existing Policy lifecycle. The pinned inventory contains 55 evaluation
-tasks across tabletop, dexterity, control, quadruped, humanoid, mobile manipulation and Bridge
-digital-twin families. The [inventory](TASK_INVENTORY.md) identifies every task and helper with
-upstream source evidence. Protocol settings and observation/action mapping are in
-[PROTOCOL.md](PROTOCOL.md).
+The `maniskill` adapter runs manifest-selected task/robot/observation/controller profiles through
+GPU vector environments and the existing Policy lifecycle. The pinned [inventory](TASK_INVENTORY.md)
+declares 55 evaluation TaskIDs across tabletop, dexterity, control, locomotion, mobile manipulation
+and Bridge families. The [evaluation protocol](../../packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md)
+defines their frozen grouping, input/action mapping, scores and shard handling.
 
-**Integration acceptance remains partial.** Strict original-horizon SDK/native checks passed for
-66 selected profiles in b51/R12, six additional canonical profiles in b52/R13, two in b55/R16 and LiftPeg4 in b56/R17:
-cumulative coverage is **75 profiles / 51 task IDs**, with six available model gaps and eight asset-deferred
-profiles. These small cohorts are not 100-episode acceptance or acceptance of all 55 tasks.
-The [current native review](NATIVE_REVIEW_VALIDATION.md) records exact counts, source identities,
-R13/R16/R17 N1/N2 checks, retained R11/R14/R15 failures and the separate HORA repeatability failure. A matching
-cohort does not establish repeatability or task competence.
-
-The historical eleven state PPO and four Bridge visual task comparisons covered 1,500 paired
-episodes before actual native terminal-mask recording/checking was fixed; they remain in the
-[review validation](REVIEW_VALIDATION.md) under their original source identities. Earlier prefix
-results remain in the [completion](COMPLETION_VALIDATION.md) and
-[remaining-compatibility](REMAINING_COMPATIBILITY.md) reports. Original-asset recovery for four task
-IDs is deferred; task declarations or environment checks alone do not establish acceptance.
+**Full integration acceptance is incomplete.** [Validation status](VALIDATION.md) separates current
+source checks, historical per-profile execution, trained-policy requirements and missing assets/models.
+Transfer-policy execution or identical SDK/reference records alone does not establish task competence
+or acceptance. Weights, simulator assets, caches and raw records remain outside Git.
 
 | Suite | Tasks | Episodes per task | Configuration |
 | --- | ---: | ---: | --- |
@@ -72,4 +61,4 @@ Additional real-model references document [Panda Octo](../../examples/maniskill/
 [G1 visual transfer](../../examples/maniskill/G1_VISUAL.md), including their transfer limitations.
 The [Fetch depth example](../../examples/maniskill/FETCH_MSHAB.md) supplies real MS-HAB Open
 weights and a native depth/contact adapter; original PartNet assets still block cabinet task runs.
-The [protocol](PROTOCOL.md) describes per-task coverage, metrics and timing boundaries.
+The [protocol](../../packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md) describes per-task coverage, metrics and timing boundaries.

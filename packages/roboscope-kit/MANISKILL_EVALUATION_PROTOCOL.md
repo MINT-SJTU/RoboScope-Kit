@@ -1,14 +1,20 @@
-# ManiSkill evaluation protocol
+# ManiSkill Evaluation Protocol
 
-Protocol `maniskill-v1` is defined by `benchmark-manifest.json`. It pins ManiSkill
+Protocol `maniskill-v1` is defined by the [benchmark manifest](../../benchmarks/maniskill/benchmark-manifest.json). It pins ManiSkill
 `baab60ede2e89167c1b7aaed41a9aa8e690a9d1e` (`3.0.0b15`), SAPIEN `3.0.0b1`,
 CPython `3.11.15`, Torch `2.6.0` with CUDA `12.4`, and NumPy `1.26.4`. The runtime builder
 records source, package, PhysX library, manifest and asset provenance. Model versions, byte counts,
 URLs and SHA-256 digests are declared separately in the model example.
 
+The source pin is retained to keep the existing source, asset and checkpoint evidence
+reproducible. It is not the latest ManiSkill release or an inventory of current upstream main.
+Changing the pin requires a regenerated task inventory, protocol and model verification,
+followed by new correctness evidence. This records the current reproducibility policy;
+it does not assert an undocumented original reason for selecting this revision.
+
 ## Scope and task settings
 
-The [task inventory](TASK_INVENTORY.md) covers 58 literal task-directory registrations and nine
+The [task inventory](../../benchmarks/maniskill/TASK_INVENTORY.md) covers 58 literal task-directory registrations and nine
 runtime scene registrations. Source-backed exclusions identify three helper/reference task-directory
 environments and the scene helpers, leaving 55 evaluation tasks. The minimal source template is
 inventoried separately. These counts describe the pinned source. A task remains unvalidated until
@@ -45,18 +51,30 @@ are the source of these settings.
 
 ## GPU grouping, reset and termination
 
-The default vector width is ten environments per Worker. Each queue item contains one profile and
-an ordered seed group. Its last group uses the actual remaining lane count. The upstream
+The frozen `benchmark_protocols.maniskill.vector_envs` value is ten environments per Worker.
+It is not an autotune bound or `defaults.envs_per_worker`; manifests using that obsolete default
+are rejected. Each queue item contains one profile and an ordered complete seed group. Prescribed
+and explicitly reduced episode counts must be multiples of this width. The upstream
 `ManiSkillVectorEnv` uses `auto_reset=False`, `ignore_terminations=True` and `record_metrics=True`.
 Every group performs a full reset with its explicit seed vector and `reconfiguration_freq=1`.
 Per-environment random initialization can depend on vector grouping, so a native comparison must
 retain the same lane width and seed grouping.
+
+Quick Test selects exactly the first complete vector group of the first task in the suite:
+ten episodes with seeds 0-9, matching the first WorkItem of full evaluation. It is not a
+one-environment evaluation with a different reset distribution. Probes round their requested
+episode count up to complete groups and cap it at the available complete seed groups; neither
+autotune nor CLI concurrency changes vector width. The N1/N2 simulator self-tests are separate
+integration diagnostics and do not claim to reproduce full-protocol initial states.
 
 Each task executes its complete registered horizon. A Worker plans a process recycle before evaluating
 another profile, while the loaded Policy replica and same-profile episode groups remain in place.
 The orchestrator requeues the unevaluated next-profile item and restarts that Worker context;
 planned recycling is recorded separately from failures and retries. This avoids reusing the PhysX
 contact-query context across profiles without changing episode identities or seed grouping.
+
+The Worker option is named `recycle_on_context_change`: its context includes both profile ID
+and vector-group width. Other benchmarks keep its default disabled.
 
 Native task failures and success tracking
 remain in the environment, while the wrapper's ignored terminations keep each lane running to
@@ -181,7 +199,7 @@ contain asynchronous CUDA work, and concurrent Worker interval sums can overlap.
 Run profiling separately from speed measurements. Measure CPU, GPU busy, memory and VRAM with
 their sample window and method. Report unavailable hardware counters or uninstrumented phases
 explicitly. Retain raw per-episode records, logs, commands, runtime provenance, resource samples
-and exact Kit source identities outside Git. The historical [three-task report](MULTITASK_VALIDATION.md)
+and exact Kit source identities outside Git. The historical [three-task report](../../benchmarks/maniskill/VALIDATION.md#recorded-evidence)
 belongs to its recorded source snapshot. Current task coverage and blockers must be reported
 against the current candidate.
 
@@ -201,13 +219,13 @@ PullCubeTool NEWT pose-controller profile. Original profiles remain unchanged. R
 and `state.root_angular_velocity` (world xyz), read from the native articulation API. Their native
 `state.proprioception` vector is unchanged. Episode metadata includes active/controller joint
 names and physical/control frequencies. Model-specific frame, joint and control conversions stay
-in the example Policy. See [completion validation](COMPLETION_VALIDATION.md) for scope and evidence.
+in the example Policy. See [completion validation](../../benchmarks/maniskill/VALIDATION.md) for scope and evidence.
 
 `humanoid_control_transfer_state_v1` adds three MS-Humanoid root-observation profiles without
 changing the original state profiles. `panda_visual_rgb_v1` selects the original 18 tabletop RGB
 profiles and a separate FMB RGB profile. `g1_visual_rgb_v1` adds two head-camera profiles with actual
 root observations. All retain the target task's native horizon, controller, reset and score; model-side
-transfer does not import source-task evaluation rules. The [remaining-compatibility report](REMAINING_COMPATIBILITY.md)
+transfer does not import source-task evaluation rules. The [remaining-compatibility report](../../benchmarks/maniskill/REMAINING_COMPATIBILITY.md)
 separates validated profiles, model limitations and original-asset blockers.
 
 `fetch_mshab_depth_v1` selects separate cabinet profiles with the native Fetch head/hand depth

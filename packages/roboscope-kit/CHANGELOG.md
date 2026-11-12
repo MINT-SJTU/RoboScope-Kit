@@ -6,6 +6,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 - Add the partial, pinned ManiSkill integration with explicit task/robot/observation/controller profiles, GPU-vectorized Workers, reproducible simulator/assets builds and real-model correctness references; incomplete task/model acceptance remains documented.
 - Preserve actual terminal masks and recycle simulator Workers when profile or vector width changes while retaining Policy replicas.
+- Freeze ManiSkill vector width in the evaluation protocol, preserve complete seeded groups in Quick Test and probes, and derive official PPO native configurations independently from pinned upstream sources.
+- Publish trajectory traces only after successful rollout cleanup, retain retry attempts and self-test timeout logs, and share one manifest PhysX binary pin across build and evaluation paths.
 - Keep return-scored episodes out of binary success/failure statistics, including progress, autotune health and both shard merge paths.
 - Merge ManiSkill profile return sums/counts and success counts separately, check complete record-tree coverage, and bind shards to checkpoint and Policy content identities.
 

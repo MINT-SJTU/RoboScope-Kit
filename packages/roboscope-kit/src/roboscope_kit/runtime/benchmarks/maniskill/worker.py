@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
 import time
 from collections.abc import Mapping
 from copy import deepcopy
@@ -27,7 +28,11 @@ from roboscope_kit.benchmark_specs import BenchmarkName
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 from roboscope_kit.runtime.benchmark.manifest import load_benchmark_manifest
 
-from .profile import PROTOCOL_ID, self_test_profiles, validate_profiles
+from .profile import PROTOCOL_ID, physx_library_sha256, self_test_profiles, validate_profiles
+
+# Raw states sample the first two, midpoint and final episodes of the 100-episode
+# reference. Every episode still retains complete initial-state/observation hashes.
+INITIAL_STATE_SNAPSHOT_EPISODE_INDICES = frozenset((0, 1, 49, 99))
 
 
 def as_numpy(value: Any) -> np.ndarray:
@@ -247,6 +252,7 @@ def evaluate(
     episode_ids = [_episode_id(profile_id, start + lane, seed) for lane, seed in enumerate(seeds)]
     initialized = []
     trajectory_files = []
+    trajectory_paths = []
     environment = None
     metadata: dict[str, Any] = {}
     records: tuple[EvaluationRecord, ...] = ()
@@ -292,9 +298,15 @@ def evaluate(
             destination = Path(trajectory_dir)
             destination.mkdir(parents=True, exist_ok=True)
             for episode_id in episode_ids:
-                trajectory_files.append((destination / f"{episode_id}.jsonl").open(
-                    "x", encoding="utf-8",
-                ))
+                # Exclusive attempt files survive failures without blocking a retry.
+                # Comparisons only discover canonical *.jsonl files from complete groups.
+                trajectory = tempfile.NamedTemporaryFile(  # noqa: SIM115 -- group closes in finally.
+                    mode="w", encoding="utf-8", dir=destination,
+                    prefix=f"{episode_id}.attempt-{os.getpid()}-", suffix=".jsonl.partial",
+                    delete=False,
+                )
+                trajectory_files.append(trajectory)
+                trajectory_paths.append((Path(trajectory.name), destination / f"{episode_id}.jsonl"))
         first_actions = None
         final_info = None
         truncation_values = None
@@ -391,7 +403,7 @@ def evaluate(
                 "initial_observation_sha256": initial_observation_digests[lane],
                 "first_action": first_actions[lane],
                 **({"initial_state": initial_states[lane].tolist()}
-                   if start + lane in {0, 1, 49, 99} else {}),
+                   if start + lane in INITIAL_STATE_SNAPSHOT_EPISODE_INDICES else {}),
                 "success_metric": profile["success_metric"],
                 "episode_return": float(returns[lane]), "success_available": success_available,
                 "success_once": bool(success_once[lane]) if success_available else None,
@@ -431,6 +443,9 @@ def evaluate(
                 phase_started = time.perf_counter()
                 environment.close()
                 metadata["environment_close_s"] = time.perf_counter() - phase_started
+    # Publish only after every lane completed and the group cleanup succeeded.
+    for attempt, destination in trajectory_paths:
+        attempt.replace(destination)
     return WorkResult(
         item_id=item.item_id, group_id=item.group_id, worker_id=worker_id,
         records=records, metadata=metadata,
@@ -454,21 +469,21 @@ def self_test(profiles: tuple[dict[str, Any], ...], destination: Path) -> None:
                     final_features = observation_rows(observation, count, profile, environment=environment)
                 if as_numpy(terminated).any() or not as_numpy(truncated).all():
                     raise RuntimeError("Self-test did not preserve fixed-horizon terminal masks")
-                frame = as_numpy(environment.render())
-                if (frame.ndim != 4 or frame.shape[0] != count or frame.shape[-1] != 3
-                        or frame.dtype != np.uint8 or not np.ptp(frame)):
+                render_frame = as_numpy(environment.render())
+                if (render_frame.ndim != 4 or render_frame.shape[0] != count or render_frame.shape[-1] != 3
+                        or render_frame.dtype != np.uint8 or not np.ptp(render_frame)):
                     raise RuntimeError("ManiSkill self-test did not render a valid nonconstant RGB frame")
                 images = {}
                 for feature, camera in profile.get("cameras", {}).items():
-                    frame = final_features[0][feature]
-                    if not np.ptp(frame):
+                    camera_frame = final_features[0][feature]
+                    if not np.ptp(camera_frame):
                         raise RuntimeError(f"RGB camera {camera!r} produced a constant frame")
                     images[feature] = {
-                        "camera": camera, "shape": list(frame.shape), "dtype": str(frame.dtype),
+                        "camera": camera, "shape": list(camera_frame.shape), "dtype": str(camera_frame.dtype),
                         "source_device": str(observation["sensor_data"][camera]["rgb"].device),
                         "nonconstant": True, "first_sha256": hashlib.sha256(
                             first_features[0][feature].tobytes()).hexdigest(),
-                        "last_sha256": hashlib.sha256(frame.tobytes()).hexdigest(),
+                        "last_sha256": hashlib.sha256(camera_frame.tobytes()).hexdigest(),
                     }
                 evidence.append({
                     "profile_id": profile["profile_id"], "task_id": profile["task_id"],
@@ -481,7 +496,8 @@ def self_test(profiles: tuple[dict[str, Any], ...], destination: Path) -> None:
                     "control_freq": environment.unwrapped.control_freq,
                     "images": images,
                     "render_frame": {
-                        "shape": list(frame.shape), "dtype": str(frame.dtype), "nonconstant": True,
+                        "shape": list(render_frame.shape), "dtype": str(render_frame.dtype),
+                        "nonconstant": True,
                     },
                     "success_once": (
                         as_numpy(info["episode"]["success_once"]).tolist()
@@ -515,10 +531,10 @@ def main() -> None:
     os.environ["HOME"] = str(manifest.runtime_path("home"))
     os.environ["MS_ASSET_DIR"] = str(manifest.runtime_path("asset_dir"))
     library = manifest.runtime_path("physx_gpu_library")
-    expected_library_hash = "4c582a16509a71faf5592fe9708586dfcc7ab61ae932eabc1ddd81f290818706"
+    protocol = manifest.benchmark_protocols.get(BenchmarkName.MANISKILL, {})
+    expected_library_hash = physx_library_sha256(protocol)
     if not library.is_file() or hashlib.sha256(library.read_bytes()).hexdigest() != expected_library_hash:
         raise RuntimeError("Pinned install-local PhysX GPU library is missing or has changed")
-    protocol = manifest.benchmark_protocols.get(BenchmarkName.MANISKILL, {})
     if args.self_test:
         if args.self_test_output is None:
             parser.error("--self-test requires --self-test-output")
@@ -535,7 +551,7 @@ def main() -> None:
     with PolicyClient(args.policy_socket, timeout_s=300) as client:
         WorkerLoop(
             worker_id=args.worker_id, queue_dir=args.queue_dir, state_dir=args.worker_state_dir,
-            recycle_on_group_change=True,
+            recycle_on_context_change=True,
         ).run(lambda item: evaluate(
             item, worker_id=args.worker_id, client=client,
             profile=profiles[item.payload["profile_id"]],

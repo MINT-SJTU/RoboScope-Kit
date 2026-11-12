@@ -34,10 +34,29 @@ _DEPTH_FEATURES = {"state.depth_head", "state.depth_hand"}
 def _profiles(protocol: dict[str, Any]) -> dict[str, Any]:
     if protocol.get("protocol_id") != PROTOCOL_ID:
         raise ValueError(f"ManiSkill protocol_id must be {PROTOCOL_ID}")
+    vector_envs(protocol)
+    physx_library_sha256(protocol)
     profiles = protocol.get("profiles")
     if not isinstance(profiles, dict) or not profiles:
         raise ValueError("ManiSkill manifest must define nonempty profiles")
     return profiles
+
+
+def vector_envs(protocol: dict[str, Any]) -> int:
+    """Vector width changes seeded initialization and is a protocol value, not a tuning bound."""
+    width = protocol.get("vector_envs")
+    if type(width) is not int or width < 1:
+        raise ValueError("ManiSkill protocol.vector_envs must be a positive integer")
+    return width
+
+
+def physx_library_sha256(protocol: dict[str, Any]) -> str:
+    """Read the single declared binary pin used by the builder and all evaluation paths."""
+    digest = protocol.get("physx_gpu_library_sha256")
+    if (not isinstance(digest, str) or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)):
+        raise ValueError("ManiSkill protocol requires a valid physx_gpu_library_sha256")
+    return digest
 
 
 def _resolve(protocol: dict[str, Any], profile_id: str) -> dict[str, Any]:
@@ -106,6 +125,8 @@ def _resolve(protocol: dict[str, Any], profile_id: str) -> dict[str, Any]:
     episodes = profile.get("episodes_per_task", protocol.get("episodes_per_task", 100))
     if type(episodes) is not int or episodes < 1:
         raise ValueError("ManiSkill episodes_per_task must be a positive integer")
+    if episodes % vector_envs(protocol):
+        raise ValueError("ManiSkill prescribed episodes must contain complete frozen vector groups")
     seeds = profile.get("seeds", protocol.get("seeds", list(range(episodes))))
     if not isinstance(seeds, list) or len(seeds) != episodes:
         raise ValueError(f"ManiSkill {profile_id}.seeds must cover every episode exactly")

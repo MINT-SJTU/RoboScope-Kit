@@ -17,7 +17,7 @@ from roboscope_kit.runtime.benchmark.factories import BenchmarkRunRequest
 from roboscope_kit.runtime.benchmark.manifest import BenchmarkManifest
 
 from .adapter import ManiSkillBenchmarkAdapter, ManiSkillRuntimeConfig
-from .profile import self_test_profiles, validate_profiles
+from .profile import self_test_profiles, validate_profiles, vector_envs
 
 
 class ManiSkillBenchmarkFactory:
@@ -32,10 +32,12 @@ class ManiSkillBenchmarkFactory:
     ) -> ManiSkillBenchmarkAdapter:
         profiles = self._profiles(request, manifest)
         expected_ids = tuple(profile["profile_id"] for profile in profiles)
+        width = vector_envs(self._protocol(manifest))
         if request.quick_test:
-            profiles = ({**profiles[0], "seeds": profiles[0]["seeds"][:1]},)
+            # One original vector group, preserving states from the full workload.
+            profiles = ({**profiles[0], "seeds": profiles[0]["seeds"][:width]},)
         else:
-            profiles = tuple(self._limit(profile, request.episodes) for profile in profiles)
+            profiles = tuple(self._limit(profile, request.episodes, width) for profile in profiles)
         return self._adapter(request, manifest, profiles, expected_ids)
 
     def create_probe(
@@ -43,13 +45,14 @@ class ManiSkillBenchmarkFactory:
     ) -> ManiSkillBenchmarkAdapter:
         profiles = self._profiles(request, manifest)
         expected_ids = tuple(profile["profile_id"] for profile in profiles)
-        vector_size = int(manifest.defaults.get("envs_per_worker", 10))
+        vector_size = vector_envs(self._protocol(manifest))
         groups = max(len(profiles), concurrency * max(1, probe_items_per_worker(manifest.defaults)))
         count = max(
             int(manifest.defaults.get("probe_episodes_per_task", 1)),
             vector_size * math.ceil(groups / len(profiles)),
         )
-        limited = tuple(self._limit(profile, request.episodes) for profile in profiles)
+        count = vector_size * math.ceil(count / vector_size)
+        limited = tuple(self._limit(profile, request.episodes, vector_size) for profile in profiles)
         probes = tuple({**profile, "seeds": profile["seeds"][:count]} for profile in limited)
         return self._adapter(request, manifest, probes, expected_ids)
 
@@ -64,15 +67,22 @@ class ManiSkillBenchmarkFactory:
         environment.pop("PYTHONPATH", None)
         environment["HOME"] = str(manifest.runtime_path("home"))
         environment["MS_ASSET_DIR"] = str(manifest.runtime_path("asset_dir"))
-        result = subprocess.run(
-            [
-                str(python), "-I", "-m", "roboscope_kit.runtime.benchmarks.maniskill.worker",
-                "--benchmark-manifest", str(manifest.path),
-                "--self-test", "--self-test-output", str(destination),
-            ],
-            capture_output=True, text=True, env=environment, timeout=300, check=False,
-        )
         log = output_dir / "runtime-validation.log"
+        try:
+            result = subprocess.run(
+                [
+                    str(python), "-I", "-m", "roboscope_kit.runtime.benchmarks.maniskill.worker",
+                    "--benchmark-manifest", str(manifest.path),
+                    "--self-test", "--self-test-output", str(destination),
+                ],
+                capture_output=True, text=True, env=environment, timeout=300, check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            log.write_bytes(b"".join(
+                part.encode("utf-8") if isinstance(part, str) else part or b""
+                for part in (error.stdout, error.stderr)
+            ))
+            raise RuntimeError(f"ManiSkill simulator self-test timed out; see {log}") from error
         log.write_text(result.stdout + result.stderr, encoding="utf-8")
         if result.returncode:
             raise RuntimeError(f"ManiSkill simulator self-test failed; see {log}: "
@@ -83,6 +93,8 @@ class ManiSkillBenchmarkFactory:
 
     @staticmethod
     def _protocol(manifest: BenchmarkManifest) -> dict[str, Any]:
+        if "envs_per_worker" in manifest.defaults:
+            raise ValueError("ManiSkill vector width belongs in protocol.vector_envs, not defaults")
         return manifest.benchmark_protocols.get(BenchmarkName.MANISKILL, {})
 
     def _profiles(
@@ -93,10 +105,12 @@ class ManiSkillBenchmarkFactory:
         return validate_profiles(self._protocol(manifest), request.suite)
 
     @staticmethod
-    def _limit(profile: dict[str, Any], count: int | None) -> dict[str, Any]:
+    def _limit(profile: dict[str, Any], count: int | None, width: int) -> dict[str, Any]:
         count = profile["episodes_per_task"] if count is None else count
         if not 1 <= count <= int(profile["episodes_per_task"]):
             raise ValueError(f"ManiSkill episode count exceeds profile {profile['profile_id']!r}")
+        if count % width:
+            raise ValueError("ManiSkill reduced episodes must preserve complete protocol vector groups")
         return {**profile, "seeds": profile["seeds"][:count]}
 
     @staticmethod
@@ -108,9 +122,7 @@ class ManiSkillBenchmarkFactory:
             python=manifest.runtime_path("python"), manifest_path=manifest.path,
             runtime_home=manifest.runtime_path("home"), asset_dir=manifest.runtime_path("asset_dir"),
             suite=request.suite, profiles=profiles, expected_profile_ids=expected_ids,
-            envs_per_worker=1 if request.quick_test else int(
-                manifest.defaults.get("envs_per_worker", 10)
-            ),
+            envs_per_worker=vector_envs(manifest.benchmark_protocols[BenchmarkName.MANISKILL]),
             policy_batch_size=int(manifest.defaults.get("policy_batch_size", 1)),
             cpu_threads=int(manifest.defaults.get("client_cpu_threads", 1)),
         ))

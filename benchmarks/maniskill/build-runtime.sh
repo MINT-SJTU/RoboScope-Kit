@@ -20,7 +20,6 @@ ENV_PYTHON="$ENV_PREFIX/bin/python"
 RUNTIME_HOME="$INSTALL_DIR/home"
 ASSET_ROOT="$INSTALL_DIR/assets"
 PHYSX_VERSION="105.1-physx-5.3.1.patch0"
-PHYSX_SHA256="4c582a16509a71faf5592fe9708586dfcc7ab61ae932eabc1ddd81f290818706"
 PHYSX_PARENT="$RUNTIME_HOME/.sapien/physx/$PHYSX_VERSION"
 PHYSX_LIBRARY="$PHYSX_PARENT/libPhysXGpu_64.so"
 PHYSX_URL="https://github.com/sapien-sim/physx-precompiled/releases/download/$PHYSX_VERSION/linux-so.zip"
@@ -89,6 +88,17 @@ if [[ ! -x "$ENV_PYTHON" ]]; then
   "$UV_BIN" venv --python "$PYTHON_BIN" "$ENV_PREFIX"
 fi
 "$ENV_PYTHON" -c 'import sys; assert sys.version_info[:3] == (3, 11, 15), sys.version'
+PHYSX_SHA256="$("$ENV_PYTHON" - "$SCRIPT_DIR/benchmark-manifest.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+digest = json.loads(Path(sys.argv[1]).read_text())["benchmark_protocols"]["maniskill"]["physx_gpu_library_sha256"]
+if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+    raise ValueError("ManiSkill manifest requires a valid physx_gpu_library_sha256")
+print(digest)
+PY
+)"
 install -d "$PHYSX_PARENT"
 if [[ ! -f "$PHYSX_LIBRARY" ]]; then
   if [[ -n "${MANISKILL_PHYSX_GPU_LIBRARY:-}" ]]; then

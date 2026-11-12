@@ -23,6 +23,9 @@ def compare(args: argparse.Namespace) -> dict:
     errors = []
     manifest = read_json(args.benchmark_manifest)
     protocol = manifest["benchmark_protocols"]["maniskill"]
+    width = protocol.get("vector_envs")
+    if type(width) is not int or width < 1:
+        raise ValueError("The comparison requires the frozen protocol.vector_envs")
     profile_ids = protocol["suites"][args.suite]
     if len(profile_ids) != len(set(profile_ids)):
         raise ValueError("The manifest suite contains duplicate profiles")
@@ -41,6 +44,8 @@ def compare(args: argparse.Namespace) -> dict:
         count = args.episodes or count
         if count > len(seeds):
             raise ValueError(f"Requested episodes exceed the frozen seeds for {name}")
+        if count % width:
+            raise ValueError("The comparison must preserve complete protocol vector groups")
         for index, seed in enumerate(seeds[:count]):
             expected[name, index, seed] = profile
 
@@ -60,8 +65,9 @@ def compare(args: argparse.Namespace) -> dict:
         wanted = args.suite if key == "suite" else protocol["protocol_id"]
         if value != wanted:
             errors.append({"side": side, "field": key, "expected": wanted, "actual": value})
-    width = args.num_envs or native["num_envs"]
-    if native["num_envs"] != width or width < 1:
+    if (type(width) is not int or width < 1 or native["num_envs"] != width
+            or (args.num_envs is not None and args.num_envs != width)
+            or sdk_manifest.get("envs_per_worker") != width):
         raise ValueError("Native vector width differs from the requested comparison width")
     task_profiles = [task["profile_id"] for task in native["tasks"]]
     if set(task_profiles) != set(profiles) or len(task_profiles) != len(profiles):
@@ -79,7 +85,8 @@ def compare(args: argparse.Namespace) -> dict:
     for path in sorted((args.sdk_output / "queue/completed").glob("*.json")):
         group = read_json(path)
         item_ids.append(group["item_id"])
-        if group["metadata"].get("vector_envs") != len(group["records"]):
+        if (group["metadata"].get("vector_envs") != width
+                or len(group["records"]) != width):
             errors.append({"side": "sdk", "item_id": group["item_id"], "field": "vector_envs"})
         for raw in group["records"]:
             row = {**raw["metadata"], "steps": raw["steps"], "record_id": raw["record_id"]}
@@ -224,6 +231,8 @@ def compare(args: argparse.Namespace) -> dict:
         errors.append({"side": "sdk", "field": "aggregate_counts"})
     return {
         "passed": not errors, "suite": args.suite, "protocol": protocol["protocol_id"],
+        "native_configuration_source": native.get("configuration_source", "legacy_manifest_configured"),
+        "original_upstream_paired_acceptance": False,
         "expected_episodes": len(expected), "sdk_episodes": len(sdk),
         "native_episodes": len(native["records"]), "vector_envs": width,
         "max_first_action_absolute_difference": maximum_action_difference,

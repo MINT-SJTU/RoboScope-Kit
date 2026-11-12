@@ -38,7 +38,6 @@
   },
   "defaults": {
     "episodes": 100,
-    "envs_per_worker": 10,
     "policy_batch_size": 256,
     "maximum_workers": 2,
     "maximum_replicas": 2,
@@ -50,6 +49,7 @@
   "benchmark_protocols": {
     "maniskill": {
       "protocol_id": "maniskill-v1",
+      "vector_envs": 10,
       "maniskill_source_commit": "baab60ede2e89167c1b7aaed41a9aa8e690a9d1e",
       "asset_sources": {
         "ycb": {
@@ -3048,7 +3048,8 @@
             "reason": "Minimal template, not imported into the default registry."
           }
         ]
-      }
+      },
+      "physx_gpu_library_sha256": "4c582a16509a71faf5592fe9708586dfcc7ab61ae932eabc1ddd81f290818706"
     }
   }
 }

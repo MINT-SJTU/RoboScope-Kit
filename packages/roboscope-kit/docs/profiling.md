@@ -102,7 +102,7 @@ is not in the report, only the round-trip time of each request.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
-- [ManiSkill](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/REVIEW_VALIDATION.md#measured-lifecycle-budget):
+- [ManiSkill](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md#timing-and-resource-coverage):
   eleven-task K1/G1/N10 CPU wall budgets separate creation, reset, rollout and RPC wait
   (2026-11-09, RTX 4090, Kit 0.8.0b44). Isolated PhysX, render and Policy GPU timings remain unmeasured.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):

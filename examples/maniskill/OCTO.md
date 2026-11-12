@@ -81,10 +81,8 @@ that reference transport and is used for correctness validation.
 Use `--trajectory-dir /path/to/traces` for a separate diagnostic. Compare initial observations,
 per-step actions, success-once/end, returns, actual steps, seeds and complete task coverage.
 The public SimplerEnv results use ManiSkill2 real2sim task versions. Their reported task scores
-are separate from the pinned ManiSkill3 profiles here. A real GPU diagnostic with one episode
-per Bridge task passes SDK/native record and full-trace comparisons: 300 actions and 304
-observations match exactly. The N10 comparison also passes all 400 episodes at 100 per task:
-initial observations, first actions, success-once/end, returns and executed steps match with zero
-action and return tolerances. See the
-[review validation report](../../benchmarks/maniskill/REVIEW_VALIDATION.md#octo-visual-policy-diagnostics)
-for measured evidence and current acceptance coverage.
+are separate from the pinned ManiSkill3 profiles here. Historical GPU evidence includes one episode
+per Bridge task with 300 exact action and 304 observation pairs, and a width-ten comparison of
+400 episodes at 100 per task. The latter predates actual native terminal-mask recording and does
+not validate the corrected current source. See the [validation status](../../benchmarks/maniskill/VALIDATION.md#recorded-evidence)
+for original source identities, measured limits and remaining acceptance.

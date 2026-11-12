@@ -78,17 +78,18 @@ observation/controller functions were checked separately with synthetic CPU
 fixtures: exact input/gripper mapping; target saturation remains a measured
 limitation. The synthetic fixtures are not native rollouts.
 
-**R17/b56 clean-build, self-test and real SDK/native checks pass.** The ordinary
-Quick Test completes the original 50 ticks at N1. An N2 five-tick prefix covers
+**Historical source `575b49c03c7566f112bd1b1a1df4f1b5a15a4668` passed its clean build,
+self-test and configured SDK/native checks.** Its then-current Quick Test completed
+the original 50 ticks at width one. A width-two five-tick prefix covers
 five seeds in groups 2,2,1. All 75 action and 81 observation pairs, records and
 terminal masks match at zero tolerance, with zero failures/OOMs. Both paths
 have zero successes. Saturated XYZ-component counts are 43 in the full episode
 and 4/3/4/3/3 in the prefixes, identically on both paths. The actual production
 CPU implementation independently reproduces all four author outputs bitwise;
 the earlier prototype receipt retains its original identity.
-See [counts, metrics and raw evidence](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md#r17-canonical-liftpeg4-extension).
-This adds one profile to cumulative coverage of 75 profiles / 51 TaskIDs; it
-does not add another TaskID or establish success rates. Cube-to-peg geometry, source500Hz versus
+See [counts, metrics and raw evidence](../../benchmarks/maniskill/VALIDATION.md#recorded-evidence).
+This adds one profile to historical execution coverage of 75 profiles / 51 TaskIDs;
+it is not intended-task trained-policy acceptance or a success-rate estimate. Cube-to-peg geometry, source500Hz versus
 target100Hz physics, and the different task objective remain transfer limits.
 
 ## Run
@@ -112,10 +113,14 @@ actor prior and frozen target protocol:
   --policy-module /path/to/kit/examples/maniskill/liftcube_policy.py \
   --policy-class ManiSkillLiftCubePolicy --policy-python /path/to/runtime/env/bin/python \
   --checkpoint /path/to/liftcube-model/lift-cube-1.pt --suite liftcube_prior_state_v1 \
-  --episodes 1 --num-envs 1 --output /path/to/native-liftcube.json
+  --episodes 10 --num-envs 10 --output /path/to/native-liftcube.json
 ```
 
 This native path independently constructs the target environment and execution
 loop while reusing the Policy. It tests SDK integration separately from the
 author-function CPU proof. Preserve original horizons for full-horizon checks;
 any five-tick diagnostic must remain explicitly non-formal.
+
+Current commands preserve the frozen ten-lane group. Earlier width-one/two measurements above
+remain historical source-specific evidence, not validation of this grouping. The generic native
+Policy diagnostic uses manifest configuration and is not independent upstream acceptance.

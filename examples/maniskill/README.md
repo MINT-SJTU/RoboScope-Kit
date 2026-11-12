@@ -92,10 +92,10 @@ catalog record sets `action_clip_bounds=[-1,1]`; the SDK Policy and direct nativ
 evaluator preserve that operation. Other actors in the four-task reference suite retain their
 original raw actions; the canonical priors have their separately documented conversions.
 Independent CPU checks against the released author actors/critics, including Apple clipping,
-are bitwise equal. R13 strict SDK/native checks passed for the first four canonical profiles and the
-two [dual-Panda transfers](DUAL_PANDA_PPO.md), at N1/N2 prefixes and full target horizons. The
-[current review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records the measured
-cohorts and source identities; these small checks do not establish 100-episode acceptance.
+are bitwise equal. Historical configured-policy checks cover these profiles and the
+two [dual-Panda transfers](DUAL_PANDA_PPO.md). The [current validation status](../../benchmarks/maniskill/VALIDATION.md)
+retains their exact source, grouping and limits. They do not establish intended-task competence,
+independent upstream configuration or 100-episode acceptance.
 
 Peg/Plug expose the same first 32 fields as LiftPeg: qpos/qvel18, TCP pose7 and
 object pose7. Their records explicitly select this prefix while traces retain
@@ -109,9 +109,20 @@ task objectives differ. These are grasp/lift priors, not insertion experts.
   /autodl-fs/maniskill-reference-models --catalog examples/maniskill/reference-ppo-models.json
 ```
 
-Use the same `ppo_policy.py` configuration and `native_eval.py`, selecting
-`--suite reference_ppo_state_v1` and this bundle. The manifest retains every target's
-original horizon, controller, observations and scoring. TransportBox's source
+Use the same `ppo_policy.py` configuration and the generic configured-policy diagnostic:
+
+```bash
+/path/to/runtime/env/bin/python examples/maniskill/native_eval_policy.py \
+  --benchmark-manifest /path/to/runtime/benchmark-manifest.json \
+  --suite reference_ppo_state_v1 --checkpoint /path/to/maniskill-reference-models \
+  --policy-module /absolute/path/to/kit/examples/maniskill/ppo_policy.py \
+  --policy-class ManiSkillPPOPolicy --policy-python /path/to/runtime/env/bin/python \
+  --episodes 100 --num-envs 10 --output /path/to/reference-policy-native.json
+```
+
+This diagnostic takes its task configuration from the manifest and reuses the same Policy.
+It is not the independent upstream configuration comparison used for official PPO acceptance.
+The manifest retains every target's original horizon, controller, observations and scoring. TransportBox's source
 evaluator defaults to 200 ticks on CPU and its lock uses ManiSkill 3.0.1; Apple's
 source simulator revision is not pinned. These references transfer checkpoints
 to the pinned Kit runtime, without claiming the papers' evaluation protocols.
@@ -119,9 +130,9 @@ TransportBox specifies no source license; Apple code is MIT and its model card
 specifies no license. Weights remain external to Git and evidence bundles.
 
 The additional [canonical priors](CANONICAL_PRIORS.md) use `canonical_prior_state_v1`,
-with unchanged target profiles. R16/b55 passed their full N1/N2 horizons and N2
-five-tick prefixes including a smaller final vector group, plus an old-PPO prefix
-regression. Their source models and transfer semantics differ from the four-task
+with unchanged target profiles. Their earlier smaller-width full-horizon and prefix
+checks remain historical evidence rather than the current frozen-width protocol.
+Their source models and transfer semantics differ from the four-task
 `reference_ppo_state_v1` suite. Both new priors had zero successes in these samples;
 they do not establish tool-use or Go2 task competence.
 
@@ -130,15 +141,16 @@ they do not establish tool-use or Go2 task competence.
 Build the simulator through [the benchmark builder](../../benchmarks/maniskill/README.md).
 The protocol is `maniskill-v1`; actions use `maniskill.native-controller-v1`, whose controller and
 shape are provided in each task's episode metadata. The adapter supports state and RGB observation
-paths. This PPO example consumes `state.proprioception`; separate visual Policies supply the
-RGB references. Sixteen of the original eighteen tabletop RGB profiles have one full-horizon
-real-policy/native comparison in R12; the other two belong to asset-deferred tasks.
+paths. This PPO example consumes `state.proprioception`; separate visual Policies supply
+RGB references. Historical visual interface checks and remaining model/asset gates are
+listed in the [validation status](../../benchmarks/maniskill/VALIDATION.md).
 
 Fill [roboscope-policy.json](roboscope-policy.json) with absolute executable, script and working
 directory paths from your installation. The contract contains portable placeholders. Use the runtime's
 manifest so asset and PhysX locations resolve against that build directory.
 
-Quick Test runs the first task in the selected suite for one episode:
+Quick Test runs the first complete ten-lane vector group of the first selected profile.
+It uses the same initial-state grouping as the corresponding full run:
 
 ```bash
 /path/to/runtime/env/bin/python -m roboscope_kit.runtime.benchmark \
@@ -171,9 +183,10 @@ The separate [Octo-small example](OCTO.md) serves the four Bridge visual tasks.
 
 ## Native GPU-vectorized comparison
 
-`native_eval.py` runs the same actors directly on ManiSkill GPU tensors with the selected manifest
-and task suite. It constructs the environment independently through upstream Gym and wrappers,
-using GPU physics, explicit seed groups and fixed horizons.
+`native_eval.py` is restricted to the eleven official PPO task checkpoints. It resolves task
+configuration from the pinned upstream source independently of the SDK manifest and rejects
+configuration disagreements. It runs the same actors directly on ManiSkill GPU tensors through
+upstream Gym and wrappers, with GPU physics, matching seed groups and fixed horizons.
 Multi-task commands launch one child process per task before CUDA initialization, retaining each
 child's logs, result and SHA-256 before validating and merging the complete task matrix.
 
@@ -181,22 +194,21 @@ child's logs, result and SHA-256 before validating and merging the complete task
 /path/to/runtime/env/bin/python examples/maniskill/native_eval.py \
   --benchmark-manifest /path/to/runtime/benchmark-manifest.json \
   --suite baseline_state_v1 --checkpoint /path/to/maniskill-models \
-  --episodes 10 --num-envs 10 --output /path/to/native-three-task.json
+  --episodes 10 --output /path/to/native-three-task.json
 ```
 
-Default environment lifetime matches the SDK baseline: create/close per vector group. Add
-`--reuse-environment` for a persistent native comparison and label that difference. Keep the same N,
-seed groups and task configuration when comparing initial-state hashes, first actions, outcomes and
-actual steps. Reset inputs can change with N even when scalar seeds match.
+Environment lifetime matches the SDK baseline: create/close per vector group. The native width
+defaults to the frozen protocol width; an explicit `--num-envs` must match it. Retain complete
+groups when reducing episode counts. Reset inputs can change with width even when scalar seeds match.
 
 Verify the complete matching episode matrix with the simulator-free comparator. Pass the same
 `--episodes` override when comparing reduced diagnostic runs.
 
 ```bash
-python examples/maniskill/compare_native.py --sdk-output /path/to/sdk-run \
-  --native-result /path/to/native-result.json \
+/path/to/runtime/env/bin/python examples/maniskill/compare_native.py \
+  --sdk-output /path/to/new-three-task-run --native-result /path/to/native-three-task.json \
   --benchmark-manifest /path/to/runtime/benchmark-manifest.json \
-  --suite official_ppo_state_v1 --output /path/to/comparison.json
+  --suite baseline_state_v1 --episodes 10 --output /path/to/comparison.json
 ```
 
 It rejects missing, duplicate and unexpected episodes, wrong task/horizon mappings, different
@@ -209,8 +221,12 @@ fields are rejected; do not infer those values from the requested horizon or rew
 
 For separate correctness diagnostics, `--trajectory-dir /path/to/new-native-traces` saves each
 consumed observation and action digest with its step number. The SDK worker supports matching
-traces through `ROBOSCOPE_MANISKILL_TRAJECTORY_DIR`. Compare these diagnostic runs separately
-from throughput measurements because copying and hashing each step adds overhead.
+traces through `ROBOSCOPE_MANISKILL_TRAJECTORY_DIR`. This variable enables correctness diagnostics
+only and must be unset during throughput measurements. Each attempt writes exclusive
+`*.jsonl.partial` files; failed attempts remain available without blocking retries. Only complete
+groups whose Policy/environment cleanup succeeds publish canonical episode `*.jsonl` files.
+The comparator discovers those canonical files and ignores partial attempts. Copying and hashing
+each step adds diagnostic overhead.
 Pass both `--sdk-trajectories` and `--native-trajectories` to the comparator to locate the first
 divergent consumed observation or action in each mismatched episode.
 
@@ -237,8 +253,9 @@ Select a checkpoint from the bundle with `--task-id`:
 
 `command.json`, `upstream.log` and `result.json` retain the exact invocation, evaluated steps/episodes,
 metrics and complete child-process time. Upstream retains its scalar-seed and subsequent unseeded
-reset schedule; this checks the genuine GPU-vectorized evaluator separately from the protocol-aligned
-native comparison. Runtime pins, assets and acceptance results are in the
+reset schedule. This smoke invocation alone does not establish equal initial inputs or acceptance;
+the configuration-independent comparison also needs a matching real current-source run.
+Runtime pins, assets and acceptance results are in the
 [benchmark documentation](../../benchmarks/maniskill/README.md).
 
 ## Additional real-policy references
@@ -246,8 +263,8 @@ native comparison. Runtime pins, assets and acceptance results are in the
 The [LiftCube actor prior](LIFTCUBE.md) targets the existing canonical LiftPeg4
 profile through `liftcube_prior_state_v1`. It retains the authors' complete
 42D state input and active learned gripper, with explicit actor-mean mode,
-EE-to-root conversion and two-tick action holds. R17/b56 full N1 and N2 prefix
-SDK/native checks pass, including groups 2,2,1, with zero differences/failures/OOMs.
+EE-to-root conversion and two-tick action holds. Its historical smaller-width checks are indexed
+in the validation record; this borrowed cube policy is not an intended upright-peg expert.
 
 Task-specific [NEWT priors](NEWT.md) cover six control tasks, PlaceSphere, PickSingleYCB and a
 separate PullCubeTool pose profile. Explicit transfer references are available for
@@ -261,10 +278,10 @@ Further references cover [Humanoid control](HUMANOID.md), the
 [MS-HAB Fetch depth transfer](FETCH_MSHAB.md). Each records its exact source model/input/control
 contract and separates interface validation from task competence and original-asset blockers.
 
-The generic `native_eval_policy.py` independently constructs the native Gym environment, features
-and action execution path without the Kit Worker or RPC. It intentionally reuses the same Policy
-implementation, so agreement isolates SDK integration rather than independently validating model
-inference or transfer mappings. Author-code and numerical checks provide separate, explicitly scoped
+The generic `native_eval_policy.py` constructs the native Gym environment, features
+and action execution without the Kit Worker or RPC. It takes configuration from the same manifest
+and reuses the same Policy, so agreement isolates SDK transport/integration; it does not independently
+validate task configuration, model inference or transfer mappings. Author-code and numerical checks provide separate, explicitly scoped
 evidence for those components. Multi-profile references run sequential per-task child processes,
 as the PPO reference does, to isolate native simulator lifetimes. Child logs and record hashes are
 retained; child phase sums and parent command time have separate boundaries. Specify
@@ -273,9 +290,7 @@ retained; child phase sums and parent command time have separate boundaries. Spe
 `--episodes`, `--num-envs` and `--trajectory-dir` for the native workload, then pass both trace
 directories to `compare_native.py`. A diagnostic manifest can set
 `benchmark_protocols.maniskill.diagnostic_step_limit=5`; retain its original environment horizon.
-All such prefixes are labeled non-formal. See [the completion report](../../benchmarks/maniskill/COMPLETION_VALIDATION.md)
-for the measured commands, coverage and unresolved asset/model gates.
-The [native-reference review](../../benchmarks/maniskill/NATIVE_REVIEW_VALIDATION.md) records
-terminal-mask fixes, passing R12/R13/R16/R17 cohorts and retained R11/R14/R15/HORA failures.
-Cumulative compared coverage is 75 profiles / 51 task IDs across those source snapshots;
-historical 100-episode-per-task evidence retains its original source identity.
+All such prefixes are non-formal and keep the frozen vector width. The [validation record](../../benchmarks/maniskill/VALIDATION.md)
+retains source identities, measured scope, failures and unresolved gates. Historical paired execution
+of 75 profiles / 51 TaskIDs is not accepted task coverage; current-source prescribed-count evaluation
+with intended task/robot checkpoints and nonzero competence remains required.

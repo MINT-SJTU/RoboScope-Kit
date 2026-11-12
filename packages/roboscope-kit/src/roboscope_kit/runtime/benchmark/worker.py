@@ -24,7 +24,7 @@ class WorkerLoop:
         state_dir: Path,
         poll_interval_s: float = 0.05,
         recycle_after_records: int | None = None,
-        recycle_on_group_change: bool = False,
+        recycle_on_context_change: bool = False,
     ) -> None:
         if worker_id < 0:
             raise ValueError("worker_id must be non-negative")
@@ -37,7 +37,7 @@ class WorkerLoop:
         self.state_dir = state_dir
         self.poll_interval_s = poll_interval_s
         self.recycle_after_records = recycle_after_records
-        self.recycle_on_group_change = recycle_on_group_change
+        self.recycle_on_context_change = recycle_on_context_change
         self.state_path = state_dir / f"worker-{worker_id:03d}.json"
 
     def run(self, evaluate: Callable[[WorkItem], WorkResult]) -> None:
@@ -54,7 +54,7 @@ class WorkerLoop:
                     return
                 time.sleep(self.poll_interval_s)
                 continue
-            if (self.recycle_on_group_change and preferred_group is not None
+            if (self.recycle_on_context_change and preferred_group is not None
                     and (claimed.item.group_id != preferred_group
                          or claimed.item.expected_results != preferred_width)):
                 # The orchestrator requeues this unevaluated claim when recycling.
