@@ -107,6 +107,31 @@ CPU use 1.14 cores. Policy loading takes 1.56 s and the total Policy wait 19.5 s
 evaluation, environment construction takes 20.3%, seeded resets 11.0%, rollout 53.5%,
 environment closing 6.2%, and Worker recycling between tasks 9.0%. The native run takes 386.1 s.
 
+### Throughput by Worker count
+
+The same source, checkpoints and 1,100 episodes were evaluated with more simulator Workers sharing one
+GPU and one Policy replica. Every run matches the native records exactly and has no Worker failure,
+retry or out-of-memory event. Each Worker holds its own ten-lane vector environment, so Worker count
+does not change initial states or seed grouping.
+
+| Workers | Evaluation (s) | Speedup | Episodes/h | Mean GPU busy | Peak VRAM (GiB) | Mean CPU cores |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 403.8 | 1.00x | 9,807 | 34% | 4.7 | 1.1 |
+| 2 | 311.1 | 1.30x | 12,729 | 56% | 8.8 | 2.1 |
+| 4 | 244.7 | 1.65x | 16,184 | 76% | 17.2 | 3.9 |
+| 6 | 220.9 | 1.83x | 17,927 | 82% | 22.8 | 5.8 |
+| 8 | 214.0 | 1.89x | 18,505 | 84% | 26.8 | 7.5 |
+| 12 | 193.6 | 2.09x | 20,455 | 94% | 35.8 | 10.6 |
+
+CUDA MPS does not help this workload: with MPS, 8 Workers take 223.0 s and 12 Workers 197.9 s and 197.7 s
+in two runs. Sixteen Workers with MPS take 197.9 s at 46.7 GiB peak VRAM. The GPU is saturated near
+twelve Workers on this machine.
+
+Autotune previously capped ManiSkill at two Workers. With the cap removed, autotune selects eight
+Workers: evaluation takes 213.0 s, after 391.4 s of probing. Probing tests 1, 2, 4, 8 and 16 Workers and
+stops when the gain falls below the knee. For a single prescribed run, a fixed `--concurrency` avoids that
+probing cost.
+
 ### Comparison with the original evaluator
 
 The unmodified upstream `ppo.py --evaluate` ran each checkpoint with 100 evaluation environments

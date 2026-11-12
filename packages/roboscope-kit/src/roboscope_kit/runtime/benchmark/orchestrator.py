@@ -645,8 +645,11 @@ class ParallelBenchmarkRuntime:
         return {
             "requested_workers": self.config.concurrency,
             "initial_workers": sum(self.initial_workers_per_gpu.values()),
+            # A Worker that exited for a planned recycle after the last exit scan is
+            # restarted by the next scan; it is not a lost Worker.
             "final_workers": sum(
-                managed.process.poll() is None for managed in self.workers.values()
+                managed.process.poll() is None or self._is_planned_recycle(worker_id, managed)
+                for worker_id, managed in self.workers.items()
             ),
             "worker_failures": len(self.failure_events),
             "oom_events": sum(

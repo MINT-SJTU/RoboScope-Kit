@@ -11,6 +11,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - Keep return-scored episodes out of binary success/failure statistics, including progress, autotune health and both shard merge paths.
 - Merge ManiSkill profile return sums/counts and success counts separately, check complete record-tree coverage, and bind shards to checkpoint and Policy content identities.
 - Remove cross-task/robot transfer Policy examples and their evaluation claims while preserving the original 55-task and tabletop observation/controller contracts; list intended-task checkpoint candidates as unvalidated until native acceptance.
+- Remove the ManiSkill two-Worker autotune cap so autotune can choose more simulator Workers per GPU, and stop counting a Worker that is exiting for a planned recycle as a lost Worker in autotune probes.
 
 ## 0.8.0b35 - 2026-11-10
 

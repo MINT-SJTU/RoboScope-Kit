@@ -32,7 +32,6 @@
   "defaults": {
     "episodes": 100,
     "policy_batch_size": 256,
-    "maximum_workers": 2,
     "maximum_replicas": 2,
     "probe_items_per_worker": 3,
     "client_cpu_threads": 1,
