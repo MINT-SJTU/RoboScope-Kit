@@ -4,6 +4,8 @@ This example loads real, task-specific [NEWT checkpoints](https://huggingface.co
 It executes the official deterministic policy-prior path (`mpc=False`,
 `eval_mode=True`), rather than model predictive control. Results from this example
 must not be presented as NEWT's published MPC performance.
+These eight task/robot checkpoints remain unvalidated candidates: inference
+compatibility does not establish prescribed-count task competence or acceptance.
 
 The source is pinned to
 [`1d3fc058b81ddf8d36a5457c29ea407dd374c1b8`](https://github.com/nicklashansen/newt/tree/1d3fc058b81ddf8d36a5457c29ea407dd374c1b8).
@@ -17,20 +19,18 @@ sizes, SHA-256 digests and native task contracts are in
 | MS-CartpoleBalance-v1 / MS-CartpoleSwingUp-v1 | 10 | 1 |
 | MS-HopperStand-v1 / MS-HopperHop-v1 | 15 | 4 |
 | PlaceSphere-v1 | 39 | 4 |
-| PickSingleYCB-v1 | 45 | 7 |
 | PullCubeTool-v1 (named pose-controller profile) | 39 | 7 |
 
 These are native ManiSkill policies, including the six `ms-*` control models.
 They are not the similarly named DeepMind Control Suite torque policies.
 The control tasks use native `pd_joint_delta_pos`; PlaceSphere uses
-`pd_ee_delta_pos`; YCB and PullCubeTool use `pd_ee_delta_pose`. PullCubeTool's
+`pd_ee_delta_pos`; PullCubeTool uses `pd_ee_delta_pose`. PullCubeTool's
 existing position-controller profile is unchanged; select the explicit new pose
 profile for this model. No observation normalization is added.
 
-The YCB model was trained on `013_apple`. It is an object-transfer reference when
-evaluated on the canonical complete YCB object distribution. The adapter does
-not select objects or change task sampling, and no all-object expert performance
-is claimed.
+`newt_state_v1` selects the eight matching profiles. The original PickSingleYCB
+task remains supported by the benchmark with no selected intended-task model;
+the apple-only checkpoint is not used for its full object distribution.
 
 The upstream [ManiSkill wrapper](https://github.com/nicklashansen/newt/blob/1d3fc058b81ddf8d36a5457c29ea407dd374c1b8/tdmpc2/envs/maniskill.py)
 consumes the native flattened state and repeats each model action twice.
@@ -71,12 +71,10 @@ EOF
 ```
 
 Pass the generated `models.json` bundle as the checkpoint path and select a
-matching numeric state profile. Each model is approximately 72.3 MB; the nine
-pinned files total approximately 650 MB. The downloader verifies cached files
+matching numeric state profile. Each model is approximately 72.3 MB; the eight
+pinned files total 578,212,440 bytes. The downloader verifies cached files
 and reports progress and estimated remaining time.
 
-The nine model adapters were compared against the pinned upstream
-`WorldModel.encode()` / `WorldModel.pi()` implementation on 32 states per model
-using Torch 2.6.0 on CPU: all action means were bitwise equal (maximum absolute
-error 0). This checks inference equivalence; task rollout acceptance is recorded
-in the benchmark's acceptance report.
+The checkpoint's source, inference branch and native contract must be verified
+independently when accepting these tasks. No current-source prescribed-count
+evaluation or reproduction of the published MPC scores is claimed here.

@@ -25,7 +25,7 @@ select `bridge_rgb_v1` with the simulator runtime's manifest.
   --quick-test --output-dir /path/to/results/octo-quick
 ```
 
-For the configured 100 episodes per task, replace `--quick-test` with
+Quick Test runs the first complete ten-episode group. For the configured 100 episodes per task, replace `--quick-test` with
 `--concurrency 1 --replicas 1`. Keep the same vector grouping on the native comparison.
 
 The implementation follows SimplerEnv's `widowx_bridge` preprocessing and action conversion.
@@ -66,7 +66,9 @@ The [pinned XLA selection code](https://github.com/openxla/xla/blob/ca31652cdbeb
 defines the repeatable algorithm choice. Exact pairing also requires the same vector width and
 history grouping on both evaluation paths.
 
-The native reference constructs Gym environments independently of the Kit Worker. It runs the
+The native reference constructs Gym environments without the Kit Worker, using the declared
+manifest configuration. This is a configured-reference diagnostic, not independently resolved
+upstream task-configuration acceptance. It runs the
 actor in a persistent subprocess using the same isolated inference interpreter, with lossless RGB
 transport. This keeps JAX/TF dependencies out of the simulator environment. Native timing includes
 that reference transport and is used for correctness validation.
@@ -81,8 +83,7 @@ that reference transport and is used for correctness validation.
 Use `--trajectory-dir /path/to/traces` for a separate diagnostic. Compare initial observations,
 per-step actions, success-once/end, returns, actual steps, seeds and complete task coverage.
 The public SimplerEnv results use ManiSkill2 real2sim task versions. Their reported task scores
-are separate from the pinned ManiSkill3 profiles here. Historical GPU evidence includes one episode
-per Bridge task with 300 exact action and 304 observation pairs, and a width-ten comparison of
-400 episodes at 100 per task. The latter predates actual native terminal-mask recording and does
-not validate the corrected current source. See the [validation status](../../benchmarks/maniskill/VALIDATION.md#recorded-evidence)
-for original source identities, measured limits and remaining acceptance.
+are separate from the pinned ManiSkill3 profiles here. This retained example is provisional:
+OXE/Bridge training does not establish matched per-task competence, and no final-source
+prescribed-count acceptance is claimed. See the
+[validation status](../../benchmarks/maniskill/VALIDATION.md) for the remaining requirements.

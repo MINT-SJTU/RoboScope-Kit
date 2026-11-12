@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import torch
-from go2_reach_prior import project_actor_input as project_go2_actor_input
-from go2_reach_prior import project_native_action as project_go2_action
 from ppo_model import LoadedPPO, load_model_bundle
-from pull_tool_prior import project_actor_input
 
 from roboscope_kit import (
     ActionChunk,
@@ -36,6 +33,11 @@ class ManiSkillPPOPolicy(Policy):
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.set_num_threads(1)
         self.models = load_model_bundle(context.checkpoint_path, self.device)
+        if any(
+            key in model.metadata for model in self.models.values()
+            for key in ("state_prefix_length", "state_projection")
+        ):
+            raise ValueError("The PPO example requires native task-model inputs without transfer projections")
         self.episode_tasks.clear()
         return PolicyCapabilities(
             supported_benchmarks=("maniskill",),
@@ -81,24 +83,13 @@ class ManiSkillPPOPolicy(Policy):
             values = []
             for index in indices:
                 state = np.asarray(observations[index].features["state.proprioception"], dtype=np.float32)
-                native_dim = model.metadata.get("native_observation_dimension", model.observation_dim)
-                if state.shape != (native_dim,) or not np.isfinite(state).all():
-                    raise ValueError(f"{task_id} requires finite native state shape ({native_dim},)")
-                prefix = model.metadata.get("state_prefix_length")
-                if prefix is not None:
-                    state = state[:prefix]
-                if model.metadata.get("state_projection") == "pull_cube_tool_workspace_target_v1":
-                    state = project_actor_input(state)
-                if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
-                    state = project_go2_actor_input(state)
-                if state.shape != (model.observation_dim,):
-                    raise ValueError(f"{task_id} observation projection differs from the checkpoint")
+                if state.shape != (model.observation_dim,) or not np.isfinite(state).all():
+                    message = f"{task_id} requires finite native state shape ({model.observation_dim},)"
+                    raise ValueError(message)
                 values.append(state)
             batch = torch.as_tensor(np.stack(values), device=self.device, dtype=torch.float32)
             with torch.inference_mode():
                 actor_actions = model.agent.actor_mean(batch)
-                if model.metadata.get("state_projection") == "go2_anymal_reach_prior_v1":
-                    actor_actions = project_go2_action(actor_actions)
                 actions = actor_actions.cpu().numpy()
             if not np.isfinite(actions).all():
                 raise ValueError(f"{task_id} model produced non-finite actions")

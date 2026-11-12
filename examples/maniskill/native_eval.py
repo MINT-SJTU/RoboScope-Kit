@@ -192,7 +192,8 @@ def run_task_processes(args: argparse.Namespace, profiles: tuple[dict, ...]) -> 
         "macro_success_rate": (
             sum(task["success_rate"] for task in scored_tasks) / len(scored_tasks) if scored_tasks else None
         ),
-        "mean_return": sum(record["episode_return"] for record in records) / len(records),
+        # Different tasks need their own reward scales; retain each task's mean below.
+        "mean_return": None,
         "timing": timing, "episodes_per_s": len(records) / timing["formal_wall_s"],
         "actual_steps_per_s": steps / timing["formal_wall_s"],
         "process_isolation": "one_task_per_process", "task_references": provenance,

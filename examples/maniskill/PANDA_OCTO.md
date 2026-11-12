@@ -5,6 +5,8 @@ ManiSkill comparison. It is separate from the Bridge Octo example: it uses the a
 fine-tuning, Octo v1.5 source, and direct normalized end-effector commands. It does not use Bridge
 action statistics. The published comparison reports zero success for this Octo baseline on its five
 tasks, so successful inference is an integration check, not evidence of task competence.
+This is an unvalidated candidate; its published zero-success baseline does not meet
+the intended-task competence requirement for acceptance.
 
 ## Pinned sources
 
@@ -45,14 +47,18 @@ Preparation does not execute the model or modify the simulator.
 The public Policy is `panda_octo_policy.ManiSkillPandaOctoPolicy`. Pass the downloaded directory as
 `SessionContext.checkpoint_path`, use an RGB profile exposing the real `images.primary`, and retain
 the manifest's robot, native controller, camera, seeds, success rules, and full episode horizon.
+The shipped candidate suite selects only `peg_insertion_side_rgb` and `plug_charger_rgb`,
+whose existing controllers supply all seven native EE-pose action values. The author's other
+three tasks are PickCube, StackCube and PushCube; their existing Kit RGB profiles use a different
+position controller and remain unverified with this checkpoint. Their controllers are unchanged.
 
 ## Observation and action contract
 
 The model consumes the actual primary RGB frame and the profile's language instruction. Images use
 the author's TensorFlow Lanczos3 resize to 256 by 256 and truncating `uint8` conversion. Its released
 configuration contains primary and wrist image tokenizers and **no proprioception tokenizer**.
-The wrist view is absent in the author's evaluator and here. Proprioception is omitted; no fictitious
-Panda finger positions are appended for PandaStick. The checkpoint's unused example `proprio` field
+The wrist view is absent in the author's evaluator and here. Proprioception is omitted.
+The checkpoint's unused example `proprio` field
 does not establish a consumed state input.
 
 Each episode has two frames of history, an initial `[false, true]` history mask, a PRNG initialized to
@@ -66,31 +72,17 @@ controller without applying checkpoint action statistics. This example preserves
 translation, rotation, and gripper values are native normalized controller commands, not directly
 metres or radians. Native controller scaling and clipping remain inside the frozen simulator.
 
-For the older profiles which expose fewer native control axes, the following explicit transfer
-projections retain their controller contracts:
-
-| Frozen embodiment and controller | Command selected from predicted EE7 |
-| --- | --- |
-| Panda, `pd_ee_delta_pose` | All seven values |
-| Panda, `pd_ee_delta_pos` | Translation indices 0–2 and gripper index 6 |
-| PandaStick, `pd_ee_delta_pos` | Translation indices 0–2 |
-| Two Panda arms, `pd_ee_delta_pos` | Independent model history and inference per arm, concatenate two four-value commands |
-
-Dual-arm inference uses the actual shared camera view and names the arm in its instruction. It does
-not imply dual-arm training. FMB, PandaStick, dual-arm tasks, new camera views, and tasks outside the
-author's five-task comparison are declared transfer evaluations; their expert success rates are not
-claimed. No task-specific model is substituted silently and no missing image or state is fabricated.
+The Policy requires a single native Panda and the complete seven-value `pd_ee_delta_pose`
+controller on an author-listed task. Position-only controllers, PandaStick, dual-arm composition
+and unrelated tasks are rejected. The benchmark's other original state/RGB profiles remain
+selectable with their own model requirements.
 
 `ManiSkillFinetunedOcto.reset(id, instruction)`, `act_batch(ids, images, proprios=None)`, and
-`end_episode(id)` also expose the learned model for explicit cross-embodiment transfer examples.
+`end_episode(id)` expose the learned model's per-episode lifecycle.
 `act_batch` returns raw EE7 and ignores the optional proprioception argument by design.
 
-## Validation
+## Acceptance status
 
-On 2026-11-09, the actual released checkpoint passed a CPU comparison against the pinned author's
-`resize_img` and `sample_actions` functions: all five actions, including the next four-action query
-boundary, were bitwise identical with maximum absolute error zero. Replacing the source's nine-value
-proprioception with other values or omitting it also produced bitwise identical actions. This probe
-uses deterministic synthetic RGB only to check the inference adapter; real simulation acceptance
-is recorded separately with the task matrix. The model restores in about eight seconds and the
-complete CPU probe took 57 seconds on the adaptation machine.
+Current-source simulation and independent author-configuration validation remain outstanding.
+Keeping the public checkpoint and its intended-task inference code does not establish task
+competence, full-profile coverage or an accepted visual baseline.

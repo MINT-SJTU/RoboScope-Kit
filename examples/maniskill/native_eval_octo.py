@@ -271,7 +271,7 @@ def main() -> None:
         "success_once": sum(row["success_once"] for row in records) / len(records),
         "success_at_end": sum(row["success_at_end"] for row in records) / len(records),
         "macro_success_rate": sum(task["success_rate"] for task in tasks) / len(tasks),
-        "mean_return": sum(row["episode_return"] for row in records) / len(records),
+        "mean_return": tasks[0]["mean_return"] if len(tasks) == 1 else None,
         "trajectory_diagnostics": args.trajectory_dir is not None,
         "environment_lifecycle": "recreate_per_vector_group",
         "versions": {name: importlib.metadata.version(name) for name in ("mani_skill", "torch", "sapien")},

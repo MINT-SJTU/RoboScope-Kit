@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "model_kind": "Pinned PPO state references and explicitly labeled task transfers, deterministic FP32",
+  "model_kind": "Pinned author G1 task-trained PPO checkpoints, deterministic FP32",
   "models": {
     "UnitreeG1TransportBox-v1": {
       "path": "stream-transport-box-adam_ppo_pretrain.pt",
@@ -49,107 +49,10 @@
       "target_simulator_revision": "baab60ede2e89167c1b7aaed41a9aa8e690a9d1e",
       "model_repository": "JsSparkYyx/LatentSafetyFilterWithPVRs",
       "model_revision": "8138cb752bc0471d79c09439172f4dc6421a1392"
-    },
-    "PegInsertionSide-v1": {
-      "path": "LiftPegUpright-v1.pt",
-      "dataset_path": "demos/LiftPegUpright-v1/rl/ppo_pd_ee_delta_pose_ckpt.pt",
-      "bytes": 1134626,
-      "sha256": "4b0372fca3cf336f94ccb17a6e507890604ea0470dbc75e2a7971321afe83e95",
-      "robot_uid": "panda_wristcam",
-      "obs_mode": "state",
-      "control_mode": "pd_ee_delta_pose",
-      "max_episode_steps": 100,
-      "observation_dimension": 32,
-      "action_dimension": 7,
-      "source_robot_uid": "panda",
-      "source_task_id": "LiftPegUpright-v1",
-      "source_repository": "haosulab/ManiSkill_Demonstrations",
-      "source_revision": "3558f72cf99d51d04a6ac4779e88b3da4bbf1628",
-      "source_kind": "haosulab official task-trained PPO, used as an explicit grasp/lift prior transfer",
-      "url": "https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/resolve/3558f72cf99d51d04a6ac4779e88b3da4bbf1628/demos/LiftPegUpright-v1/rl/ppo_pd_ee_delta_pose_ckpt.pt",
-      "native_observation_dimension": 43,
-      "state_prefix_length": 32,
-      "source_max_episode_steps": 50
-    },
-    "PlugCharger-v1": {
-      "path": "LiftPegUpright-v1.pt",
-      "dataset_path": "demos/LiftPegUpright-v1/rl/ppo_pd_ee_delta_pose_ckpt.pt",
-      "bytes": 1134626,
-      "sha256": "4b0372fca3cf336f94ccb17a6e507890604ea0470dbc75e2a7971321afe83e95",
-      "robot_uid": "panda_wristcam",
-      "obs_mode": "state",
-      "control_mode": "pd_ee_delta_pose",
-      "max_episode_steps": 200,
-      "observation_dimension": 32,
-      "action_dimension": 7,
-      "source_robot_uid": "panda",
-      "source_task_id": "LiftPegUpright-v1",
-      "source_repository": "haosulab/ManiSkill_Demonstrations",
-      "source_revision": "3558f72cf99d51d04a6ac4779e88b3da4bbf1628",
-      "source_kind": "haosulab official task-trained PPO, used as an explicit grasp/lift prior transfer",
-      "url": "https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/resolve/3558f72cf99d51d04a6ac4779e88b3da4bbf1628/demos/LiftPegUpright-v1/rl/ppo_pd_ee_delta_pose_ckpt.pt",
-      "native_observation_dimension": 46,
-      "state_prefix_length": 32,
-      "source_max_episode_steps": 50
-    },
-    "PullCubeTool-v1": {
-      "path": "PullCube-v1.pt",
-      "dataset_path": "demos/PullCube-v1/rl/ppo_pd_ee_delta_pos_ckpt.pt",
-      "bytes": 1137698,
-      "sha256": "76a7275c0c67adad46fcf32c98c0a7d7bb1397c9119b57b56f80a823292c60ad",
-      "robot_uid": "panda",
-      "obs_mode": "state",
-      "control_mode": "pd_ee_delta_pos",
-      "max_episode_steps": 100,
-      "observation_dimension": 35,
-      "action_dimension": 4,
-      "source_task_id": "PullCube-v1",
-      "source_max_episode_steps": 50,
-      "source_repository": "haosulab/ManiSkill_Demonstrations",
-      "source_revision": "3558f72cf99d51d04a6ac4779e88b3da4bbf1628",
-      "source_kind": "haosulab official task-trained PPO used as an explicit direct-pull prior transfer; does not learn tool use",
-      "native_observation_dimension": 39,
-      "state_projection": "pull_cube_tool_workspace_target_v1",
-      "workspace_target_source": "Pinned PullCubeTool dense reward: fixed TableSceneBuilder Panda base plus [0.05,0,0]; distinct from progress center and success radius",
-      "target_simulator_revision": "baab60ede2e89167c1b7aaed41a9aa8e690a9d1e",
-      "url": "https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/resolve/3558f72cf99d51d04a6ac4779e88b3da4bbf1628/demos/PullCube-v1/rl/ppo_pd_ee_delta_pos_ckpt.pt"
-    },
-    "UnitreeGo2-Reach-v1": {
-      "path": "AnymalC-Reach-v1.pt",
-      "dataset_path": "demos/AnymalC-Reach-v1/rl/ppo_pd_joint_delta_pos_ckpt.pt",
-      "bytes": 1145890,
-      "sha256": "e679a1ec3aa9cf2eeee8f6b2c233a49fa340480ab614af6b06b6b56393857ba9",
-      "robot_uid": "unitree_go2_simplified_locomotion",
-      "obs_mode": "state",
-      "control_mode": "pd_joint_delta_pos",
-      "max_episode_steps": 200,
-      "observation_dimension": 35,
-      "action_dimension": 12,
-      "source_robot_uid": "anymal_c",
-      "source_task_id": "AnymalC-Reach-v1",
-      "source_repository": "haosulab/ManiSkill_Demonstrations",
-      "source_revision": "3558f72cf99d51d04a6ac4779e88b3da4bbf1628",
-      "source_kind": "Official ANYmal Reach PPO used as an explicit cross-robot home-centered joint prior, not a Go2-trained expert",
-      "native_observation_dimension": 35,
-      "state_projection": "go2_anymal_reach_prior_v1",
-      "source_delta_bounds": [
-        -0.225,
-        0.225
-      ],
-      "target_delta_bounds": [
-        -0.7,
-        0.7
-      ],
-      "target_simulator_revision": "baab60ede2e89167c1b7aaed41a9aa8e690a9d1e",
-      "url": "https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/resolve/3558f72cf99d51d04a6ac4779e88b3da4bbf1628/demos/AnymalC-Reach-v1/rl/ppo_pd_joint_delta_pos_ckpt.pt"
     }
   },
   "default_tasks": [
     "UnitreeG1TransportBox-v1",
-    "UnitreeG1PlaceAppleInBowl-v1",
-    "PegInsertionSide-v1",
-    "PlugCharger-v1",
-    "PullCubeTool-v1",
-    "UnitreeGo2-Reach-v1"
+    "UnitreeG1PlaceAppleInBowl-v1"
   ]
 }

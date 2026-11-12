@@ -86,21 +86,6 @@
       "action_dimension": 4,
       "action_repeat": 2
     },
-    "PickSingleYCB-v1": {
-      "path": "ms-pick-apple.pt",
-      "sha256": "d2a3a22e6f03f8f0ec9506de13d66be5fd9eb9830af537e551484f97cc86bb83",
-      "bytes": 72276555,
-      "model_task": "ms-pick-apple",
-      "robot_uid": "panda_wristcam",
-      "control_mode": "pd_ee_delta_pose",
-      "observation_dimension": 45,
-      "action_dimension": 7,
-      "action_repeat": 2,
-      "training_model_ids": [
-        "013_apple"
-      ],
-      "evaluation_distribution": "unchanged native complete object distribution; object-transfer reference"
-    },
     "PullCubeTool-v1": {
       "path": "ms-pull-cube-tool.pt",
       "sha256": "cdf75a14048bf29424182580686a6dc9790dbb250c001fa252143c1c9df8a865",

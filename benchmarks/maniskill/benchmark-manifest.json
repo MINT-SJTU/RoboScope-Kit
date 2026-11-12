@@ -16,16 +16,9 @@
       "upstream_tasks_v1",
       "upstream_state_v1",
       "bridge_rgb_v1",
-      "transfer_reference_state_v1",
-      "humanoid_control_transfer_state_v1",
-      "humanoid_control_canonical_state_v1",
       "panda_visual_rgb_v1",
-      "g1_visual_rgb_v1",
-      "fetch_mshab_depth_v1",
       "reference_ppo_state_v1",
-      "dual_panda_transfer_state_v1",
-      "canonical_prior_state_v1",
-      "liftcube_prior_state_v1"
+      "newt_state_v1"
     ]
   },
   "runtime": {
@@ -403,67 +396,23 @@
           "stack_green_cube_on_yellow_cube_baked_tex_in_scene_rgb",
           "put_spoon_on_table_cloth_in_scene_rgb"
         ],
-        "transfer_reference_state_v1": [
-          "unitree_h1_stand_root_state",
-          "unitree_g1_stand_root_state",
-          "unitree_go2_reach_root_state",
-          "anymal_c_spin_root_state",
-          "pull_cube_tool_newt_state"
-        ],
-        "humanoid_control_transfer_state_v1": [
-          "ms_humanoid_stand_root_state",
-          "ms_humanoid_walk_root_state",
-          "ms_humanoid_run_root_state"
-        ],
         "panda_visual_rgb_v1": [
-          "assembling_kits_rgb",
-          "lift_peg_upright_rgb",
           "peg_insertion_side_rgb",
-          "pick_clutter_ycb_rgb",
-          "pickcube_rgb",
-          "pick_single_ycb_rgb",
-          "place_sphere_rgb",
-          "plug_charger_rgb",
-          "poke_cube_rgb",
-          "pull_cube_rgb",
-          "pull_cube_tool_rgb",
-          "pushcube_rgb",
-          "pusht_rgb",
-          "rollball_rgb",
-          "stackcube_rgb",
-          "turn_faucet_rgb",
-          "two_robot_pickcube_rgb",
-          "two_robot_stackcube_rgb",
-          "fmb_assembly1_easy_rgb"
-        ],
-        "g1_visual_rgb_v1": [
-          "unitree_g1_place_apple_in_bowl_rgb",
-          "unitree_g1_transport_box_rgb"
-        ],
-        "fetch_mshab_depth_v1": [
-          "open_cabinet_door_mshab_depth",
-          "open_cabinet_drawer_mshab_depth"
-        ],
-        "humanoid_control_canonical_state_v1": [
-          "ms_humanoid_walk_state",
-          "ms_humanoid_run_state"
+          "plug_charger_rgb"
         ],
         "reference_ppo_state_v1": [
           "unitree_g1_transport_box_state",
-          "unitree_g1_place_apple_in_bowl_state",
-          "peg_insertion_side_state",
-          "plug_charger_state"
+          "unitree_g1_place_apple_in_bowl_state"
         ],
-        "dual_panda_transfer_state_v1": [
-          "two_robot_pickcube_state",
-          "two_robot_stackcube_state"
-        ],
-        "canonical_prior_state_v1": [
-          "pull_cube_tool_state",
-          "unitree_go2_reach_state"
-        ],
-        "liftcube_prior_state_v1": [
-          "lift_peg_upright_state"
+        "newt_state_v1": [
+          "ms_ant_walk_state",
+          "ms_ant_run_state",
+          "ms_cartpole_balance_state",
+          "ms_cartpole_swing_up_state",
+          "ms_hopper_stand_state",
+          "ms_hopper_hop_state",
+          "place_sphere_state",
+          "pull_cube_tool_newt_state"
         ]
       },
       "profiles": {
@@ -2048,94 +1997,6 @@
           "instruction": "Use both robots to stack the cubes.",
           "action_dimension": 16
         },
-        "unitree_h1_stand_root_state": {
-          "task_id": "UnitreeH1Stand-v1",
-          "robot_uid": "unitree_h1_simplified",
-          "obs_mode": "state",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 1000,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "return",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [
-            "unitree_h1"
-          ],
-          "instruction": "UnitreeH1Stand-v1",
-          "env_kwargs": {
-            "reward_mode": "sparse"
-          },
-          "include_root_kinematics": true
-        },
-        "unitree_g1_stand_root_state": {
-          "task_id": "UnitreeG1Stand-v1",
-          "robot_uid": "unitree_g1_simplified_legs",
-          "obs_mode": "state",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 1000,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "return",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [],
-          "instruction": "UnitreeG1Stand-v1",
-          "env_kwargs": {
-            "reward_mode": "sparse"
-          },
-          "include_root_kinematics": true
-        },
-        "unitree_go2_reach_root_state": {
-          "task_id": "UnitreeGo2-Reach-v1",
-          "robot_uid": "unitree_go2_simplified_locomotion",
-          "obs_mode": "state",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 200,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "success_once",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [
-            "unitree_go2"
-          ],
-          "instruction": "UnitreeGo2-Reach-v1",
-          "include_root_kinematics": true
-        },
-        "anymal_c_spin_root_state": {
-          "task_id": "AnymalC-Spin-v1",
-          "robot_uid": "anymal_c",
-          "obs_mode": "state",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 200,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "return",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [
-            "anymal_c"
-          ],
-          "instruction": "AnymalC-Spin-v1",
-          "include_root_kinematics": true
-        },
         "pull_cube_tool_newt_state": {
           "task_id": "PullCubeTool-v1",
           "robot_uid": "panda",
@@ -2154,191 +2015,6 @@
           "asset_download_ids": [],
           "instruction": "Use the tool to pull the cube to its goal.",
           "action_dimension": 7
-        },
-        "ms_humanoid_stand_root_state": {
-          "task_id": "MS-HumanoidStand-v1",
-          "robot_uid": "humanoid",
-          "obs_mode": "state",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 1000,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "return",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 200,
-          "control_freq": 40,
-          "asset_download_ids": [],
-          "instruction": "MS-HumanoidStand-v1",
-          "include_root_kinematics": true,
-          "action_dimension": 21
-        },
-        "ms_humanoid_walk_root_state": {
-          "task_id": "MS-HumanoidWalk-v1",
-          "robot_uid": "humanoid",
-          "obs_mode": "state",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 1000,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "return",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 200,
-          "control_freq": 40,
-          "asset_download_ids": [],
-          "instruction": "MS-HumanoidWalk-v1",
-          "include_root_kinematics": true,
-          "action_dimension": 21
-        },
-        "ms_humanoid_run_root_state": {
-          "task_id": "MS-HumanoidRun-v1",
-          "robot_uid": "humanoid",
-          "obs_mode": "state",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 1000,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "return",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 200,
-          "control_freq": 40,
-          "asset_download_ids": [],
-          "instruction": "MS-HumanoidRun-v1",
-          "include_root_kinematics": true,
-          "action_dimension": 21
-        },
-        "fmb_assembly1_easy_rgb": {
-          "task_id": "FMBAssembly1Easy-v1",
-          "robot_uid": "panda",
-          "obs_mode": "rgb",
-          "control_mode": "pd_ee_delta_pose",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 500,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "success_once",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [],
-          "instruction": "FMBAssembly1Easy-v1",
-          "env_kwargs": {
-            "reward_mode": "sparse"
-          },
-          "cameras": {
-            "images.primary": "base_camera"
-          },
-          "action_dimension": 7
-        },
-        "unitree_g1_place_apple_in_bowl_rgb": {
-          "task_id": "UnitreeG1PlaceAppleInBowl-v1",
-          "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
-          "obs_mode": "rgb",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 100,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "success_once",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [],
-          "instruction": "UnitreeG1PlaceAppleInBowl-v1",
-          "use_default_robot": true,
-          "cameras": {
-            "images.primary": "head_camera"
-          },
-          "include_root_kinematics": true,
-          "action_dimension": 25
-        },
-        "unitree_g1_transport_box_rgb": {
-          "task_id": "UnitreeG1TransportBox-v1",
-          "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
-          "obs_mode": "rgb",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 100,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "success_once",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [],
-          "instruction": "UnitreeG1TransportBox-v1",
-          "use_default_robot": true,
-          "cameras": {
-            "images.primary": "head_camera"
-          },
-          "include_root_kinematics": true,
-          "action_dimension": 25
-        },
-        "open_cabinet_door_mshab_depth": {
-          "task_id": "OpenCabinetDoor-v1",
-          "robot_uid": "fetch",
-          "obs_mode": "depth",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 100,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "success_once",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [
-            "partnet_mobility_cabinet"
-          ],
-          "instruction": "OpenCabinetDoor-v1",
-          "include_cabinet_contact_state": true,
-          "depth_cameras": {
-            "state.depth_head": "fetch_head",
-            "state.depth_hand": "fetch_hand"
-          },
-          "action_dimension": 13
-        },
-        "open_cabinet_drawer_mshab_depth": {
-          "task_id": "OpenCabinetDrawer-v1",
-          "robot_uid": "fetch",
-          "obs_mode": "depth",
-          "control_mode": "pd_joint_delta_pos",
-          "sim_backend": "physx_cuda",
-          "render_backend": "gpu",
-          "max_episode_steps": 100,
-          "reconfiguration_freq": 1,
-          "ignore_terminations": true,
-          "success_metric": "success_once",
-          "action_chunk_size": 1,
-          "enhanced_determinism": false,
-          "sim_freq": 100,
-          "control_freq": 20,
-          "asset_download_ids": [
-            "partnet_mobility_cabinet"
-          ],
-          "instruction": "OpenCabinetDrawer-v1",
-          "include_cabinet_contact_state": true,
-          "depth_cameras": {
-            "state.depth_head": "fetch_head",
-            "state.depth_hand": "fetch_hand"
-          },
-          "action_dimension": 13
         }
       },
       "upstream_inventory": {
@@ -2357,7 +2033,7 @@
               "anymal_c_reach_state"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "AnymalC-Spin-v1",
@@ -2368,7 +2044,7 @@
               "anymal_c_spin_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "AssemblingKits-v1",
@@ -2380,7 +2056,7 @@
               "assembling_kits_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "FMBAssembly1Easy-v1",
@@ -2391,7 +2067,7 @@
               "fmb_assembly1_easy_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "LiftPegUpright-v1",
@@ -2404,7 +2080,7 @@
               "lift_peg_upright_ppo_state"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "MS-AntRun-v1",
@@ -2414,8 +2090,8 @@
             "profiles": [
               "ms_ant_run_state"
             ],
-            "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "public_checkpoint": "newt_task_trained_candidate",
+            "acceptance": "not_validated_actor_prior_and_native_protocol_require_comparison"
           },
           {
             "task_id": "MS-AntWalk-v1",
@@ -2425,8 +2101,8 @@
             "profiles": [
               "ms_ant_walk_state"
             ],
-            "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "public_checkpoint": "newt_task_trained_candidate",
+            "acceptance": "not_validated_actor_prior_and_native_protocol_require_comparison"
           },
           {
             "task_id": "MS-CartpoleBalance-v1",
@@ -2436,8 +2112,8 @@
             "profiles": [
               "ms_cartpole_balance_state"
             ],
-            "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "public_checkpoint": "newt_task_trained_candidate",
+            "acceptance": "not_validated_actor_prior_and_native_protocol_require_comparison"
           },
           {
             "task_id": "MS-CartpoleSwingUp-v1",
@@ -2447,8 +2123,8 @@
             "profiles": [
               "ms_cartpole_swing_up_state"
             ],
-            "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "public_checkpoint": "newt_task_trained_candidate",
+            "acceptance": "not_validated_actor_prior_and_native_protocol_require_comparison"
           },
           {
             "task_id": "MS-HopperHop-v1",
@@ -2458,8 +2134,8 @@
             "profiles": [
               "ms_hopper_hop_state"
             ],
-            "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "public_checkpoint": "newt_task_trained_candidate",
+            "acceptance": "not_validated_actor_prior_and_native_protocol_require_comparison"
           },
           {
             "task_id": "MS-HopperStand-v1",
@@ -2469,8 +2145,8 @@
             "profiles": [
               "ms_hopper_stand_state"
             ],
-            "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "public_checkpoint": "newt_task_trained_candidate",
+            "acceptance": "not_validated_actor_prior_and_native_protocol_require_comparison"
           },
           {
             "task_id": "MS-HumanoidRun-v1",
@@ -2481,7 +2157,7 @@
               "ms_humanoid_run_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "MS-HumanoidStand-v1",
@@ -2492,7 +2168,7 @@
               "ms_humanoid_stand_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "MS-HumanoidWalk-v1",
@@ -2503,7 +2179,7 @@
               "ms_humanoid_walk_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "OpenCabinetDoor-v1",
@@ -2514,7 +2190,7 @@
               "open_cabinet_door_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "OpenCabinetDrawer-v1",
@@ -2525,7 +2201,7 @@
               "open_cabinet_drawer_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "PegInsertionSide-v1",
@@ -2537,7 +2213,7 @@
               "peg_insertion_side_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "PickClutterYCB-v1",
@@ -2549,7 +2225,7 @@
               "pick_clutter_ycb_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "PickCube-v1",
@@ -2561,7 +2237,7 @@
               "pickcube_rgb"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "PickSingleYCB-v1",
@@ -2573,7 +2249,7 @@
               "pick_single_ycb_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "PlaceSphere-v1",
@@ -2584,8 +2260,8 @@
               "place_sphere_state",
               "place_sphere_rgb"
             ],
-            "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "public_checkpoint": "newt_task_trained_candidate",
+            "acceptance": "not_validated_actor_prior_and_native_protocol_require_comparison"
           },
           {
             "task_id": "PlugCharger-v1",
@@ -2597,7 +2273,7 @@
               "plug_charger_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "PokeCube-v1",
@@ -2609,7 +2285,7 @@
               "poke_cube_rgb"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "PullCube-v1",
@@ -2621,7 +2297,7 @@
               "pull_cube_rgb"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "PullCubeTool-v1",
@@ -2630,10 +2306,11 @@
             "max_episode_steps": 100,
             "profiles": [
               "pull_cube_tool_state",
-              "pull_cube_tool_rgb"
+              "pull_cube_tool_rgb",
+              "pull_cube_tool_newt_state"
             ],
-            "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "public_checkpoint": "newt_task_trained_candidate",
+            "acceptance": "not_validated_actor_prior_and_native_protocol_require_comparison"
           },
           {
             "task_id": "PushCube-v1",
@@ -2645,7 +2322,7 @@
               "pushcube_rgb"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "PushT-v1",
@@ -2657,7 +2334,7 @@
               "pusht_rgb"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "PutCarrotOnPlateInScene-v1",
@@ -2668,7 +2345,7 @@
               "put_carrot_on_plate_in_scene_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "PutEggplantInBasketScene-v1",
@@ -2679,7 +2356,7 @@
               "put_eggplant_in_basket_scene_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "PutSpoonOnTableClothInScene-v1",
@@ -2690,7 +2367,7 @@
               "put_spoon_on_table_cloth_in_scene_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RollBall-v1",
@@ -2702,7 +2379,7 @@
               "rollball_rgb"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "RotateSingleObjectInHandLevel0-v1",
@@ -2713,7 +2390,7 @@
               "rotate_single_object_in_hand_level0_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RotateSingleObjectInHandLevel1-v1",
@@ -2724,7 +2401,7 @@
               "rotate_single_object_in_hand_level1_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RotateSingleObjectInHandLevel2-v1",
@@ -2735,7 +2412,7 @@
               "rotate_single_object_in_hand_level2_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RotateSingleObjectInHandLevel3-v1",
@@ -2746,7 +2423,7 @@
               "rotate_single_object_in_hand_level3_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RotateValveLevel0-v1",
@@ -2757,7 +2434,7 @@
               "rotate_valve_level0_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RotateValveLevel1-v1",
@@ -2768,7 +2445,7 @@
               "rotate_valve_level1_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RotateValveLevel2-v1",
@@ -2779,7 +2456,7 @@
               "rotate_valve_level2_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RotateValveLevel3-v1",
@@ -2790,7 +2467,7 @@
               "rotate_valve_level3_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "RotateValveLevel4-v1",
@@ -2801,7 +2478,7 @@
               "rotate_valve_level4_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "StackCube-v1",
@@ -2813,7 +2490,7 @@
               "stackcube_rgb"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "StackGreenCubeOnYellowCubeBakedTexInScene-v1",
@@ -2824,7 +2501,7 @@
               "stack_green_cube_on_yellow_cube_baked_tex_in_scene_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "TriFingerRotateCubeLevel0-v1",
@@ -2835,7 +2512,7 @@
               "tri_finger_rotate_cube_level0_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "TriFingerRotateCubeLevel1-v1",
@@ -2846,7 +2523,7 @@
               "tri_finger_rotate_cube_level1_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "TriFingerRotateCubeLevel2-v1",
@@ -2857,7 +2534,7 @@
               "tri_finger_rotate_cube_level2_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "TriFingerRotateCubeLevel3-v1",
@@ -2868,7 +2545,7 @@
               "tri_finger_rotate_cube_level3_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "TriFingerRotateCubeLevel4-v1",
@@ -2879,7 +2556,7 @@
               "tri_finger_rotate_cube_level4_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "TurnFaucet-v1",
@@ -2891,7 +2568,7 @@
               "turn_faucet_rgb"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "TwoRobotPickCube-v1",
@@ -2904,7 +2581,7 @@
               "two_robot_pickcube_ppo_state"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "TwoRobotStackCube-v1",
@@ -2917,7 +2594,7 @@
               "two_robot_stackcube_ppo_state"
             ],
             "public_checkpoint": "official_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "UnitreeG1PlaceAppleInBowl-v1",
@@ -2928,7 +2605,7 @@
               "unitree_g1_place_apple_in_bowl_state"
             ],
             "public_checkpoint": "author_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "UnitreeG1Stand-v1",
@@ -2939,7 +2616,7 @@
               "unitree_g1_stand_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "UnitreeG1TransportBox-v1",
@@ -2950,7 +2627,7 @@
               "unitree_g1_transport_box_state"
             ],
             "public_checkpoint": "author_state_ppo",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_pending_current_head_native_comparison"
           },
           {
             "task_id": "UnitreeGo2-Reach-v1",
@@ -2961,7 +2638,7 @@
               "unitree_go2_reach_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           },
           {
             "task_id": "UnitreeH1Stand-v1",
@@ -2972,7 +2649,7 @@
               "unitree_h1_stand_state"
             ],
             "public_checkpoint": "missing",
-            "acceptance": "pending_current_head_native_comparison"
+            "acceptance": "not_validated_no_selected_task_robot_checkpoint"
           }
         ],
         "helpers": [

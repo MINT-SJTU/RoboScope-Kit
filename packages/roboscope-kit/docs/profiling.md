@@ -81,7 +81,7 @@ is not in the report, only the round-trip time of each request.
 | MetaWorld | Yes | Not yet |
 | RLBench | Yes | Not yet |
 | robomimic | Yes | Not yet |
-| ManiSkill | Yes | Integration checked; Nsight capture not yet verified |
+| ManiSkill | Yes | Worker CPU ranges wired; Nsight GPU capture not yet verified |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No, its launcher has its own client | Records nothing |
@@ -103,7 +103,8 @@ Each benchmark keeps its profiling findings in its own documentation, newest fir
 configuration, and Kit version:
 
 - [ManiSkill](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md#timing-and-resource-coverage):
-  eleven-task K1/G1/N10 CPU wall budgets separate creation, reset, rollout and RPC wait
-  (2026-11-09, RTX 4090, Kit 0.8.0b44). Isolated PhysX, render and Policy GPU timings remain unmeasured.
+  current source/scoring corrections have CPU-only verification (2026-11-12); no new
+  current-source rollout budget or GPU profile is claimed. Isolated PhysX, render and Policy GPU
+  timings remain unmeasured. Historical borrowed-policy runs are excluded from task acceptance.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).

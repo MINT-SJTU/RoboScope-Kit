@@ -435,7 +435,10 @@ that distinction.
 The pinned inventory declares 55 TaskIDs. Full integration acceptance remains incomplete: compatible
 intended-task models, current-source prescribed-count evaluation and independent upstream comparison
 are still required. The [validation status](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md)
-separates recorded execution from accepted task/model coverage.
+separates CPU source/scoring checks, retained candidates and task/model acceptance.
+The selected task-trained catalog has eleven official PPO, two author G1 PPO and eight NEWT
+TaskIDs; NEWT runs the actor prior rather than original MPC. Provisional visual examples do
+not establish per-task acceptance, and all original tabletop state/RGB profiles remain in scope.
 
 Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and choose asset suites with
 `MANISKILL_ASSET_SUITES`. See the

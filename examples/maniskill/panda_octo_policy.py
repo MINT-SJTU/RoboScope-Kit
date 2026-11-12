@@ -1,4 +1,4 @@
-"""Visual ManiSkill Octo baseline and explicit projections onto frozen Panda controllers."""
+"""Author-task ManiSkill Octo candidate with its complete native EE-pose action."""
 
 from __future__ import annotations
 
@@ -15,11 +15,15 @@ from roboscope_kit import (
     run,
 )
 
+AUTHOR_TASKS = {
+    "PegInsertionSide-v1", "PickCube-v1", "StackCube-v1", "PlugCharger-v1", "PushCube-v1",
+}
+
 
 class ManiSkillPandaOctoPolicy(Policy):
     def __init__(self) -> None:
         self.model: ManiSkillFinetunedOcto | None = None
-        self.episodes: dict[str, dict] = {}
+        self.episodes: dict[str, str | None] = {}
 
     def load(self, context: SessionContext) -> PolicyCapabilities:
         if context.benchmark.name != "maniskill" or context.benchmark.protocol_version != "maniskill-v1":
@@ -37,23 +41,15 @@ class ManiSkillPandaOctoPolicy(Policy):
 
     def reset(self, context: EpisodeContext) -> None:
         self.end_episode(context.episode_id)
-        robots = context.metadata["robot_uid"]
-        robots = [robots] if isinstance(robots, str) else robots
-        modes = context.metadata["control_mode"]
-        modes = [modes] * len(robots) if isinstance(modes, str) else modes
-        if len(robots) != len(modes) or not 1 <= len(robots) <= 2:
-            raise ValueError("Expected one or two frozen Panda controllers")
-        for robot, mode in zip(robots, modes, strict=True):
-            if robot not in {"panda", "panda_wristcam", "panda_stick"}:
-                raise ValueError(f"Unsupported Panda embodiment {robot}")
-            if mode not in {"pd_ee_delta_pose", "pd_ee_delta_pos"}:
-                raise ValueError(f"Unsupported Panda Octo controller {mode}")
-            if robot == "panda_stick" and mode != "pd_ee_delta_pos":
-                raise ValueError("The fixed PandaStick profile has translation-only control")
-        self.episodes[context.episode_id] = {
-            "robots": robots, "modes": modes, "instruction": None,
-            "ids": [f"{context.episode_id}/arm{index}" for index in range(len(robots))],
-        }
+        if context.task_id not in AUTHOR_TASKS:
+            raise ValueError("This Octo candidate is restricted to the author's five ManiSkill tasks")
+        robot = context.metadata["robot_uid"]
+        if not isinstance(robot, str) or robot not in {"panda", "panda_wristcam"}:
+            raise ValueError("This Octo candidate requires one native Panda")
+        if (context.metadata["control_mode"] != "pd_ee_delta_pose"
+                or context.metadata["action_dimension"] != 7):
+            raise ValueError("This Octo candidate requires the author's complete 7D EE-pose controller")
+        self.episodes[context.episode_id] = None
 
     def act(self, observation: Observation) -> ActionChunk:
         return self.act_batch([observation])[0]
@@ -63,39 +59,23 @@ class ManiSkillPandaOctoPolicy(Policy):
             raise RuntimeError("Load the real ManiSkill Octo checkpoint before inference")
         ids, images = [], []
         for observation in observations:
-            state = self.episodes[observation.episode_id]
+            previous_instruction = self.episodes[observation.episode_id]
             instruction = observation.features["language.instruction"]
-            if state["instruction"] is None:
-                state["instruction"] = instruction
-                for index, episode_id in enumerate(state["ids"]):
-                    prompt = instruction if len(state["ids"]) == 1 else f"Robot {index + 1}: {instruction}"
-                    self.model.reset(episode_id, prompt)
-            elif state["instruction"] != instruction:
+            if previous_instruction is None:
+                self.episodes[observation.episode_id] = instruction
+                self.model.reset(observation.episode_id, instruction)
+            elif previous_instruction != instruction:
                 raise ValueError("The instruction changed during an episode")
-            for episode_id in state["ids"]:
-                ids.append(episode_id)
-                images.append(np.asarray(observation.features["images.primary"]))
-        raw_actions = iter(self.model.act_batch(ids, images))
-        result = []
-        for observation in observations:
-            state = self.episodes[observation.episode_id]
-            actions = []
-            for robot, mode in zip(state["robots"], state["modes"], strict=True):
-                raw = next(raw_actions)
-                if robot == "panda_stick":
-                    actions.append(raw[:3])
-                elif mode == "pd_ee_delta_pos":
-                    actions.append(raw[[0, 1, 2, 6]])
-                else:
-                    actions.append(raw)
-            result.append(ActionChunk(np.ascontiguousarray(np.concatenate(actions)[None], dtype=np.float32)))
-        return result
+            ids.append(observation.episode_id)
+            images.append(np.asarray(observation.features["images.primary"]))
+        return [ActionChunk(np.ascontiguousarray(action[None], dtype=np.float32))
+                for action in self.model.act_batch(ids, images)]
 
     def end_episode(self, episode_id: str) -> None:
-        state = self.episodes.pop(episode_id, None)
-        if state is not None and self.model is not None:
-            for stream in state["ids"]:
-                self.model.end_episode(stream)
+        if episode_id in self.episodes:
+            self.episodes.pop(episode_id)
+            if self.model is not None:
+                self.model.end_episode(episode_id)
 
     def unload(self) -> None:
         self.episodes.clear()

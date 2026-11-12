@@ -99,7 +99,6 @@ upstream observation and map declared camera RGB pixels to `images.primary`, `im
 `language.instruction` comes from the profile. Model-specific normalization and preprocessing
 belong to the Policy implementation. The optional `include_joint_names` profile setting adds
 actual active/controller joint identities to episode metadata without adding observation features.
-The canonical Humanoid Walk/Run references use this metadata and their original 185D states.
 
 The four Bridge tasks require the native `rgb+segmentation` observation mode, background overlay,
 500/5 Hz configuration and task-specific WidowX robot class. The declared Policy camera is
@@ -199,11 +198,11 @@ contain asynchronous CUDA work, and concurrent Worker interval sums can overlap.
 Run profiling separately from speed measurements. Measure CPU, GPU busy, memory and VRAM with
 their sample window and method. Report unavailable hardware counters or uninstrumented phases
 explicitly. Retain raw per-episode records, logs, commands, runtime provenance, resource samples
-and exact Kit source identities outside Git. The historical [three-task report](../../benchmarks/maniskill/VALIDATION.md#recorded-evidence)
-belongs to its recorded source snapshot. Current task coverage and blockers must be reported
-against the current candidate.
+and exact Kit source identities outside Git. The [validation status](../../benchmarks/maniskill/VALIDATION.md)
+separates source/scoring checks from current task/model acceptance. A stored-record regression
+fixture is not trained-policy or throughput evidence.
 
-## Integration-prefix diagnostics and root observations
+## Integration-prefix diagnostics and model candidates
 
 A manifest may explicitly set `diagnostic_step_limit` to a positive integer no larger than the
 profile's native horizon. This bounds only the evaluator loop. Gym still receives the original
@@ -213,36 +212,13 @@ selected episode count is complete. Do not use prefix throughput as a full-evalu
 The generic `native_eval_policy.py` reference supports the same prefix; the older PPO/Octo native
 entry points reject this setting.
 
-`transfer_reference_state_v1` names four optional root-kinematics profiles and the separate
-PullCubeTool NEWT pose-controller profile. Original profiles remain unchanged. Root profiles add
-`state.root_pose` (scene-local xyz and wxyz quaternion), `state.root_linear_velocity` (world xyz)
-and `state.root_angular_velocity` (world xyz), read from the native articulation API. Their native
-`state.proprioception` vector is unchanged. Episode metadata includes active/controller joint
-names and physical/control frequencies. Model-specific frame, joint and control conversions stay
-in the example Policy. See [completion validation](../../benchmarks/maniskill/VALIDATION.md) for scope and evidence.
-
-`humanoid_control_transfer_state_v1` adds three MS-Humanoid root-observation profiles without
-changing the original state profiles. `panda_visual_rgb_v1` selects the original 18 tabletop RGB
-profiles and a separate FMB RGB profile. `g1_visual_rgb_v1` adds two head-camera profiles with actual
-root observations. All retain the target task's native horizon, controller, reset and score; model-side
-transfer does not import source-task evaluation rules. The [remaining-compatibility report](../../benchmarks/maniskill/REMAINING_COMPATIBILITY.md)
-separates validated profiles, model limitations and original-asset blockers.
-
-`fetch_mshab_depth_v1` selects separate cabinet profiles with the native Fetch head/hand depth
-cameras. `depth_cameras` maps their unnormalized millimeter depth to float32 HWC1 features
-`state.depth_head` and `state.depth_hand`, preserving signed native encoded/sentinel values.
-`include_cabinet_contact_state` exports the live base-link,
-TCP and finger XYZ/WXYZ poses, handle position, and pairwise finger/handle contact forces in the
-scene frame. It also supplies actual active/controller joint names in episode metadata. These are
-raw physical measurements; base-relative transforms, source-specific state ordering and absent-object
-sentinel, grasp classification, depth normalization and frame history belong to the Fetch Policy.
-The original cabinet state profiles and all native reset, horizon and success rules are unchanged.
-The original processed PartNet assets remain necessary for task acceptance.
-
-`liftcube_prior_state_v1` selects the existing `lift_peg_upright_state`; it adds no
-profile and changes none of its 32D state, 4D controller, frequencies, seeds,
-50-tick horizon or scoring. The [model-side reference](../../examples/maniskill/LIFTCUBE.md)
-declares a TD-MPC2 LiftCube actor-mean prior, actual state projection, active
-gripper, per-episode two-tick holds and EE-to-root conversion. It is separate
-from the author's full MPC evaluator and the existing 7D official LiftPeg profile.
-CPU source-function checks do not establish real-policy rollout acceptance.
+The model-specific suites do not change the original task inventory or tabletop
+state/RGB profiles. `reference_ppo_state_v1` selects the two author G1 task-trained
+PPO profiles. `newt_state_v1` selects six control tasks, PlaceSphere and the
+PullCubeTool pose-controller variant. NEWT currently runs its deterministic actor
+prior, not original MPC; source/backend/horizon differences remain unresolved.
+`panda_visual_rgb_v1` selects only the existing PegInsertionSide and PlugCharger
+RGB profiles with complete seven-dimensional pose actions. Its author baseline
+has zero reported success, so these candidates remain unvalidated. Bridge Octo
+remains a separate provisional visual example. The [model compatibility notes](../../benchmarks/maniskill/REMAINING_COMPATIBILITY.md)
+record these boundaries; a named suite is not accepted task/model coverage.
