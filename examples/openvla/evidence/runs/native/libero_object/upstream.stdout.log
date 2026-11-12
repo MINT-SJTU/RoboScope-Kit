@@ -1,450 +1,0 @@
-2026-11-09 17:31:47.622985: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
-2026-11-09 17:31:47.656648: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-2026-11-09 17:31:47.656694: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-2026-11-09 17:31:47.657711: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2026-11-09 17:31:47.663562: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI AMX_TILE AMX_INT8 AMX_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2026-11-09 17:31:48.367625: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
-[robosuite WARNING] No private macro file found! (macros.py:53)
-[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
-[robosuite WARNING] To setup, run: python /root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
-Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
-Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
-See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
-[*] Instantiating Pretrained VLA model
-[*] Loading in BF16 with Flash-Attention Enabled
-<frozen importlib._bootstrap>:283: DeprecationWarning: the load_module() method is deprecated and slated for removal in Python 3.12; use exec_module() instead
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:42<02:06, 42.04s/it]Loading checkpoint shards:  50%|█████     | 2/4 [01:04<01:00, 30.32s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [01:20<00:23, 23.83s/it]Loading checkpoint shards: 100%|██████████| 4/4 [01:20<00:00, 14.57s/it]Loading checkpoint shards: 100%|██████████| 4/4 [01:20<00:00, 20.16s/it]
-Loaded model: <class 'transformers_modules.openvla.openvla-7b.47a0ec7fc4ec123775a391911046cf33cf9ed83f.modeling_prismatic.OpenVLAForActionPrediction'>
-Logging to local log file: /root/autodl-tmp/openvla-native-200-seed7-20261109/libero_object/upstream-logs/EVAL-libero_object-openvla-2026_11_09-17_32_02.txt
-[info] using task orders [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-Task suite: libero_object
-  0%|          | 0/10 [00:00<?, ?it/s]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the alphabet soup and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 1
-# successes: 1 (100.0%)
-
- 20%|██        | 1/5 [00:31<02:07, 31.89s/it][A
-Task: pick up the alphabet soup and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 2
-# successes: 2 (100.0%)
-
- 40%|████      | 2/5 [01:01<01:32, 30.77s/it][A
-Task: pick up the alphabet soup and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 3
-# successes: 3 (100.0%)
-
- 60%|██████    | 3/5 [01:31<01:00, 30.22s/it][A
-Task: pick up the alphabet soup and place it in the basket
-Starting episode 4...
-Success: True
-# episodes completed so far: 4
-# successes: 4 (100.0%)
-
- 80%|████████  | 4/5 [02:02<00:30, 30.65s/it][A
-Task: pick up the alphabet soup and place it in the basket
-Starting episode 5...
-Success: True
-# episodes completed so far: 5
-# successes: 5 (100.0%)
-
-100%|██████████| 5/5 [02:42<00:00, 33.81s/it][A100%|██████████| 5/5 [02:42<00:00, 32.43s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 10%|█         | 1/10 [02:44<24:39, 164.36s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the cream cheese and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 6
-# successes: 6 (100.0%)
-
- 20%|██        | 1/5 [00:38<02:35, 38.79s/it][A
-Task: pick up the cream cheese and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 7
-# successes: 7 (100.0%)
-
- 40%|████      | 2/5 [01:10<01:43, 34.50s/it][A
-Task: pick up the cream cheese and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 8
-# successes: 8 (100.0%)
-
- 60%|██████    | 3/5 [01:38<01:03, 31.85s/it][A
-Task: pick up the cream cheese and place it in the basket
-Starting episode 4...
-Success: True
-# episodes completed so far: 9
-# successes: 9 (100.0%)
-
- 80%|████████  | 4/5 [02:12<00:32, 32.41s/it][A
-Task: pick up the cream cheese and place it in the basket
-Starting episode 5...
-Success: True
-# episodes completed so far: 10
-# successes: 10 (100.0%)
-
-100%|██████████| 5/5 [02:44<00:00, 32.28s/it][A100%|██████████| 5/5 [02:44<00:00, 32.86s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 20%|██        | 2/10 [05:29<21:58, 164.86s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the salad dressing and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 11
-# successes: 11 (100.0%)
-
- 20%|██        | 1/5 [00:26<01:44, 26.16s/it][A
-Task: pick up the salad dressing and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 12
-# successes: 12 (100.0%)
-
- 40%|████      | 2/5 [00:52<01:19, 26.40s/it][A
-Task: pick up the salad dressing and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 13
-# successes: 13 (100.0%)
-
- 60%|██████    | 3/5 [01:13<00:47, 23.85s/it][A
-Task: pick up the salad dressing and place it in the basket
-Starting episode 4...
-Success: True
-# episodes completed so far: 14
-# successes: 14 (100.0%)
-
- 80%|████████  | 4/5 [01:39<00:24, 24.71s/it][A
-Task: pick up the salad dressing and place it in the basket
-Starting episode 5...
-Success: True
-# episodes completed so far: 15
-# successes: 15 (100.0%)
-
-100%|██████████| 5/5 [02:05<00:00, 25.17s/it][A100%|██████████| 5/5 [02:05<00:00, 25.11s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 30%|███       | 3/10 [07:35<17:11, 147.31s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the bbq sauce and place it in the basket
-Starting episode 1...
-Success: False
-# episodes completed so far: 16
-# successes: 15 (93.8%)
-
- 20%|██        | 1/5 [00:55<03:43, 55.83s/it][A
-Task: pick up the bbq sauce and place it in the basket
-Starting episode 2...
-Success: False
-# episodes completed so far: 17
-# successes: 15 (88.2%)
-
- 40%|████      | 2/5 [01:52<02:48, 56.15s/it][A
-Task: pick up the bbq sauce and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 18
-# successes: 16 (88.9%)
-
- 60%|██████    | 3/5 [02:20<01:26, 43.39s/it][A
-Task: pick up the bbq sauce and place it in the basket
-Starting episode 4...
-Success: False
-# episodes completed so far: 19
-# successes: 16 (84.2%)
-
- 80%|████████  | 4/5 [03:16<00:48, 48.33s/it][A
-Task: pick up the bbq sauce and place it in the basket
-Starting episode 5...
-Success: True
-# episodes completed so far: 20
-# successes: 17 (85.0%)
-
-100%|██████████| 5/5 [03:46<00:00, 41.69s/it][A100%|██████████| 5/5 [03:46<00:00, 45.25s/it]
-Current task success rate: 0.4
-Current total success rate: 0.85
- 40%|████      | 4/10 [11:23<17:53, 178.84s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the ketchup and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 21
-# successes: 18 (85.7%)
-
- 20%|██        | 1/5 [00:27<01:50, 27.54s/it][A
-Task: pick up the ketchup and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 22
-# successes: 19 (86.4%)
-
- 40%|████      | 2/5 [00:58<01:28, 29.61s/it][A
-Task: pick up the ketchup and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 23
-# successes: 20 (87.0%)
-
- 60%|██████    | 3/5 [01:26<00:57, 28.82s/it][A
-Task: pick up the ketchup and place it in the basket
-Starting episode 4...
-Success: True
-# episodes completed so far: 24
-# successes: 21 (87.5%)
-
- 80%|████████  | 4/5 [01:53<00:28, 28.31s/it][A
-Task: pick up the ketchup and place it in the basket
-Starting episode 5...
-Success: True
-# episodes completed so far: 25
-# successes: 22 (88.0%)
-
-100%|██████████| 5/5 [02:30<00:00, 31.15s/it][A100%|██████████| 5/5 [02:30<00:00, 30.04s/it]
-Current task success rate: 1.0
-Current total success rate: 0.88
- 50%|█████     | 5/10 [13:54<14:03, 168.79s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the tomato sauce and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 26
-# successes: 23 (88.5%)
-
- 20%|██        | 1/5 [00:33<02:13, 33.29s/it][A
-Task: pick up the tomato sauce and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 27
-# successes: 24 (88.9%)
-
- 40%|████      | 2/5 [00:59<01:27, 29.17s/it][A
-Task: pick up the tomato sauce and place it in the basket
-Starting episode 3...
-Success: False
-# episodes completed so far: 28
-# successes: 24 (85.7%)
-
- 60%|██████    | 3/5 [01:56<01:23, 41.71s/it][A
-Task: pick up the tomato sauce and place it in the basket
-Starting episode 4...
-Success: True
-# episodes completed so far: 29
-# successes: 25 (86.2%)
-
- 80%|████████  | 4/5 [02:23<00:36, 36.19s/it][A
-Task: pick up the tomato sauce and place it in the basket
-Starting episode 5...
-Success: True
-# episodes completed so far: 30
-# successes: 26 (86.7%)
-
-100%|██████████| 5/5 [02:52<00:00, 33.55s/it][A100%|██████████| 5/5 [02:52<00:00, 34.56s/it]
-Current task success rate: 0.8
-Current total success rate: 0.8666666666666667
- 60%|██████    | 6/10 [16:47<11:21, 170.42s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the butter and place it in the basket
-Starting episode 1...
-Success: False
-# episodes completed so far: 31
-# successes: 26 (83.9%)
-
- 20%|██        | 1/5 [00:55<03:43, 55.91s/it][A
-Task: pick up the butter and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 32
-# successes: 27 (84.4%)
-
- 40%|████      | 2/5 [01:27<02:04, 41.60s/it][A
-Task: pick up the butter and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 33
-# successes: 28 (84.8%)
-
- 60%|██████    | 3/5 [01:59<01:14, 37.26s/it][A
-Task: pick up the butter and place it in the basket
-Starting episode 4...
-Success: True
-# episodes completed so far: 34
-# successes: 29 (85.3%)
-
- 80%|████████  | 4/5 [02:42<00:39, 39.61s/it][A
-Task: pick up the butter and place it in the basket
-Starting episode 5...
-Success: False
-# episodes completed so far: 35
-# successes: 29 (82.9%)
-
-100%|██████████| 5/5 [03:39<00:00, 45.64s/it][A100%|██████████| 5/5 [03:39<00:00, 43.83s/it]
-Current task success rate: 0.6
-Current total success rate: 0.8285714285714286
- 70%|███████   | 7/10 [20:27<09:19, 186.60s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the milk and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 36
-# successes: 30 (83.3%)
-
- 20%|██        | 1/5 [00:25<01:42, 25.63s/it][A
-Task: pick up the milk and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 37
-# successes: 31 (83.8%)
-
- 40%|████      | 2/5 [00:55<01:23, 27.96s/it][A
-Task: pick up the milk and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 38
-# successes: 32 (84.2%)
-
- 60%|██████    | 3/5 [01:36<01:08, 34.02s/it][A
-Task: pick up the milk and place it in the basket
-Starting episode 4...
-Success: True
-# episodes completed so far: 39
-# successes: 33 (84.6%)
-
- 80%|████████  | 4/5 [02:03<00:31, 31.46s/it][A
-Task: pick up the milk and place it in the basket
-Starting episode 5...
-Success: True
-# episodes completed so far: 40
-# successes: 34 (85.0%)
-
-100%|██████████| 5/5 [02:30<00:00, 29.64s/it][A100%|██████████| 5/5 [02:30<00:00, 30.08s/it]
-Current task success rate: 1.0
-Current total success rate: 0.85
- 80%|████████  | 8/10 [22:58<05:50, 175.32s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the chocolate pudding and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 41
-# successes: 35 (85.4%)
-
- 20%|██        | 1/5 [00:30<02:02, 30.65s/it][A
-Task: pick up the chocolate pudding and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 42
-# successes: 36 (85.7%)
-
- 40%|████      | 2/5 [01:05<01:39, 33.15s/it][A
-Task: pick up the chocolate pudding and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 43
-# successes: 37 (86.0%)
-
- 60%|██████    | 3/5 [01:37<01:05, 32.68s/it][A
-Task: pick up the chocolate pudding and place it in the basket
-Starting episode 4...
-Success: True
-# episodes completed so far: 44
-# successes: 38 (86.4%)
-
- 80%|████████  | 4/5 [02:07<00:31, 31.60s/it][A
-Task: pick up the chocolate pudding and place it in the basket
-Starting episode 5...
-Success: False
-# episodes completed so far: 45
-# successes: 38 (84.4%)
-
-100%|██████████| 5/5 [03:02<00:00, 40.12s/it][A100%|██████████| 5/5 [03:02<00:00, 36.57s/it]
-Current task success rate: 0.8
-Current total success rate: 0.8444444444444444
- 90%|█████████ | 9/10 [26:02<02:57, 177.92s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: pick up the orange juice and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 46
-# successes: 39 (84.8%)
-
- 20%|██        | 1/5 [00:23<01:33, 23.42s/it][A
-Task: pick up the orange juice and place it in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 47
-# successes: 40 (85.1%)
-
- 40%|████      | 2/5 [00:48<01:13, 24.50s/it][A
-Task: pick up the orange juice and place it in the basket
-Starting episode 3...
-Success: True
-# episodes completed so far: 48
-# successes: 41 (85.4%)
-
- 60%|██████    | 3/5 [01:11<00:47, 23.90s/it][A
-Task: pick up the orange juice and place it in the basket
-Starting episode 4...
-Success: False
-# episodes completed so far: 49
-# successes: 41 (83.7%)
-
- 80%|████████  | 4/5 [02:07<00:36, 36.51s/it][A
-Task: pick up the orange juice and place it in the basket
-Starting episode 5...
-Success: True
-# episodes completed so far: 50
-# successes: 42 (84.0%)
-
-100%|██████████| 5/5 [02:36<00:00, 33.60s/it][A100%|██████████| 5/5 [02:36<00:00, 31.23s/it]
-Current task success rate: 0.8
-Current total success rate: 0.84
-100%|██████████| 10/10 [28:39<00:00, 171.45s/it]100%|██████████| 10/10 [28:39<00:00, 171.94s/it]
-Exception ignored in: <function MjRenderContext.__del__ at 0x7fb1ff6f5870>
-Traceback (most recent call last):
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/utils/binding_utils.py", line 199, in __del__
-    self.gl_ctx.free()
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 149, in free
-    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/OpenGL/error.py", line 230, in glCheckError
-    raise self._errorClass(
-OpenGL.raw.EGL._errors.EGLError: EGLError(
-	err = EGL_NOT_INITIALIZED,
-	baseOperation = eglMakeCurrent,
-	cArguments = (
-		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fb1be87e440>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7fb1ff9755c0>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7fb1ff9755c0>,
-		<OpenGL._opaque.EGLContext_pointer object at 0x7fb1ff975540>,
-	),
-	result = 0
-)
-Exception ignored in: <function EGLGLContext.__del__ at 0x7fb1ff6f56c0>
-Traceback (most recent call last):
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 155, in __del__
-    self.free()
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 149, in free
-    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/OpenGL/error.py", line 230, in glCheckError
-    raise self._errorClass(
-OpenGL.raw.EGL._errors.EGLError: EGLError(
-	err = EGL_NOT_INITIALIZED,
-	baseOperation = eglMakeCurrent,
-	cArguments = (
-		<OpenGL._opaque.EGLDisplay_pointer object at 0x7fb1be87e440>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7fb1ff9755c0>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7fb1ff9755c0>,
-		<OpenGL._opaque.EGLContext_pointer object at 0x7fb1ff975540>,
-	),
-	result = 0
-)

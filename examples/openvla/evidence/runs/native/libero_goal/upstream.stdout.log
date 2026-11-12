@@ -1,450 +1,0 @@
-2026-11-09 18:07:10.773341: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
-2026-11-09 18:07:10.806540: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-2026-11-09 18:07:10.806568: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-2026-11-09 18:07:10.807589: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2026-11-09 18:07:10.813205: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI AMX_TILE AMX_INT8 AMX_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2026-11-09 18:07:11.459005: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
-[robosuite WARNING] No private macro file found! (macros.py:53)
-[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
-[robosuite WARNING] To setup, run: python /root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
-Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
-Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
-See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
-[*] Instantiating Pretrained VLA model
-[*] Loading in BF16 with Flash-Attention Enabled
-<frozen importlib._bootstrap>:283: DeprecationWarning: the load_module() method is deprecated and slated for removal in Python 3.12; use exec_module() instead
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:49<02:27, 49.29s/it]Loading checkpoint shards:  50%|█████     | 2/4 [01:13<01:09, 34.70s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [01:38<00:30, 30.35s/it]Loading checkpoint shards: 100%|██████████| 4/4 [01:39<00:00, 18.55s/it]Loading checkpoint shards: 100%|██████████| 4/4 [01:39<00:00, 24.85s/it]
-Loaded model: <class 'transformers_modules.openvla.openvla-7b.47a0ec7fc4ec123775a391911046cf33cf9ed83f.modeling_prismatic.OpenVLAForActionPrediction'>
-Logging to local log file: /root/autodl-tmp/openvla-native-200-seed7-20261109/libero_goal/upstream-logs/EVAL-libero_goal-openvla-2026_11_09-18_07_26.txt
-[info] using task orders [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-Task suite: libero_goal
-  0%|          | 0/10 [00:00<?, ?it/s]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: open the middle drawer of the cabinet
-Starting episode 1...
-Success: False
-# episodes completed so far: 1
-# successes: 0 (0.0%)
-
- 20%|██        | 1/5 [00:59<03:57, 59.38s/it][A
-Task: open the middle drawer of the cabinet
-Starting episode 2...
-Success: False
-# episodes completed so far: 2
-# successes: 0 (0.0%)
-
- 40%|████      | 2/5 [01:57<02:56, 58.93s/it][A
-Task: open the middle drawer of the cabinet
-Starting episode 3...
-Success: False
-# episodes completed so far: 3
-# successes: 0 (0.0%)
-
- 60%|██████    | 3/5 [02:56<01:57, 58.80s/it][A
-Task: open the middle drawer of the cabinet
-Starting episode 4...
-Success: False
-# episodes completed so far: 4
-# successes: 0 (0.0%)
-
- 80%|████████  | 4/5 [03:55<00:58, 58.85s/it][A
-Task: open the middle drawer of the cabinet
-Starting episode 5...
-Success: False
-# episodes completed so far: 5
-# successes: 0 (0.0%)
-
-100%|██████████| 5/5 [04:55<00:00, 59.19s/it][A100%|██████████| 5/5 [04:55<00:00, 59.07s/it]
-Current task success rate: 0.0
-Current total success rate: 0.0
- 10%|█         | 1/10 [04:57<44:35, 297.29s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: put the bowl on the stove
-Starting episode 1...
-Success: True
-# episodes completed so far: 6
-# successes: 1 (16.7%)
-
- 20%|██        | 1/5 [00:17<01:10, 17.65s/it][A
-Task: put the bowl on the stove
-Starting episode 2...
-Success: True
-# episodes completed so far: 7
-# successes: 2 (28.6%)
-
- 40%|████      | 2/5 [00:35<00:53, 17.95s/it][A
-Task: put the bowl on the stove
-Starting episode 3...
-Success: True
-# episodes completed so far: 8
-# successes: 3 (37.5%)
-
- 60%|██████    | 3/5 [00:52<00:35, 17.54s/it][A
-Task: put the bowl on the stove
-Starting episode 4...
-Success: True
-# episodes completed so far: 9
-# successes: 4 (44.4%)
-
- 80%|████████  | 4/5 [01:08<00:16, 16.90s/it][A
-Task: put the bowl on the stove
-Starting episode 5...
-Success: True
-# episodes completed so far: 10
-# successes: 5 (50.0%)
-
-100%|██████████| 5/5 [01:26<00:00, 17.16s/it][A100%|██████████| 5/5 [01:26<00:00, 17.28s/it]
-Current task success rate: 1.0
-Current total success rate: 0.5
- 20%|██        | 2/10 [06:24<23:09, 173.67s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: put the wine bottle on top of the cabinet
-Starting episode 1...
-Success: False
-# episodes completed so far: 11
-# successes: 5 (45.5%)
-
- 20%|██        | 1/5 [00:59<03:56, 59.04s/it][A
-Task: put the wine bottle on top of the cabinet
-Starting episode 2...
-Success: True
-# episodes completed so far: 12
-# successes: 6 (50.0%)
-
- 40%|████      | 2/5 [01:17<01:45, 35.11s/it][A
-Task: put the wine bottle on top of the cabinet
-Starting episode 3...
-Success: True
-# episodes completed so far: 13
-# successes: 7 (53.8%)
-
- 60%|██████    | 3/5 [01:36<00:55, 27.78s/it][A
-Task: put the wine bottle on top of the cabinet
-Starting episode 4...
-Success: True
-# episodes completed so far: 14
-# successes: 8 (57.1%)
-
- 80%|████████  | 4/5 [02:01<00:26, 26.76s/it][A
-Task: put the wine bottle on top of the cabinet
-Starting episode 5...
-Success: True
-# episodes completed so far: 15
-# successes: 9 (60.0%)
-
-100%|██████████| 5/5 [02:19<00:00, 23.42s/it][A100%|██████████| 5/5 [02:19<00:00, 27.83s/it]
-Current task success rate: 0.8
-Current total success rate: 0.6
- 30%|███       | 3/10 [08:44<18:27, 158.23s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: open the top drawer and put the bowl inside
-Starting episode 1...
-Success: True
-# episodes completed so far: 16
-# successes: 10 (62.5%)
-
- 20%|██        | 1/5 [00:36<02:24, 36.04s/it][A
-Task: open the top drawer and put the bowl inside
-Starting episode 2...
-Success: False
-# episodes completed so far: 17
-# successes: 10 (58.8%)
-
- 40%|████      | 2/5 [01:34<02:27, 49.07s/it][A
-Task: open the top drawer and put the bowl inside
-Starting episode 3...
-Success: True
-# episodes completed so far: 18
-# successes: 11 (61.1%)
-
- 60%|██████    | 3/5 [02:10<01:26, 43.37s/it][A
-Task: open the top drawer and put the bowl inside
-Starting episode 4...
-Success: True
-# episodes completed so far: 19
-# successes: 12 (63.2%)
-
- 80%|████████  | 4/5 [02:47<00:40, 40.57s/it][A
-Task: open the top drawer and put the bowl inside
-Starting episode 5...
-Success: False
-# episodes completed so far: 20
-# successes: 12 (60.0%)
-
-100%|██████████| 5/5 [03:46<00:00, 47.32s/it][A100%|██████████| 5/5 [03:46<00:00, 45.28s/it]
-Current task success rate: 0.6
-Current total success rate: 0.6
- 40%|████      | 4/10 [12:31<18:32, 185.42s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: put the bowl on top of the cabinet
-Starting episode 1...
-Success: True
-# episodes completed so far: 21
-# successes: 13 (61.9%)
-
- 20%|██        | 1/5 [00:18<01:15, 18.85s/it][A
-Task: put the bowl on top of the cabinet
-Starting episode 2...
-Success: True
-# episodes completed so far: 22
-# successes: 14 (63.6%)
-
- 40%|████      | 2/5 [00:40<01:02, 20.76s/it][A
-Task: put the bowl on top of the cabinet
-Starting episode 3...
-Success: True
-# episodes completed so far: 23
-# successes: 15 (65.2%)
-
- 60%|██████    | 3/5 [01:03<00:42, 21.37s/it][A
-Task: put the bowl on top of the cabinet
-Starting episode 4...
-Success: True
-# episodes completed so far: 24
-# successes: 16 (66.7%)
-
- 80%|████████  | 4/5 [01:23<00:21, 21.05s/it][A
-Task: put the bowl on top of the cabinet
-Starting episode 5...
-Success: True
-# episodes completed so far: 25
-# successes: 17 (68.0%)
-
-100%|██████████| 5/5 [01:41<00:00, 19.79s/it][A100%|██████████| 5/5 [01:41<00:00, 20.23s/it]
-Current task success rate: 1.0
-Current total success rate: 0.68
- 50%|█████     | 5/10 [14:13<12:56, 155.31s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: push the plate to the front of the stove
-Starting episode 1...
-Success: True
-# episodes completed so far: 26
-# successes: 18 (69.2%)
-
- 20%|██        | 1/5 [00:28<01:55, 28.93s/it][A
-Task: push the plate to the front of the stove
-Starting episode 2...
-Success: True
-# episodes completed so far: 27
-# successes: 19 (70.4%)
-
- 40%|████      | 2/5 [00:58<01:27, 29.14s/it][A
-Task: push the plate to the front of the stove
-Starting episode 3...
-Success: False
-# episodes completed so far: 28
-# successes: 19 (67.9%)
-
- 60%|██████    | 3/5 [01:59<01:27, 43.74s/it][A
-Task: push the plate to the front of the stove
-Starting episode 4...
-Success: False
-# episodes completed so far: 29
-# successes: 19 (65.5%)
-
- 80%|████████  | 4/5 [02:58<00:49, 49.83s/it][A
-Task: push the plate to the front of the stove
-Starting episode 5...
-Success: False
-# episodes completed so far: 30
-# successes: 19 (63.3%)
-
-100%|██████████| 5/5 [03:59<00:00, 53.86s/it][A100%|██████████| 5/5 [03:59<00:00, 47.90s/it]
-Current task success rate: 0.4
-Current total success rate: 0.6333333333333333
- 60%|██████    | 6/10 [18:13<12:16, 184.18s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: put the cream cheese in the bowl
-Starting episode 1...
-Success: True
-# episodes completed so far: 31
-# successes: 20 (64.5%)
-
- 20%|██        | 1/5 [00:21<01:25, 21.30s/it][A
-Task: put the cream cheese in the bowl
-Starting episode 2...
-Success: True
-# episodes completed so far: 32
-# successes: 21 (65.6%)
-
- 40%|████      | 2/5 [00:45<01:09, 23.07s/it][A
-Task: put the cream cheese in the bowl
-Starting episode 3...
-Success: False
-# episodes completed so far: 33
-# successes: 21 (63.6%)
-
- 60%|██████    | 3/5 [01:47<01:21, 40.69s/it][A
-Task: put the cream cheese in the bowl
-Starting episode 4...
-Success: True
-# episodes completed so far: 34
-# successes: 22 (64.7%)
-
- 80%|████████  | 4/5 [02:04<00:31, 31.60s/it][A
-Task: put the cream cheese in the bowl
-Starting episode 5...
-Success: False
-# episodes completed so far: 35
-# successes: 22 (62.9%)
-
-100%|██████████| 5/5 [03:06<00:00, 42.45s/it][A100%|██████████| 5/5 [03:06<00:00, 37.33s/it]
-Current task success rate: 0.6
-Current total success rate: 0.6285714285714286
- 70%|███████   | 7/10 [21:21<09:15, 185.26s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: turn on the stove
-Starting episode 1...
-Success: True
-# episodes completed so far: 36
-# successes: 23 (63.9%)
-
- 20%|██        | 1/5 [00:19<01:19, 19.82s/it][A
-Task: turn on the stove
-Starting episode 2...
-Success: True
-# episodes completed so far: 37
-# successes: 24 (64.9%)
-
- 40%|████      | 2/5 [00:39<00:59, 19.96s/it][A
-Task: turn on the stove
-Starting episode 3...
-Success: True
-# episodes completed so far: 38
-# successes: 25 (65.8%)
-
- 60%|██████    | 3/5 [01:01<00:41, 20.50s/it][A
-Task: turn on the stove
-Starting episode 4...
-Success: True
-# episodes completed so far: 39
-# successes: 26 (66.7%)
-
- 80%|████████  | 4/5 [01:18<00:19, 19.38s/it][A
-Task: turn on the stove
-Starting episode 5...
-Success: True
-# episodes completed so far: 40
-# successes: 27 (67.5%)
-
-100%|██████████| 5/5 [01:36<00:00, 18.68s/it][A100%|██████████| 5/5 [01:36<00:00, 19.22s/it]
-Current task success rate: 1.0
-Current total success rate: 0.675
- 80%|████████  | 8/10 [22:57<05:14, 157.14s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: put the bowl on the plate
-Starting episode 1...
-Success: True
-# episodes completed so far: 41
-# successes: 28 (68.3%)
-
- 20%|██        | 1/5 [00:18<01:13, 18.42s/it][A
-Task: put the bowl on the plate
-Starting episode 2...
-Success: True
-# episodes completed so far: 42
-# successes: 29 (69.0%)
-
- 40%|████      | 2/5 [00:35<00:53, 17.89s/it][A
-Task: put the bowl on the plate
-Starting episode 3...
-Success: True
-# episodes completed so far: 43
-# successes: 30 (69.8%)
-
- 60%|██████    | 3/5 [00:52<00:34, 17.29s/it][A
-Task: put the bowl on the plate
-Starting episode 4...
-Success: True
-# episodes completed so far: 44
-# successes: 31 (70.5%)
-
- 80%|████████  | 4/5 [01:07<00:16, 16.34s/it][A
-Task: put the bowl on the plate
-Starting episode 5...
-Success: False
-# episodes completed so far: 45
-# successes: 31 (68.9%)
-
-100%|██████████| 5/5 [02:10<00:00, 33.25s/it][A100%|██████████| 5/5 [02:10<00:00, 26.13s/it]
-Current task success rate: 0.8
-Current total success rate: 0.6888888888888889
- 90%|█████████ | 9/10 [25:09<02:29, 149.12s/it]
-  0%|          | 0/5 [00:00<?, ?it/s][A
-Task: put the wine bottle on the rack
-Starting episode 1...
-Success: True
-# episodes completed so far: 46
-# successes: 32 (69.6%)
-
- 20%|██        | 1/5 [00:25<01:42, 25.70s/it][A
-Task: put the wine bottle on the rack
-Starting episode 2...
-Success: True
-# episodes completed so far: 47
-# successes: 33 (70.2%)
-
- 40%|████      | 2/5 [00:53<01:21, 27.06s/it][A
-Task: put the wine bottle on the rack
-Starting episode 3...
-Success: False
-# episodes completed so far: 48
-# successes: 33 (68.8%)
-
- 60%|██████    | 3/5 [01:55<01:25, 42.82s/it][A
-Task: put the wine bottle on the rack
-Starting episode 4...
-Success: False
-# episodes completed so far: 49
-# successes: 33 (67.3%)
-
- 80%|████████  | 4/5 [02:55<00:49, 49.69s/it][A
-Task: put the wine bottle on the rack
-Starting episode 5...
-Success: False
-# episodes completed so far: 50
-# successes: 33 (66.0%)
-
-100%|██████████| 5/5 [03:56<00:00, 53.72s/it][A100%|██████████| 5/5 [03:56<00:00, 47.28s/it]
-Current task success rate: 0.4
-Current total success rate: 0.66
-100%|██████████| 10/10 [29:06<00:00, 176.32s/it]100%|██████████| 10/10 [29:06<00:00, 174.67s/it]
-Exception ignored in: <function MjRenderContext.__del__ at 0x7f0b37bb5870>
-Traceback (most recent call last):
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/utils/binding_utils.py", line 199, in __del__
-    self.gl_ctx.free()
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 149, in free
-    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/OpenGL/error.py", line 230, in glCheckError
-    raise self._errorClass(
-OpenGL.raw.EGL._errors.EGLError: EGLError(
-	err = EGL_NOT_INITIALIZED,
-	baseOperation = eglMakeCurrent,
-	cArguments = (
-		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f0af6b25bc0>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7f0b37cf52c0>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7f0b37cf52c0>,
-		<OpenGL._opaque.EGLContext_pointer object at 0x7f0b37cf5240>,
-	),
-	result = 0
-)
-Exception ignored in: <function EGLGLContext.__del__ at 0x7f0b37bb56c0>
-Traceback (most recent call last):
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 155, in __del__
-    self.free()
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 149, in free
-    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/OpenGL/error.py", line 230, in glCheckError
-    raise self._errorClass(
-OpenGL.raw.EGL._errors.EGLError: EGLError(
-	err = EGL_NOT_INITIALIZED,
-	baseOperation = eglMakeCurrent,
-	cArguments = (
-		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f0af6b25bc0>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7f0b37cf52c0>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7f0b37cf52c0>,
-		<OpenGL._opaque.EGLContext_pointer object at 0x7f0b37cf5240>,
-	),
-	result = 0
-)

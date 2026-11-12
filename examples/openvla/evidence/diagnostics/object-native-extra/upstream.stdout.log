@@ -1,100 +1,0 @@
-2026-11-11 16:57:52.204926: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
-2026-11-11 16:57:52.237501: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-2026-11-11 16:57:52.237550: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-2026-11-11 16:57:52.238893: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2026-11-11 16:57:52.245413: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI AMX_TILE AMX_INT8 AMX_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2026-11-11 16:57:52.907201: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
-[robosuite WARNING] No private macro file found! (macros.py:53)
-[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
-[robosuite WARNING] To setup, run: python /root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
-Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
-Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
-See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
-[*] Instantiating Pretrained VLA model
-[*] Loading in BF16 with Flash-Attention Enabled
-<frozen importlib._bootstrap>:283: DeprecationWarning: the load_module() method is deprecated and slated for removal in Python 3.12; use exec_module() instead
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  3.35it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  3.75it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  4.03it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  4.35it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  4.12it/s]
-Loaded model: <class 'transformers_modules.openvla.openvla-7b.47a0ec7fc4ec123775a391911046cf33cf9ed83f.modeling_prismatic.OpenVLAForActionPrediction'>
-Logging to local log file: /root/autodl-tmp/openvla-paired-diagnostics-20261111/object-native-extra/upstream-logs/EVAL-libero_object-openvla-2026_11_11-16_58_07.txt
-[info] using task orders [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-Task suite: libero_object
-  0%|          | 0/3 [00:00<?, ?it/s]
-  0%|          | 0/1 [00:00<?, ?it/s][A
-Task: pick up the bbq sauce and place it in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 1
-# successes: 1 (100.0%)
-
-100%|██████████| 1/1 [00:46<00:00, 46.90s/it][A100%|██████████| 1/1 [00:46<00:00, 46.90s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 33%|███▎      | 1/3 [00:49<01:38, 49.12s/it]
-  0%|          | 0/2 [00:00<?, ?it/s][A
-Task: pick up the butter and place it in the basket
-Starting episode 1...
-Success: False
-# episodes completed so far: 2
-# successes: 1 (50.0%)
-
- 50%|█████     | 1/2 [01:41<01:41, 101.32s/it][A
-Task: pick up the butter and place it in the basket
-Starting episode 2...
-Success: False
-# episodes completed so far: 3
-# successes: 1 (33.3%)
-
-100%|██████████| 2/2 [03:22<00:00, 101.21s/it][A100%|██████████| 2/2 [03:22<00:00, 101.22s/it]
-Current task success rate: 0.0
-Current total success rate: 0.3333333333333333
- 67%|██████▋   | 2/3 [04:12<02:19, 139.94s/it]
-  0%|          | 0/1 [00:00<?, ?it/s][A
-Task: pick up the chocolate pudding and place it in the basket
-Starting episode 1...
-Success: False
-# episodes completed so far: 4
-# successes: 1 (25.0%)
-
-100%|██████████| 1/1 [01:41<00:00, 101.75s/it][A100%|██████████| 1/1 [01:41<00:00, 101.75s/it]
-Current task success rate: 0.0
-Current total success rate: 0.25
-100%|██████████| 3/3 [05:55<00:00, 122.86s/it]100%|██████████| 3/3 [05:55<00:00, 118.39s/it]
-Exception ignored in: <function MjRenderContext.__del__ at 0x7f5359de1bd0>
-Traceback (most recent call last):
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/utils/binding_utils.py", line 199, in __del__
-    self.gl_ctx.free()
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 149, in free
-    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/OpenGL/error.py", line 230, in glCheckError
-    raise self._errorClass(
-OpenGL.raw.EGL._errors.EGLError: EGLError(
-	err = EGL_NOT_INITIALIZED,
-	baseOperation = eglMakeCurrent,
-	cArguments = (
-		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5318b3e640>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7f535aaf9ac0>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7f535aaf9ac0>,
-		<OpenGL._opaque.EGLContext_pointer object at 0x7f535aaf9a40>,
-	),
-	result = 0
-)
-Exception ignored in: <function EGLGLContext.__del__ at 0x7f5359de1a20>
-Traceback (most recent call last):
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 155, in __del__
-    self.free()
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 149, in free
-    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/OpenGL/error.py", line 230, in glCheckError
-    raise self._errorClass(
-OpenGL.raw.EGL._errors.EGLError: EGLError(
-	err = EGL_NOT_INITIALIZED,
-	baseOperation = eglMakeCurrent,
-	cArguments = (
-		<OpenGL._opaque.EGLDisplay_pointer object at 0x7f5318b3e640>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7f535aaf9ac0>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7f535aaf9ac0>,
-		<OpenGL._opaque.EGLContext_pointer object at 0x7f535aaf9a40>,
-	),
-	result = 0
-)

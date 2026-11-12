@@ -4,51 +4,38 @@ This example implements the public Kit `Policy` lifecycle for the four suite-spe
 LIBERO checkpoints. The SDK owns Policy processes, simulator Workers, scheduling, recovery, and scoring.
 The example does not support the base OpenVLA checkpoint, `libero_90`, LIBERO-Plus, or LIBERO-Pro.
 
-## Build the runtime
+## Build the Policy environment and standard LIBERO Worker
 
-Use Linux x86_64 with an NVIDIA GPU supporting BF16 and FlashAttention2, a compatible NVIDIA driver,
-`uv`, `git`, and `curl`. From this repository:
+Use Linux x86_64 with an NVIDIA GPU supporting BF16 and FlashAttention2, a compatible
+NVIDIA driver, `uv`, `curl`, `git`, and conda or micromamba. Build into two separate
+directories from this checkout:
 
 ```bash
-bash benchmarks/libero/build-runtime.sh --openvla-kit /absolute/openvla-kit-runtime
+bash examples/openvla/build-policy-env.sh /absolute/openvla-policy
+KIT_PYTHON=/absolute/openvla-policy/env/bin/python \
+  bash benchmarks/libero/build-runtime.sh /absolute/libero-runtime
 ```
 
-The builder installs Python 3.11.15, the SDK, and hash-locked dependencies: torch 2.2.0,
-Transformers 4.40.1, TensorFlow 2.15.0, FlashAttention 2.5.5, robosuite 1.4.1, MuJoCo 3.2.3,
-and NumPy 1.24.4. The builder clones LIBERO with Git and checks out the pinned commit
-`8f1084e3132a39270c3a13ebe37270a43ece2a01`, using the same source as the default LIBERO builder.
-The builder writes a benchmark manifest and runs the SDK environment self-test. The self-test
-checks the simulator runtime; it does not load an OpenVLA checkpoint or run an episode.
+The Policy builder installs CPython 3.11.15, the SDK, and hash-locked inference
+dependencies: torch 2.2.0, Transformers 4.40.1, TensorFlow 2.15.0, NumPy 1.24.4,
+and checksum-pinned FlashAttention 2.5.5. It checks imports and CPU preprocessing,
+and writes `build-manifest.json`; it does not load a checkpoint or build a simulator.
+Use a new Policy directory when moving from the former combined OpenVLA runtime.
 
-The default builder remains a separate simulator environment. Selecting `--openvla-kit`
-creates an independent environment containing both the simulator and OpenVLA inference dependencies:
+The standard LIBERO builder owns the simulator, source checkout, manifest, and
+self-test. Its existing pins remain CPython 3.10.20, robosuite 1.4.0, MuJoCo 3.2.3,
+NumPy 1.24.4, and LIBERO revision `8f1084e3132a39270c3a13ebe37270a43ece2a01`.
+The benchmark CLI and Policy run in the Policy environment; the manifest starts
+Workers in `/absolute/libero-runtime/env`. No OpenVLA-specific simulator is built.
 
-| Component | Default LIBERO runtime | OpenVLA Kit runtime |
-| --- | --- | --- |
-| Environment manager | conda / micromamba | uv venv |
-| CPython | 3.10.20 | 3.11.15 |
-| LIBERO | 0.1.0, revision `8f1084e3132a39270c3a13ebe37270a43ece2a01` | Same |
-| robosuite | 1.4.0 | 1.4.1 |
-| MuJoCo / NumPy | 3.2.3 / 1.24.4 | Same |
-| PyTorch | 2.5.1+cpu, for simulator utilities | 2.2.0, with GPU inference dependencies |
-| OpenVLA inference stack | Not supplied by this simulator builder | Transformers 4.40.1, TensorFlow 2.15.0, FlashAttention 2.5.5 |
-| Default server readiness timeout | 300 seconds | Same |
+Optional inputs: `OPENVLA_INDEX_URL` and `DOWNLOAD_CACHE` configure the Policy
+package index and verified FlashAttention wheel cache; `LIBERO_URL` selects a
+source mirror for the standard simulator builder. Change environments through
+these scripts and their pin files.
 
-The default CLI/Policy environment is separate from its Python 3.10 simulator Worker.
-The OpenVLA builder installs the Kit into its Python 3.11 environment and verifies Worker
-and model imports. It verifies the LIBERO checkout's commit and required source paths,
-locks dependency hashes, and verifies the FlashAttention wheel checksum. It does not
-change the default runtime's pins or the LIBERO Worker implementation.
-The historical native comparison used a third environment: CPython 3.10.13 with
-robosuite 1.4.1 and MuJoCo 3.2.3, not the default Kit simulator environment.
-
-Optional build inputs:
-
-- `LIBERO_URL`: Git source URL or mirror; the pinned LIBERO commit remains fixed.
-- `DOWNLOAD_CACHE`: directory containing the checksum-verified FlashAttention wheel.
-- `OPENVLA_INDEX_URL`: Python package index; package versions and hashes remain fixed.
-
-Make environment changes through this builder and its pin files, rather than patching an installed runtime.
+After building, validate the separated layout with the self-test and a bounded
+real-policy evaluation. Historical results below used a different Worker stack
+and do not validate current full-suite results.
 
 ## Prepare a checkpoint and the model-code cache
 
@@ -65,18 +52,19 @@ uses its own older `huggingface-hub` dependency. Select the checkpoint matching 
 For Spatial:
 
 ```bash
-export HF_HOME=/absolute/openvla-hf-cache
+export HF_HOME=/absolute/local-disk/openvla-hf-cache
 hf download openvla/openvla-7b-finetuned-libero-spatial \
   --revision 962318cec55ac10993ff0f5f43eda9a270b4c873 \
-  --local-dir /absolute/models/openvla/spatial
+  --local-dir /absolute/local-disk/models/openvla/spatial
 
 # Cache the external Python implementation; base-model weights are not needed.
 hf download openvla/openvla-7b \
   --revision 47a0ec7fc4ec123775a391911046cf33cf9ed83f --include '*.py'
 ```
 
-Keep the same `HF_HOME` when running the evaluation. The Policy loads only local files and pins the
-external model/configuration/image-processor code to `47a0ec7fc4ec123775a391911046cf33cf9ed83f`.
+Keep checkpoints and `HF_HOME` on local disk rather than network storage to avoid
+slow checkpoint loading. Keep the same `HF_HOME` when running the evaluation. The
+Policy loads only local files and pins the external model/configuration/image-processor code to `47a0ec7fc4ec123775a391911046cf33cf9ed83f`.
 Each checkpoint directory must retain its weights, tokenizer, processor configuration, and
 `dataset_statistics.json`. The statistics must contain the selected suite's key.
 The processor is assembled from explicitly pinned components because Transformers 4.40.1's nested
@@ -85,38 +73,27 @@ processor loaders do not consistently forward `code_revision`.
 ## Evaluate through the SDK
 
 Copy [`roboscope-policy.json`](roboscope-policy.json) and replace its absolute placeholder paths.
-The command must use the built runtime's Python and this example's `openvla_policy.py`; `cwd` must
-point to the example directory. Keep the repository and runtime at those paths while the run is active.
+Its command uses the Policy environment's Python and this example's `openvla_policy.py`;
+`cwd` points to the example directory. Keep those paths fixed during a run.
 
-Run a bounded smoke evaluation in a new output directory:
-
-The builder retains the manifest's 300-second readiness timeout. For OpenVLA runs requiring
-longer checkpoint loading, create an evaluation manifest with a longer timeout in the same
-directory, so its relative runtime paths still resolve. The example below allows 1,800 seconds:
+Run a bounded smoke evaluation in a new output directory. The standard manifest
+retains its 300-second readiness timeout:
 
 ```bash
-/absolute/openvla-kit-runtime/env/bin/python - <<'PY'
-import json
-from pathlib import Path
-
-root = Path("/absolute/openvla-kit-runtime")
-manifest = json.loads((root / "benchmark-manifest.json").read_text())
-manifest["defaults"]["ready_timeout_s"] = 1800
-(root / "benchmark-manifest.openvla-eval.json").write_text(json.dumps(manifest, indent=2) + "\n")
-PY
-
-export HF_HOME=/absolute/openvla-hf-cache
+export HF_HOME=/absolute/local-disk/openvla-hf-cache
 export OPENVLA_SEED=7
-/absolute/openvla-kit-runtime/env/bin/python -m roboscope_kit.runtime.benchmark \
+/absolute/openvla-policy/env/bin/python -m roboscope_kit.runtime.benchmark \
   --benchmark libero --suite libero_spatial \
-  --checkpoint-source /absolute/models/openvla/spatial \
-  --benchmark-manifest /absolute/openvla-kit-runtime/benchmark-manifest.openvla-eval.json \
+  --checkpoint-source /absolute/local-disk/models/openvla/spatial \
+  --benchmark-manifest /absolute/libero-runtime/benchmark-manifest.json \
   --policy-config /absolute/roboscope-policy.json \
   --quick-test --output-dir /absolute/new-smoke-run
 ```
 
 For a fixed evaluation, replace `--quick-test` with `--episodes 5 --concurrency 2 --replicas 2`.
-This evaluates five initial states for each of ten tasks in the selected suite (50 episodes).
+This evaluates initial states 0–4 for each of ten tasks (50 episodes): partial
+initial-state coverage, five of the 50 states per task. Acceptance of this reduced
+workload requires maintainer approval; it is not the full 500-episode suite.
 Omit both fixed concurrency flags to use SDK Autotune. To evaluate another suite, change both
 `--suite` and the suite-specific checkpoint path. Each run needs a new output directory.
 CUDA MPS and profiling are optional SDK features and are off unless explicitly requested.
@@ -150,8 +127,8 @@ Increasing `--replicas` creates independent model processes rather than a batch 
 
 ## Experiment results
 
-The recorded evaluations use ten tasks per suite and initial-state indices 0–4 (50 episodes
-per suite). Kit 2/2 means two Workers and two Policy replicas on one GPU; Native runs serially.
+These historical evaluations cover all ten tasks per suite but only initial-state
+indices 0–4: 50 episodes per suite, with partial coverage of the 50 states per task. Kit 2/2 means two Workers and two Policy replicas on one GPU; Native runs serially.
 
 | Suite | Native successes | Kit 2/2 successes | Native formal time (min) | Kit 2/2 formal time (min) |
 | --- | --- | --- | --- | --- |
@@ -161,14 +138,13 @@ per suite). Kit 2/2 means two Workers and two Policy replicas on one GPU; Native
 | Long (`libero_10`) | 28/50 (56%) | 23/50 (46%) | 64.20 | 59.35 |
 | Total | 146/200 (73%) | 146/200 (73%) | 144.93 | 124.21 |
 
-Formal time excludes checkpoint loading and other setup; see the [timing records](evidence/tables/performance-by-suite.csv)
-for loading and full command durations. These measurements used Kit `0.8.0b33`, source commit
+Formal time excludes checkpoint loading and other setup. These measurements used Kit `0.8.0b33`, source commit
 `b432786`, on November 9–10, 2026. Each path used one NVIDIA GeForce RTX 4090 reporting
 49,140 MiB; Native used driver `595.71.05` and Kit 2/2 used `580.105.08` on a different GPU.
-The CPU model was not recorded for these full evaluations; see [runtime and hardware records](evidence/reproduction/RUNS.md).
+The CPU model was not recorded for these full evaluations.
 The paired outcomes disagree on 36 episodes, so equal totals do not establish per-episode agreement
-or statistical equivalence. These are historical measurements, not a controlled speedup claim.
+or statistical equivalence. These historical measurements used the combined robosuite 1.4.1 runtime and Kit GPU
+preprocessing; they validate neither the current CPU Policy nor the standard
+robosuite 1.4.0 Worker layout. They are not a controlled speedup claim.
 
-See the [experiment results and analysis](evidence/README.md) for paired
-outcomes, executed steps, first observation/action differences, diagnostic
-findings, and the hardware and commands used in the experiments.
+Durable external evidence links and current-code results are pending.

@@ -32,12 +32,8 @@ set -Eeuo pipefail
 # simulator stack; see conda-specs.txt and runtime-requirements.txt.
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-if [[ "${1:-}" == "--openvla-kit" ]]; then
-  shift
-  exec bash "${SCRIPT_DIR}/openvla-kit/build-runtime.sh" "$@"
-fi
 [[ $# -eq 1 ]] || {
-  echo "usage: $0 [--openvla-kit] <install-dir>" >&2
+  echo "usage: $0 <install-dir>" >&2
   exit 2
 }
 install -d -m 0755 "$1"
@@ -104,7 +100,7 @@ while IFS= read -r line; do
   CONDA_PACKAGES+=("${BASH_REMATCH[1]}=${BASH_REMATCH[2]}=${BASH_REMATCH[3]}")
 done < "${CONDA_SPECS}"
 if [[ ! -x "${ENV_PYTHON}" ]]; then
-  "${CONDA_BIN}" create --yes --quiet -c conda-forge --prefix "${ENV_PREFIX}" "${CONDA_PACKAGES[@]}"
+  "${CONDA_BIN}" create --yes --quiet --override-channels -c conda-forge --prefix "${ENV_PREFIX}" "${CONDA_PACKAGES[@]}"
 fi
 # Install the source tree first: its setup.py declares libero 0.1.0, which PyPI
 # never published, so pip then treats that pin of the lock as satisfied.

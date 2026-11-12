@@ -1,8 +1,0 @@
-{
-  "suite": "spatial",
-  "episode_id": "task-0007-episode-0000",
-  "float32_open_loop_steps": 112,
-  "first_image_difference_from_closed_loop_kit": 44,
-  "first_action_difference_from_closed_loop_kit": 43,
-  "scope": "Compare already-recorded float32 replay of Native actions against actual closed-loop Kit. No new rollout."
-}

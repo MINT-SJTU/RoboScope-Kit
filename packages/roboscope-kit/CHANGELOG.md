@@ -2,15 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b36 - 2026-11-11
+## 0.8.0b58 - 2026-11-12
 
-- Keep OpenVLA TensorFlow image preprocessing on CPU to match the native evaluator.
-
-- Add an OpenVLA Policy for the four fine-tuned LIBERO suites through the existing SDK lifecycle.
-- Add a self-contained Python 3.11 runtime builder with pinned simulator sources and inference dependencies.
-- Document pinned checkpoints, offline model-code preparation, and standard SDK evaluation commands.
-- Fetch the pinned OpenVLA LIBERO source with Git and support `LIBERO_URL` mirrors; retain the
-  manifest's default readiness timeout and document an evaluation-specific override.
+- Add an OpenVLA Policy for the four fine-tuned LIBERO suites, with pinned checkpoints and model code,
+  CPU image preprocessing, and BF16/FlashAttention2 inference through the standard Policy lifecycle.
+- Build the OpenVLA Policy and CLI in a separate pinned Python 3.11 environment while using the
+  standard LIBERO simulator Worker and its existing package versions.
+- Document local checkpoint preparation and SDK evaluation commands for the separate environments.
 
 ## 0.8.0b35 - 2026-11-10
 

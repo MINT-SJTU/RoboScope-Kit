@@ -1,9 +1,0 @@
-{
-  "python": "3.10.13 (main, Oct  3 2023, 01:22:22) [Clang 17.0.1 ]",
-  "tensorflow": "2.15.0",
-  "before_upstream_import": [
-    "PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU')"
-  ],
-  "after_upstream_import": [],
-  "evaluator_file": "/root/autodl-tmp/openvla-native-runtime/openvla/experiments/robot/libero/run_libero_eval.py"
-}

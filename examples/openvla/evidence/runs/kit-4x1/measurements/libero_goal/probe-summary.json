@@ -1,5 +1,0 @@
-{
-  "flushed_requests": 0,
-  "errors": 0,
-  "note": "Buffered requests from forcibly terminated probes may be incomplete; candidate terminal records and selection.json are authoritative for coverage."
-}

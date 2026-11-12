@@ -1,183 +1,0 @@
-2026-11-11 17:19:42.784113: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
-2026-11-11 17:19:42.817088: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
-2026-11-11 17:19:42.817134: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
-2026-11-11 17:19:42.818541: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
-2026-11-11 17:19:42.824947: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
-To enable the following instructions: AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI AMX_TILE AMX_INT8 AMX_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
-2026-11-11 17:19:43.470333: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT
-[robosuite WARNING] No private macro file found! (macros.py:53)
-[robosuite WARNING] It is recommended to use a private macro file (macros.py:54)
-[robosuite WARNING] To setup, run: python /root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/scripts/setup_macros.py (macros.py:55)
-Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
-Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
-See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
-[*] Instantiating Pretrained VLA model
-[*] Loading in BF16 with Flash-Attention Enabled
-<frozen importlib._bootstrap>:283: DeprecationWarning: the load_module() method is deprecated and slated for removal in Python 3.12; use exec_module() instead
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  3.25it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00,  3.98it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:00<00:00,  4.18it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  4.50it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00,  4.25it/s]
-Loaded model: <class 'transformers_modules.openvla.openvla-7b.47a0ec7fc4ec123775a391911046cf33cf9ed83f.modeling_prismatic.OpenVLAForActionPrediction'>
-Logging to local log file: /root/autodl-tmp/openvla-paired-diagnostics-20261111/10-native/upstream-logs/EVAL-libero_10-openvla-2026_11_11-17_19_57.txt
-[info] using task orders [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-Task suite: libero_10
-  0%|          | 0/8 [00:00<?, ?it/s]
-  0%|          | 0/1 [00:00<?, ?it/s][A
-Task: put both the alphabet soup and the tomato sauce in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 1
-# successes: 1 (100.0%)
-
-100%|██████████| 1/1 [01:54<00:00, 114.63s/it][A100%|██████████| 1/1 [01:54<00:00, 114.63s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 12%|█▎        | 1/8 [01:57<13:41, 117.43s/it]
-  0%|          | 0/2 [00:00<?, ?it/s][A
-Task: put both the cream cheese box and the butter in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 2
-# successes: 2 (100.0%)
-
- 50%|█████     | 1/2 [01:46<01:46, 106.99s/it][A
-Task: put both the cream cheese box and the butter in the basket
-Starting episode 2...
-Success: True
-# episodes completed so far: 3
-# successes: 3 (100.0%)
-
-100%|██████████| 2/2 [03:27<00:00, 103.00s/it][A100%|██████████| 2/2 [03:27<00:00, 103.60s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 25%|██▌       | 2/8 [05:26<17:06, 171.08s/it]
-  0%|          | 0/3 [00:00<?, ?it/s][A
-Task: turn on the stove and put the moka pot on it
-Starting episode 1...
-Success: True
-# episodes completed so far: 4
-# successes: 4 (100.0%)
-
- 33%|███▎      | 1/3 [01:19<02:38, 79.27s/it][A
-Task: turn on the stove and put the moka pot on it
-Starting episode 2...
-Success: True
-# episodes completed so far: 5
-# successes: 5 (100.0%)
-
- 67%|██████▋   | 2/3 [02:45<01:23, 83.13s/it][A
-Task: turn on the stove and put the moka pot on it
-Starting episode 3...
-Success: True
-# episodes completed so far: 6
-# successes: 6 (100.0%)
-
-100%|██████████| 3/3 [04:42<00:00, 98.85s/it][A100%|██████████| 3/3 [04:42<00:00, 94.22s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 38%|███▊      | 3/8 [10:09<18:31, 222.36s/it]
-  0%|          | 0/1 [00:00<?, ?it/s][A
-Task: put the white mug on the left plate and put the yellow and white mug on the right plate
-Starting episode 1...
-Success: True
-# episodes completed so far: 7
-# successes: 7 (100.0%)
-
-100%|██████████| 1/1 [01:24<00:00, 84.66s/it][A100%|██████████| 1/1 [01:24<00:00, 84.66s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 50%|█████     | 4/8 [11:37<11:17, 169.31s/it]
-  0%|          | 0/1 [00:00<?, ?it/s][A
-Task: put the white mug on the plate and put the chocolate pudding to the right of the plate
-Starting episode 1...
-Success: True
-# episodes completed so far: 8
-# successes: 8 (100.0%)
-
-100%|██████████| 1/1 [02:12<00:00, 132.60s/it][A100%|██████████| 1/1 [02:12<00:00, 132.60s/it]
-Current task success rate: 1.0
-Current total success rate: 1.0
- 62%|██████▎   | 5/8 [13:51<07:49, 156.63s/it]
-  0%|          | 0/2 [00:00<?, ?it/s][A
-Task: put both the alphabet soup and the cream cheese box in the basket
-Starting episode 1...
-Success: True
-# episodes completed so far: 9
-# successes: 9 (100.0%)
-
- 50%|█████     | 1/2 [01:19<01:19, 79.02s/it][A
-Task: put both the alphabet soup and the cream cheese box in the basket
-Starting episode 2...
-Success: False
-# episodes completed so far: 10
-# successes: 9 (90.0%)
-
-100%|██████████| 2/2 [04:14<00:00, 135.96s/it][A100%|██████████| 2/2 [04:14<00:00, 127.42s/it]
-Current task success rate: 0.5
-Current total success rate: 0.9
- 75%|███████▌  | 6/8 [18:07<06:20, 190.34s/it]
-  0%|          | 0/1 [00:00<?, ?it/s][A
-Task: put both moka pots on the stove
-Starting episode 1...
-Success: True
-# episodes completed so far: 11
-# successes: 10 (90.9%)
-
-100%|██████████| 1/1 [02:31<00:00, 151.70s/it][A100%|██████████| 1/1 [02:31<00:00, 151.70s/it]
-Current task success rate: 1.0
-Current total success rate: 0.9090909090909091
- 88%|████████▊ | 7/8 [20:39<02:57, 177.85s/it]
-  0%|          | 0/2 [00:00<?, ?it/s][A
-Task: put the yellow and white mug in the microwave and close it
-Starting episode 1...
-Success: False
-# episodes completed so far: 12
-# successes: 10 (83.3%)
-
- 50%|█████     | 1/2 [02:46<02:46, 166.45s/it][A
-Task: put the yellow and white mug in the microwave and close it
-Starting episode 2...
-Success: False
-# episodes completed so far: 13
-# successes: 10 (76.9%)
-
-100%|██████████| 2/2 [05:33<00:00, 166.78s/it][A100%|██████████| 2/2 [05:33<00:00, 166.73s/it]
-Current task success rate: 0.0
-Current total success rate: 0.7692307692307693
-100%|██████████| 8/8 [26:13<00:00, 227.62s/it]100%|██████████| 8/8 [26:13<00:00, 196.71s/it]
-Exception ignored in: <function MjRenderContext.__del__ at 0x7ff0653c20e0>
-Traceback (most recent call last):
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/utils/binding_utils.py", line 199, in __del__
-    self.gl_ctx.free()
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 149, in free
-    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/OpenGL/error.py", line 230, in glCheckError
-    raise self._errorClass(
-OpenGL.raw.EGL._errors.EGLError: EGLError(
-	err = EGL_NOT_INITIALIZED,
-	baseOperation = eglMakeCurrent,
-	cArguments = (
-		<OpenGL._opaque.EGLDisplay_pointer object at 0x7ff024316440>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7ff06530d840>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7ff06530d840>,
-		<OpenGL._opaque.EGLContext_pointer object at 0x7ff06530d7c0>,
-	),
-	result = 0
-)
-Exception ignored in: <function EGLGLContext.__del__ at 0x7ff0653c1f30>
-Traceback (most recent call last):
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 155, in __del__
-    self.free()
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/robosuite/renderers/context/egl_context.py", line 149, in free
-    EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
-  File "/root/autodl-tmp/openvla-native-runtime/env/lib/python3.10/site-packages/OpenGL/error.py", line 230, in glCheckError
-    raise self._errorClass(
-OpenGL.raw.EGL._errors.EGLError: EGLError(
-	err = EGL_NOT_INITIALIZED,
-	baseOperation = eglMakeCurrent,
-	cArguments = (
-		<OpenGL._opaque.EGLDisplay_pointer object at 0x7ff024316440>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7ff06530d840>,
-		<OpenGL._opaque.EGLSurface_pointer object at 0x7ff06530d840>,
-		<OpenGL._opaque.EGLContext_pointer object at 0x7ff06530d7c0>,
-	),
-	result = 0
-)
