@@ -2,80 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b56 - 2026-11-11
+## 0.8.0b36 - 2026-11-12
 
-- Add a pinned TD-MPC2 LiftCube actor-mean prior for the existing 32D-state/4D-action LiftPeg profile, retaining every original tensor and the learned active gripper output.
-- Preserve the complete source action for two native ticks, remapping its EE-frame translation with each measured TCP pose and documenting native component saturation separately from inference parity.
-
-## 0.8.0b55 - 2026-11-11
-
-- Include vector width in opt-in Worker recycling so ManiSkill tail batches start in a fresh simulator process while retaining the Policy replica.
-- Isolate native Policy reference width segments while preserving the frozen seed indices, episode identities and complete per-profile records.
-
-## 0.8.0b54 - 2026-11-11
-
-- Keep Go2 transfer action normalization on the same Torch device in the SDK Policy and native evaluator, avoiding mixed NumPy/CUDA FP32 rounding drift without relaxing strict comparisons.
-
-## 0.8.0b53 - 2026-11-11
-
-- Add an explicit direct-pull PPO prior for the canonical PullCubeTool state/controller, using the pinned native dense-reward workspace target and all original learned action outputs.
-- Retarget all twelve joints of the official ANYmal Reach PPO actor to the canonical Go2 Reach state/controller using pinned joint axes, home offsets and native action scaling; retain transfer limitations separately from task competence.
-
-## 0.8.0b52 - 2026-11-11
-
-- Pin author-released G1 TransportBox and Apple PPO state models with their original 77D/74D inputs and 25D joint controller, retaining the Apple's source action clipping.
-- Allow the PPO model downloader to select an explicit pinned catalog while retaining its original official-model defaults and checksum checks.
-- Reuse the complete LiftPeg pose actor on the real TCP/object state prefix for explicit Peg/Plug grasp-prior transfers.
-- Compose unchanged 4D official actors for canonical dual-Panda controllers using observed object/goal data and pinned robot-frame calibration.
-
-## 0.8.0b51 - 2026-11-11
-
-- Recycle ManiSkill simulation Workers before switching profiles to isolate PhysX contact-query lifetimes while retaining the loaded Policy replica.
-- Keep same-profile groups in one Worker; make group-boundary recycling opt-in so other benchmarks retain their existing lifecycle.
-- Support the existing Humanoid Walk/Run state profiles by reconstructing the unchanged checkpoint input from native state fields and measured joint identities.
-
-## 0.8.0b50 - 2026-11-10
-
-- Preserve virtual-environment Python executable paths when launching generic native Policy children.
-
-## 0.8.0b49 - 2026-11-10
-
-- Run generic multi-task native ManiSkill references in sequential per-task processes, matching the established PPO reference lifetime and preserving task rules.
-- Validate child coverage before merging unchanged records; retain child commands, failures and separate phase-sum versus parent wall clocks.
-
-## 0.8.0b48 - 2026-11-10
-
-- Check actual boolean native terminal masks in full-horizon and diagnostic ManiSkill comparisons.
-- Record returned per-lane masks in the native PPO and Octo evaluators; reject missing legacy fields instead of inferring them.
-- Integrate current main while retaining both ManiSkill and RLBench registration and documentation.
-
-## 0.8.0b47 - 2026-11-10
-
-- Add separately named cabinet depth profiles and optional native robot, handle and contact observations for the pinned MS-HAB Fetch Open policy example.
-- Keep depth normalization, contact classification, coordinate transforms and frame history in the Policy; preserve original cabinet task profiles and rules.
-
-## 0.8.0b46 - 2026-11-09
-
-- Recover the original PickClutterYCB scene corpus from a checksum-pinned author mirror without changing its upstream bytes.
-- Extend separately named real-policy references for remaining control and visual task profiles, preserving canonical evaluation rules.
-
-## 0.8.0b45 - 2026-11-09
-
-- Add pinned learned-policy references for control, dexterous manipulation and locomotion tasks, with explicit cross-simulator transfer contracts.
-- Add separately named root-kinematics profiles without changing existing observation vectors or controllers.
-- Support clearly labeled integration prefixes while preserving native horizons and termination masks, and compare their complete observation/action traces against independent native rollouts.
-
-## 0.8.0b44 - 2026-11-09
-
-- Integrate ManiSkill GPU vector evaluation with a complete inventory of 55 evaluation tasks,
-  source-backed helper exclusions, per-task robot/controller/observation settings and full horizons.
-- Add a pinned runtime builder, checksum-pinned asset sources and 11 official PPO checkpoint mappings.
-  Construct the native evaluator independently and compare expected records, inputs, actions and outcomes.
-- Add an isolated, pinned public Octo-small Bridge Policy, target-controller rotation mapping,
-  repeatable GPU inference and an independent native visual evaluator with per-step comparison.
-- Validate complete record coverage, preserve return-based scoring for tasks without success flags,
-  support task-default robots and Bridge RGB observations, and render a real frame in the GPU self-test.
-- Keep missing task policies, assets and native comparisons explicit while integration acceptance is partial.
+- Add the partial, pinned ManiSkill integration with explicit task/robot/observation/controller profiles, GPU-vectorized Workers, reproducible simulator/assets builds and real-model correctness references; incomplete task/model acceptance remains documented.
+- Preserve actual terminal masks and recycle simulator Workers when profile or vector width changes while retaining Policy replicas.
+- Keep return-scored episodes out of binary success/failure statistics, including progress, autotune health and both shard merge paths.
+- Merge ManiSkill profile return sums/counts and success counts separately, check complete record-tree coverage, and bind shards to checkpoint and Policy content identities.
 
 ## 0.8.0b35 - 2026-11-10
 

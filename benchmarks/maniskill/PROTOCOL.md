@@ -105,7 +105,30 @@ unknown or duplicate work items, missing or incorrectly identified records, wron
 inconsistent scores. `formal` requires complete coverage of the named suite at its configured
 episode counts. `--quick-test` and reduced `--episodes` runs are incomplete supporting evidence.
 Record-tree shard merging follows the same coverage validation. JSON-only `shard_reduce` has
-no ManiSkill reducer.
+a dedicated ManiSkill reducer keyed by profile ID. Each profile retains `return_sum` and
+`return_count`; merging computes its sample-weighted mean and never averages returns across
+different tasks. Return-scored episodes contribute neither binary successes nor failures.
+The standard result records `success_evaluated_episodes` and `return_evaluated_episodes` when
+return-only samples are present. With no success-scored samples, standard successes/failures
+are zero and its success rate is null; official return-profile success fields remain null.
+
+Both merge paths check the complete declared profile/count protocol and identical vector width.
+New ManiSkill shards additionally record checkpoint and Policy content identities in `shard.build`.
+Checkpoint identity covers file content and relative names (excluding Git internals and Python
+bytecode); Policy identity covers command arguments, file arguments, Python sources under its
+working directory and declared benchmark configuration. Hashing runs once before sharded
+evaluation and is timed as `checkpoint_identity_s`. Keep the checkpoint immutable and runtime
+caches outside it. This binds the declared inputs, not every dependency imported from another
+environment. Absolute installation paths are not a substitute for content identity. Older
+shards without these identities must be rerun; a merger cannot reconstruct their provenance.
+
+`shard_merge` reads completed records, validates the deterministic WorkItem partition, episode
+index/seed/lane/profile/record identity, actual boolean terminal masks, steps and per-shard
+summaries, then reaggregates them. Its coverage is `complete` only after those checks pass.
+`shard_reduce` reads only result documents: it rejects inconsistent counts, means, profiles,
+protocols and model identities, but coverage remains `accounted`. Consistent fabricated counts
+cannot prove that actual records were neither omitted nor duplicated. Use record-tree merging
+for that stronger guarantee. Neither path adds concurrent elapsed times or throughput rates.
 
 Native comparisons use the same checkpoint, precision, profile, seeds, vector groups and full
 horizons. Compare initial state and observation, actions, native returns, both success outcomes

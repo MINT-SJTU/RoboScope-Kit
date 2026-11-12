@@ -374,6 +374,10 @@ metrics are undefined on a subset; the merge derives the metrics only after conf
 reduction trusts the reported counts and cannot prove that each record is unique; use the record-tree merge
 when you need that guarantee.
 
+ManiSkill keeps return-scored profiles outside the success-rate denominator and merges each
+profile's return sum and sample count into a weighted mean. Its shards also bind checkpoint
+and Policy content identities; see the [ManiSkill scoring and shard protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/PROTOCOL.md#scoring-and-coverage).
+
 ## Python support
 
 Supported versions follow the [CPython release lifecycle](https://devguide.python.org/versions/): every

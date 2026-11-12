@@ -12,6 +12,7 @@ from typing import Any
 
 from roboscope_kit.runtime.benchmark import ProcessSpec, WorkerContext, WorkItem, WorkResult
 
+from .metrics import overall_task_results
 from .profile import PROTOCOL_ID
 
 
@@ -109,6 +110,13 @@ class ManiSkillBenchmarkAdapter:
                 index = item.payload["episode_start"] + lane
                 record_id = f"{result.group_id}-episode-{index:06d}-seed-{seed}"
                 metadata = record.metadata
+                if any(type(metadata.get(key)) is not bool for key in ("terminated", "truncated")):
+                    raise RuntimeError(f"Invalid ManiSkill terminal masks in record {record.record_id!r}")
+                if type(record.success) is not bool or any(
+                    type(metadata.get(key)) is not int
+                    for key in ("episode_index", "seed", "vector_lane")
+                ):
+                    raise RuntimeError(f"Invalid ManiSkill identity in record {record.record_id!r}")
                 if record.record_id != record_id or any(
                     metadata.get(key) != value for key, value in {
                         "task_id": profile["task_id"], "profile_id": result.group_id,
@@ -122,10 +130,13 @@ class ManiSkillBenchmarkAdapter:
                     }.items()
                 ):
                     raise RuntimeError(f"ManiSkill record {record.record_id!r} differs from its manifest")
-                if record.steps != steps:
+                if type(record.steps) is not int or record.steps != steps:
                     raise RuntimeError(f"Invalid ManiSkill steps or score in record {record.record_id!r}")
+                value = metadata.get("episode_return")
+                if type(value) not in (int, float) or not isfinite(value):
+                    raise RuntimeError(f"Invalid ManiSkill return in record {record.record_id!r}")
                 if profile["success_metric"] == "return":
-                    if record.success or not isfinite(metadata.get("episode_return", float("nan"))):
+                    if record.success:
                         raise RuntimeError(f"Invalid ManiSkill return in record {record.record_id!r}")
                 elif any(
                     type(metadata.get(key)) is not bool
@@ -141,7 +152,7 @@ class ManiSkillBenchmarkAdapter:
             count = len(records)
             scores_success = profile["success_metric"] != "return"
             successes = sum(record.success for record in records) if scores_success else None
-            has_success = bool(records) and all(
+            has_success = scores_success and bool(records) and all(
                 type(record.metadata.get("success_once")) is bool for record in records
             )
             once = sum(record.metadata["success_once"] for record in records) if has_success else None
@@ -158,26 +169,16 @@ class ManiSkillBenchmarkAdapter:
                 "success_at_end_successes": at_end,
                 "success_at_end_rate": at_end / count if has_success else None,
                 "mean_return": sum(returns) / count if count and None not in returns else None,
+                "return_sum": sum(returns),
+                "return_count": count,
                 "actual_steps": sum(record.steps for record in records),
             })
         records = [record for result in results for record in result.records]
-        count = len(records)
-        success_rows = [row for row in rows if row["success_metric"] != "return"]
-        success_count = sum(row["episodes"] for row in success_rows)
-        successes = sum(row["successes"] for row in success_rows)
         return {
             "formal": require_complete and self.metadata()["complete_named_suite"],
             "evaluation_kind": self.metadata()["evaluation_kind"],
             "tasks": rows,
-            "overall": {
-                "episodes": count, "successes": successes if success_count else None,
-                "success_evaluated_episodes": success_count,
-                "success_rate": successes / success_count if success_count else None,
-                "task_mean_success_rate": (
-                    sum(row["success_rate"] for row in success_rows) / len(success_rows)
-                    if success_rows and all(row["episodes"] for row in success_rows) else None
-                ),
-            },
+            "overall": overall_task_results(rows),
             "runtime_metrics": {
                 "actual_policy_steps": sum(record.steps for record in records),
                 "inference_wait_s": sum(

@@ -135,6 +135,11 @@ def merge_shards(
     total_records = sum(item.expected_results for item in full_items)
     _validate_coverage(shards, full_by_id, total_records)
     validate_terminal_accounting(all_results, total_records)
+    if benchmark is BenchmarkName.MANISKILL:
+        for (directory, _, document), records in zip(shards, results_by_shard, strict=True):
+            partial = adapter.aggregate_partial(records)
+            if document["official_result"] != partial:
+                raise ValueError(f"{directory}: official result disagrees with completed ManiSkill records")
 
     ordered = sorted(
         all_results,
@@ -207,7 +212,13 @@ def _validate_shard_metadata(
     identity = validate_shard_identity(documents)
     if json.dumps(identity, sort_keys=True) != json.dumps(expected_identity, sort_keys=True):
         raise ValueError("shard benchmark identity disagrees with the merge workload")
-    if meta["build"] != shard_build(benchmark_manifest):
+    expected_build = shard_build(benchmark_manifest)
+    actual_build = meta["build"]
+    if identity["benchmark"] == "maniskill":
+        # Model/Policy digests are checked across shards by validate_shard_set.
+        # The merge does not load the checkpoint or replace it with its placeholder.
+        actual_build = {key: actual_build.get(key) for key in expected_build}
+    if actual_build != expected_build:
         raise ValueError("shard kit build disagrees with the merge's kit version and benchmark manifest")
     for shard_dir, manifest, result in shards:
         if manifest.get("benchmark") != result["benchmark"]:

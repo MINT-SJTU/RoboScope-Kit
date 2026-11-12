@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -47,6 +48,13 @@ def validate_shard_set(shards: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     for shard in shards:
         if shard.get("result", {}).get("state") != "complete":
             raise ValueError(f"shard {shard_metadata(shard)['index']} did not complete")
+        if shard["benchmark"].get("benchmark") == "maniskill":
+            build = shard_metadata(shard).get("build")
+            for key in ("checkpoint_sha256", "policy_sha256"):
+                value = build.get(key) if isinstance(build, Mapping) else None
+                if (not isinstance(value, str) or len(value) != 64
+                        or any(character not in "0123456789abcdef" for character in value)):
+                    raise ValueError(f"ManiSkill shard must record a valid {key} content identity")
     _require_one_build(metas)
     return {
         key: metas[0][key]
@@ -90,5 +98,23 @@ def validate_shard_accounting(shard: Mapping[str, Any]) -> None:
     failures = require_count(result["failures"], f"shard {index} failures")
     require_count(result["total_steps"], f"shard {index} total_steps")
     require_count(result["completed_items"], f"shard {index} completed_items", minimum=1)
-    if episodes != total or successes + failures != episodes:
+    scored = episodes
+    if shard["benchmark"].get("benchmark") == "maniskill":
+        fields = ("success_evaluated_episodes", "return_evaluated_episodes")
+        if any(field in result for field in fields):
+            scored = require_count(result.get(fields[0]), f"shard {index} {fields[0]}")
+            returns = require_count(result.get(fields[1]), f"shard {index} {fields[1]}")
+            if scored + returns != episodes:
+                raise ValueError(f"shard {index} scoring counts do not cover its episodes")
+            rate = result.get("success_rate")
+            expected_rate = successes / scored if scored else None
+            if ("success_rate" not in result or rate != expected_rate
+                    or (rate is not None and (type(rate) not in (int, float) or not math.isfinite(rate)))):
+                raise ValueError(f"shard {index} success rate differs from its scored episodes")
+        elif any(
+            row.get("success_metric") == "return" and row.get("episodes") != 0
+            for row in shard["official_result"].get("tasks", [])
+        ):
+            raise ValueError(f"shard {index} ManiSkill return records require explicit scoring counts")
+    if episodes != total or successes + failures != scored:
         raise ValueError(f"shard {index} partition is not complete or its counts are inconsistent")

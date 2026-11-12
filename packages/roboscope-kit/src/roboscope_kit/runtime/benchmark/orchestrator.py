@@ -79,17 +79,21 @@ ProgressCallback = Callable[["dict[str, Any]", Sequence[WorkResult]], None]
 
 def aggregate_standard_results(results: Sequence[WorkResult], total_records: int) -> dict[str, Any]:
     records = [record for result in results for record in result.records]
-    successes = sum(record.success for record in records)
+    scored = [record for record in records if record.metadata.get("success_metric") != "return"]
+    successes = sum(record.success for record in scored)
+    return_count = len(records) - len(scored)
     total_steps = sum(record.steps for record in records)
     return {
         "state": "complete" if len(records) == total_records else "running",
         "episodes": len(records),
         "successes": successes,
-        "failures": len(records) - successes,
+        "failures": len(scored) - successes,
         "total_steps": total_steps,
         "total_episodes": total_records,
-        "success_rate": successes / len(records) if records else 0.0,
+        "success_rate": successes / len(scored) if scored else None if return_count else 0.0,
         "completed_items": len(results),
+        **({"success_evaluated_episodes": len(scored), "return_evaluated_episodes": return_count}
+           if return_count else {}),
     }
 
 
@@ -329,6 +333,7 @@ class ParallelBenchmarkRuntime:
             },
             "record_success": {
                 record.record_id: record.success for result in results for record in result.records
+                if record.metadata.get("success_metric") != "return"
             },
             "inference": inference_metadata,
             "policy_io": policy_io,
