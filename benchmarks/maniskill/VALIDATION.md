@@ -125,12 +125,19 @@ does not change initial states or seed grouping.
 
 CUDA MPS does not help this workload: with MPS, 8 Workers take 223.0 s and 12 Workers 197.9 s and 197.7 s
 in two runs. Sixteen Workers with MPS take 197.9 s at 46.7 GiB peak VRAM. The GPU is saturated near
-twelve Workers on this machine.
+twelve Workers on this machine. A second Policy replica is slower: 8 and 12 Workers take 231.4 s and
+198.3 s with two replicas. The small actor is not the bottleneck; the extra replica competes with the
+simulators for the GPU.
 
-Autotune previously capped ManiSkill at two Workers. With the cap removed, autotune selects eight
-Workers: evaluation takes 213.0 s, after 391.4 s of probing. Probing tests 1, 2, 4, 8 and 16 Workers and
-stops when the gain falls below the knee. For a single prescribed run, a fixed `--concurrency` avoids that
-probing cost.
+Autotune previously capped ManiSkill at two Workers; the cap is now 16. Autotune then selects eight
+Workers: evaluation takes 213.0 s after 391.4 s of probing 1, 2, 4, 8 and 16 Workers. Sixteen Workers
+miss the knee, which requires a doubling to deliver a quarter of linear scaling. The prescribed runs
+agree: twelve Workers are 10.5% faster than eight, below the 12.5% the same rule requires for that step.
+Autotune therefore selects the efficient point, not the fastest one; a fixed `--concurrency 12` is
+fastest on this machine and avoids the probing time. Without a cap, a probe after an accepted 16-Worker
+step requested 30 Workers from the CPU estimate and failed with a GPU solver allocation error. Two probe
+items per Worker leave the steady-state window too short at 16 Workers: it reported 504.6 steps/s against
+an elapsed rate of 353.1, so the manifest keeps three.
 
 ### Comparison with the original evaluator
 
