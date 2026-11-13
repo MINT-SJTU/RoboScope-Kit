@@ -632,6 +632,9 @@ class BenchmarkAutotuneController:
         if baseline is None or (k, g) == baseline_key:
             return
         baseline_health = baseline[2]
+        if baseline_health["success_rate"] is None or health["success_rate"] is None:
+            health["success_check"] = "not_applicable_return_only"
+            return
         baseline_records = self.record_success.get(baseline_key, {})
         matched = sorted(baseline_records.keys() & record_success.keys())
         if matched:
@@ -641,7 +644,9 @@ class BenchmarkAutotuneController:
             success_rate = sum(record_success[record] for record in matched) / len(matched)
         else:
             baseline_successes = baseline_health["successes"]
-            baseline_episodes = baseline_health["completed_episodes"]
+            baseline_episodes = baseline_health.get(
+                "success_evaluated_episodes", baseline_health["completed_episodes"],
+            )
             baseline_rate = float(baseline_health["success_rate"])
             success_rate = float(health["success_rate"])
         minimum_rate = baseline_rate * (1.0 - self.limits.maximum_success_rate_drop)
@@ -983,7 +988,10 @@ def _concurrency_health(k: int, output: dict[str, Any]) -> dict[str, Any]:
         "completed_episodes": int(result["episodes"]),
         "expected_episodes": int(result["total_episodes"]),
         "successes": int(result["successes"]),
-        "success_rate": float(result["success_rate"]),
+        "success_rate": float(result["success_rate"]) if result["success_rate"] is not None else None,
+        **({key: int(result[key]) for key in (
+            "success_evaluated_episodes", "return_evaluated_episodes",
+        )} if "return_evaluated_episodes" in result else {}),
     }
 
 

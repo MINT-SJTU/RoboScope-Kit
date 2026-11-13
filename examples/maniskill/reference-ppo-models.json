@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "model_kind": "Pinned author G1 task-trained PPO checkpoints, deterministic FP32",
+  "models": {
+    "UnitreeG1TransportBox-v1": {
+      "path": "stream-transport-box-adam_ppo_pretrain.pt",
+      "sha256": "1cfc6ddcae502b3b974babd2a19f1ff01935c5f0b99f7e75ed39fb908662d690",
+      "bytes": 1245726,
+      "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
+      "obs_mode": "state",
+      "control_mode": "pd_joint_delta_pos",
+      "observation_dimension": 77,
+      "action_dimension": 25,
+      "max_episode_steps": 100,
+      "sim_freq": 100,
+      "control_freq": 20,
+      "source_evaluator_default_max_episode_steps": 200,
+      "source_evaluator_sim_backend": "physx_cpu",
+      "source_lock_mani_skill_version": "3.0.1",
+      "url": "https://raw.githubusercontent.com/tjvitchutripop/stream-rl-robotics/30b2d8ecca093d9b9b492598aa9eeba70b628fd5/pretrained-models/transport-box/adam_ppo_pretrain.pt",
+      "source_repository": "tjvitchutripop/stream-rl-robotics",
+      "source_revision": "30b2d8ecca093d9b9b492598aa9eeba70b628fd5",
+      "license_status": "Not specified by the author repository at the pinned revision; weights are not redistributed."
+    },
+    "UnitreeG1PlaceAppleInBowl-v1": {
+      "path": "lsf-g1-apple-maniskill_ppo_expert.pt",
+      "sha256": "add5426b2ffcb07f4a9002e98ab99efaa39eb58cdd45eb1f02470ab4251175e5",
+      "bytes": 1239202,
+      "robot_uid": "unitree_g1_simplified_upper_body_with_head_camera",
+      "obs_mode": "state",
+      "control_mode": "pd_joint_delta_pos",
+      "observation_dimension": 74,
+      "action_dimension": 25,
+      "max_episode_steps": 100,
+      "sim_freq": 100,
+      "control_freq": 20,
+      "source_action_postprocessing": "clip deterministic actor mean to actual normalized action space [-1,1]",
+      "action_clip_bounds": [
+        -1.0,
+        1.0
+      ],
+      "dataset_path": "nominal/maniskill_ppo_expert.pt",
+      "url": "https://huggingface.co/JsSparkYyx/LatentSafetyFilterWithPVRs/resolve/8138cb752bc0471d79c09439172f4dc6421a1392/nominal/maniskill_ppo_expert.pt",
+      "source_repository": "tabz23/Latent-Safety-Filters",
+      "source_revision": "ea456084576b16053e6de79c52b489e33409479e",
+      "source_license": "MIT",
+      "model_card_license": null,
+      "source_simulator_revision": "Not pinned in the released author repository",
+      "target_simulator_revision": "baab60ede2e89167c1b7aaed41a9aa8e690a9d1e",
+      "model_repository": "JsSparkYyx/LatentSafetyFilterWithPVRs",
+      "model_revision": "8138cb752bc0471d79c09439172f4dc6421a1392"
+    }
+  },
+  "default_tasks": [
+    "UnitreeG1TransportBox-v1",
+    "UnitreeG1PlaceAppleInBowl-v1"
+  ]
+}

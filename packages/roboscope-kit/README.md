@@ -89,7 +89,8 @@ python -m roboscope_kit.runtime.benchmark \
 `--checkpoint-source` is an absolute local path, passed to `Policy.load()` unchanged. Prepare the checkpoint
 before starting the evaluation. The runtime validates the Policy process contract before every run.
 `--quick-test` runs a short real evaluation with one Worker and one Server; without it, the run is a full
-scored evaluation. `--self-test` only checks that the manifest's runtime paths exist. Results, progress,
+scored evaluation. `--self-test` runs benchmark-specific runtime checks without loading your Policy;
+some checks create GPU simulator environments. Results, progress,
 and logs are written under `--output-dir`. Use a new or empty directory for each evaluation or self-test.
 A directory containing only `errors.jsonl` can be retried; new errors are appended to preserve earlier
 failures. Pure preflight checks run before any evaluation artifacts are written. Once a run has produced
@@ -373,6 +374,10 @@ metrics are undefined on a subset; the merge derives the metrics only after conf
 reduction trusts the reported counts and cannot prove that each record is unique; use the record-tree merge
 when you need that guarantee.
 
+ManiSkill keeps return-scored profiles outside the success-rate denominator and merges each
+profile's return sum and sample count into a weighted mean. Its shards also bind checkpoint
+and Policy content identities; see the [ManiSkill scoring and shard protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md#scoring-and-coverage).
+
 ## Python support
 
 Supported versions follow the [CPython release lifecycle](https://devguide.python.org/versions/): every
@@ -418,6 +423,31 @@ again. To retry a failed upload, run the `SDK compatibility` workflow manually o
 Earlier source releases had a `libero` extra that only installed `imageio[ffmpeg]` and never a runnable
 LIBERO simulator, so it was removed. If you use `imageio` directly, declare `imageio[ffmpeg]>=2.34,<3.0` in
 your own dependencies.
+
+## ManiSkill multi-task integration
+
+The `maniskill` adapter runs selected task, robot, observation and controller profiles in GPU vector
+Workers through the existing `Policy` lifecycle. Official PPO state examples and a Bridge visual
+Policy example provide pinned model-loading and comparison workflows. Each profile reports its
+native success metric or episode return; record-tree shard merging and result-only reduction retain
+that distinction.
+
+The pinned inventory declares 55 TaskIDs. Full integration acceptance remains incomplete: compatible
+intended-task models, current-source prescribed-count evaluation and independent upstream comparison
+are still required. The [validation status](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md)
+separates CPU source/scoring checks, retained candidates and task/model acceptance.
+The selected task-trained catalog has eleven official PPO, two author G1 PPO and eight NEWT
+TaskIDs; NEWT runs the actor prior rather than original MPC. Provisional visual examples do
+not establish per-task acceptance, and all original tabletop state/RGB profiles remain in scope.
+
+Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and choose asset suites with
+`MANISKILL_ASSET_SUITES`. See the
+[build guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/README.md),
+[protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md),
+[task inventory](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/TASK_INVENTORY.md),
+[PPO example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/README.md) and
+[Octo example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/OCTO.md).
+Issue #25 integration and issue #31 throughput work remain separate.
 
 ## License
 
