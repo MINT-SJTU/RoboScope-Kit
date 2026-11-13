@@ -86,8 +86,9 @@ calvin and libero_plus work the same way (libero_plus uses `checkpoints/libero`)
   `[pos3, axis-angle3, grip±1]`, 30-step chunks, proprio tracking (real state on the first frame → target at chunk end),
   domain_id=3, steps=10. Proprio rotation uses the **site frame** (= the controller's ee_ori_mat; the observation
   `robot0_eef_quat` is the body frame in xyzw, offset by a constant 90° z rotation, `_libero_site_rotmat`).
-  Worker patches (inside the SDK): `use_delta=False` (as stated in the recipe) + MAX_STEPS aligned with
-  the recipe's 800/900-step horizons.
+  The Policy declares `libero.absolute-eef-v1`, so the LIBERO worker switches the OSC controllers to absolute
+  targets (`use_delta=False`) after the settle steps, as the recipe does. Episodes keep the benchmark's suite
+  horizons (220 to 520 policy steps), which are shorter than the recipe's 800 and 900 steps.
 - **calvin**: matches calvin_client.py: absolute `(pos, quat_xyzw, grip)` tuples,
   the first 20 rows of the model chunk, domain_id=2, gripper threshold 0.8. The RoboScope Kit calvin spec is a 7-D
   relative action, so this Policy declares

@@ -85,6 +85,20 @@ def test_legacy_policy_capabilities_use_benchmark_action_default() -> None:
     assert contract.action_representation_source == "benchmark_default"
 
 
+@pytest.mark.parametrize("benchmark_name", (BenchmarkName.LIBERO, BenchmarkName.LIBERO_PLUS))
+def test_libero_absolute_action_representation_is_negotiated(benchmark_name: BenchmarkName) -> None:
+    benchmark = roboscope_kit.get_benchmark_spec(benchmark_name, "libero_10")
+    capabilities = PolicyCapabilities(
+        supported_benchmarks=(benchmark_name.value,),
+        required_features=(),
+        action_representations={benchmark_name.value: "libero.absolute-eef-v1"},
+    )
+    contract = roboscope_kit.negotiate_policy_action_contract(benchmark, capabilities)
+
+    assert contract.action_representation == "libero.absolute-eef-v1"
+    assert contract.action_representation_source == "policy"
+
+
 def test_explicit_policy_action_representation_is_validated() -> None:
     benchmark = roboscope_kit.get_benchmark_spec(
         BenchmarkName.ROBOTWIN,
@@ -372,7 +386,8 @@ def test_libero_aggregate_zero_fills_missing_tasks() -> None:
     assert metrics["episode_elapsed_s"] == 3.0
 
 
-def test_libero_worker_process_spec() -> None:
+@pytest.mark.parametrize("representation", ("libero.delta-eef-v1", "libero.absolute-eef-v1"))
+def test_libero_worker_process_spec(representation: str) -> None:
     from roboscope_kit.runtime.benchmark.adapters import WorkerContext
 
     factory = LiberoBenchmarkFactory()
@@ -392,11 +407,12 @@ def test_libero_worker_process_spec() -> None:
         output_dir=Path("/tmp/out"),
         execution_contract=roboscope_kit.PolicyExecutionContract(
             benchmark="libero",
-            action_representation="libero.delta-eef-v1",
+            action_representation=representation,
         ),
     )
     spec = adapter.worker_process(context)
     assert spec.command[1:3] == ("-m", "roboscope_kit.runtime.benchmarks.libero.worker")
+    assert spec.command[spec.command.index("--action-representation") + 1] == representation
     assert spec.env["CUDA_VISIBLE_DEVICES"] == "3"
     assert spec.env["MUJOCO_EGL_DEVICE_ID"] == "3"
     assert spec.env["LIBERO_HOME"] == "/sim/libero"
@@ -832,6 +848,8 @@ def test_libero_plus_quick_test_and_probe() -> None:
     worker_spec = quick.worker_process(context)
     worker_env = worker_spec.env
     assert worker_spec.command[1:3] == ("-m", "roboscope_kit.runtime.benchmarks.libero.worker")
+    representation_index = worker_spec.command.index("--action-representation") + 1
+    assert worker_spec.command[representation_index] == "libero.delta-eef-v1"
     assert "--suite" in worker_spec.command
     assert worker_spec.command[worker_spec.command.index("--suite") + 1] == "libero_goal"
     assert worker_env["LIBERO_CONFIG_PATH"] == "/tmp/state/libero-config"

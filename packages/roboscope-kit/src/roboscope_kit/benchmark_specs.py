@@ -80,7 +80,7 @@ def _feature(
 class LiberoBenchmarkDefinition(BenchmarkDefinition):
     name = BenchmarkName.LIBERO
     protocol_version = "libero-v1"
-    supported_action_representations = ("libero.delta-eef-v1",)
+    supported_action_representations = ("libero.delta-eef-v1", "libero.absolute-eef-v1")
     default_action_representation = "libero.delta-eef-v1"
 
     def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
@@ -107,7 +107,12 @@ class LiberoBenchmarkDefinition(BenchmarkDefinition):
         )
 
     def action(self, _suite: str) -> ActionSpec:
-        return ActionSpec("action.robot", "LIBERO 6-DoF end-effector delta and gripper command.", 7)
+        return ActionSpec(
+            "action.robot",
+            "LIBERO 6-DoF end-effector delta (libero.delta-eef-v1) or absolute target position and "
+            "axis-angle (libero.absolute-eef-v1), and gripper command.",
+            7,
+        )
 
 
 class LiberoPlusBenchmarkDefinition(LiberoBenchmarkDefinition):
