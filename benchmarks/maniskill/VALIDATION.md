@@ -1,6 +1,6 @@
 # ManiSkill validation status
 
-**2026-11-12: integration acceptance is incomplete.** The pinned inventory declares
+**2026-11-13: integration acceptance is incomplete.** The pinned inventory declares
 55 evaluation TaskIDs and 77 selectable task/robot/observation/controller profiles.
 All original task IDs and tabletop state/RGB configurations remain in scope.
 Removing borrowed-task/robot model examples does not remove benchmark tasks.
@@ -18,9 +18,9 @@ tasks retain their native metric without fabricated binary success. See the
 | Model family | Selected scope | Acceptance limit |
 |---|---|---|
 | Official state PPO | Eleven task-trained checkpoints, including the genuine 16D dual-Panda actors | Prescribed-count native comparison matches exactly at `6dcbf53`; rates agree with the original evaluator at the same width ([results](#official-ppo-prescribed-count-results)) |
-| Author G1 PPO | TransportBox and PlaceAppleInBowl task/robot checkpoints | Author simulator/horizon differences and independent native comparison remain unresolved |
-| NEWT | Eight task/robot checkpoints: six control tasks, PlaceSphere and PullCubeTool | Current inference is the deterministic actor prior, not the author's default MPC evaluator; version, backend and horizon differences require validation |
-| Bridge Octo-small | Four original WidowX Bridge profiles | Provisional baseline; matching per-task training and competence are not established |
+| Author G1 PPO | TransportBox and PlaceAppleInBowl task/robot checkpoints | Prescribed-count records match the configured native reference ([results](#remaining-model-prescribed-count-results)); author simulator/horizon differences and independent configuration remain unresolved |
+| NEWT | Eight task/robot checkpoints: six control tasks, PlaceSphere and PullCubeTool | Prescribed-count records match the configured native reference ([results](#remaining-model-prescribed-count-results)); inference is the deterministic actor prior, not the author's default MPC evaluator, and Hopper and PlaceSphere score well below the published MPC results |
+| Bridge Octo-small | Four original WidowX Bridge profiles | Prescribed-count records match the native reference ([results](#remaining-model-prescribed-count-results)); provisional baseline, since a generalist model does not establish per-task training or competence |
 | Author ManiSkill Octo | Existing PegInsertionSide/PlugCharger RGB profiles with complete 7D pose actions | The author's published Octo results have zero success; no task acceptance is claimed |
 
 The eleven official PPO tasks, two author G1 tasks and eight NEWT tasks identify
@@ -186,6 +186,56 @@ With it, `AnymalC-Reach-v1` seeds 200-299 fail in two of two attempts with a CUD
 error in the contact impulse query of the first reset after the environment is reused; with a new
 environment per group the same seeds complete 100/100. The seed 200-299 AnymalC row above uses
 the per-group environment. The SDK always builds a new environment for each group.
+
+## Remaining-model prescribed-count results
+
+On 2026-11-13, the selected checkpoints for the other tasks ran at the prescribed 100 episodes per
+task: Kit 0.8.0b37 (this source plus #126's Worker scheduling and out-of-memory changes, which do
+not affect records), a new runtime built with
+`build-runtime.sh` and checkpoints verified against their pinned SHA-256 by the example downloaders.
+Four Workers and one Policy replica; records do not depend on Worker count. The native side is
+`native_eval_policy.py`, which builds native Gym environments without the Kit Worker or RPC and
+reuses the same Policy and manifest configuration. Its exact agreement verifies the Kit's execution
+path; it does not independently resolve the authors' task configuration.
+
+| Task | Checkpoint | Metric | Kit result | Published result | Records vs native |
+| --- | --- | --- | ---: | --- | --- |
+| `UnitreeG1TransportBox-v1` | Author PPO | Success once / at end | 100/100, 99/100 | – | Exact |
+| `UnitreeG1PlaceAppleInBowl-v1` | Author PPO | Success once / at end | 26/100, 22/100 | – | Exact |
+| `MS-AntWalk-v1` | NEWT | Mean return | 993.7 | none | Exact |
+| `MS-AntRun-v1` | NEWT | Mean return | 201.9 | none | Exact |
+| `MS-CartpoleBalance-v1` | NEWT | Mean return / 1000 | 0.9998 | 0.999 | Exact |
+| `MS-CartpoleSwingUp-v1` | NEWT | Mean return / 1000 | 0.991 | 0.991 | Exact |
+| `MS-HopperStand-v1` | NEWT | Mean return / 600 | 0.217 | 0.806 | Exact |
+| `MS-HopperHop-v1` | NEWT | Mean return / 600 | 0.088 | 0.797 | Exact |
+| `PlaceSphere-v1` | NEWT | Success once / at end | 34/100, 16/100 | 0.9 | Exact |
+| `PullCubeTool-v1` (pose controller) | NEWT | Success once / at end | 93/100, 93/100 | 1.0 | Exact |
+| `PutCarrotOnPlateInScene-v1` | Octo-small | Success once / at end | 19/100, 18/100 | 0.097 | Exact |
+| `PutEggplantInBasketScene-v1` | Octo-small | Success once / at end | 59/100, 59/100 | 0.569 | Exact |
+| `PutSpoonOnTableClothInScene-v1` | Octo-small | Success once / at end | 31/100, 31/100 | 0.472 | Exact |
+| `StackGreenCubeOnYellowCubeBakedTexInScene-v1` | Octo-small | Success once / at end | 1/100, 1/100 | 0.042 | Exact |
+
+All 1,400 episodes match: seeds, lanes, initial-state hashes, first actions, returns, success
+flags, steps and terminal masks, with zero tolerance. The G1 pair takes 84.7 s for 200 episodes
+and 20,000 steps; the NEWT suite 356.2 s for 800 episodes and 535,000 steps. The Bridge suite runs
+the Octo-small RGB Policy in its own inference environment, built with `build-octo-policy.sh`,
+with one Worker; it takes 2,583.7 s for 400 episodes and 30,000 steps, and its native side is
+`native_eval_octo.py`.
+
+Cartpole reproduces NEWT's published scores. PullCubeTool is close. Hopper and PlaceSphere are far
+below them: NEWT's published single-task scores plan with MPC at its own horizons (Hopper 500
+ticks, PlaceSphere 25),
+from CPU simulation on a later ManiSkill nightly, while this example runs the actor prior at the
+benchmark's horizons on GPU physics. These tasks therefore have a working intended-task model but
+no matching competence. NEWT publishes no usable score for the Ant tasks.
+
+The Bridge published results are SIMPLER visual-matching scores on the original ManiSkill2 real2sim
+tasks, not these ManiSkill3 profiles. Octo-small is a generalist model trained on Open
+X-Embodiment data that includes Bridge, not a per-task checkpoint, so the Bridge tasks remain a
+provisional visual baseline.
+
+The other 30 of the 55 TaskIDs have no checkpoint that meets the
+[checkpoint search](TASK_INVENTORY.md#public-checkpoint-search) rule and remain unvalidated.
 
 ## Scoring and shard correction
 
