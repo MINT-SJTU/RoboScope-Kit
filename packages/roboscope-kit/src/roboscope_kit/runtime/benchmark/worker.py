@@ -48,7 +48,11 @@ class WorkerLoop:
         preferred_width: int | None = None
         completed_records = 0
         while True:
-            claimed = self.queue.claim(self.worker_id, preferred_group)
+            # A Worker recycled on every group change spreads over groups instead of following
+            # the others into the next one.
+            claimed = self.queue.claim(
+                self.worker_id, preferred_group, spread_groups=self.recycle_on_context_change,
+            )
             if claimed is None:
                 if (self.queue.root / "stop").exists():
                     return

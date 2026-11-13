@@ -129,6 +129,30 @@ twelve Workers on this machine. A second Policy replica is slower: 8 and 12 Work
 198.3 s with two replicas. The small actor is not the bottleneck; the extra replica competes with the
 simulators for the GPU.
 
+Workers recycle before every new task. When idle Workers all claimed the next pending item, they
+moved through the tasks together, and nearly every group paid a process restart and a first
+environment build. Recycling Workers now start the task with the most pending groups per Worker
+already on it, so they spread across tasks:
+
+| Workers | Evaluation (s) | Speedup over one Worker | Planned recycles | Peak VRAM (GiB) |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 414.5 | 0.97x | 10 | 4.7 |
+| 4 | 207.6 | 1.95x | 14 | 16.8 |
+| 8 | 189.3 | 2.13x | 8 | 32.5 |
+| 10 | 189.8 | 2.13x | 10 | 40.2 |
+| 12 | 189.6 | 2.13x | 3 | 47.4 |
+
+Records match the native reference exactly in every run. One Worker has nothing to spread; 414.5 s
+against 403.8 s is run-to-run variation. Spreading saves 15% at four Workers and 12%
+at eight, and reaches the GPU's limit with eight Workers instead of twelve. Different tasks now run
+side by side, so peak VRAM grows faster with Worker count. With twelve Workers the GPU memory was
+full: one run lost three Workers to PhysX allocator errors during `AnymalC-Reach-v1` resets and
+recovered by retrying them, and an earlier run exhausted its retries. These errors surface as CUDA
+illegal-access failures rather than out-of-memory, so the Kit does not scale Workers down for them.
+
+These runs use the 0.8.0b36 source plus this claim change, which ships as 0.8.0b37, and the
+reproduction command below.
+
 Autotune previously capped ManiSkill at two Workers; the cap is now 16. Autotune then selects eight
 Workers: evaluation takes 213.0 s after 391.4 s of probing 1, 2, 4, 8 and 16 Workers. Sixteen Workers
 miss the knee, which requires a doubling to deliver a quarter of linear scaling. The prescribed runs

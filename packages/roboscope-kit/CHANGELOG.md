@@ -2,6 +2,10 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b37 - 2026-11-13
+
+- Spread Workers that recycle on every group change across groups: an idle recycling Worker claims from the group with the most pending items per Worker already on it instead of following the others into the same next group. On eleven ManiSkill tasks this cuts evaluation time by 15% with four Workers and 12% with eight; benchmarks without recycling keep the ordinal claim order.
+
 ## 0.8.0b36 - 2026-11-12
 
 - Add the partial, pinned ManiSkill integration with explicit task/robot/observation/controller profiles, GPU-vectorized Workers, reproducible simulator/assets builds and real-model correctness references; incomplete task/model acceptance remains documented.
