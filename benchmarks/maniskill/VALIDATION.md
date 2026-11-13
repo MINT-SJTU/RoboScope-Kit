@@ -139,6 +139,19 @@ step requested 30 Workers from the CPU estimate and failed with a GPU solver all
 items per Worker leave the steady-state window too short at 16 Workers: it reported 504.6 steps/s against
 an elapsed rate of 353.1, so the manifest keeps three.
 
+To reproduce a row, evaluate with a fixed Worker count and compare with the native records as in
+the [example README](../../examples/maniskill/README.md):
+
+```bash
+<install-dir>/env/bin/python -m roboscope_kit.runtime.benchmark --benchmark maniskill \
+  --suite official_ppo_state_v1 --benchmark-manifest <install-dir>/benchmark-manifest.json \
+  --checkpoint-source <official-checkpoints> --policy-config <roboscope-policy.json> \
+  --output-dir <out> --concurrency 8 --replicas 1
+```
+
+Evaluation time is the last item completion in the run's `result.json` `item_timeline`; GPU busy,
+peak VRAM and CPU cores are its `resources` fields.
+
 ### Comparison with the original evaluator
 
 The unmodified upstream `ppo.py --evaluate` ran each checkpoint with 100 evaluation environments
