@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "repository": "nicklashansen/newt",
+  "revision": "7eef11eb63c8ed53d61d739693d7140135ea0876",
+  "source_repository": "https://github.com/nicklashansen/newt",
+  "source_revision": "1d3fc058b81ddf8d36a5457c29ea407dd374c1b8",
+  "license": "MIT",
+  "inference": "deterministic-policy-prior (mpc=False, eval_mode=True)",
+  "padded_observation_dimension": 128,
+  "padded_action_dimension": 16,
+  "models": {
+    "MS-AntWalk-v1": {
+      "path": "ms-ant-walk.pt",
+      "sha256": "66a608ed94d0012d7c7cdf4f163dcc4a0bc97b221f70e9503d53fdd10a318dd2",
+      "bytes": 72276555,
+      "model_task": "ms-ant-walk",
+      "robot_uid": "ant",
+      "control_mode": "pd_joint_delta_pos",
+      "observation_dimension": 114,
+      "action_dimension": 8,
+      "action_repeat": 2
+    },
+    "MS-AntRun-v1": {
+      "path": "ms-ant-run.pt",
+      "sha256": "3f96ef550d1ee6c612d825f4928891aa9f24f2a62053658a8d20cf629fcab989",
+      "bytes": 72276555,
+      "model_task": "ms-ant-run",
+      "robot_uid": "ant",
+      "control_mode": "pd_joint_delta_pos",
+      "observation_dimension": 114,
+      "action_dimension": 8,
+      "action_repeat": 2
+    },
+    "MS-CartpoleBalance-v1": {
+      "path": "ms-cartpole-balance.pt",
+      "sha256": "0337e4160611b2ddbc24dbae54cfba7d88caa7e8717562b89dbaf3e58fbe4cb5",
+      "bytes": 72276555,
+      "model_task": "ms-cartpole-balance",
+      "robot_uid": "cart_pole",
+      "control_mode": "pd_joint_delta_pos",
+      "observation_dimension": 10,
+      "action_dimension": 1,
+      "action_repeat": 2
+    },
+    "MS-CartpoleSwingUp-v1": {
+      "path": "ms-cartpole-swingup.pt",
+      "sha256": "64df20e1e0e13f6e3f0efa892ef5fd57da739c8739b251c42004ce7a261214e2",
+      "bytes": 72276555,
+      "model_task": "ms-cartpole-swingup",
+      "robot_uid": "cart_pole",
+      "control_mode": "pd_joint_delta_pos",
+      "observation_dimension": 10,
+      "action_dimension": 1,
+      "action_repeat": 2
+    },
+    "MS-HopperStand-v1": {
+      "path": "ms-hopper-stand.pt",
+      "sha256": "e25f8e0c8ac3c9cbe7aeef1cc76ac9c19ab60bb7cd24075b75c8212e65a1fee5",
+      "bytes": 72276555,
+      "model_task": "ms-hopper-stand",
+      "robot_uid": "hopper",
+      "control_mode": "pd_joint_delta_pos",
+      "observation_dimension": 15,
+      "action_dimension": 4,
+      "action_repeat": 2
+    },
+    "MS-HopperHop-v1": {
+      "path": "ms-hopper-hop.pt",
+      "sha256": "f17f033f46f0de4c84f23d0b735806a7a95f00117753445862ceaba84c15d25e",
+      "bytes": 72276555,
+      "model_task": "ms-hopper-hop",
+      "robot_uid": "hopper",
+      "control_mode": "pd_joint_delta_pos",
+      "observation_dimension": 15,
+      "action_dimension": 4,
+      "action_repeat": 2
+    },
+    "PlaceSphere-v1": {
+      "path": "ms-place-sphere.pt",
+      "sha256": "bea02aa2e7ffe2730529fd330ea5f5e6983f58f514a295f0ad8b7bc5b7688577",
+      "bytes": 72276555,
+      "model_task": "ms-place-sphere",
+      "robot_uid": "panda",
+      "control_mode": "pd_ee_delta_pos",
+      "observation_dimension": 39,
+      "action_dimension": 4,
+      "action_repeat": 2
+    },
+    "PullCubeTool-v1": {
+      "path": "ms-pull-cube-tool.pt",
+      "sha256": "cdf75a14048bf29424182580686a6dc9790dbb250c001fa252143c1c9df8a865",
+      "bytes": 72276555,
+      "model_task": "ms-pull-cube-tool",
+      "robot_uid": "panda",
+      "control_mode": "pd_ee_delta_pose",
+      "observation_dimension": 39,
+      "action_dimension": 7,
+      "action_repeat": 2
+    }
+  }
+}

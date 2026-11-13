@@ -26,6 +26,10 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from roboscope_kit.runtime.benchmarks.calvin.adapter import merge_sequence_lengths
+from roboscope_kit.runtime.benchmarks.maniskill.metrics import (
+    merge_task_results as merge_maniskill_task_results,
+)
+from roboscope_kit.runtime.benchmarks.maniskill.metrics import validate_task_results
 from roboscope_kit.runtime.benchmarks.metaworld.adapter import merge_task_results
 
 from .shard_validation import (
@@ -67,6 +71,9 @@ def merge_shard_results(shard_results: Sequence[Mapping[str, Any]]) -> dict[str,
     for shard in ordered:
         _validate_partial_counts(identity["benchmark"], shard)
     _validate_official_counts(identity["benchmark"], official, standard)
+    if identity["benchmark"] == "maniskill":
+        _validate_maniskill_profiles(official, identity, require_complete=True)
+        official["formal"] = identity.get("complete_named_suite") is True
     return {
         "sdk_version": 1,
         "merged": True,
@@ -97,19 +104,30 @@ def _merge_standard(shards: Sequence[Mapping[str, Any]], full_total: int) -> dic
             "the partition is not complete"
         )
     successes = sum(result["successes"] for result in results)
-    return {
+    maniskill = shards[0]["benchmark"].get("benchmark") == "maniskill"
+    explicit_scores = maniskill and any("return_evaluated_episodes" in result for result in results)
+    scored = (
+        sum(result.get("success_evaluated_episodes", result["episodes"]) for result in results)
+        if maniskill else episodes
+    )
+    standard = {
         "state": "complete",
         "episodes": episodes,
         "successes": successes,
-        "failures": episodes - successes,
+        "failures": scored - successes,
         "total_steps": sum(result["total_steps"] for result in results),
         "total_episodes": full_total,
-        "success_rate": successes / episodes,
+        "success_rate": successes / scored if scored else None,
         "completed_items": sum(result["completed_items"] for result in results),
     }
+    if explicit_scores:
+        standard.update(success_evaluated_episodes=scored, return_evaluated_episodes=episodes - scored)
+    return standard
 
 
 def _merge_official(benchmark: str, partials: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    if benchmark == "maniskill":
+        return merge_maniskill_task_results(partials)
     if benchmark in _ADDITIVE_TABLES:
         key, has_runtime_metrics = _ADDITIVE_TABLES[benchmark]
         return _sum_task_tables(partials, key, has_runtime_metrics)
@@ -177,6 +195,11 @@ def _sum_task_tables(
 
 def _validate_partial_counts(benchmark: str, shard: Mapping[str, Any]) -> None:
     partial = shard["official_result"]
+    if benchmark == "maniskill":
+        validate_task_results(partial)
+        _validate_maniskill_profiles(partial, shard["benchmark"], require_complete=False)
+        _validate_maniskill_counts(partial, shard["result"])
+        return
     if benchmark == "calvin":
         lengths = partial["sequence_success_lengths_by_index"].values()
         episodes, successes = len(lengths), sum(length == 5 for length in lengths)
@@ -192,6 +215,10 @@ def _validate_partial_counts(benchmark: str, shard: Mapping[str, Any]) -> None:
 def _validate_official_counts(
     benchmark: str, official: Mapping[str, Any], standard: Mapping[str, Any]
 ) -> None:
+    if benchmark == "maniskill":
+        validate_task_results(official)
+        _validate_maniskill_counts(official, standard)
+        return
     if benchmark == "calvin":
         episodes = official["num_sequences"]
         successes = sum(length == 5 for length in official["sequence_success_lengths"])
@@ -201,6 +228,56 @@ def _validate_official_counts(
         successes = sum(row[success_key] for row in official["tasks"])
     if episodes != standard["episodes"] or successes != standard["successes"]:
         raise ValueError("official result counts disagree with terminal record counts")
+
+
+def _validate_maniskill_counts(official: Mapping[str, Any], standard: Mapping[str, Any]) -> None:
+    overall = official["overall"]
+    scored = overall["success_evaluated_episodes"]
+    returned = overall["return_evaluated_episodes"]
+    successes = overall["successes"] or 0
+    expected = {
+        "episodes": overall["episodes"], "total_episodes": overall["episodes"],
+        "successes": successes, "failures": scored - successes,
+        "success_rate": overall["success_rate"],
+        "total_steps": sum(row["actual_steps"] for row in official["tasks"]),
+    }
+    if returned or "return_evaluated_episodes" in standard:
+        expected.update(success_evaluated_episodes=scored, return_evaluated_episodes=returned)
+    if any(standard.get(key) != value for key, value in expected.items()):
+        raise ValueError("ManiSkill standard and official scoring counts disagree")
+
+
+def _validate_maniskill_profiles(
+    official: Mapping[str, Any], identity: Mapping[str, Any], *, require_complete: bool,
+) -> None:
+    """Result-only checks validate declared counts, not actual episode ownership."""
+    profiles = identity.get("profile_config")
+    if not isinstance(profiles, list) or not profiles:
+        raise ValueError("ManiSkill shards must retain their frozen profile configurations")
+    ids = [profile["profile_id"] for profile in profiles]
+    if len(ids) != len(set(ids)) or ids != identity.get("profiles"):
+        raise ValueError("ManiSkill shard profile identities are inconsistent")
+    if [row["profile_id"] for row in official["tasks"]] != ids:
+        raise ValueError("ManiSkill result does not cover its declared profile table")
+    counts = identity.get("episodes_by_profile", {})
+    seeds = identity.get("episode_seeds", {})
+    for row, profile in zip(official["tasks"], profiles, strict=True):
+        profile_id = profile["profile_id"]
+        expected = require_count(counts.get(profile_id), "ManiSkill profile episodes", minimum=1)
+        if (profile.get("seeds") != seeds.get(profile_id)
+                or not isinstance(seeds.get(profile_id), list)
+                or len(seeds[profile_id]) != expected
+                or row["task_id"] != profile["task_id"]
+                or row["success_metric"] != profile["success_metric"]):
+            raise ValueError("ManiSkill row identity differs from the frozen profile protocol")
+        if row["episodes"] > expected or (require_complete and row["episodes"] != expected):
+            raise ValueError("ManiSkill profile episode coverage is incomplete or excessive")
+        horizon = profile.get("diagnostic_step_limit", profile["max_episode_steps"])
+        require_count(horizon, "ManiSkill horizon", minimum=1)
+        if row["actual_steps"] != row["episodes"] * horizon:
+            raise ValueError("ManiSkill profile steps disagree with the frozen horizon")
+    if sum(counts.values()) != identity.get("expected_records"):
+        raise ValueError("ManiSkill full workload count disagrees with its profile counts")
 
 
 def _shard_summary(shard: Mapping[str, Any]) -> dict[str, Any]:

@@ -23,6 +23,10 @@ def item_filename(item: WorkItem) -> str:
     return f"item-{item.ordinal:06d}-{group_token(item.group_id)}.json"
 
 
+def _path_group(path: Path) -> str:
+    return path.stem.rsplit("-", 1)[1]
+
+
 def group_token(group_id: str) -> str:
     return hashlib.blake2s(group_id.encode("utf-8"), digest_size=6).hexdigest()
 
@@ -77,8 +81,10 @@ class WorkQueue:
     def request_stop(self) -> None:
         (self.root / "stop").touch()
 
-    def claim(self, worker_id: int, preferred_group: str | None = None) -> ClaimedWork | None:
-        for pending_path in self._pending_candidates(preferred_group):
+    def claim(
+        self, worker_id: int, preferred_group: str | None = None, *, spread_groups: bool = False,
+    ) -> ClaimedWork | None:
+        for pending_path in self._pending_candidates(preferred_group, spread_groups):
             claimed_path = self.running_dir / f"worker-{worker_id:03d}-{pending_path.name}"
             try:
                 pending_path.replace(claimed_path)
@@ -163,12 +169,24 @@ class WorkQueue:
     def is_drained(self) -> bool:
         return not any(self.pending_dir.glob("*.json")) and not any(self.running_dir.glob("*.json"))
 
-    def _pending_candidates(self, preferred_group: str | None) -> list[Path]:
+    def _pending_candidates(self, preferred_group: str | None, spread_groups: bool = False) -> list[Path]:
         paths = sorted(self.pending_dir.glob("item-*.json"))
-        if preferred_group is None:
+        if preferred_group is not None:
+            preferred = sorted(self.pending_dir.glob(f"item-*-{group_token(preferred_group)}.json"))
+            if preferred:
+                return preferred
+        if not spread_groups:
             return paths
-        preferred = sorted(self.pending_dir.glob(f"item-*-{group_token(preferred_group)}.json"))
-        return preferred if preferred else paths
+        # Start the group with the most pending items per Worker already on it, so Workers
+        # that pay for every group change spread over groups instead of moving together.
+        pending: dict[str, list[Path]] = {}
+        for path in paths:
+            pending.setdefault(_path_group(path), []).append(path)
+        running: dict[str, int] = {}
+        for path in self.running_dir.glob("worker-*-item-*.json"):
+            running[_path_group(path)] = running.get(_path_group(path), 0) + 1
+        groups = sorted(pending, key=lambda token: -len(pending[token]) / (running.get(token, 0) + 1))
+        return [path for token in groups for path in pending[token]]
 
     @staticmethod
     def _validate_result(item: WorkItem, result: WorkResult) -> None:

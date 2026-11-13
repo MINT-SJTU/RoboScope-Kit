@@ -2,6 +2,22 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b37 - 2026-11-13
+
+- Spread Workers that recycle on every group change across groups: an idle recycling Worker claims from the group with the most pending items per Worker already on it instead of following the others into the same next group. On eleven ManiSkill tasks this cuts evaluation time by 15% with four Workers and 12% with eight; benchmarks without recycling keep the ordinal claim order.
+- Classify PhysX GPU allocator failures, cuBLAS allocation failures and cuSOLVER handle-creation failures as out-of-memory, so a Worker that runs out of GPU memory in PhysX (which then stops with CUDA error 700) scales its GPU's Workers down instead of retrying at the same count; this applies to every benchmark. A Worker that exits for a planned recycle while its GPU scales down is no longer reported as failed.
+
+## 0.8.0b36 - 2026-11-12
+
+- Add the partial, pinned ManiSkill integration with explicit task/robot/observation/controller profiles, GPU-vectorized Workers, reproducible simulator/assets builds and real-model correctness references; incomplete task/model acceptance remains documented.
+- Preserve actual terminal masks and recycle simulator Workers when profile or vector width changes while retaining Policy replicas.
+- Freeze ManiSkill vector width in the evaluation protocol, preserve complete seeded groups in Quick Test and probes, and derive official PPO native configurations independently from pinned upstream sources.
+- Publish trajectory traces only after successful rollout cleanup, retain retry attempts and self-test timeout logs, and share one manifest PhysX binary pin across build and evaluation paths.
+- Keep return-scored episodes out of binary success/failure statistics, including progress, autotune health and both shard merge paths.
+- Merge ManiSkill profile return sums/counts and success counts separately, check complete record-tree coverage, and bind shards to checkpoint and Policy content identities.
+- Remove cross-task/robot transfer Policy examples and their evaluation claims while preserving the original 55-task and tabletop observation/controller contracts; list intended-task checkpoint candidates as unvalidated until native acceptance.
+- Raise the ManiSkill autotune Worker cap from 2 to 16 so autotune can choose more simulator Workers per GPU, and stop counting a Worker that is exiting for a planned recycle as a lost Worker in autotune probes; this shared probe fix applies to every benchmark whose Workers recycle.
+
 ## 0.8.0b35 - 2026-11-10
 
 - Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task

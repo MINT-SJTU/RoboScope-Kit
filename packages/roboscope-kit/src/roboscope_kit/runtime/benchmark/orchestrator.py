@@ -79,17 +79,21 @@ ProgressCallback = Callable[["dict[str, Any]", Sequence[WorkResult]], None]
 
 def aggregate_standard_results(results: Sequence[WorkResult], total_records: int) -> dict[str, Any]:
     records = [record for result in results for record in result.records]
-    successes = sum(record.success for record in records)
+    scored = [record for record in records if record.metadata.get("success_metric") != "return"]
+    successes = sum(record.success for record in scored)
+    return_count = len(records) - len(scored)
     total_steps = sum(record.steps for record in records)
     return {
         "state": "complete" if len(records) == total_records else "running",
         "episodes": len(records),
         "successes": successes,
-        "failures": len(records) - successes,
+        "failures": len(scored) - successes,
         "total_steps": total_steps,
         "total_episodes": total_records,
-        "success_rate": successes / len(records) if records else 0.0,
+        "success_rate": successes / len(scored) if scored else None if return_count else 0.0,
         "completed_items": len(results),
+        **({"success_evaluated_episodes": len(scored), "return_evaluated_episodes": return_count}
+           if return_count else {}),
     }
 
 
@@ -329,6 +333,7 @@ class ParallelBenchmarkRuntime:
             },
             "record_success": {
                 record.record_id: record.success for result in results for record in result.records
+                if record.metadata.get("success_metric") != "return"
             },
             "inference": inference_metadata,
             "policy_io": policy_io,
@@ -640,8 +645,11 @@ class ParallelBenchmarkRuntime:
         return {
             "requested_workers": self.config.concurrency,
             "initial_workers": sum(self.initial_workers_per_gpu.values()),
+            # A Worker that exited for a planned recycle after the last exit scan is
+            # restarted by the next scan; it is not a lost Worker.
             "final_workers": sum(
-                managed.process.poll() is None for managed in self.workers.values()
+                managed.process.poll() is None or self._is_planned_recycle(worker_id, managed)
+                for worker_id, managed in self.workers.items()
             ),
             "worker_failures": len(self.failure_events),
             "oom_events": sum(
@@ -691,6 +699,7 @@ class ParallelBenchmarkRuntime:
             for worker_id, managed in self.workers.items()
             if self.worker_contexts[worker_id].gpu_slot == gpu_slot
             and managed.process.poll() is not None
+            and not self._is_planned_recycle(worker_id, managed)
         ]
         for worker_id, managed in late_failures:
             failed_by_id[worker_id] = managed
