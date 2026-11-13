@@ -18,6 +18,8 @@ from roboscope_kit import EpisodeContext, Observation, PolicyClient
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 
 LIBERO_DUMMY_ACTION = np.asarray([0.0] * 6 + [-1.0], dtype=np.float32)
+LIBERO_DELTA_ACTION = "libero.delta-eef-v1"
+LIBERO_ABSOLUTE_ACTION = "libero.absolute-eef-v1"
 LIBERO_ENV_RESOLUTION = 256
 MAX_STEPS = {
     "libero_spatial": 220,
@@ -86,6 +88,12 @@ def parse_args() -> argparse.Namespace:
         choices=("task", "bddl"),
         default="task",
         help="task: the benchmark's Task.language; bddl: the (:language ...) of the task's BDDL file",
+    )
+    parser.add_argument(
+        "--action-representation",
+        choices=(LIBERO_DELTA_ACTION, LIBERO_ABSOLUTE_ACTION),
+        default=LIBERO_DELTA_ACTION,
+        help="negotiated action representation; absolute targets switch the OSC controller after settling",
     )
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--settle-steps", type=int, default=10)
@@ -172,6 +180,12 @@ def create_task_runtime(
     )
 
 
+def set_delta_control(env: object, use_delta: bool) -> None:
+    """Make every robot's OSC controller read actions as deltas (LIBERO's default) or absolute targets."""
+    for robot in env.env.robots:
+        robot.controller.use_delta = use_delta
+
+
 def run_episode(
     runtime: TaskRuntime,
     policy: PolicyActionQueue,
@@ -180,6 +194,7 @@ def run_episode(
     max_steps: int,
     settle_steps: int,
     save_frames: bool,
+    absolute_actions: bool = False,
 ) -> tuple[bool, int, float, list[np.ndarray]]:
     episode_id = f"task-{runtime.task_id:04d}-episode-{episode_index:04d}"
     policy.reset(
@@ -195,10 +210,16 @@ def run_episode(
         frames: list[np.ndarray] = []
         started = time.perf_counter()
 
+        # The settle steps are zero deltas, and the environment is reused across episodes, so delta control is
+        # restored before them; absolute-target policies then get absolute control, as the X-VLA recipe does.
+        if absolute_actions:
+            set_delta_control(runtime.env, True)
         for _ in range(settle_steps):
             observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
             if task_done or runtime.env.env.done:
                 return bool(task_done), 0, time.perf_counter() - started, frames
+        if absolute_actions:
+            set_delta_control(runtime.env, False)
 
         for action_step in range(max_steps):
             if save_frames:
@@ -249,6 +270,7 @@ def run_chunk(
             max_steps=args.max_steps,
             settle_steps=args.settle_steps,
             save_frames=args.video_dir is not None,
+            absolute_actions=args.action_representation == LIBERO_ABSOLUTE_ACTION,
         )
         save_video(args.video_dir, runtime.task_id, episode_index, success, frames)
         records.append(

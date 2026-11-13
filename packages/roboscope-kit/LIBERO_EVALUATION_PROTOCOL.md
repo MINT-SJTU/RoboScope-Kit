@@ -8,7 +8,7 @@ postprocessing.
 The current protocol identifiers are:
 
 - benchmark specification: `libero-v1` (LIBERO+: `libero-plus-v1`; LIBERO-Pro: `libero-pro-v1`);
-- action representation: `libero.delta-eef-v1`;
+- action representations: `libero.delta-eef-v1` (default) and `libero.absolute-eef-v1`;
 - SDK-native evaluator transport: `roboscope-policy-v1`.
 
 `roboscope-kit` requires Python 3.11 or newer for the Policy and for the benchmark CLI. The LIBERO and
@@ -162,9 +162,12 @@ The Policy returns `ActionChunk` containing either:
 - a `float32` chunk with shape `(N, 7)`, where `N` is declared in
   `PolicyCapabilities.supported_action_chunk_sizes`.
 
-The seven values are the native LIBERO controller action: six end-effector delta values followed by the
-gripper command. The worker does not decode, clip, or normalize actions; the Policy must return a
-benchmark-valid native action. Actions from a chunk are executed in order, one simulator step at a time.
+The seven values are the native LIBERO controller action: six end-effector values followed by the gripper
+command. Under the default `libero.delta-eef-v1` the six values are LIBERO's position and axis-angle deltas.
+A Policy that declares `libero.absolute-eef-v1` in `PolicyCapabilities.action_representations` returns the
+absolute target position and axis-angle orientation instead; after the settle steps of every episode the
+worker sets `use_delta = False` on each robot's OSC controller, as the X-VLA LIBERO client does. The worker
+does not decode, clip, or normalize actions; the Policy must return a benchmark-valid native action. Actions from a chunk are executed in order, one simulator step at a time.
 A new observation is sent to the Policy only after the cached chunk is exhausted.
 
 The SDK validates numeric dtype, action dimension, and declared chunk size before the worker receives the
@@ -185,8 +188,9 @@ For task `t` and episode index `e`:
 
 1. the worker calls `Policy.reset()` with `task_id=str(t)` and the official instruction;
 2. the environment is reset and initialized with `task_suite.get_task_init_states(t)[e]`;
-3. the worker executes the manifest's `settle_steps`, 10, native no-op actions `[0, 0, 0, 0, 0, 0, -1]`;
-   if the episode terminates during them, it ends with zero policy steps;
+3. the worker executes the manifest's `settle_steps`, 10, native no-op actions `[0, 0, 0, 0, 0, 0, -1]`
+   under delta control; if the episode terminates during them, it ends with zero policy steps. With
+   `libero.absolute-eef-v1` the controllers then switch to absolute targets for the rest of the episode;
 4. the Policy/environment loop runs until official success/termination or the suite horizon;
 5. exactly one terminal `EvaluationRecord` is committed.
 
