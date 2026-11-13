@@ -147,8 +147,12 @@ against 403.8 s is run-to-run variation. Spreading saves 15% at four Workers and
 at eight, and reaches the GPU's limit with eight Workers instead of twelve. Different tasks now run
 side by side, so peak VRAM grows faster with Worker count. With twelve Workers the GPU memory was
 full: one run lost three Workers to PhysX allocator errors during `AnymalC-Reach-v1` resets and
-recovered by retrying them, and an earlier run exhausted its retries. These errors surface as CUDA
-illegal-access failures rather than out-of-memory, so the Kit does not scale Workers down for them.
+recovered by retrying them, and an earlier run exhausted its retries. PhysX logs only its
+allocator's source file (`PxgCudaMemoryAllocator.cpp`) and then stops with CUDA error 700 (illegal
+address), so the Kit did not recognize these as out-of-memory and retried at the same Worker count.
+It now classifies them as out-of-memory. With that change, a twelve-Worker run hit the same
+error in one Worker, retired one Worker, finished with eleven in 192.0 s (peak 47.3 GiB) and matched the
+native records exactly.
 
 These runs use the 0.8.0b36 source plus this claim change, which ships as 0.8.0b37, and the
 reproduction command below.

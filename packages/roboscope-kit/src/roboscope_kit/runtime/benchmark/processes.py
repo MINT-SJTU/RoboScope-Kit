@@ -39,6 +39,12 @@ OOM_PATTERNS = (
     re.compile(r"(?im)^.*runtimeerror:\s*cannot create buffer\s*$"),
     re.compile(r"(?im)^.*failed to allocate device memory.*$"),
     re.compile(r"(?im)^.*mps backend out of memory.*$"),
+    # PhysX GPU (SAPIEN) logs only the allocator's source path when a device allocation fails;
+    # the simulation then stops with CUDA error 700 (illegal address), not "out of memory".
+    re.compile(r"(?im)^.*\[critical\].*pxgcudamemoryallocator\.cpp\s*$"),
+    re.compile(r"(?im)^.*cublas_status_alloc_failed.*$"),
+    # cuSOLVER reports a failed workspace allocation while creating a handle as an internal error.
+    re.compile(r"(?im)^.*cusolver_status_internal_error.*cusolverdncreate.*$"),
 )
 
 FAILURE_LOG_READ_BYTES = 1024 * 1024

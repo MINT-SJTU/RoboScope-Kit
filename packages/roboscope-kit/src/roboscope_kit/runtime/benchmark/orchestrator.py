@@ -699,6 +699,7 @@ class ParallelBenchmarkRuntime:
             for worker_id, managed in self.workers.items()
             if self.worker_contexts[worker_id].gpu_slot == gpu_slot
             and managed.process.poll() is not None
+            and not self._is_planned_recycle(worker_id, managed)
         ]
         for worker_id, managed in late_failures:
             failed_by_id[worker_id] = managed
