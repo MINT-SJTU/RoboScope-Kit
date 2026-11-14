@@ -341,10 +341,16 @@ def _run_evaluation(
         if cuda_mps is not None:
             cuda_mps.stop()
     if not args.quick_test:
-        run_cache.store(
-            selection=selected if selected.get("mode") == "dynamic-probe" else None,
-            task_seconds=task_seconds_from_queues([args.output_dir / "queue"]),
-        )
+        recovery = output.get("recovery") or {}
+        if recovery.get("oom_events") or recovery.get("worker_failures"):
+            # A run that ran out of memory or lost a Worker finished on a scaled-down or retried
+            # configuration, so neither its K/g nor its task times describe a healthy run.
+            run_cache.forget_selection()
+        else:
+            run_cache.store(
+                selection=selected if selected.get("mode") == "dynamic-probe" else None,
+                task_seconds=task_seconds_from_queues([args.output_dir / "queue"]),
+            )
     output["autotune"] = selected
     output["run_cache"] = run_cache.describe()
     output["cuda_mps"] = cuda_mps.metadata() if cuda_mps is not None else {"enabled": False}

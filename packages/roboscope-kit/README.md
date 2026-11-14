@@ -157,7 +157,9 @@ config, the GPU models, the CPU quota and CUDA MPS. The next evaluation with the
 and records `"autotune": {"mode": "cached", ...}`. Every evaluation hands out work items of the longest tasks
 first when the cache, or this evaluation's probes, have measured them; tasks without a measurement go
 first, so no long task starts last. `--run-cache refresh` searches again and replaces the entry, and
-`--run-cache off` neither reads nor writes it. `result.json` records the entry under `run_cache`.
+`--run-cache off` neither reads nor writes it. An evaluation that ran out of GPU memory or lost a Worker
+stores nothing and drops the cached `K`/`g`, so the next evaluation searches again. `result.json` records the
+entry under `run_cache`.
 
 To compare searches without a GPU, the
 [autotune testbed](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/autotune-testbed.md)
