@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b57 - 2026-11-11
+## 0.8.0b64 - 2026-11-14
 
 - RoboTwin evaluators no longer render `front_camera`. RoboTwin renders four cameras for every observation, and
   the Policy reads three of them (head and the two wrist cameras); the front camera's image was rendered and
@@ -20,7 +20,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   point clouds, depth, segmentation, observer or third-view data) render all four as before, and
   `ROBOTWIN_SKIP_UNREAD_CAMERAS=0` turns the change off.
 
-## 0.8.0b54 - 2026-11-10
+## 0.8.0b63 - 2026-11-14
 
 - RoboTwin eval sessions free each finished task's SAPIEN scene before the next task starts. `Base_Task.close_env`
   leaves the last scene attached to the task object, and `click_bell` and `click_alarmclock` store a bound method
@@ -33,22 +33,23 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   peaks at 63.3-64.1 GB per GPU (57.2-58.9 GB in its last five minutes), takes 4,262 s instead of 4,285 s, and every
   episode equals the previous run and a full 5,000-episode run of the official evaluator.
 
-## 0.8.0b53 - 2026-11-10
+## 0.8.0b62 - 2026-11-14
 
 - RoboTwin evaluators no longer create the observer camera and the two world cameras when video logging and
-  point-cloud, observer and third-view data are off; they serve only those outputs and never take a picture in an
-  evaluation. The three cameras the Policy reads keep the same images (12 first observations compared pixel by
+  point-cloud, observer, third-view and segmentation data are off; they never take a picture in such an
+  evaluation. Segmentation data keeps them because scene entities are numbered in creation order. The three cameras the Policy reads keep the same images (12 first observations compared pixel by
   pixel). Each camera costs GPU-driver calls when a scene is built, which queue across evaluator processes: at 48
   processes on four RTX PRO 5000 GPUs the first observation of a new scene drops from 6.3 to 5.3 s, and a
   500-episode K48/g8 run from 643 to 629 s with every episode equal to the official evaluation.
   `ROBOTWIN_SKIP_UNUSED_CAMERAS=0` keeps them.
 
-## 0.8.0b52 - 2026-11-10
+## 0.8.0b61 - 2026-11-14
 
 - Run cache: an evaluation stores the searched `K`/`g` and each task's mean episode time, keyed by the kit
   version, manifest, workload, checkpoint, Policy config, GPU models, CPU quota and CUDA MPS. The next
   evaluation with the same key skips the search (`"mode": "cached"`). `--run-cache refresh|off` searches again
   or leaves the cache alone. On four RTX PRO 5000 GPUs the RoboTwin search took 1,130 s of a 1,827 s run.
+  An evaluation that ran out of GPU memory or lost a Worker stores nothing and drops the cached `K`/`g`.
 - The formal pass hands out the longest tasks first when the run cache or this evaluation's probes have measured
   them; unmeasured tasks go first. On four RTX PRO 5000 GPUs at `K48/g8`, longest-first cut the 500-episode
   RoboTwin run from 655 s to 579 s (one run each), mostly from the tail.
@@ -59,7 +60,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   step that runs out of memory moves to the next smaller `K`. On four RTX PRO 5000 GPUs the RoboTwin search
   stopped at `K32/g4` because `K64/g8` did not fit, while the measured `K48/g8` was 32% faster.
 
-## 0.8.0b51 - 2026-11-10
+## 0.8.0b60 - 2026-11-14
 
 - Policy replicas on different GPUs now start in parallel; replicas on the same GPU still start one at a time.
   With two replicas on each of four RTX PRO 5000 GPUs, Workers used to wait about 100 s for eight serial loads.
@@ -72,6 +73,13 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   `K16/g4`, steady-state throughput is the same for 5-, 2- and 1-episode items, while the end-of-run tail
   shrinks: the whole-run rate rises from 81% (5-episode) to 91% (1-episode) of steady state. Ten-episode items
   also left too few items for autotune to measure `K32`.
+
+## 0.8.0b56 - 2026-11-14
+
+- The StarVLA RoboTwin demo (`examples/starvla/robotwin/demo.yaml`) no longer sends joint state to the
+  Policy. The official StarVLA RoboTwin evaluator drops the state before calling the model, and the technical
+  report's RoboTwin results were produced without it. With the state, the demo scored 190/500 on the report's
+  500 episodes instead of 230/500, and disagreed with the official evaluator on 14 of 40 compared episodes (#108).
 
 ## 0.8.0b35 - 2026-11-10
 

@@ -883,9 +883,10 @@ class _LeanCameraScene:
 def install_lean_cameras():
     """Skip the observer and the two world cameras (``ROBOTWIN_SKIP_UNUSED_CAMERAS=0`` keeps them).
 
-    They serve video logging (observer) and the world point cloud; with video disabled and no point-cloud,
-    observer or third-view data they never take a picture. They have fixed poses and draw no random numbers,
-    so the episode is otherwise built as before. Any later use of them raises.
+    The observer camera serves third-view data and the world cameras the world point cloud; with video,
+    the viewer, point-cloud, observer, third-view and segmentation data off they never take a picture.
+    They have fixed poses and draw no random numbers. Scene entities are numbered in creation order, so
+    segmentation data keeps them to keep the official labels. Any later use of them raises.
     """
 
     from envs._base_task import Base_Task
@@ -895,7 +896,8 @@ def install_lean_cameras():
     def load_camera_lean(self, **kwags):
         data = self.data_type or {}
         if (self.eval_video_path is not None or self.render_freq
-                or any(data.get(key) for key in ("pointcloud", "observer", "third_view"))):
+                or any(data.get(key) for key in ("pointcloud", "observer", "third_view", "mesh_segmentation",
+                                                "actor_segmentation"))):
             return fresh_load_camera(self, **kwags)
         scene = self.scene
         self.scene = _LeanCameraScene(scene)

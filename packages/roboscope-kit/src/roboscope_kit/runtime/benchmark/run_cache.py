@@ -122,6 +122,22 @@ class RunCache:
         atomic_json(self.path, entry)
         self.entry = entry
 
+    def forget_selection(self) -> None:
+        """Drop the stored ``K``/``g`` so the next evaluation searches again; task times stay."""
+
+        if self.mode == "off":
+            return
+        entry = {
+            "schema": CACHE_SCHEMA,
+            "key": self.key,
+            "key_fields": self.key_fields,
+            "selection": None,
+            "task_seconds": self.task_seconds,
+        }
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_json(self.path, entry)
+        self.entry = entry
+
 
 def task_seconds_from_queues(queue_dirs: Sequence[Path]) -> dict[str, float]:
     """Mean episode wall time per task from the completed items of finished runs."""

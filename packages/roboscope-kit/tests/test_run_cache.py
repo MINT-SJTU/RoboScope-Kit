@@ -62,6 +62,12 @@ def test_run_cache_round_trip_refresh_and_off(tmp_path: Path) -> None:
     assert RunCache("use", fields, root=tmp_path).task_seconds == {"a": 20.0, "b": 5.0}
     assert RunCache("use", fields, root=tmp_path).selection["k"] == 48
 
+    # A run that ran out of memory drops the cached K/g and keeps the task times.
+    RunCache("use", fields, root=tmp_path).forget_selection()
+    assert RunCache("use", fields, root=tmp_path).selection is None
+    assert RunCache("use", fields, root=tmp_path).task_seconds == {"a": 20.0, "b": 5.0}
+    first.store(selection={"k": 48, "g": 8, "mode": "dynamic-probe"}, task_seconds={})
+
     refreshed = RunCache("refresh", fields, root=tmp_path)
     assert refreshed.selection is None and refreshed.task_seconds == {}
 
