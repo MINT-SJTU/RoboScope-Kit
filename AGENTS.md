@@ -19,6 +19,7 @@ A change is complete when it is committed, carries the required version bump, an
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
 | `examples/peract/` | A PerAct `Policy` example for RLBench, with PerAct's native `eval.py` runner and an episode-by-episode comparison |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
+| `examples/rt1/` | An RT-1-X `Policy` example for SimplerEnv, with a runner for SimplerEnv's official scripts and an episode-by-episode comparison |
 | `ci/` and `.github/workflows/` | Build, compatibility, and PyPI release automation |
 
 When a path moves, update the source and every caller directly. Do not add compatibility wrappers or

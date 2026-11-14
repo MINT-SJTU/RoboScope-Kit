@@ -24,6 +24,7 @@ body:
         - MetaWorld
         - RLBench
         - robomimic
+        - SimplerEnv
     validations:
       required: true
   - type: input

@@ -2,6 +2,27 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b66 - 2026-11-14
+
+- Add the `simpler_env` benchmark (protocol `simpler-env-v1`, action `simpler_env.ee-delta-axangle-v1`) with
+  three separate suites transcribed from SimplerEnv's official RT-1 scripts: `google_robot_visual_matching`
+  (864 episodes), `google_robot_variant_aggregation` (1,722 episodes, without the two alternative-camera
+  variants that SimplerEnv's own average leaves out), and `widowx_visual_matching` (96 episodes). Each episode
+  is built, reset, stepped, and scored as SimplerEnv's `maniskill2_evaluator.py` does it, with the policy camera
+  and the current instruction as the observation and the 7-value `env.step` action plus a terminate signal.
+  `benchmarks/simpler_env/build-runtime.sh` builds SimplerEnv and ManiSkill2_real2sim at pinned commits on
+  CPython 3.11 with SAPIEN 2.2.2 and the TensorFlow stack of SimplerEnv's RT-1 inference.
+- Add `examples/rt1/`: an RT-1-X Policy built on SimplerEnv's `RT1Inference`, a runner for SimplerEnv's
+  official scripts, and an episode-by-episode comparison. The runner binds its output directory to one run
+  identity and reuses a finished invocation only when its command line and episode records still match. The
+  comparison matches every native invocation to one frozen variant, including its observation camera and
+  policy configuration, and `--strict` fails on missing, duplicate, unknown, or unpaired episodes.
+- A SimplerEnv result is `formal` only when it holds every episode of the full matrix. One shard's
+  `official_result` is `partial`, and `benchmark.formal_selection` records whether the requested workload is
+  the full matrix. Shards from different hosts or install directories merge, and `shard_merge` runs without
+  the Vulkan ICD check. `build-runtime.sh` fails when the venv holds anything other than the lock and the two
+  checkouts.
+
 ## 0.8.0b65 - 2026-11-14
 
 - Add an OpenVLA Policy for the four fine-tuned LIBERO suites, with pinned checkpoints and model code,

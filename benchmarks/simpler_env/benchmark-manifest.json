@@ -1,0 +1,33 @@
+{
+  "schema_version": 3,
+  "supported_benchmarks": ["simpler_env"],
+  "protocol_versions": {"simpler_env": "simpler-env-v1"},
+  "supported_suites": {
+    "simpler_env": [
+      "google_robot_visual_matching",
+      "google_robot_variant_aggregation",
+      "widowx_visual_matching"
+    ]
+  },
+  "runtime": {
+    "python": "env/bin/python",
+    "simpler_env": "src/SimplerEnv"
+  },
+  "defaults": {
+    "episodes": null,
+    "client_cpu_threads": 1,
+    "ready_timeout_s": 600,
+    "probe_episodes": 5
+  },
+  "benchmark_protocols": {
+    "simpler_env": {
+      "source_revision": "eddb5690749a1e34267807c0f7b5eede323918d7",
+      "maniskill2_real2sim_revision": "ef7a4d4fdf4b69f2c2154db5b15b9ac8dfe10682",
+      "suite_episodes": {
+        "google_robot_visual_matching": 864,
+        "google_robot_variant_aggregation": 1722,
+        "widowx_visual_matching": 96
+      }
+    }
+  }
+}

@@ -276,6 +276,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
 | RLBench | SDK-native adapter and persistent CoppeliaSim worker on a private Xvfb display, with a fixed Python hash seed for paired evaluation | CoppeliaSim 4.1, pinned PyRep and the PerAct RLBench fork, and PerAct's released test split |
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
+| SimplerEnv | SDK-native adapter and persistent SAPIEN/ManiSkill2_real2sim worker, one fresh environment per episode as upstream | Pinned SimplerEnv and ManiSkill2_real2sim (with their scene and overlay assets), SAPIEN 2.2.2, and the frozen matrix of the official RT-1 scripts |
 
 LIBERO and CALVIN convert native observations to the canonical feature names and send native 7-dimensional
 actions back to their simulators. CALVIN's task-D-to-task-D path runs the official 1,000 long-horizon
@@ -299,6 +300,10 @@ The exact contracts are in the protocol documents:
 - [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md):
   the `ph_low_dim` suite, supported and unsupported task/dataset/observation combinations, version and
   license gates, seeded initial states, upstream rollout semantics, the native comparison, and the baseline.
+- [SimplerEnv](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md):
+  the Google Robot visual-matching and variant-aggregation suites and the WidowX visual-matching suite, kept
+  separate; the frozen pose sweeps, episode loop, termination, aggregation, the native comparison, and the
+  baseline.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md):
   environment build, suites, observation and action layouts, step observation updates, and experimental
   runtime switches.
