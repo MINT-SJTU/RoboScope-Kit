@@ -8,6 +8,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   version, manifest, workload, checkpoint, Policy config, GPU models, CPU quota and CUDA MPS. The next
   evaluation with the same key skips the search (`"mode": "cached"`). `--run-cache refresh|off` searches again
   or leaves the cache alone. On four RTX PRO 5000 GPUs the RoboTwin search took 1,130 s of a 1,827 s run.
+  An evaluation that ran out of GPU memory or lost a Worker stores nothing and drops the cached `K`/`g`.
 - The formal pass hands out the longest tasks first when the run cache or this evaluation's probes have measured
   them; unmeasured tasks go first. On four RTX PRO 5000 GPUs at `K48/g8`, longest-first cut the 500-episode
   RoboTwin run from 655 s to 579 s (one run each), mostly from the tail.
