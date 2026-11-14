@@ -97,6 +97,7 @@ Start from an existing `Policy` if you use one of these model families:
 | Model | Benchmarks | Example |
 | --- | --- | --- |
 | [StarVLA](https://github.com/starVLA/starVLA) | LIBERO, LIBERO-Plus, LIBERO-Pro, RoboTwin, RoboCasa GR-1 Tabletop, CALVIN, MetaWorld, with a published checkpoint for each | [`examples/starvla/`](examples/starvla/README.md) |
+| [OpenVLA](https://github.com/openvla/openvla) | LIBERO Spatial, Object, Goal, and Long with suite-specific checkpoints | [`examples/openvla/`](examples/openvla/README.md) |
 | [X-VLA](https://github.com/2toINF/X-VLA) | LIBERO, LIBERO-Plus, RoboTwin, CALVIN | [`examples/xvla/`](examples/xvla/README.md) |
 | [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) | RoboDojo | [`examples/xpolicylab/`](examples/xpolicylab/README.md) |
 | [PerAct](https://github.com/peract/peract) | RLBench (the released 600k multi-task checkpoint) | [`examples/peract/`](examples/peract/README.md) |

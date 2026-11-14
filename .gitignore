@@ -13,3 +13,8 @@ sdk-dist/
 # X-VLA example sources and weights placed inside the example directory
 examples/xvla/X-VLA/
 examples/xvla/checkpoints/
+
+# Local OpenVLA checkpoints, runtimes, and experiment artifacts
+examples/openvla/artifacts/
+examples/openvla/checkpoints/
+examples/openvla/runtime/
