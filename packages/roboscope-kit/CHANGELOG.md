@@ -2,6 +2,19 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b63 - 2026-11-14
+
+- RoboTwin eval sessions free each finished task's SAPIEN scene before the next task starts. `Base_Task.close_env`
+  leaves the last scene attached to the task object, and `click_bell` and `click_alarmclock` store a bound method
+  on their task object (`self.check_arm_function = self.is_left_gripper_close`), a reference cycle that kept the
+  scene of every finished task of those two kinds on the GPU until the cyclic garbage collector ran. Over a
+  5,000-episode run each evaluator grew from about 3 GB to 4.4-5.7 GB, and at K48/g8 on four RTX PRO 5000 GPUs the
+  last minutes, which run those two short tasks, reached 72.8 of 73.4 GB per GPU and hit out-of-memory errors. The
+  launcher now stores `check_arm_function` as the gripper method's name and returns the same bound method on every
+  read, and it clears the evaluator's globals and collects after every task. The same 5,000-episode K48/g8 run now
+  peaks at 63.3-64.1 GB per GPU (57.2-58.9 GB in its last five minutes), takes 4,262 s instead of 4,285 s, and every
+  episode equals the previous run and a full 5,000-episode run of the official evaluator.
+
 ## 0.8.0b62 - 2026-11-14
 
 - RoboTwin evaluators no longer create the observer camera and the two world cameras when video logging and
