@@ -5,8 +5,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 ## 0.8.0b53 - 2026-11-10
 
 - RoboTwin evaluators no longer create the observer camera and the two world cameras when video logging and
-  point-cloud, observer and third-view data are off; they serve only those outputs and never take a picture in an
-  evaluation. The three cameras the Policy reads keep the same images (12 first observations compared pixel by
+  point-cloud, observer, third-view and segmentation data are off; they never take a picture in such an
+  evaluation. Segmentation data keeps them because scene entities are numbered in creation order. The three cameras the Policy reads keep the same images (12 first observations compared pixel by
   pixel). Each camera costs GPU-driver calls when a scene is built, which queue across evaluator processes: at 48
   processes on four RTX PRO 5000 GPUs the first observation of a new scene drops from 6.3 to 5.3 s, and a
   500-episode K48/g8 run from 643 to 629 s with every episode equal to the official evaluation.
