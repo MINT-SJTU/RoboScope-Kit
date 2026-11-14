@@ -183,6 +183,10 @@ class AutotuneLimits:
     throughput_estimator: str | None = None
     worker_knee_gain: float = DEFAULT_WORKER_KNEE_GAIN
     replica_minimum_gain: float = DEFAULT_REPLICA_MINIMUM_GAIN
+    # Diagonal replica step: when K = r * g is predicted not to fit in GPU memory, try
+    # smaller K before stopping. Off by default so recorded searches still reproduce;
+    # a manifest turns it on with ``autotune_replica_memory_backoff``.
+    replica_memory_backoff: bool = False
 
     def __post_init__(self) -> None:
         resolve_strategy(self.strategy)
@@ -288,6 +292,7 @@ def resolve_limits(manifest_defaults: dict[str, Any]) -> AutotuneLimits:
         replica_minimum_gain=float(
             manifest_defaults.get("autotune_replica_minimum_gain", DEFAULT_REPLICA_MINIMUM_GAIN)
         ),
+        replica_memory_backoff=bool(manifest_defaults.get("autotune_replica_memory_backoff", False)),
     )
 
 
@@ -476,6 +481,19 @@ class BenchmarkAutotuneController:
             f"K={k_next}, g={g_next} predicted GPU memory {predicted / 1024**3:.1f} GiB "
             f"on the busiest GPU above {capacity / 1024**3:.1f} GiB"
         )
+
+    def fitting_k_options(self, incumbent: KTrial, k_next: int, g_next: int) -> list[int]:
+        """K below ``k_next``, down to the incumbent's, whose probe is predicted to fit, largest first.
+
+        K steps down by the GPU count so every GPU keeps the same number of workers.
+        """
+
+        step = self.bounds.gpu_count
+        return [
+            k
+            for k in range(k_next - step, incumbent.k - 1, -step)
+            if self.predicted_memory_limit(incumbent, k, g_next) is None
+        ]
 
     def replica_cap(self) -> int | None:
         replica_vram = self.cache[self.baseline_key][1]
@@ -797,6 +815,12 @@ def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]
     workload was too small for K workers, which says nothing about resources. The
     replica phase then reaches the same K on the same workload, so its probes fall
     back to elapsed rates rather than stop for the same reason.
+
+    With ``replica_memory_backoff``, when the predicted memory of K = r * g does not
+    fit, the replica step tries the largest smaller K that fits, down to the
+    incumbent's K, before it stops: renderer
+    memory per worker can leave room for more replicas but not for r workers each.
+    A probe at such a K that runs out of GPU memory steps down to the next K that fits.
     """
 
     base = controller.bounds.gpu_count
@@ -843,13 +867,33 @@ def diagonal_strategy(controller: BenchmarkAutotuneController) -> dict[str, Any]
             break
         k_next = max(incumbent.k, min(round(workers_per_replica * g_next), controller.worker_cap(incumbent)))
         memory = controller.predicted_memory_limit(incumbent, k_next, g_next)
-        if memory is not None:
-            stop_reason += f"; {memory}"
-            break
-        try:
-            trial = controller.measure_trial(k_next, g_next, ramp="g", elapsed_fallback=True)
-        except (ProbeStopped, AutotuneBudgetExhausted) as exc:
-            stop_reason += f"; {_stop_reason(exc)}"
+        if memory is None:
+            k_options = [k_next]
+        else:
+            # The added replicas may still fit with fewer workers per replica.
+            k_options = (
+                controller.fitting_k_options(incumbent, k_next, g_next)
+                if controller.limits.replica_memory_backoff
+                else []
+            )
+            if not k_options:
+                stop_reason += f"; {memory}"
+                break
+            stop_reason += f"; {memory}, trying K={k_options[0]}"
+        trial = None
+        for index, k_next in enumerate(k_options):
+            try:
+                trial = controller.measure_trial(k_next, g_next, ramp="g", elapsed_fallback=True)
+                break
+            except (ProbeStopped, AutotuneBudgetExhausted) as exc:
+                stop_reason += f"; {_stop_reason(exc)}"
+                # A predicted fit that runs out of memory steps down to the next K that fits.
+                oom = isinstance(exc, ProbeStopped) and exc.stop_reason == "worker_oom"
+                if oom and index + 1 < len(k_options):
+                    stop_reason += f", trying K={k_options[index + 1]}"
+                    continue
+                break
+        if trial is None:
             break
         gain = controller.gain(trial, incumbent)
         path.append({"k": k_next, "g": g_next, "gain": gain})

@@ -14,6 +14,7 @@ import time
 from collections import deque
 from pathlib import Path
 
+from roboscope_kit import profiling
 from roboscope_kit.runtime.benchmark import (
     EvaluationRecord,
     WorkerLoop,
@@ -145,6 +146,8 @@ class _EvalSession:
             "ROBOTWIN_SEED_CACHE_ENABLED": (
                 "1" if self.args.seed_cache_dir is not None else "0"
             ),
+            # --profile: the launcher loads Kit's NVTX helper from this file.
+            "ROBOSCOPE_PROFILING_MODULE": profiling.__file__,
         }
         command = (
             str(self.args.robotwin_python),
@@ -356,6 +359,7 @@ def _run_task_single_process(args: argparse.Namespace, item: WorkItem) -> WorkRe
         "CUDA_VISIBLE_DEVICES": str(args.gpu_id),
         "ROBOSCOPE_INFERENCE_SOCKET": str(args.policy_socket),
         "ROBOTWIN_SEED_CACHE_ENABLED": "1" if args.seed_cache_dir is not None else "0",
+        "ROBOSCOPE_PROFILING_MODULE": profiling.__file__,
         **task_env,
     }
     command = (

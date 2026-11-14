@@ -47,6 +47,8 @@ from .output import reserve_output_directory
 from .policy_process import PolicyProcessAdapter
 from .queue import atomic_json
 from .registry import benchmark_factory
+from .resources import cpu_quota
+from .run_cache import CACHE_MODES, RunCache, checkpoint_identity, gpu_models, task_seconds_from_queues
 from .sharding import DEFAULT_EPISODES_PER_SHARD, shard_build
 from .timing import BenchmarkTimingRecorder, PhaseTimingCallback, benchmark_phase
 
@@ -98,6 +100,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--autotune-strategy",
         help=f"K/g autotune strategy, one of {', '.join(autotune_strategies())}; overrides the "
         "manifest's autotune_strategy",
+    )
+    parser.add_argument(
+        "--run-cache",
+        choices=CACHE_MODES,
+        default="use",
+        help="reuse this host's earlier search result and per-task episode times (use, the default), "
+        "search again and overwrite them (refresh), or neither read nor write them (off)",
     )
     parser.add_argument(
         "--concurrency",
@@ -282,6 +291,7 @@ def _run_evaluation(
     gpu_devices = plan.gpu_devices
     shard_kwargs = plan.shard_kwargs
     fixed = args.concurrency is not None
+    run_cache = _open_run_cache(args, benchmark, manifest, plan, checkpoint)
     cuda_mps: CudaMpsSession | None = None
     try:
         if args.cuda_mps:
@@ -311,6 +321,7 @@ def _run_evaluation(
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
                 profile=args.profile,
+                task_seconds=run_cache.task_seconds or None,
             )
         else:
             output, selected = _autotuned_run(
@@ -324,14 +335,54 @@ def _run_evaluation(
                 phase_timing_callback,
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
+                run_cache=run_cache,
             )
     finally:
         if cuda_mps is not None:
             cuda_mps.stop()
+    if not args.quick_test:
+        recovery = output.get("recovery") or {}
+        if recovery.get("oom_events") or recovery.get("worker_failures"):
+            # A run that ran out of memory or lost a Worker finished on a scaled-down or retried
+            # configuration, so neither its K/g nor its task times describe a healthy run.
+            run_cache.forget_selection()
+        else:
+            run_cache.store(
+                selection=selected if selected.get("mode") == "dynamic-probe" else None,
+                task_seconds=task_seconds_from_queues([args.output_dir / "queue"]),
+            )
     output["autotune"] = selected
+    output["run_cache"] = run_cache.describe()
     output["cuda_mps"] = cuda_mps.metadata() if cuda_mps is not None else {"enabled": False}
     atomic_json(args.output_dir / "result.json", output)
     return 0
+
+
+def _open_run_cache(
+    args: argparse.Namespace,
+    benchmark: BenchmarkName,
+    manifest: BenchmarkManifest,
+    plan: EvaluationPlan,
+    checkpoint: Path,
+) -> RunCache:
+    """The run cache entry of this host, workload, checkpoint and Policy."""
+
+    mode = "off" if args.quick_test or args.profile else args.run_cache
+    fields: dict[str, Any] = {}
+    if mode != "off":
+        fields = {
+            **shard_build(manifest),
+            "benchmark": benchmark.value,
+            "suite": args.suite,
+            "episodes": args.episodes,
+            "evaluation_config": plan.evaluation_config,
+            "checkpoint": checkpoint_identity(checkpoint),
+            "policy_config": args.policy_config.read_text(encoding="utf-8"),
+            "gpu_models": gpu_models(plan.gpu_devices),
+            "cpu_cores": cpu_quota(),
+            "cuda_mps": bool(args.cuda_mps),
+        }
+    return RunCache(mode, fields)
 
 
 def _resolve_evaluation_config(
@@ -378,6 +429,7 @@ def _autotuned_run(
     phase_timing_callback: PhaseTimingCallback,
     shard_kwargs: dict[str, Any] | None = None,
     cuda_mps: CudaMpsSession | None = None,
+    run_cache: RunCache | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Load the policy pool once, probe candidates against it, then run for real.
 
@@ -385,7 +437,9 @@ def _autotuned_run(
     probes grow it incrementally so every candidate measures the requested
     replica count without reloading replicas that are already running.
     Autotune probes always run the unsharded workload; sharding applies to the
-    final pass only.
+    final pass only. A run cache entry for this host replaces the search with its
+    selection, and its per-task episode times, with those of the probes, order the
+    final pass longest first.
     """
 
     gpu_count = len(gpu_devices)
@@ -407,25 +461,34 @@ def _autotuned_run(
         ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
         cuda_mps=cuda_mps,
     )
+    cached = run_cache.selection if run_cache is not None else None
     try:
         with autotune_phase(phase_timing_callback):
-            selected = run_autotune(
-                measure=lambda k, g, probe_limits, probe_progress: _measure_shared(
-                    factory,
-                    request,
-                    manifest,
-                    pool,
-                    gpu_devices,
-                    k,
-                    g,
-                    probe_limits,
-                    probe_progress,
-                    output_dir,
-                ),
-                output_dir=output_dir / "autotune",
-                bounds=bounds,
-                limits=limits,
-            )
+            if cached is not None:
+                selected = {**cached, "mode": "cached", "searched_mode": cached.get("mode")}
+            else:
+                selected = run_autotune(
+                    measure=lambda k, g, probe_limits, probe_progress: _measure_shared(
+                        factory,
+                        request,
+                        manifest,
+                        pool,
+                        gpu_devices,
+                        k,
+                        g,
+                        probe_limits,
+                        probe_progress,
+                        output_dir,
+                    ),
+                    output_dir=output_dir / "autotune",
+                    bounds=bounds,
+                    limits=limits,
+                )
+        # Probe episodes ran under other concurrencies; a formal run's times take precedence.
+        task_seconds = {
+            **task_seconds_from_queues(sorted((output_dir / "autotune").glob("candidate-*/queue"))),
+            **(run_cache.task_seconds if run_cache is not None else {}),
+        }
         final = _run_with_pool(
             factory=factory,
             request=request,
@@ -438,6 +501,7 @@ def _autotuned_run(
             probe=False,
             phase_timing_callback=phase_timing_callback,
             shard_kwargs=shard_kwargs,
+            task_seconds=task_seconds or None,
         )
         return final, selected
     finally:
@@ -511,6 +575,7 @@ def _run_with_pool(
     phase_timing_callback: PhaseTimingCallback | None = None,
     progress_callback=None,
     shard_kwargs: dict[str, Any] | None = None,
+    task_seconds: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     adapter = (
         factory.create_probe(request, manifest, concurrency) if probe else factory.create(request, manifest)
@@ -524,6 +589,7 @@ def _run_with_pool(
             base_port=int(manifest.defaults.get("base_port", 16694)),
             ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
             probe_limits=probe_limits,
+            task_seconds=task_seconds,
             **(shard_kwargs or {}),
         ),
         inference=pool.adapter,
@@ -552,6 +618,7 @@ def run_candidate(
     shard_kwargs: dict[str, Any] | None = None,
     cuda_mps: CudaMpsSession | None = None,
     profile: bool = False,
+    task_seconds: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     adapter = (
         factory.create_probe(request, manifest, concurrency) if probe else factory.create(request, manifest)
@@ -566,6 +633,7 @@ def run_candidate(
             base_port=int(manifest.defaults.get("base_port", 16694)),
             ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
             profile=profile,
+            task_seconds=task_seconds,
             **(shard_kwargs or {}),
         ),
         inference=inference,

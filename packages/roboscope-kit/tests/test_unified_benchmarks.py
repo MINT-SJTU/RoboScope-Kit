@@ -1126,3 +1126,17 @@ def test_calvin_self_test_reports_missing_paths(tmp_path: Path) -> None:
     )
     with pytest.raises(RuntimeError, match="CALVIN runtime paths are missing"):
         factory.self_test(manifest, tmp_path / "out")
+
+
+def test_robotwin_launcher_loads_the_nvtx_helper_only_in_a_profile_run(monkeypatch) -> None:
+    from benchmarks.robotwin import roboscope_robotwin_launcher as launcher
+
+    from roboscope_kit import profiling
+
+    monkeypatch.setenv("ROBOSCOPE_PROFILING_MODULE", profiling.__file__)
+    monkeypatch.delenv("ROBOSCOPE_PROFILE", raising=False)
+    assert launcher._load_profiling() is None
+    # Under --profile but outside nsys there is no injection library, so nothing is recorded.
+    monkeypatch.setenv("ROBOSCOPE_PROFILE", "1")
+    monkeypatch.delenv("NVTX_INJECTION64_PATH", raising=False)
+    assert launcher._load_profiling() is None
