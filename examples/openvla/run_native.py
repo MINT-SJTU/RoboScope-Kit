@@ -100,7 +100,8 @@ def main() -> None:
     run_path.write_text(json.dumps(run, indent=2) + "\n")
     started = time.perf_counter()
     try:
-        upstream.eval_libero(cfg)
+        # Bypass draccus CLI parsing: this entry point has already built the config.
+        upstream.eval_libero.__wrapped__(cfg)
         logs = list((output / "logs").glob("*.txt"))
         if any("Caught exception:" in p.read_text() for p in logs):
             raise RuntimeError("Official evaluator caught an exception; reject this run")

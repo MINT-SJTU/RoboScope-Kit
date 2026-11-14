@@ -100,7 +100,7 @@ while IFS= read -r line; do
   CONDA_PACKAGES+=("${BASH_REMATCH[1]}=${BASH_REMATCH[2]}=${BASH_REMATCH[3]}")
 done < "${CONDA_SPECS}"
 if [[ ! -x "${ENV_PYTHON}" ]]; then
-  "${CONDA_BIN}" create --yes --quiet --override-channels -c conda-forge --prefix "${ENV_PREFIX}" "${CONDA_PACKAGES[@]}"
+  "${CONDA_BIN}" create --yes --quiet -c conda-forge --prefix "${ENV_PREFIX}" "${CONDA_PACKAGES[@]}"
 fi
 # Install the source tree first: its setup.py declares libero 0.1.0, which PyPI
 # never published, so pip then treats that pin of the lock as satisfied.

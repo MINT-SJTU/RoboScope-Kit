@@ -22,11 +22,7 @@ OpenVLA uses a separate CPython 3.11.15 Policy environment, built with
 `examples/openvla/build-policy-env.sh <install-dir>`, and the standard LIBERO Worker
 built with `benchmarks/libero/build-runtime.sh <install-dir>` (CPython 3.10.20,
 robosuite 1.4.0, MuJoCo 3.2.3, NumPy 1.24.4, LIBERO source revision
-`8f1084e3132a39270c3a13ebe37270a43ece2a01`). The current OpenVLA evaluation uses
-this standard Worker layout on all ten tasks and initial states 0–4 per suite
-(50 episodes per suite, partial initial-state coverage). Native retains its
-robosuite 1.4.1 environment. The [experiment report](../../examples/openvla/EXPERIMENT_REPORT.md)
-records the configuration comparison and episode consistency checks.
+`8f1084e3132a39270c3a13ebe37270a43ece2a01`). Native uses upstream's robosuite 1.4.1 environment.
 
 ## 1. Environment and invocation
 

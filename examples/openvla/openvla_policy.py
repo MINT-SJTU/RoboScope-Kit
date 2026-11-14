@@ -11,7 +11,6 @@ import random
 from pathlib import Path
 
 import numpy as np
-
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -89,7 +88,10 @@ class OpenVLAPolicy(Policy):
         self.suite = context.benchmark.suite
         checkpoint = Path(context.checkpoint_path)
         statistics = json.loads((checkpoint / "dataset_statistics.json").read_text())
-        if self.suite not in statistics:
+        self.unnorm_key = self.suite
+        if self.unnorm_key not in statistics and f"{self.suite}_no_noops" in statistics:
+            self.unnorm_key = f"{self.suite}_no_noops"
+        if self.unnorm_key not in statistics:
             raise ValueError(f"Checkpoint has no normalization statistics for {self.suite}")
         local = {"trust_remote_code": True, "code_revision": CODE_REVISION, "local_files_only": True}
         self.model = AutoModelForVision2Seq.from_pretrained(
@@ -136,7 +138,7 @@ class OpenVLAPolicy(Policy):
         inputs = self.processor(prompt, Image.fromarray(cropped).convert("RGB"))
         inputs = inputs.to("cuda:0", dtype=torch.bfloat16)
         with torch.inference_mode():
-            predicted = self.model.predict_action(**inputs, unnorm_key=self.suite, do_sample=False)
+            predicted = self.model.predict_action(**inputs, unnorm_key=self.unnorm_key, do_sample=False)
         action = environment_action(predicted)
         return ActionChunk(actions=action)
 
