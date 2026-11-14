@@ -152,6 +152,10 @@ Outputs stay in the selected run directories and are not repository fixtures.
 
 ## Evaluation
 
+Current implementation: `roboscope-kit 0.8.0b65`, code commit `14d2f50`.
+The experiment report, including the completed Native validation, is recorded
+in documentation commit `84fcc95`.
+
 Completed measurements below used Kit `da280f0` on an RTX 4090 at K/g=2/2 and
 the earlier serial Native reference with upstream OpenVLA `c8f03f4`; each suite
 covers ten tasks × states 0–4. Times exclude loading and tuning.

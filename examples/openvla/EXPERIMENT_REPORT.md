@@ -2,6 +2,11 @@
 
 Updated: 2026-11-14.
 
+Current implementation: **Kit `0.8.0b65`, code commit `14d2f50`**.
+The completed Native validation and README update are recorded in documentation
+commit `84fcc95`. The performance campaign used `0.8.0b58` / `da280f0`; those
+measured versions remain identified separately below.
+
 This report summarizes the completed evaluation of the updated RoboScope Kit
 integration and the subsequent Goal investigations. It contains settings, key
 measurements and conclusions; raw logs, images and experiment archives are not
@@ -26,7 +31,7 @@ runtime-version differences.
 
 | Setting | Kit | Native |
 | --- | --- | --- |
-| Implementation | Kit `0.8.0b58`, source `da280f0` | Pinned official OpenVLA evaluator, source `c8f03f4`; configuration unchanged |
+| Evaluated implementation | Kit `0.8.0b58`, source `da280f0` | Pinned official OpenVLA evaluator, source `c8f03f4`; configuration unchanged |
 | Execution | Two simulator Workers / two Policy replicas (K/g=2/2) | Serial evaluation |
 | Runtime layout | Separate Policy/CLI and standard LIBERO Worker environments | Original environment retained |
 | Python | Policy 3.11.15; Worker 3.10.20 | 3.10.13 |
