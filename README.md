@@ -98,6 +98,7 @@ Start from an existing `Policy` if you use one of these model families:
 | Model | Benchmarks | Example |
 | --- | --- | --- |
 | [StarVLA](https://github.com/starVLA/starVLA) | LIBERO, LIBERO-Plus, LIBERO-Pro, RoboTwin, RoboCasa GR-1 Tabletop, CALVIN, MetaWorld, with a published checkpoint for each | [`examples/starvla/`](examples/starvla/README.md) |
+| [OpenVLA](https://github.com/openvla/openvla) | LIBERO Spatial, Object, Goal, and Long with suite-specific checkpoints | [`examples/openvla/`](examples/openvla/README.md) |
 | [X-VLA](https://github.com/2toINF/X-VLA) | LIBERO, LIBERO-Plus, RoboTwin, CALVIN | [`examples/xvla/`](examples/xvla/README.md) |
 | [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) | RoboDojo | [`examples/xpolicylab/`](examples/xpolicylab/README.md) |
 | [PerAct](https://github.com/peract/peract) | RLBench (the released 600k multi-task checkpoint) | [`examples/peract/`](examples/peract/README.md) |
@@ -225,6 +226,6 @@ Ask questions, share your results, and discuss new benchmarks in
 [Issues](https://github.com/MINT-SJTU/RoboScope-Kit/issues).
 
 WeChat users can also scan the QR code to join the RoboScope Kit group (the invitation is valid before
-November 12, 2026):
+November 19, 2026):
 
 <img src="docs/community-qr.png" alt="WeChat QR code for the RoboScope Kit community" width="240">

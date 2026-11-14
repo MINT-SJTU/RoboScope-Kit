@@ -143,6 +143,24 @@ one on total probe steps over probe wall time, recorded as `"throughput_estimato
 `selection.json` metrics. That rate understates a larger `K`, so a step it keeps is a real gain. Probes it
 measures but does not keep are marked `rejected` in `selection.json`.
 
+A manifest can set `autotune_replica_memory_backoff: true` (RoboTwin does): when a replica step's `K` would not
+fit in GPU memory, the step tries the largest smaller `K` that fits, in steps of the GPU count and down to the
+current `K`, instead of stopping. A probe at such a `K` that runs out of memory steps down to the next one.
+Renderer memory per Worker can leave room for another replica on each GPU but not for that many more Workers.
+
+### Reusing what an evaluation learned
+
+After an evaluation, the runtime stores the searched `K`/`g` and the mean episode time of each task in a run
+cache (`$XDG_CACHE_HOME/roboscope-kit/run-cache/`, or `ROBOSCOPE_RUN_CACHE_DIR`). The entry is keyed by the
+kit version and benchmark manifest, the benchmark, suite and episode count, the checkpoint files and Policy
+config, the GPU models, the CPU quota and CUDA MPS. The next evaluation with the same key skips the search
+and records `"autotune": {"mode": "cached", ...}`. Every evaluation hands out work items of the longest tasks
+first when the cache, or this evaluation's probes, have measured them; tasks without a measurement go
+first, so no long task starts last. `--run-cache refresh` searches again and replaces the entry, and
+`--run-cache off` neither reads nor writes it. An evaluation that ran out of GPU memory or lost a Worker
+stores nothing and drops the cached `K`/`g`, so the next evaluation searches again. `result.json` records the
+entry under `run_cache`.
+
 To compare searches without a GPU, the
 [autotune testbed](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/autotune-testbed.md)
 replays recorded workloads through the same controller and scores any registered strategy.
@@ -223,6 +241,11 @@ Policy state for you. If your Policy keeps state, key it by `episode_id` and rel
 The [X-VLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/xvla) is a stateful
 Policy; the [StarVLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/starvla) is
 stateless.
+
+The [OpenVLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/openvla)
+serves the four fine-tuned LIBERO suites with a separate pinned Python 3.11 Policy environment,
+CPU image preprocessing, BF16/FlashAttention2 inference, and the standard LIBERO simulator Worker.
+It returns one action per observation through the standard Policy lifecycle.
 
 For RoboDojo, a Policy that needs observations between actions in a chunk can declare
 `step_observation_updates=("robodojo",)` in `PolicyCapabilities` and implement `observe(Observation)`.

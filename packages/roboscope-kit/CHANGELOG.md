@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b55 - 2026-11-10
+## 0.8.0b66 - 2026-11-14
 
 - Add the `simpler_env` benchmark (protocol `simpler-env-v1`, action `simpler_env.ee-delta-axangle-v1`) with
   three separate suites transcribed from SimplerEnv's official RT-1 scripts: `google_robot_visual_matching`
@@ -22,6 +22,93 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   the full matrix. Shards from different hosts or install directories merge, and `shard_merge` runs without
   the Vulkan ICD check. `build-runtime.sh` fails when the venv holds anything other than the lock and the two
   checkouts.
+
+## 0.8.0b65 - 2026-11-14
+
+- Add an OpenVLA Policy for the four fine-tuned LIBERO suites, with pinned checkpoints and model code,
+  CPU image preprocessing, and BF16/FlashAttention2 inference through the standard Policy lifecycle.
+- Build the OpenVLA Policy and CLI in a separate pinned Python 3.11 environment while using the
+  standard LIBERO simulator Worker and its existing package versions.
+- Add a pinned official Native evaluation entry point and per-episode Kit/Native comparison.
+
+## 0.8.0b64 - 2026-11-14
+
+- RoboTwin evaluators no longer render `front_camera`. RoboTwin renders four cameras for every observation, and
+  the Policy reads three of them (head and the two wrist cameras); the front camera's image was rendered and
+  dropped. The camera is still created, so each scene is built as before, and every camera has its own renderer:
+  the three images the Policy reads and the joint state are bit-identical (4 seeds, about 31 observations each).
+  At K48/g8 the twelve evaluators and two Policy replicas on a GPU share it, and an observation of three cameras
+  takes 121 ms in a 500-episode run against about 30 ms for one process alone, so one camera less shortens every
+  observation.
+  On four RTX PRO 5000 GPUs at K48/g8 with the longest tasks first, a 5,000-episode run takes 3,851 s instead of
+  4,262 s (3,881 s instead of 4,295 s from launch to exit), steady throughput rises from 511 to 569 steps/s, GPU
+  memory is unchanged (62.4-65.2 GB peak per GPU), and every episode equals the official evaluation. In the
+  default task order, which a first run without a run-cache entry uses, the same run takes 4,023 s (4,119 s from
+  launch to exit, of which replica loading took 94 s instead of 29 s), again with every episode equal to the
+  official evaluation, which takes 63,068 s on the same GPUs. Settings that read every camera (video, the viewer,
+  point clouds, depth, segmentation, observer or third-view data) render all four as before, and
+  `ROBOTWIN_SKIP_UNREAD_CAMERAS=0` turns the change off.
+
+## 0.8.0b63 - 2026-11-14
+
+- RoboTwin eval sessions free each finished task's SAPIEN scene before the next task starts. `Base_Task.close_env`
+  leaves the last scene attached to the task object, and `click_bell` and `click_alarmclock` store a bound method
+  on their task object (`self.check_arm_function = self.is_left_gripper_close`), a reference cycle that kept the
+  scene of every finished task of those two kinds on the GPU until the cyclic garbage collector ran. Over a
+  5,000-episode run each evaluator grew from about 3 GB to 4.4-5.7 GB, and at K48/g8 on four RTX PRO 5000 GPUs the
+  last minutes, which run those two short tasks, reached 72.8 of 73.4 GB per GPU and hit out-of-memory errors. The
+  launcher now stores `check_arm_function` as the gripper method's name and returns the same bound method on every
+  read, and it clears the evaluator's globals and collects after every task. The same 5,000-episode K48/g8 run now
+  peaks at 63.3-64.1 GB per GPU (57.2-58.9 GB in its last five minutes), takes 4,262 s instead of 4,285 s, and every
+  episode equals the previous run and a full 5,000-episode run of the official evaluator.
+
+## 0.8.0b62 - 2026-11-14
+
+- RoboTwin evaluators no longer create the observer camera and the two world cameras when video logging and
+  point-cloud, observer, third-view and segmentation data are off; they never take a picture in such an
+  evaluation. Segmentation data keeps them because scene entities are numbered in creation order. The three cameras the Policy reads keep the same images (12 first observations compared pixel by
+  pixel). Each camera costs GPU-driver calls when a scene is built, which queue across evaluator processes: at 48
+  processes on four RTX PRO 5000 GPUs the first observation of a new scene drops from 6.3 to 5.3 s, and a
+  500-episode K48/g8 run from 643 to 629 s with every episode equal to the official evaluation.
+  `ROBOTWIN_SKIP_UNUSED_CAMERAS=0` keeps them.
+
+## 0.8.0b61 - 2026-11-14
+
+- Run cache: an evaluation stores the searched `K`/`g` and each task's mean episode time, keyed by the kit
+  version, manifest, workload, checkpoint, Policy config, GPU models, CPU quota and CUDA MPS. The next
+  evaluation with the same key skips the search (`"mode": "cached"`). `--run-cache refresh|off` searches again
+  or leaves the cache alone. On four RTX PRO 5000 GPUs the RoboTwin search took 1,130 s of a 1,827 s run.
+  An evaluation that ran out of GPU memory or lost a Worker stores nothing and drops the cached `K`/`g`.
+- The formal pass hands out the longest tasks first when the run cache or this evaluation's probes have measured
+  them; unmeasured tasks go first. On four RTX PRO 5000 GPUs at `K48/g8`, longest-first cut the 500-episode
+  RoboTwin run from 655 s to 579 s (one run each), mostly from the tail.
+- `--profile` records RoboTwin episodes: its launcher, which has its own Policy client, writes the `episode` and
+  `policy.<operation>` NVTX ranges through Kit's helper. It used to record nothing.
+- `diagonal` autotune, with the manifest's `autotune_replica_memory_backoff` (on for RoboTwin): when a replica
+  step's `K = r * g` is predicted not to fit in GPU memory, it tries smaller `K` that fit before stopping, and a
+  step that runs out of memory moves to the next smaller `K`. On four RTX PRO 5000 GPUs the RoboTwin search
+  stopped at `K32/g4` because `K64/g8` did not fit, while the measured `K48/g8` was 32% faster.
+
+## 0.8.0b60 - 2026-11-14
+
+- Policy replicas on different GPUs now start in parallel; replicas on the same GPU still start one at a time.
+  With two replicas on each of four RTX PRO 5000 GPUs, Workers used to wait about 100 s for eight serial loads.
+  Commands to the CUDA MPS control daemon are serialized, since it refuses concurrent connections.
+- RoboTwin draws each episode's language instruction with the suite's `instruction_seed_limit` instead of the
+  number of episodes per task in this run. A run or autotune probe with fewer episodes per task than the
+  protocol used to draw different instructions for the same seeds, so its episodes differed from the formal run
+  (99 of 250 at five episodes per task).
+- RoboTwin work items hold one episode instead of ten (`episode_shard_size: 1`). On four RTX PRO 5000 GPUs at
+  `K16/g4`, steady-state throughput is the same for 5-, 2- and 1-episode items, while the end-of-run tail
+  shrinks: the whole-run rate rises from 81% (5-episode) to 91% (1-episode) of steady state. Ten-episode items
+  also left too few items for autotune to measure `K32`.
+
+## 0.8.0b56 - 2026-11-14
+
+- The StarVLA RoboTwin demo (`examples/starvla/robotwin/demo.yaml`) no longer sends joint state to the
+  Policy. The official StarVLA RoboTwin evaluator drops the state before calling the model, and the technical
+  report's RoboTwin results were produced without it. With the state, the demo scored 190/500 on the report's
+  500 episodes instead of 230/500, and disagreed with the official evaluator on 14 of 40 compared episodes (#108).
 
 ## 0.8.0b35 - 2026-11-10
 

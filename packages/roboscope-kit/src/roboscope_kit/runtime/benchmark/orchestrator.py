@@ -10,7 +10,7 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, Sequence  # noqa: UP035 - this alias is evaluated by Python 3.8
+from typing import Any, Callable, Iterable, Mapping, Sequence  # noqa: UP035 - this alias is evaluated by Python 3.8
 
 from .adapters import BenchmarkAdapter, InferenceAdapter, WorkerContext
 from .autotune import ProbeCapacityReached, ProbeLimits, ProbeTimedOut
@@ -20,6 +20,7 @@ from .nsys import profiled_process
 from .processes import InferencePool, ManagedProcess, ProcessFailureKind, start_process
 from .queue import WorkQueue, atomic_json
 from .resources import GpuSampler, cpu_quota, cpu_window, gpu_window, read_cpu_stat
+from .run_cache import longest_first
 from .schema import EvaluationRecord, WorkItem, WorkResult, validate_terminal_accounting
 from .sharding import (
     DEFAULT_EPISODES_PER_SHARD,
@@ -48,6 +49,9 @@ class RuntimeConfig:
     shard_episodes: int = DEFAULT_EPISODES_PER_SHARD
     shard_build: dict[str, str] | None = None
     profile: bool = False
+    # Mean episode wall time per task from earlier runs; the formal pass hands out the
+    # longest items first so no long task starts last.
+    task_seconds: Mapping[str, float] | None = None
 
     def __post_init__(self) -> None:
         if not self.gpu_devices or len(self.gpu_devices) != len(set(self.gpu_devices)):
@@ -178,6 +182,8 @@ class ParallelBenchmarkRuntime:
             items, shard_metadata = shard
         else:
             shard_metadata = None
+        if self.config.task_seconds and self.config.probe_limits is None:
+            items = longest_first(items, self.config.task_seconds)
         total_records = sum(item.expected_results for item in items)
         benchmark_metadata = self.benchmark.metadata()
         self.config.output_dir.mkdir(parents=True, exist_ok=True)

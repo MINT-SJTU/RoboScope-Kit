@@ -84,7 +84,7 @@ is not in the report, only the round-trip time of each request.
 | SimplerEnv | Yes | Not yet |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
 | CALVIN | Yes | Not yet |
-| RoboTwin | No, its launcher has its own client | Records nothing |
+| RoboTwin | No; its launcher writes the same ranges through Kit's helper, loaded from `ROBOSCOPE_PROFILING_MODULE` | Not yet |
 
 ## How it works
 

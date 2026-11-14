@@ -99,6 +99,28 @@ def decode(value):
     return {key: decode(item) for key, item in value.items()}
 
 
+def _load_profiling():
+    """Kit's NVTX helper for ``--profile`` Workers; ``None`` outside a profile run.
+
+    This launcher runs in RoboTwin's interpreter, which need not have roboscope_kit
+    installed, so the Worker passes the helper's file path. The helper writes ranges
+    through Nsight Systems' injection library with ctypes and needs no package.
+    """
+
+    path = os.environ.get("ROBOSCOPE_PROFILING_MODULE")
+    if not path or not os.environ.get("ROBOSCOPE_PROFILE"):
+        return None
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_roboscope_profiling", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module if module.ENABLED else None
+
+
+PROFILING = _load_profiling()
+
+
 class PolicySocketClient:
     def __init__(self, socket_path):
         self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -120,6 +142,12 @@ class PolicySocketClient:
         raise last_error
 
     def request(self, operation, payload):
+        if PROFILING is not None:
+            with PROFILING.request(operation):
+                return self._request(operation, payload)
+        return self._request(operation, payload)
+
+    def _request(self, operation, payload):
         request_id = str(uuid.uuid4())
         message = encode(
             {
@@ -194,6 +222,8 @@ class ModelClient:
         self.episode_id = f"robotwin-{uuid.uuid4()}"
         self.raw_actions = None
         self.prev_action = None
+        if PROFILING is not None:
+            PROFILING.episode_start()
         self.client.request(
             "reset",
             {
@@ -212,6 +242,8 @@ class ModelClient:
         self.episode_id = ""
         self.raw_actions = None
         self.client.request("end_episode", {"episode_id": episode_id})
+        if PROFILING is not None:
+            PROFILING.episode_end()
 
     def close(self):
         try:
@@ -817,6 +849,66 @@ def install_shared_engine():
     Base_Task.setup_scene = setup_scene_on_shared_engine
 
 
+class _UnusedCamera:
+    """Stand-in for a RoboTwin camera that this evaluation never reads (observer and world cameras)."""
+
+    def __init__(self, name):
+        self.name = name
+        self.entity = self
+
+    def set_pose(self, _pose):
+        return None
+
+    def __getattr__(self, attr):
+        raise RuntimeError(f"RoboTwin camera {self.name!r} was not created; it is unused in this evaluation")
+
+
+class _LeanCameraScene:
+    """Scene proxy for ``Camera.load_camera`` that skips the observer and world cameras."""
+
+    UNUSED = ("observer_camera", "world_camera1")
+
+    def __init__(self, scene):
+        self._scene = scene
+
+    def add_camera(self, name, *args, **kwargs):
+        if name in self.UNUSED:
+            return _UnusedCamera(name)
+        return self._scene.add_camera(name, *args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._scene, name)
+
+
+def install_lean_cameras():
+    """Skip the observer and the two world cameras (``ROBOTWIN_SKIP_UNUSED_CAMERAS=0`` keeps them).
+
+    The observer camera serves third-view data and the world cameras the world point cloud; with video,
+    the viewer, point-cloud, observer, third-view and segmentation data off they never take a picture.
+    They have fixed poses and draw no random numbers. Scene entities are numbered in creation order, so
+    segmentation data keeps them to keep the official labels. Any later use of them raises.
+    """
+
+    from envs._base_task import Base_Task
+
+    fresh_load_camera = Base_Task.load_camera
+
+    def load_camera_lean(self, **kwags):
+        data = self.data_type or {}
+        if (self.eval_video_path is not None or self.render_freq
+                or any(data.get(key) for key in ("pointcloud", "observer", "third_view", "mesh_segmentation",
+                                                "actor_segmentation"))):
+            return fresh_load_camera(self, **kwags)
+        scene = self.scene
+        self.scene = _LeanCameraScene(scene)
+        try:
+            fresh_load_camera(self, **kwags)
+        finally:
+            self.scene = scene
+
+    Base_Task.load_camera = load_camera_lean
+
+
 class GripperOnlyPlanner:
     """Qpos eval-mode planner: gripper interpolation identical to CuroboPlanner.
 
@@ -1026,6 +1118,111 @@ def _close_active_models() -> None:
                 raise
 
 
+def install_skip_unread_static_cameras():
+    """Do not render static cameras whose images the policy never reads (``front_camera`` on aloha-agilex).
+
+    ``eval_step`` sends only the head, left and right images to the policy. The front camera is still
+    created, so the scene is built exactly as before; only its per-observation ``take_picture`` and
+    ``get_picture`` are skipped. Each camera renders with its own renderer, so the three used images are
+    unchanged. Settings that read every camera (video, viewer, point clouds, depth, segmentation, observer or
+    third-view data) keep the official behavior.
+    """
+
+    from envs.camera.camera import Camera
+
+    used = ("head_camera",)
+    fresh_update, fresh_rgba = Camera.update_picture, Camera.get_rgba
+
+    def _reads_all(self):
+        task = getattr(self, "_roboscope_task", None)
+        return task is None or task.eval_video_path is not None or task.render_freq or any(
+            (task.data_type or {}).get(key) for key in ("pointcloud", "observer", "third_view", "depth",
+                                                        "mesh_segmentation", "actor_segmentation"))
+
+    def update_picture(self):
+        if _reads_all(self):
+            return fresh_update(self)
+        if self.collect_wrist_camera:
+            self.left_camera.take_picture()
+            self.right_camera.take_picture()
+        for camera, name in zip(self.static_camera_list, self.static_camera_name, strict=True):
+            if name in used:
+                camera.take_picture()
+
+    def get_rgba(self):
+        if _reads_all(self):
+            return fresh_rgba(self)
+        cameras, names = self.static_camera_list, self.static_camera_name
+        kept = [(c, n) for c, n in zip(cameras, names, strict=True) if n in used]
+        self.static_camera_list, self.static_camera_name = [c for c, _ in kept], [n for _, n in kept]
+        try:
+            return fresh_rgba(self)
+        finally:
+            self.static_camera_list, self.static_camera_name = cameras, names
+
+    Camera.update_picture = update_picture
+    Camera.get_rgba = get_rgba
+
+    from envs._base_task import Base_Task
+
+    fresh_load_camera = Base_Task.load_camera
+
+    def load_camera_tagged(self, **kwags):
+        fresh_load_camera(self, **kwags)
+        self.cameras._roboscope_task = self
+
+    Base_Task.load_camera = load_camera_tagged
+
+
+def install_acyclic_check_arm_function():
+    """Store ``check_arm_function`` as the gripper method's name instead of a bound method.
+
+    ``click_bell`` and ``click_alarmclock`` assign ``self.check_arm_function =
+    self.is_left_gripper_close`` (or the right one) in ``load_actors``. A bound method
+    stored on its own instance is a reference cycle, so a finished task of either kind
+    keeps its SAPIEN scene on the GPU until the cyclic garbage collector runs. This
+    descriptor keeps the assignment and every read verbatim: reading returns the same
+    bound gripper method, built on access, so the task object holds no reference to
+    itself. Any other value is stored as assigned.
+    """
+
+    from envs._base_task import Base_Task
+
+    gripper_checks = ("is_left_gripper_close", "is_right_gripper_close")
+
+    def get_check_arm_function(self):
+        try:
+            value = self.__dict__["_roboscope_check_arm_function"]
+        except KeyError:
+            raise AttributeError("check_arm_function") from None
+        return getattr(self, value) if isinstance(value, str) else value
+
+    def set_check_arm_function(self, function):
+        name = getattr(function, "__name__", None)
+        if getattr(function, "__self__", None) is self and name in gripper_checks:
+            self.__dict__["_roboscope_check_arm_function"] = name
+        else:
+            self.__dict__["_roboscope_check_arm_function"] = function
+
+    Base_Task.check_arm_function = property(get_check_arm_function, set_check_arm_function)
+
+
+def _release_task_scene(namespace: dict) -> None:
+    """Free the finished task's SAPIEN scene before the next task builds its own.
+
+    ``Base_Task.close_env`` leaves the last scene attached to the task object, so the
+    scene lives as long as the task object. ``install_acyclic_check_arm_function``
+    removes the one reference cycle RoboTwin's tasks create; dropping the evaluator's
+    globals and collecting here also frees any task object a future cycle would keep,
+    so every process stays at its single-scene footprint.
+    """
+
+    import gc
+
+    namespace.clear()
+    gc.collect()
+
+
 def run_single_task(script: Path, remaining: list[str]) -> None:
     sys.argv = [str(script)] + remaining
     source = instrument_eval_source(script)
@@ -1079,6 +1276,7 @@ def run_eval_session(script: Path) -> None:
                 exec(compile(source, str(script), "exec"), namespace)
             finally:
                 _close_active_models()
+                _release_task_scene(namespace)
         except BaseException:
             traceback.print_exc()
             sys.stdout.flush()
@@ -1122,6 +1320,18 @@ def main():
     # ROBOTWIN_SHARED_ENGINE=0 disables it for A/B timing.
     if os.environ.get("ROBOTWIN_SHARED_ENGINE", "1") == "1":
         install_shared_engine()
+    # Unused cameras cost driver calls per scene: 6.3 -> 5.3 s for the first observation of a new scene at 48
+    # concurrent evaluators on 4x RTX PRO 5000; the three used cameras' images are unchanged.
+    if os.environ.get("ROBOTWIN_SKIP_UNUSED_CAMERAS", "1") == "1":
+        install_lean_cameras()
+    # The GPU time-slices the ray tracing of every evaluator on a card, so each rendered camera waits for the
+    # others: at K48/g8 on 4x RTX PRO 5000, not rendering front_camera raises steady throughput from 511 to
+    # 583 steps/s with the three used images unchanged. ROBOTWIN_SKIP_UNREAD_CAMERAS=0 renders every camera.
+    if os.environ.get("ROBOTWIN_SKIP_UNREAD_CAMERAS", "1") == "1":
+        install_skip_unread_static_cameras()
+    # Without the bound-method cycle, finished click_bell/click_alarmclock tasks free their scene as soon as
+    # the evaluator returns instead of when the cyclic garbage collector runs.
+    install_acyclic_check_arm_function()
     # The qf-hoisted loop and GripperOnlyPlanner are qpos-only optimizations.
     # EE evaluation keeps the official take_action and CuroboPlanner even when a
     # seed cache skips the unrelated expert play_once seed validation.
