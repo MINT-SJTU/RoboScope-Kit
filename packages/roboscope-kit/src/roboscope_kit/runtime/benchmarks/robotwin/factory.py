@@ -156,6 +156,7 @@ class RoboTwinBenchmarkFactory:
             seed_cache_dir = manifest.runtime_path("seed_cache_dir", required=False)
             protocol_id = None
             generation_digest = None
+            instruction_seed_limit = None
         else:
             suite_protocol = protocol_suite(protocol, request.suite)
             generations = manifest.runtime.get("seed_generations")
@@ -167,6 +168,7 @@ class RoboTwinBenchmarkFactory:
             generation_root = manifest.runtime_path("seed_generation_root")
             seed_cache_dir = generation_root / generation_digest
             protocol_id = str(protocol["protocol_id"])
+            instruction_seed_limit = int(suite_protocol["seed_selection"]["instruction_seed_limit"])
             if require_exact_episodes and episodes != int(suite_protocol["episodes_per_task"]):
                 raise ValueError("RoboTwin formal episodes must match the benchmark protocol")
         return RoboTwinBenchmarkAdapter(
@@ -187,6 +189,7 @@ class RoboTwinBenchmarkFactory:
                 seed_cache_dir=seed_cache_dir,
                 protocol_id=protocol_id,
                 seed_generation_digest=generation_digest,
+                instruction_seed_limit=instruction_seed_limit,
             )
         )
 
