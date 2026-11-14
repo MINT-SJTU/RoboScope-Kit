@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b56 - 2026-11-10
+## 0.8.0b56 - 2026-11-14
 
 - The StarVLA RoboTwin demo (`examples/starvla/robotwin/demo.yaml`) no longer sends joint state to the
   Policy. The official StarVLA RoboTwin evaluator drops the state before calling the model, and the technical
