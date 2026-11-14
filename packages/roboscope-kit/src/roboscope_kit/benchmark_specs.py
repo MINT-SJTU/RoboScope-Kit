@@ -23,6 +23,7 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     RLBENCH = "rlbench"
     ROBOMIMIC = "robomimic"
     SIMPLER_ENV = "simpler_env"
+    BEHAVIOR = "behavior"
 
 
 class BenchmarkDefinition(ABC):
@@ -478,6 +479,73 @@ class RLBenchBenchmarkDefinition(BenchmarkDefinition):
         )
 
 
+# Camera role, (H, W) of the BEHAVIOR Challenge RGBDFullResWrapper.
+BEHAVIOR_CAMERAS = (("head", (720, 720)), ("left_wrist", (480, 480)), ("right_wrist", (480, 480)))
+
+
+class BehaviorBenchmarkDefinition(BenchmarkDefinition):
+    """BEHAVIOR Challenge 2026 with the R1Pro's three RGB-D cameras and whole-body joint actions."""
+
+    name = BenchmarkName.BEHAVIOR
+    protocol_version = "behavior-challenge-2026-v1"
+    supported_action_representations = ("behavior.r1pro-joint-v1",)
+    default_action_representation = "behavior.r1pro-joint-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        cameras: list[FeatureSpec] = []
+        for camera, (height, width) in BEHAVIOR_CAMERAS:
+            label = camera.replace("_", " ")
+            cameras.extend(
+                (
+                    _feature(
+                        f"images.{camera}",
+                        FeatureKind.IMAGE,
+                        f"R1Pro {label} camera RGB.",
+                        shape=(height, width, 3),
+                    ),
+                    _feature(
+                        f"state.{camera}_depth",
+                        FeatureKind.STATE,
+                        f"R1Pro {label} camera linear depth in metres (OmniGibson depth_linear).",
+                        shape=(height, width),
+                    ),
+                )
+            )
+        return (
+            *cameras,
+            _feature(
+                "state.proprioception",
+                FeatureKind.STATE,
+                "R1Pro 61-dim proprioception in the order of OmniGibson's PROPRIOCEPTION_INDICES['R1Pro'].",
+                shape=(61,),
+            ),
+            _feature(
+                "state.camera_poses",
+                FeatureKind.STATE,
+                "Head, left wrist and right wrist camera poses relative to the robot base: "
+                "x, y, z, qx, qy, qz, qw each (cam_rel_poses).",
+                shape=(21,),
+            ),
+            _feature(
+                "state.task_id",
+                FeatureKind.STATE,
+                "BEHAVIOR Challenge 2026 task ID (0-99), as the native evaluator's task_id observation.",
+                shape=(1,),
+                dtype="int64",
+            ),
+        )
+
+    def action(self, _suite: str) -> ActionSpec:
+        return ActionSpec(
+            "action.robot",
+            "R1Pro whole-body action: base x, y, yaw velocity (0:3), torso joint positions (3:7), "
+            "left arm joint positions (7:14), left gripper (14), right arm joint positions (15:22), "
+            "right gripper (22).",
+            23,
+            dtype="float32",
+        )
+
+
 _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
     definition.name: definition
     for definition in (
@@ -492,6 +560,7 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         RLBenchBenchmarkDefinition(),
         RobomimicBenchmarkDefinition(),
         SimplerEnvBenchmarkDefinition(),
+        BehaviorBenchmarkDefinition(),
     )
 }
 

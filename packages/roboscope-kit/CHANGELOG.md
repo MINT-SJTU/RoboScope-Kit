@@ -2,6 +2,25 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b67 - 2026-11-15
+
+- Add the `behavior` benchmark with the `challenge_2026` suite (protocol `behavior-challenge-2026-v1`): the
+  2026 BEHAVIOR Challenge public-test profile of BEHAVIOR-1K `v3.9.3-post1`, 100 activities in 7 scenes with
+  the R1Pro robot, not all of BEHAVIOR-1K. A formal run evaluates public test instances 301-310 of every
+  task once (1,000 episodes); `--quick-test` runs instance 301 of `turning_on_radio`. Each worker process
+  runs the pinned challenge evaluator (`BatchedEvaluator`, official `RGBDFullResWrapper`, `seed_everything(0)`)
+  for one instance and queries the Policy once per 30 Hz control step through a bridge policy: three RGB-D
+  cameras (head 720x720, wrists 480x480), the 61-dim proprioception, camera poses and the task ID, and 23
+  `float32` whole-body joint actions (`behavior.r1pro-joint-v1`). Episodes end on BDDL success, task
+  termination or 1.5x the mean human demonstration length, frozen per task. Records keep the evaluator's
+  own result; the aggregate reports the challenge's mean Q score and, separately, the success rate.
+- `benchmarks/behavior/build-runtime.sh --accept-licenses` builds the runtime on CPython 3.11 from an exact
+  lock of `setup.sh --omnigibson --bddl --joylo --eval` (Isaac Sim 5.1, torch 2.7.0+cu128), installs the
+  pinned BEHAVIOR assets, robot assets and 2026 task instances with their SHA-256, and checks a rendered
+  instance load. Passing `--accept-licenses` accepts the Isaac Sim EULA and the BEHAVIOR Data Bundle licence.
+- Add `examples/gr00t/`: a Policy for the GR00T N1.7 BEHAVIOR multi-task checkpoint that forwards to its
+  native Python 3.10 server, the model environment build, a native runner and an episode comparison.
+
 ## 0.8.0b66 - 2026-11-14
 
 - Add the `simpler_env` benchmark (protocol `simpler-env-v1`, action `simpler_env.ee-delta-axangle-v1`) with
