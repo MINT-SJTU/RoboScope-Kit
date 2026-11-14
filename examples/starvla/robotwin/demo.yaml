@@ -17,7 +17,6 @@ config:
     inputs:
       images: [images.head, images.left_wrist, images.right_wrist]
       language: language.instruction
-      state: state.joints
     kwargs:
       do_sample: false
       use_ddim: true
