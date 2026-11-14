@@ -1118,6 +1118,62 @@ def _close_active_models() -> None:
                 raise
 
 
+def install_skip_unread_static_cameras():
+    """Do not render static cameras whose images the policy never reads (``front_camera`` on aloha-agilex).
+
+    ``eval_step`` sends only the head, left and right images to the policy. The front camera is still
+    created, so the scene is built exactly as before; only its per-observation ``take_picture`` and
+    ``get_picture`` are skipped. Each camera renders with its own renderer, so the three used images are
+    unchanged. Settings that read every camera (video, viewer, point clouds, depth, segmentation, observer or
+    third-view data) keep the official behavior.
+    """
+
+    from envs.camera.camera import Camera
+
+    used = ("head_camera",)
+    fresh_update, fresh_rgba = Camera.update_picture, Camera.get_rgba
+
+    def _reads_all(self):
+        task = getattr(self, "_roboscope_task", None)
+        return task is None or task.eval_video_path is not None or task.render_freq or any(
+            (task.data_type or {}).get(key) for key in ("pointcloud", "observer", "third_view", "depth",
+                                                        "mesh_segmentation", "actor_segmentation"))
+
+    def update_picture(self):
+        if _reads_all(self):
+            return fresh_update(self)
+        if self.collect_wrist_camera:
+            self.left_camera.take_picture()
+            self.right_camera.take_picture()
+        for camera, name in zip(self.static_camera_list, self.static_camera_name, strict=True):
+            if name in used:
+                camera.take_picture()
+
+    def get_rgba(self):
+        if _reads_all(self):
+            return fresh_rgba(self)
+        cameras, names = self.static_camera_list, self.static_camera_name
+        kept = [(c, n) for c, n in zip(cameras, names, strict=True) if n in used]
+        self.static_camera_list, self.static_camera_name = [c for c, _ in kept], [n for _, n in kept]
+        try:
+            return fresh_rgba(self)
+        finally:
+            self.static_camera_list, self.static_camera_name = cameras, names
+
+    Camera.update_picture = update_picture
+    Camera.get_rgba = get_rgba
+
+    from envs._base_task import Base_Task
+
+    fresh_load_camera = Base_Task.load_camera
+
+    def load_camera_tagged(self, **kwags):
+        fresh_load_camera(self, **kwags)
+        self.cameras._roboscope_task = self
+
+    Base_Task.load_camera = load_camera_tagged
+
+
 def install_acyclic_check_arm_function():
     """Store ``check_arm_function`` as the gripper method's name instead of a bound method.
 
@@ -1268,6 +1324,11 @@ def main():
     # concurrent evaluators on 4x RTX PRO 5000; the three used cameras' images are unchanged.
     if os.environ.get("ROBOTWIN_SKIP_UNUSED_CAMERAS", "1") == "1":
         install_lean_cameras()
+    # The GPU time-slices the ray tracing of every evaluator on a card, so each rendered camera waits for the
+    # others: at K48/g8 on 4x RTX PRO 5000, not rendering front_camera raises steady throughput from 511 to
+    # 583 steps/s with the three used images unchanged. ROBOTWIN_SKIP_UNREAD_CAMERAS=0 renders every camera.
+    if os.environ.get("ROBOTWIN_SKIP_UNREAD_CAMERAS", "1") == "1":
+        install_skip_unread_static_cameras()
     # Without the bound-method cycle, finished click_bell/click_alarmclock tasks free their scene as soon as
     # the evaluator returns instead of when the cyclic garbage collector runs.
     install_acyclic_check_arm_function()

@@ -2,6 +2,24 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b64 - 2026-11-14
+
+- RoboTwin evaluators no longer render `front_camera`. RoboTwin renders four cameras for every observation, and
+  the Policy reads three of them (head and the two wrist cameras); the front camera's image was rendered and
+  dropped. The camera is still created, so each scene is built as before, and every camera has its own renderer:
+  the three images the Policy reads and the joint state are bit-identical (4 seeds, about 31 observations each).
+  At K48/g8 the twelve evaluators and two Policy replicas on a GPU share it, and an observation of three cameras
+  takes 121 ms in a 500-episode run against about 30 ms for one process alone, so one camera less shortens every
+  observation.
+  On four RTX PRO 5000 GPUs at K48/g8 with the longest tasks first, a 5,000-episode run takes 3,851 s instead of
+  4,262 s (3,881 s instead of 4,295 s from launch to exit), steady throughput rises from 511 to 569 steps/s, GPU
+  memory is unchanged (62.4-65.2 GB peak per GPU), and every episode equals the official evaluation. In the
+  default task order, which a first run without a run-cache entry uses, the same run takes 4,023 s (4,119 s from
+  launch to exit, of which replica loading took 94 s instead of 29 s), again with every episode equal to the
+  official evaluation, which takes 63,068 s on the same GPUs. Settings that read every camera (video, the viewer,
+  point clouds, depth, segmentation, observer or third-view data) render all four as before, and
+  `ROBOTWIN_SKIP_UNREAD_CAMERAS=0` turns the change off.
+
 ## 0.8.0b63 - 2026-11-14
 
 - RoboTwin eval sessions free each finished task's SAPIEN scene before the next task starts. `Base_Task.close_env`
