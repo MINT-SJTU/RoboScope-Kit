@@ -2,13 +2,15 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b58 - 2026-11-12
+## 0.8.0b59 - 2026-11-14
 
 - Add an OpenVLA Policy for the four fine-tuned LIBERO suites, with pinned checkpoints and model code,
   CPU image preprocessing, and BF16/FlashAttention2 inference through the standard Policy lifecycle.
 - Build the OpenVLA Policy and CLI in a separate pinned Python 3.11 environment while using the
   standard LIBERO simulator Worker and its existing package versions.
-- Document local checkpoint preparation and SDK evaluation commands for the separate environments.
+- Add a pinned official Native evaluation entry point and per-episode Kit/Native comparison.
+- Document local checkpoint preparation, SDK evaluation commands, and current configuration and
+  consistency results for the separate environments.
 
 ## 0.8.0b35 - 2026-11-10
 
