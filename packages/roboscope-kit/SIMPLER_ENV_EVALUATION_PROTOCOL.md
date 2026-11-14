@@ -226,7 +226,8 @@ whole matrix.
 
 ## 8. Correctness baseline
 
-The results below come from one RTX 4090 host, the RT-1-X checkpoint served by `examples/rt1/`, and a runtime
+The full three-suite comparison below comes from one RTX 4090 host; the WidowX suite was compared again at
+commit `0af5b90` on an RTX 3080 host. Both used the RT-1-X checkpoint served by `examples/rt1/` and a runtime
 built with the committed script. Commit hashes are those of
 [pull request #88](https://github.com/MINT-SJTU/RoboScope-Kit/pull/88).
 
@@ -279,6 +280,20 @@ Variant-aggregation success by task (mean of variant rates) in the runs above:
 | `close_drawer` | 50.8% | 52.9% |
 | `place_apple_in_closed_top_drawer` | 12.7% | 12.7% |
 
+### WidowX comparison at `0af5b90` on an RTX 3080
+
+Measured on 2026-11-14 on one RTX 3080 (10 GB) host, commit `0af5b90`, with a runtime built from scratch with
+the committed script (10 min 48 s, cold uv cache); `--self-test` passed. `--quick-test` on
+`widowx_visual_matching` ran `put_spoon_on_tablecloth/base/000` to the end (60 steps, not a success): Policy load
+36.87 s, evaluation 22.86 s. The full suite then ran on both sides, one after the other on the same idle GPU,
+and `compare_native.py --strict` exited 0.
+
+| Suite | Episodes paired | Kit / native successes | Different outcomes | Same action trajectory | Same first image | Kit evaluation time | Native wall time |
+| --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| `widowx_visual_matching` | 96 of 96 | 3 / 3 | 0 | 84 | 96 | 434.4 s (K=3, G=1) | 549 s (2 jobs) |
+
+Sampled peak GPU memory was 4.6 GB for the Kit run and 9.8 GB for the native run with 2 jobs.
+
 ### Run-to-run variation
 
 Two runs of the same side can give different outcomes. The repeats below ran on the same host from 2026-11-06
@@ -313,10 +328,10 @@ memory was 1.42 GB per Worker (ray-traced scenes) and 1.78 GB for the replica.
 - Repeats at one commit cover visual matching only, with one repeat per side.
 - The source of the variation was not isolated. In a separate probe, five passes on the same rendered frame
   produced different actions at steps 0 and 3.
-- The Kit runs used commit `932d85d`. Since then the adapter's result flags and shard metadata, the place of
-  the Vulkan check, and the build's lock check changed, and `main` was merged; the worker, the frozen matrix,
-  and the example Policy did not change. On the later code only the Quick Test ran. The native runs and the
-  comparison used the `examples/rt1/` tools as they are now.
+- The Google Robot suites were compared at commit `932d85d` only. Since then the adapter's result flags and
+  shard metadata, the place of the Vulkan check, and the build's lock check changed, and `main` was merged;
+  the worker, the frozen matrix, and the example Policy did not change. At the current code the WidowX suite
+  was compared again, on an RTX 3080.
 - Ray-traced images depend on the GPU model. A Kit visual-matching run on another GPU, an RTX 3080, gave the
   same first image as the RTX 4090 in all 540 rasterized episodes and a different one in all 324 ray-traced
   episodes. Run the Kit and the native evaluation on the same host.
