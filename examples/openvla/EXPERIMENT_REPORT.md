@@ -7,6 +7,12 @@ integration and the subsequent Goal investigations. It contains settings, key
 measurements and conclusions; raw logs, images and experiment archives are not
 included. The existing detailed report is retained separately.
 
+The main performance measurements predate the final review fixes to the Native
+entry point and normalization-key fallback. The additional 200-episode Native
+validation is complete and recorded in section 6. Kit was not rerun: all four
+checkpoints contain the original suite key, so the fallback leaves their inference
+key unchanged. Existing performance results retain their original provenance.
+
 ## 1. Evaluation scope and settings
 
 The main comparison covers LIBERO-Spatial, Object, Goal and Long (`libero_10`).
@@ -299,3 +305,67 @@ for the remaining discrepancies. Data collection for the described Goal experime
 is complete; further causal attribution may remain inconclusive. Overall, the
 updated Kit reruns improve consistency, while the performance conclusions remain
 aligned with the previous experiments.
+
+### Known implementation differences identified during review
+
+Kit Worker assignment can give the same task/state identity a different reset
+history. LIBERO samples fixture placement from the global NumPy RNG at reset;
+`set_init_state` does not restore those model properties. This accounts for the
+initial-scene differences in Goal 9/2 and 9/3. The recorded action replay also
+shows that float32 versus upstream float64 execution changes trajectories.
+Native's robosuite 1.4.1 additionally includes a Panda `link7` collision geom and
+resets the gripper's previous action, unlike Kit's 1.4.0 runtime. These known
+differences are separate follow-up work; their contributions to every final
+success/failure disagreement have not been fully isolated.
+
+## 6. Corrected Native entry-point validation
+
+Completed November 14 at 15:57 +08:00. The corrected `run_native.py` calls
+`eval_libero.__wrapped__(cfg)` and runs the pinned official OpenVLA evaluator
+`c8f03f48af692657d3060c19588038c7220e9af9`. This validation covers all four suites,
+ten tasks and initial-state indices 0–4 per suite: **200 episodes**. Model and
+environment seeds are 7, settling is ten steps, and the suite horizons remain
+unchanged. Native runs serially on the RTX 4090 with its existing robosuite 1.4.1
+environment, CPU TensorFlow preprocessing and local data-disk checkpoints. Videos
+and additional observation/action traces are disabled.
+
+The run used the review-fix working-tree snapshot based on `ca37420` on
+`fix/openvla-review-followup`; it was not yet a committed revision when launched.
+The uploaded runner and comparison script match commit `14d2f501370be9b8a702936236a40e33516e6cdd`
+byte for byte. This identifies the tested source without relabeling the
+pre-commit launch as a checkout of that later commit:
+
+| File | SHA-256 |
+| --- | --- |
+| `run_native.py` | `304c3eab0c125579b15a13a461c911f9a7c2e6feec06cd595041e6182a150ce6` |
+| `compare_native.py` | `644363cdddad2569a965a7118d1d218f8722be9947da95c1f2b766ee63e682a6` |
+
+The Native process uses its existing LIBERO source/configuration paths. An isolated
+offline model-code cache resolves the official loader's default reference to
+`47a0ec7fc4ec123775a391911046cf33cf9ed83f`, matching the frozen model code used by Kit.
+Unlike the preceding single-case smoke check, this run uses the full entry point
+without task-subset modifications.
+
+| Suite | Native successes | Native policy steps | Runner elapsed (min) | Kit-only / Native-only successes |
+| --- | ---: | ---: | ---: | ---: |
+| Spatial | 43/50 | 6,181 | 22.11 | 1 / 4 |
+| Object | 42/50 | 8,416 | 28.02 | 1 / 0 |
+| Goal | 33/50 | 8,516 | 28.31 | 6 / 1 |
+| Long | 28/50 | 19,595 | 63.25 | 6 / 4 |
+| Total | **146/200** | **42,708** | **141.69** | **14 / 9** |
+
+Runner elapsed time includes model loading and setup; total queue wall time is
+143.06 minutes, including process startup and comparison work. These timings do
+not replace the evaluation-only times in the main performance table.
+
+`compare_native.py` completed for all four suites against the existing fixed
+Kit 2/2 configuration-campaign results (`da280f0`). Every expected task/state pair
+is present exactly once, and no caught evaluator execution errors were found.
+**All 200 Native episodes reproduce the previous Native reference's success/failure
+outcome and executed policy-step count exactly.** The Kit/Native outcome split
+therefore also remains unchanged: 14 Kit-only and nine Native-only successes.
+
+This validates the corrected Native entry point through the complete requested
+workload and supports retaining the existing Native reference. It is an additional
+Native validation, not a new same-final-head Kit/Native performance campaign;
+Kit was not rerun for this follow-up.

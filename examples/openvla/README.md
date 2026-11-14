@@ -25,7 +25,8 @@ revision `c8f03f48af692657d3060c19588038c7220e9af9`:
 - TensorFlow preprocessing runs on CPU, matching the official evaluator; PyTorch
   inference uses GPU BF16 and FlashAttention2 with greedy decoding.
 - The prompt uses the lowercase task instruction. Actions use suite-specific
-  unnormalization and the upstream gripper binarization/sign conversion.
+  unnormalization, falling back to `<suite>_no_noops` when the suite key is absent,
+  and the upstream gripper binarization/sign conversion.
 - Each call produces one 7-dimensional action. The Policy returns it as float32
   in Kit's `libero.delta-eef-v1` representation; Native retains float64-valued actions.
 - The model keeps no recurrent state between requests or episodes. Episode IDs
@@ -151,8 +152,18 @@ Outputs stay in the selected run directories and are not repository fixtures.
 
 ## Evaluation
 
-Current Kit `da280f0`, RTX 4090, K/g=2/2; ten tasks × states 0–4 per suite.
-Native retains the existing serial reference. Times exclude loading and tuning.
+Completed measurements below used Kit `da280f0` on an RTX 4090 at K/g=2/2 and
+the earlier serial Native reference with upstream OpenVLA `c8f03f4`; each suite
+covers ten tasks × states 0–4. Times exclude loading and tuning.
+
+The corrected Native entry point and comparison script at `14d2f50` have been
+validated on all 200 episodes: every Native outcome and step count matches the
+previous reference, and all four comparisons pass. The run used a pre-commit
+snapshot whose script hashes match `14d2f50` exactly; see
+[Native validation](EXPERIMENT_REPORT.md#6-corrected-native-entry-point-validation).
+The performance table retains its original provenance: Kit was not rerun because
+all four checkpoints contain the original suite key, so the new `_no_noops`
+fallback does not change the inference key for these models.
 
 | Suite | Native success | Kit 2/2 success | Native eval (min) | Kit eval (min) |
 | --- | ---: | ---: | ---: | ---: |
