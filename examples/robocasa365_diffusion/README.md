@@ -7,15 +7,9 @@ Diffusion Policy through the RoboScope Kit lifecycle. It serves the independent
 
 The checkpoint was trained on RoboCasa365 human demonstrations across 300 tasks.
 It is linked in the [official multi-task documentation](https://github.com/robocasa/robocasa/blob/3443cdf3dd20f9ae8ed41adba442059b506891d0/docs/benchmarking/multitask_learning.md).
-This example performs no training or model inference optimization. The formal
-protocol defaults to 2,500 rollouts. For PR #100, the maintainer
-[approved 50 tasks with five paired rollouts each](https://github.com/MINT-SJTU/RoboScope-Kit/pull/100#issuecomment-6718404495),
-or 250 pairs, for the integration comparison. The
-[current-source comparison](../../benchmarks/robocasa365/approved250-native-20261109.md)
-completes every task with two fresh native passes and serial Kit at the approved
-common 128-step cap: 3/250 successes and 32,000 steps each, with zero paired
-outcome or terminal-step differences. This is capped agreement, not native-horizon
-accuracy or full trajectory equivalence; exact-head CI remains a separate gate.
+This example performs no training or model inference optimization. Its
+full-horizon comparison with the official evaluator is in the
+[benchmark README](../../benchmarks/robocasa365/README.md#native-comparison).
 
 ## Pinned inputs
 
@@ -128,72 +122,64 @@ diffusion noise. The worker's first-slot/first-episode reset restarts the stream
 for each new workload or retry, so autotune probes cannot consume formal-run
 noise. CLIP initialization and encoding do not consume these streams.
 
-## Native five-slot smoke
-
-The CLI Quick Test uses one native five-slot group on the first task. To select
-a different task for the same smoke workload, use the public runtime helper:
-
-```bash
-OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
-python examples/robocasa365_diffusion/run_group_smoke.py \
-  --task TurnOnElectricKettle \
-  --benchmark-manifest /sim/robocasa365/benchmark-manifest.json \
-  --policy-config /workspace/evostudio-policy.json \
-  --checkpoint-source /models/robocasa365-diffusion \
-  --output-dir /results/robocasa365-group-smoke
-```
-
-Use a simulator built with the committed marker-2 EGL cleanup patches; its
-self-test rejects stale rendering code. The helper defaults to the first
-target50 task, CloseBlenderLid. `--task <official-task-name>` selects another
-target50 task, such as TurnOnElectricKettle above. It always runs one group of
-five native slots/episodes at the selected task's full horizon, fixed K=1/G=1
-and videos disabled. It records `full_suite: false` and
-is not a formal score or an acceleration measurement. The captured first batch
-can be passed to `compare_native.py` in the same way as a single-slot capture.
-
-See the [validation record](../../benchmarks/robocasa365/validation-20261107.md)
-for the tested Kit revision, startup coverage, build checks and native comparison
-limits. Smoke results do not establish full-suite accuracy.
-
 ## Native comparison
 
-For the full formal matrix, run the pinned upstream `eval_robocasa.py` with the
-same simulator, checkpoint,
-`--task_set atomic_seen composite_seen composite_unseen`, `--split pretrain`,
-`--num_rollouts 50` and `--num_envs 5`. This covers 50 tasks and 2,500 rollouts.
-The approved reduced integration collection uses five rollouts per task on both
-paths. Record its actual horizon and label any shortened-horizon run as a
-diagnostic; the default formal task horizons remain unchanged.
+The scripts below compare full rollouts with the pinned upstream
+`eval_robocasa.py`, at the official task horizons and with videos off on both
+sides. `rollout_trace.py` wraps the RoboCasa Gym environment in every simulator
+process of both paths; it records per-slot SHA-256 digests of the initial scene
+and state, and every eight physical steps of the Policy features, executed
+actions and MuJoCo integration state. It changes no reset, action or score.
 
-The Kit formal and Quick Test factories preserve five native slots per task
-group. Batch size and ordering affect diffusion noise. The native evaluator's
-`100000+i` labels are ineffective seeds:
-its `env.seed(seed)` call is commented out. Constructor seed `1111111+slot` and
-sequential resets govern scenes. Compare scenario metadata and initial-state
-digests; matching rollout labels alone is insufficient.
+Run the official evaluator for each task, in the inference environment with
+`native-requirements.txt` installed and an unpacked `gym==0.21.0` source tree
+(the version in upstream `conda_environment.yaml`; it is pure Python):
 
-This integration makes no speed or unchanged-accuracy claim. Keep
-model inputs, scheduler, precision, native slot count, task horizons and output
-settings fixed. Changes to this Policy's inference are outside simulator/runtime
-speedup claims.
+```bash
+HF_HOME=/models/huggingface HF_HUB_OFFLINE=1 PYTHONHASHSEED=42 \
+/sim/robocasa365-policy/env/bin/python examples/robocasa365_diffusion/run_native.py \
+  --task CloseBlenderLid --simulator /sim/robocasa365 --gym-source /sim/gym-0.21.0 \
+  --diffusion-policy /sim/robocasa365-policy/diffusion_policy \
+  --checkpoint /models/robocasa365-diffusion/model.ckpt \
+  --output /results/native-a/CloseBlenderLid
+```
 
-For a first-batch input/action parity check, install `native-requirements.txt`
-into the inference environment with the pinned model sources.
-Use a real worker capture, with the same device and runtime as its producing run:
+Run the Kit CLI with the same tracing (all arguments pass to
+`python -m roboscope_kit.runtime.benchmark`):
+
+```bash
+ROBOCASA365_TRACE_DIR=/results/kit/trace \
+python examples/robocasa365_diffusion/run_kit.py \
+  --benchmark robocasa365 --suite target50 --episodes 5 \
+  --benchmark-manifest /sim/robocasa365/benchmark-manifest.json \
+  --policy-config /workspace/robocasa365-policy.json \
+  --checkpoint-source /models/robocasa365-diffusion \
+  --concurrency 4 --replicas 1 --output-dir /results/kit/result
+```
+
+Then pair two native passes with one or more Kit runs:
+
+```bash
+python examples/robocasa365_diffusion/compare_rollouts.py \
+  --native /results/native-a /results/native-b --kit serial=/results/kit \
+  --output /results/comparison.json
+```
+
+`compare_rollouts.py` rejects missing, duplicate or unknown episodes and any
+disagreement between an arm's score and its trace. Its docstring fixes the
+tolerance: identical initial scenes and states for every pair, Kit/native
+outcome disagreements no more frequent than native/native ones, and no
+direction among them. It reports per-task successes and steps and each pair's
+first divergence.
+
+`compare_native.py` is a narrower check that needs no simulator: it feeds a
+captured first Policy batch (`evidence/worker-*/<task>-first-batch.npz` of any
+Kit run) through the upstream workspace loader and observation wrapper, and
+requires every prepared feature and the first action chunk to match exactly.
 
 ```bash
 python examples/robocasa365_diffusion/compare_native.py \
   --checkpoint /models/robocasa365-diffusion \
-  --batch /results/robocasa365-group-smoke/evidence/worker-000/TurnOnElectricKettle-first-batch.npz \
-  --output /results/evidence/native-first-batch-parity.json
+  --batch /results/kit/result/evidence/worker-000/CloseBlenderLid-first-batch.npz \
+  --output /results/first-batch-parity.json
 ```
-
-The helper invokes the upstream workspace loader and language encoder. It checks
-the pinned observation wrapper file's SHA-256 and executes its `process_obs`
-method directly, skipping unrelated simulator imports. No simulator installation
-or environment construction is needed for this capture-only check. It compares
-each loader's independently captured RNG state, every prepared feature, and the
-first action chunk exactly. This does not replace a full native rollout and
-per-task/per-split score comparison. The additional gym/AV packages in the native
-requirements are for running the complete upstream evaluator with the simulator.

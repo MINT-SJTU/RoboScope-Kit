@@ -36,14 +36,6 @@ for the first task of the selected suite at its official horizon.
 50 for reduced runs with the native five-slot grouping. No dummy or padded
 episodes are counted.
 
-For PR #100's integration comparison, the maintainer
-[approved five rollouts per task](https://github.com/MINT-SJTU/RoboScope-Kit/pull/100#issuecomment-6718404495)
-across all 50 tasks (250 pairs). This changes the approved collection count,
-not the formal 50-rollout default or task horizons. The
-[current-source 128-step comparison](../../../benchmarks/robocasa365/approved250-native-20261109.md)
-records the separately approved cap and completes every task on native and Kit
-paths. It does not establish native-horizon accuracy or full trajectory equality.
-
 Each task is one work item. Its five simulator slots and Policy RNG stream
 persist across groups. At 50 episodes, a long task can occupy one Worker
 for ten groups. Recovery replays the entire item, and task-length variation
@@ -77,30 +69,23 @@ Environment wrappers persist between episode groups of a task and close when
 the task completes; native hard resets can rebuild their underlying model and
 renderer. Wrappers are never reused across different tasks.
 
-The first implementation steps each slot in the worker process. The reference
-runner uses subprocess slots. This process-layout difference and model RNG
-behavior require measured comparisons; matching the intended sampling rules
-alone does not establish native equivalence. `native_equivalence_verified`
-remains `false` in individual run results; the separate
-[paired evidence](../../../benchmarks/robocasa365/approved250-native-20261109.md)
-records the validated comparison scope.
+The worker steps the five slots in its own process; the reference runner uses
+one subprocess per slot. `native_equivalence_verified` remains `false` in
+individual run results; the [native comparison](../../../benchmarks/robocasa365/README.md#native-comparison)
+records the validated scope.
 
-The reproducible runtime requires the reviewed EGL ownership/restoration fix,
-checked by factory self-test and worker marker-2 validation. It preserves a live
-renderer when another slot is destroyed, including delayed hard-reset cleanup.
-It changes no scenario ordering, seeds, reset counts, actions, observation
-frequency or success rules. Earlier uncorrected multi-slot scores/timings are
-superseded; see the
-[integration validation](../../../benchmarks/robocasa365/validation-20261107.md).
+The runtime carries an EGL fix: renderer resources are freed in their owning
+context, so destroying one slot's renderer does not break another's. Self-test
+and workers reject a runtime without it. It changes no scenario, seed, reset,
+action, observation or success rule.
 
-The 0.8.0b34 integration pins two source-locked sampling corrections that preserve
-counter-region insertion order and pass the seeded generator to fixture stack bases.
-The uncorrected native evaluator is not repeatable across fresh processes at the
-same constructor seeds. These corrections change previously nondeterministic scene
-realizations. Paired native evidence must use the same corrected runtime and must
-identify both patches explicitly; it does not establish equivalence to a particular
-unmodified-upstream run. The task matrix, seed labels, reset count, policy, horizons,
-observations and scoring rules are unchanged.
+The runtime also carries two reproducibility corrections, applied to native and
+Kit alike: counter regions keep XML insertion order instead of `set()` order, and
+fixture stack bases use the environment's seeded generator. Without them the same
+constructor seed can give different initial scenes in two fresh processes, so no
+per-episode comparison is possible. Results are therefore those of the official
+evaluator on the corrected pinned simulator. Tasks, seeds, horizons, observations
+and scoring are unchanged.
 
 ## Observations and actions
 
@@ -154,13 +139,15 @@ latest two physical-step values; substituting the latest value or any-ever
 success would change the native rule. Each slot truncates at the exact
 task-specific horizon, including a partial last action chunk. A done slot
 continues to be present in batched inference and ignores further actions,
-matching the native MultiStepWrapper.
+matching the native MultiStepWrapper. Each record's `termination` is
+`native_group_success` when the group stopped at the success barrier, otherwise
+`horizon` if the slot reached its horizon and `simulator_done` if the simulator
+ended it earlier.
 
 The native runner checks group completion after `env.step` and keeps slots
 that succeeded earlier active until that barrier. The native multi-step
 wrapper retains two consecutive success values and ignores actions after
-an environment has ended. The Kit `termination` field describes the group
-exit. Per-slot success and actual steps are recorded separately.
+an environment has ended.
 [Native group predicate](https://github.com/robocasa-benchmark/diffusion_policy/blob/41212698b6f481ed92a55f0d5f1778ec56bea417/diffusion_policy/env_runner/robomimic_image_runner.py#L303)
 · [Native step wrapper](https://github.com/robocasa-benchmark/diffusion_policy/blob/41212698b6f481ed92a55f0d5f1778ec56bea417/diffusion_policy/gym_util/multistep_wrapper.py)
 
