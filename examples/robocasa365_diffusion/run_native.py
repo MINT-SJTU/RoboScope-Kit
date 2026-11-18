@@ -47,11 +47,23 @@ def parse_args() -> argparse.Namespace:
 
 
 def prepare_paths(args: argparse.Namespace) -> None:
-    packages = next((args.simulator / "env/lib").glob("python3.*/site-packages"))
-    sys.path[:0] = [
+    """Use the simulator's packages, except its CPU-only torch, ahead of the inference env."""
+    packages = str(next((args.simulator / "env/lib").glob("python3.*/site-packages")))
+    simulator = [
         str(args.simulator / "src/robocasa"), str(args.simulator / "src/robosuite"),
-        str(args.gym_source), str(packages),
+        str(args.gym_source), packages,
     ]
+    # Spawned environments inherit the parent's sys.path; rebuild it in the same order.
+    sys.path[:] = [entry for entry in sys.path if entry not in simulator]
+    sys.path.insert(0, packages)
+    import cv2  # noqa: F401
+    import numpy  # noqa: F401
+
+    sys.path.remove(packages)
+    import torch  # noqa: F401
+    import torchvision  # noqa: F401
+
+    sys.path[:0] = simulator
 
 
 def load_runner(source_root: Path) -> None:
@@ -81,7 +93,8 @@ def load_runner(source_root: Path) -> None:
     module.RobomimicImageRunner.__init__ = initialize
 
 
-def main() -> None:
+def bootstrap() -> argparse.Namespace:
+    """Prepare imports and traces; the runner's spawned environments repeat this."""
     args = parse_args()
     os.environ.update(
         OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1",
@@ -95,6 +108,13 @@ def main() -> None:
     import rollout_trace
 
     rollout_trace.install()
+    return args
+
+
+ARGS = bootstrap()
+
+
+def main(args: argparse.Namespace) -> None:
     path = args.diffusion_policy / "eval_robocasa.py"
     if hashlib.sha256(path.read_bytes()).hexdigest() != EVALUATOR_SHA256:
         raise RuntimeError(f"upstream evaluator checksum mismatch: {path}")
@@ -102,7 +122,7 @@ def main() -> None:
     evaluator = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = evaluator
     spec.loader.exec_module(evaluator)
-    args.output.mkdir(parents=True, exist_ok=False)
+    args.output.mkdir(parents=True, exist_ok=True)
     evaluator.eval_task(str(args.checkpoint), str(args.output / "result"), "cuda:0", args.task,
                         args.episodes, 5, "pretrain", overwrite=False)
     import gym
@@ -117,4 +137,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(ARGS)
