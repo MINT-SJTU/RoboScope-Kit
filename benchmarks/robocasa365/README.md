@@ -47,6 +47,15 @@ the same constructor seeds start from different scenes, and no per-episode
 comparison is possible. Results are those of the official evaluator on the
 corrected pinned simulator; tasks, seeds and success criteria are unchanged.
 
+`check-scene-repeatability.py` shows the problem. On 2026-11-18 it built six
+tasks (PickPlaceCounterToCabinet, WashLettuce, ArrangeTea, StirVegetables,
+PrepareCoffee, OpenDrawer) with constructor seed 1111111 in three fresh
+processes each, with `PYTHONHASHSEED=42`. On the uncorrected pin, WashLettuce
+started from two different simulator states; with the corrections, every task
+started from one state and one scenario. Fix `PYTHONHASHSEED` when comparing
+scenario metadata digests: with a random hash seed, ArrangeTea's metadata
+serializes in a different order although its simulator state is the same.
+
 ```bash
 python -m roboscope_kit.runtime.benchmark \
   --benchmark robocasa365 \

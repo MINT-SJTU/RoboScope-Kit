@@ -148,7 +148,7 @@ Run the Kit CLI with the same tracing (all arguments pass to
 `python -m roboscope_kit.runtime.benchmark`):
 
 ```bash
-ROBOCASA365_TRACE_DIR=/results/kit/trace \
+PYTHONHASHSEED=42 ROBOCASA365_TRACE_DIR=/results/kit/trace \
 python examples/robocasa365_diffusion/run_kit.py \
   --benchmark robocasa365 --suite target50 --episodes 5 \
   --benchmark-manifest /sim/robocasa365/benchmark-manifest.json \
