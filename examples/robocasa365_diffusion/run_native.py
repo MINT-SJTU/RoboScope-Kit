@@ -83,7 +83,7 @@ def load_runner(source_root: Path) -> None:
     parent_name, _, child_name = RUNNER_MODULE.rpartition(".")
     sys.modules[RUNNER_MODULE] = module
     setattr(importlib.import_module(parent_name), child_name, module)
-    exec(compile(source.replace(line, b""), str(path), "exec"), module.__dict__)
+    exec(compile(source.replace(line, b""), str(path), "exec"), module.__dict__)  # noqa: S102
     original = module.RobomimicImageRunner.__init__
 
     def initialize(self, *args, **kwargs):
