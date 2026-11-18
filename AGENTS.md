@@ -71,6 +71,13 @@ configuration, Kit version) to the benchmark's own documentation and link it fro
 profiled. The package README is also the PyPI project page, so link to
 other repository files with absolute GitHub URLs.
 
+Compress every image a README shows, so the page's first screen loads fast. Keep the total for one README
+under 1 MB, each still image under 200 KB, and each animation under 1 MB. Store an image at no more than
+twice its displayed width. Save diagrams and screenshots as palette PNGs (256 colors or fewer) and run a
+lossless PNG optimizer such as `oxipng` on them. Encode animations as GIFs with one global palette and
+transparent inter-frame deltas (ImageMagick `-layers OptimizeTransparency`), keeping the frame count and
+timing. In the pull request, compare the new image with the original side by side, and list both file sizes.
+
 ## Issue and PR titles
 
 Use `type(scope): description` for new Issues and PRs, following
