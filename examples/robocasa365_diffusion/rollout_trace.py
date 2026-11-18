@@ -154,7 +154,7 @@ def install() -> None:
         result = original_step(self, action)
         if state is None:
             return result
-        frame, reward, terminated, truncated, info = result
+        frame, _, terminated, truncated, info = result
         state["step"] += 1
         state["history"].append(frame)
         state["success"] |= bool(info["success"])

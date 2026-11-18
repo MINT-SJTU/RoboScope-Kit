@@ -173,7 +173,10 @@ def main() -> None:
     parser.add_argument("--episodes", type=int, default=5)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    from roboscope_kit.runtime.benchmarks.robocasa365.protocol import SUITES, TASKS_BY_NAME
+    from roboscope_kit.runtime.benchmarks.robocasa365.protocol import (
+        SUITES,
+        TASKS_BY_NAME,
+    )
 
     tasks = list(SUITES["target50"])
     arms = {"native_a": load_arm(args.native[0], "native", tasks, args.episodes),
@@ -186,9 +189,7 @@ def main() -> None:
     native_spread = max(abs(counts["native_a"][task] - counts["native_b"][task]) for task in tasks)
     comparisons = {"native_a/native_b": reference}
     verdicts = {}
-    for name in arms:
-        if name.startswith("native_"):
-            continue
+    for name in [name for name in arms if not name.startswith("native_")]:
         for native in ("native_a", "native_b"):
             result = pair(arms[name], arms[native])
             result["repeat_test_p"] = binomial_two_sided(

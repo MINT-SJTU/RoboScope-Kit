@@ -15,7 +15,9 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
-from roboscope_kit.runtime.benchmarks.robocasa365.adapter import RoboCasa365BenchmarkAdapter
+from roboscope_kit.runtime.benchmarks.robocasa365.adapter import (
+    RoboCasa365BenchmarkAdapter,
+)
 
 WORKER_MODULE = "roboscope_kit.runtime.benchmarks.robocasa365.worker"
 
