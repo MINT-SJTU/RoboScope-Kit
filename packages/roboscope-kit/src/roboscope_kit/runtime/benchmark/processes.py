@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 import time
 from collections.abc import Iterable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
@@ -284,14 +285,28 @@ class InferencePool:
         *,
         shared_deadline: bool,
     ) -> None:
-        # Replicas on the same GPU load large checkpoints, so starting them
-        # one at a time avoids a transient VRAM spike that fails replica start.
+        # Replicas on the same GPU load large checkpoints, so they start one at a
+        # time to avoid a transient VRAM spike that fails replica start. GPUs do not
+        # share VRAM, so each GPU's replicas start in parallel with the other GPUs'.
         deadline = time.monotonic() + ready_timeout_s
+
+        def launch_serially(group: Sequence[ReplicaContext]) -> None:
+            for context in group:
+                remaining_s = deadline - time.monotonic() if shared_deadline else ready_timeout_s
+                if remaining_s <= 0:
+                    raise TimeoutError("inference replica scale operation timed out")
+                self._launch_replica(context, remaining_s)
+
+        groups: dict[str, list[ReplicaContext]] = {}
         for context in contexts:
-            remaining_s = deadline - time.monotonic() if shared_deadline else ready_timeout_s
-            if remaining_s <= 0:
-                raise TimeoutError("inference replica scale operation timed out")
-            self._launch_replica(context, remaining_s)
+            groups.setdefault(context.gpu_device, []).append(context)
+        if len(groups) == 1:
+            launch_serially(contexts)
+            return
+        with ThreadPoolExecutor(max_workers=len(groups)) as pool:
+            futures = [pool.submit(launch_serially, group) for group in groups.values()]
+        for future in futures:
+            future.result()
 
     def _launch_replica(self, context: ReplicaContext, ready_timeout_s: float) -> None:
         try:

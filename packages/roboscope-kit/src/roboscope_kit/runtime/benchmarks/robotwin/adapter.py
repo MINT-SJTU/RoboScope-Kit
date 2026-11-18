@@ -44,6 +44,7 @@ class RoboTwinRuntimeConfig:
     seed_cache_dir: Path | None = None
     protocol_id: str | None = None
     seed_generation_digest: str | None = None
+    instruction_seed_limit: int | None = None
     seed: int = 0
     save_videos: bool = False
     cpu_threads: int = 1
@@ -63,6 +64,8 @@ class RoboTwinRuntimeConfig:
             )
         if self.suite not in {"demo_clean", "demo_randomized"}:
             raise ValueError(f"unsupported RoboTwin suite: {self.suite}")
+        if self.instruction_seed_limit is not None and self.instruction_seed_limit < 1:
+            raise ValueError("RoboTwin instruction_seed_limit must be positive")
         if (self.protocol_id is None) != (self.seed_generation_digest is None):
             raise ValueError("RoboTwin protocol and seed generation identity must be paired")
 
@@ -99,6 +102,10 @@ class RoboTwinBenchmarkAdapter:
                             "episode_start": episode_start,
                             "episodes": episodes,
                             "total_episodes": total,
+                            # Instructions are drawn from the protocol's limit, not from
+                            # this run's episode count, so a run of fewer episodes per
+                            # task draws the same instruction for each seed.
+                            "instruction_seed_limit": self.config.instruction_seed_limit or total,
                         },
                         expected_results=episodes,
                     )
