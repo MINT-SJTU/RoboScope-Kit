@@ -109,6 +109,8 @@ class LiberoPlusBenchmarkAdapter:
             str(self.config.seed),
             "--settle-steps",
             str(self.config.settle_steps),
+            "--action-representation",
+            context.execution_contract.action_representation,
             "--queue-dir",
             str(context.queue_dir),
             "--worker-state-dir",

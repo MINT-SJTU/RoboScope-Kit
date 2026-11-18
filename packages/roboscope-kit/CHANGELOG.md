@@ -2,6 +2,19 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b67 - 2026-11-14
+
+- Add the `libero.absolute-eef-v1` action representation to LIBERO, LIBERO+, and LIBERO-Pro: the seven values
+  are the absolute end-effector target position, axis-angle orientation, and gripper command. The adapters pass
+  the negotiated representation to the shared LIBERO worker, which keeps the 10 settle steps under delta control
+  and then sets `use_delta = False` on each robot's OSC controller for the rest of the episode, as the X-VLA
+  LIBERO client does. The default `libero.delta-eef-v1` path is unchanged.
+- Fix `examples/xvla` on LIBERO: the Policy returns absolute targets but declared the default delta
+  representation, and no worker patch switched the controller, so the targets were executed as deltas. It now
+  declares `libero.absolute-eef-v1` for LIBERO and LIBERO+; only LIBERO has been run with it. Its README no
+  longer claims a worker patch or recipe horizons that the kit did not have; episodes keep the benchmark's suite
+  horizons, so X-VLA's published LIBERO scores (800- and 900-step episodes) are not directly comparable.
+
 ## 0.8.0b66 - 2026-11-14
 
 - Add the `simpler_env` benchmark (protocol `simpler-env-v1`, action `simpler_env.ee-delta-axangle-v1`) with
