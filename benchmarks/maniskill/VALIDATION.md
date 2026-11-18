@@ -1,6 +1,6 @@
 # ManiSkill validation status
 
-**2026-11-13: integration acceptance is incomplete.** The pinned inventory declares
+**2026-11-18: integration acceptance is incomplete.** The pinned inventory declares
 55 evaluation TaskIDs and 77 selectable task/robot/observation/controller profiles.
 All original task IDs and tabletop state/RGB configurations remain in scope.
 Removing borrowed-task/robot model examples does not remove benchmark tasks.
@@ -12,6 +12,14 @@ and results from the final source. Shape compatibility, a five-step prefix or an
 SDK/configured-reference match cannot establish these requirements. Return-scored
 tasks retain their native metric without fabricated binary success. See the
 [maintainer decision](https://github.com/MINT-SJTU/RoboScope-Kit/pull/99#issuecomment-6800683447).
+
+The runs below were made before this source was merged with main 0.8.0b66. Their source carried
+0.8.0b36 (this integration) and 0.8.0b37 (with #126); after the merge these ship as 0.8.0b67 and
+0.8.0b68. The merge brings main's shared runtime changes (run cache, autotune, process handling);
+the [post-merge check](#post-merge-check) reruns one prescribed-count suite on the merged source.
+
+Tasks that this integration cannot validate, and why, are listed under
+[blockers outside this integration](#blockers-outside-this-integration).
 
 ## Retained model scope
 
@@ -154,7 +162,7 @@ It now classifies them as out-of-memory. With that change, a twelve-Worker run h
 error in one Worker, retired one Worker, finished with eleven in 192.0 s (peak 47.3 GiB) and matched the
 native records exactly.
 
-These runs use the 0.8.0b36 source plus this claim change, which ships as 0.8.0b37, and the
+These runs use the 0.8.0b36 source plus this claim change (0.8.0b37, now 0.8.0b68), and the
 reproduction command below.
 
 Autotune previously capped ManiSkill at two Workers; the cap is now 16. Autotune then selects eight
@@ -362,3 +370,23 @@ first two tasks and the two original cabinet state profiles. Model and asset gap
 can overlap. Unknown outcomes are not zero-success results. Original asset
 availability and exact clutter-corpus recovery are documented in the
 [compatibility notes](REMAINING_COMPATIBILITY.md#original-asset-gaps).
+
+## Blockers outside this integration
+
+These gaps cannot be closed by Kit code. Each needs a model, an asset or a maintainer decision
+that the integration does not control. Unvalidated tasks are not reported as zero success.
+
+| Blocker | TaskIDs | What would close it |
+|---|---|---|
+| No public checkpoint trained for the task and robot | 25: RotateSingleObjectInHand L0-3, RotateValve L0-4, TriFingerRotateCube L0-4, MS-Humanoid Run/Stand/Walk, UnitreeG1Stand, UnitreeH1Stand, AnymalC-Spin, AssemblingKits, FMBAssembly1Easy, OpenCabinetDoor, OpenCabinetDrawer, PickClutterYCB | A trained and published checkpoint per task, with non-zero success; whether a checkpoint trained for this purpose counts is a maintainer decision |
+| Candidate checkpoint outside the rule | 5: PegInsertionSide and PlugCharger (RDT five-task fine-tune, non-default controller, camera and horizon), PickSingleYCB and TurnFaucet (ManiSkill2 `-v0` TD-MPC2 only), UnitreeGo2-Reach (model card states no task, controller or score) | A same-task checkpoint under the pinned protocol, or a maintainer decision on these candidates |
+| Original assets unavailable | AssemblingKits, TurnFaucet, OpenCabinetDoor, OpenCabinetDrawer (six profiles) | The original processed assets from a verifiable source; replacement meshes or regenerated scenes are not the original task distribution |
+| Published scores need the author's evaluator | NEWT Hopper Stand/Hop and PlaceSphere (published with MPC planning, `mani_skill-nightly` and changed horizons); NEWT Ant (published metric is success, which these tasks lack); G1 (author simulator and horizon) | Running each author's original evaluator as an independent native reference, in its own environment |
+| Generalist models only | The four Bridge tasks (Octo-small) | A per-task Bridge checkpoint |
+| Upstream pin and author-protocol differences | All tasks | A maintainer decision on the pin `baab60e` and on which protocol differences are accepted |
+
+Resource limits also bound what was measured: twelve Workers fill the 48 GiB GPU, the
+single-Worker Bridge suite takes 2,584 s for 400 episodes, downloads through the machine's proxy
+are interrupted, and the machine denies GPU performance counters, so no Nsight or SM-level data
+exists. The [checkpoint search](TASK_INVENTORY.md#public-checkpoint-search) lists the sources
+searched and the three that could not be read.

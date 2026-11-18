@@ -82,9 +82,10 @@ is not in the report, only the round-trip time of each request.
 | RLBench | Yes | Not yet |
 | robomimic | Yes | Not yet |
 | ManiSkill | Yes | Worker CPU ranges wired; Nsight GPU capture not yet verified |
+| SimplerEnv | Yes | Not yet |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
 | CALVIN | Yes | Not yet |
-| RoboTwin | No, its launcher has its own client | Records nothing |
+| RoboTwin | No; its launcher writes the same ranges through Kit's helper, loaded from `ROBOSCOPE_PROFILING_MODULE` | Not yet |
 
 ## How it works
 
@@ -103,9 +104,9 @@ Each benchmark keeps its profiling findings in its own documentation, newest fir
 configuration, and Kit version:
 
 - [ManiSkill](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md#throughput-by-worker-count):
-  eleven official PPO tasks on one RTX 4090 48G (Kit 0.8.0b36, 2026-11-12) keep the GPU 34% busy
+  eleven official PPO tasks on one RTX 4090 48G (Kit 0.8.0b36, now 0.8.0b67, 2026-11-12) keep the GPU 34% busy
   with one Worker and 94% with twelve, which run 2.09x faster; Policy wait is under 5% of Worker
-  time. Spreading recycling Workers across tasks (0.8.0b37) reaches 2.13x with eight Workers.
+  time. Spreading recycling Workers across tasks (0.8.0b37, now 0.8.0b68) reaches 2.13x with eight Workers.
   Measured from Kit timing records and GPU sampling, not an Nsight capture.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md#profiling):
   `arx_x5` keeps the GPU busy only about 11% of an episode (2026-11-05).

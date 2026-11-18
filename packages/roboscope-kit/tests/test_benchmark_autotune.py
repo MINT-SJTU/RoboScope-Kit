@@ -81,6 +81,7 @@ def _output(
     *,
     gpu_utilization: float = 0.6,
     steady: float | None = None,
+    peak_memory_bytes: int = 12 * 1024**3,
 ) -> dict:
     return {
         "benchmark": {"bound_hint": "gpu_infer"},
@@ -96,7 +97,7 @@ def _output(
             "cpu": {"cpu_cores": k * 0.5, "throttle_time_ratio": 0.0},
             "gpu": {
                 "mean_utilization": gpu_utilization,
-                "peak_memory_bytes": 12 * 1024**3,
+                "peak_memory_bytes": peak_memory_bytes,
             },
         },
         "recovery": {
@@ -635,3 +636,86 @@ def _process_is_running(pid: int) -> bool:
     except ProcessLookupError:
         return False
     return True
+
+
+@pytest.mark.parametrize("backoff", [True, False])
+def test_diagonal_replica_step_backs_off_workers_when_r_times_g_does_not_fit(
+    tmp_path: Path, backoff: bool
+) -> None:
+    # Four RTX PRO 5000 GPUs on RoboTwin: renderer memory per worker, not the replicas,
+    # rules out K=64 at two replicas per GPU. K=60 is predicted to fit but runs out of
+    # memory, so the step falls back to K=56.
+    gib = 1024**3
+    probes = {
+        (4, 4): (76.0, 53.1),
+        (8, 4): (168.0, 65.9),
+        (16, 4): (265.0, 93.4),
+        (32, 4): (391.0, 145.1),
+        (64, 4): (400.0, 250.0),
+        (56, 8): (515.0, 220.0),
+    }
+    oom = ProbeCapacityReached("renderer out of memory", stop_reason="worker_oom")
+    calls = []
+
+    def measure(k: int, g: int, _limits: ProbeLimits, _progress):
+        calls.append((k, g))
+        if (k, g) == (60, 8):
+            raise oom
+        rate, peak = probes[k, g]
+        output = _output(k, rate, steady=rate, peak_memory_bytes=int(peak * gib))
+        return output, int(9.54 * gib)
+
+    result = BenchmarkAutotuneController(
+        measure=measure,
+        output_dir=tmp_path,
+        bounds=AutotuneBounds(
+            gpu_count=4,
+            cpu_cores=200.0,
+            max_workers=64,
+            max_replicas=16,
+            worker_cpu_cores=2.0,
+            vram_per_gpu_bytes=int(71.7 * gib),
+        ),
+        limits=AutotuneLimits(candidate_timeout_s=30.0, total_budget_s=600.0, replica_memory_backoff=backoff),
+    ).run()
+
+    if not backoff:
+        assert calls == [(4, 4), (8, 4), (16, 4), (32, 4), (64, 4)]
+        assert (result["k"], result["g"]) == (32, 4)
+        assert "trying" not in result["stop_reason"]
+        return
+
+    assert calls == [(4, 4), (8, 4), (16, 4), (32, 4), (64, 4), (60, 8), (56, 8)]
+    assert (result["k"], result["g"]) == (56, 8)
+    assert "K=64, g=8 predicted GPU memory" in result["stop_reason"]
+    assert "trying K=60; worker_oom: renderer out of memory, trying K=56" in result["stop_reason"]
+    assert "K=64, g=12 predicted GPU memory" in result["stop_reason"].rsplit(";", 1)[-1]
+
+
+def test_diagonal_replica_step_stops_when_no_smaller_k_fits(tmp_path: Path) -> None:
+    gib = 1024**3
+    calls = []
+
+    def measure(k: int, g: int, _limits: ProbeLimits, _progress):
+        calls.append((k, g))
+        peak = {4: 53.1, 8: 90.0}[k]
+        return _output(k, 100.0 * k, steady=100.0 * k, peak_memory_bytes=int(peak * gib)), int(30 * gib)
+
+    result = BenchmarkAutotuneController(
+        measure=measure,
+        output_dir=tmp_path,
+        bounds=AutotuneBounds(
+            gpu_count=4,
+            cpu_cores=200.0,
+            max_workers=8,
+            max_replicas=16,
+            worker_cpu_cores=2.0,
+            vram_per_gpu_bytes=int(71.7 * gib),
+            max_workers_hard=8,
+        ),
+        limits=AutotuneLimits(candidate_timeout_s=30.0, total_budget_s=600.0, replica_memory_backoff=True),
+    ).run()
+
+    assert calls == [(4, 4), (8, 4)]
+    assert (result["k"], result["g"]) == (8, 4)
+    assert "trying" not in result["stop_reason"]

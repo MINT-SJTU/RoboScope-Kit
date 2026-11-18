@@ -25,6 +25,7 @@ import shutil
 import signal
 import subprocess
 import tempfile
+import threading
 import time
 from collections.abc import Sequence
 from pathlib import Path
@@ -64,6 +65,9 @@ class CudaMpsSession:
         self.max_clients = 0
         self._controller: subprocess.Popen | None = None
         self._controller_log: TextIO | None = None
+        # Replicas on different GPUs start in parallel; the control daemon refuses
+        # concurrent connections ("Cannot send command to MPS control daemon process").
+        self._control_lock = threading.Lock()
 
     # Lifecycle -----------------------------------------------------------
 
@@ -211,6 +215,10 @@ class CudaMpsSession:
             time.sleep(0.1)
 
     def _control(self, command: str) -> str:
+        with self._control_lock:
+            return self._control_unlocked(command)
+
+    def _control_unlocked(self, command: str) -> str:
         try:
             result = subprocess.run(
                 [self.control],
