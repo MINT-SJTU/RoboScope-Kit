@@ -2,6 +2,16 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b67 - 2026-11-18
+
+- Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,
+  and official Diffusion Policy example. Freeze all 50 tasks, horizons, pretrain scenes and scoring.
+- Correct EGL context ownership and cleanup, including partially constructed renderers, and stabilize
+  seeded scene sampling. The runtime builder pins the source, patch and resulting-file hashes.
+- Make self-test reset and render twice and Quick Test execute one native five-slot group.
+- Add public grouped Policy lifecycle profiling and simulator-operation markers, plus simulator-free
+  checks for task accounting, configuration, factory sizing, sharding and profiling.
+
 ## 0.8.0b66 - 2026-11-14
 
 - Add the `simpler_env` benchmark (protocol `simpler-env-v1`, action `simpler_env.ee-delta-axangle-v1`) with

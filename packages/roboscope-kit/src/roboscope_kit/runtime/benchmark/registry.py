@@ -39,6 +39,10 @@ def benchmark_factory(name: BenchmarkName) -> BenchmarkFactory:
         from roboscope_kit.runtime.benchmarks.robocasa import RoboCasaBenchmarkFactory
 
         return RoboCasaBenchmarkFactory()
+    if name is BenchmarkName.ROBOCASA365:
+        from roboscope_kit.runtime.benchmarks.robocasa365 import RoboCasa365BenchmarkFactory
+
+        return RoboCasa365BenchmarkFactory()
     if name is BenchmarkName.METAWORLD:
         from roboscope_kit.runtime.benchmarks.metaworld import MetaworldBenchmarkFactory
 

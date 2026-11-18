@@ -9,6 +9,8 @@ import os
 import socket
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +67,7 @@ class PolicyClient:
             "json" if preferred == "json" else _NEGOTIATED_ENCODINGS.get(self.socket_path)
         )
         self._connection: socket.socket | None = None
+        self._episode_group_depth = 0
         if profiling.ENABLED:
             # Only a --profile Worker pays for the NVTX ranges; otherwise requests run unwrapped.
             self._request = self._profiled_request  # type: ignore[method-assign]
@@ -100,7 +103,7 @@ class PolicyClient:
         return PolicyCapabilities.from_dict(result["capabilities"])
 
     def reset(self, context: EpisodeContext) -> dict[str, Any]:
-        if profiling.ENABLED:
+        if profiling.ENABLED and not self._episode_group_depth:
             profiling.episode_start()
         return self._request("reset", {"context": context.to_dict()})
 
@@ -122,9 +125,22 @@ class PolicyClient:
         if not episode_id:
             raise ValueError("episode_id cannot be empty")
         result = self._request("end_episode", {"episode_id": episode_id})
-        if profiling.ENABLED:
+        if profiling.ENABLED and not self._episode_group_depth:
             profiling.episode_end()
         return result
+
+    @contextmanager
+    def episode_group(self) -> Iterator[None]:
+        """Profile a native group across its normal per-episode lifecycle calls."""
+        if profiling.ENABLED and not self._episode_group_depth:
+            profiling.episode_start()
+        self._episode_group_depth += 1
+        try:
+            yield
+        finally:
+            self._episode_group_depth -= 1
+            if profiling.ENABLED and not self._episode_group_depth:
+                profiling.episode_end()
 
     def unload(self) -> dict[str, Any]:
         return self._request("unload", {})

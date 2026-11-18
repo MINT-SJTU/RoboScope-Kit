@@ -1,0 +1,38 @@
+{
+  "diffusion_policy": {
+    "repository": "https://github.com/robocasa-benchmark/diffusion_policy",
+    "revision": "41212698b6f481ed92a55f0d5f1778ec56bea417",
+    "archive_url": "https://codeload.github.com/robocasa-benchmark/diffusion_policy/tar.gz/41212698b6f481ed92a55f0d5f1778ec56bea417",
+    "archive_sha256": "4e3d0f7ae3222f5910978ae05e77e5936f8f49560b5da188302e512440818822",
+    "observation_wrapper_sha256": "792bd8757cfbce8b9c8bee6fa691f9e2a8e3d5357c90d58d2365a571d0de1dc2"
+  },
+  "robomimic": {
+    "repository": "https://github.com/robocasa-benchmark/robomimic",
+    "revision": "7dc18461c4fc497095f1044f4c40cd44fff62e6a",
+    "archive_url": "https://codeload.github.com/robocasa-benchmark/robomimic/tar.gz/7dc18461c4fc497095f1044f4c40cd44fff62e6a",
+    "archive_sha256": "a9cc66d26c3f00afdea2618ca6828d8cab2d6e9689cf52b12be127ad31d98afb"
+  },
+  "checkpoint": {
+    "repository": "robocasa/robocasa365_checkpoints",
+    "revision": "c484448aba1a9b60a04c9b0ca117241518ea69f3",
+    "filename": "diffusion_policy/17.40.09_train_diffusion_transformer_hybrid_pretrain_human300/checkpoints/epoch=0500-test_mean_score=-1.000.ckpt",
+    "local_filename": "model.ckpt",
+    "size_bytes": 1697722871,
+    "sha256": "e19011f1db25ca75d5047b5b0ab749592d48005e7222c542faadc0c6df88424c"
+  },
+  "language_encoder": {
+    "repository": "openai/clip-vit-large-patch14",
+    "revision": "32bd64288804d66eefd0ccbe215aa642df71cc41",
+    "files": [
+      "config.json",
+      "merges.txt",
+      "model.safetensors",
+      "preprocessor_config.json",
+      "special_tokens_map.json",
+      "tokenizer.json",
+      "tokenizer_config.json",
+      "vocab.json"
+    ],
+    "weights_sha256": "a2bf730a0c7debf160f7a6b50b3aaf3703e7e88ac73de7a314903141db026dcb"
+  }
+}

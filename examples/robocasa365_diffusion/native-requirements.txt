@@ -1,0 +1,9 @@
+# Additional imports used by the pinned upstream workspace/evaluator.
+# Use the benchmark's pinned robocasa/robosuite environment as well.
+accelerate==0.34.2
+wandb==0.18.7
+pandas==2.2.3
+gym==0.26.2
+av==13.1.0
+threadpoolctl==3.5.0
+cloudpickle==3.1.0
