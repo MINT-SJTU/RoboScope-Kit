@@ -97,7 +97,6 @@ def test_full_suite_requires_every_task_and_official_group_count() -> None:
     assert config.full_suite
     assert not replace(config, episodes_per_task=NATIVE_ENVS).full_suite
     assert not replace(config, tasks=TASKS).full_suite
-    assert not replace(config, native_envs=1).full_suite
     items = RoboCasa365BenchmarkAdapter(config).work_items()
     assert len(items) == 50
     assert sum(item.expected_results for item in items) == 2500
@@ -306,3 +305,11 @@ def test_group_success_keeps_slots_stepping_and_uses_first_retained_value(
     assert client.reset_ids == client.end_ids == [record.record_id for record in records]
     assert all(record.success and record.steps == stop_step for record in records)
     assert all(record.metadata["termination"] == "native_group_success" for record in records)
+
+
+def test_termination_is_recorded_per_slot() -> None:
+    from roboscope_kit.runtime.benchmarks.robocasa365.worker import termination
+
+    assert termination(True, 40, 450) == "native_group_success"
+    assert termination(False, 450, 450) == "horizon"
+    assert termination(False, 120, 450) == "simulator_done"

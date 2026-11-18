@@ -53,8 +53,8 @@ class RoboCasa365RuntimeConfig:
             raise ValueError("RoboCasa365 tasks are outside the selected suite")
         if not 1 <= self.episodes_per_task <= EPISODES_PER_TASK:
             raise ValueError(f"RoboCasa365 episodes must be in [1, {EPISODES_PER_TASK}]")
-        if self.native_envs not in (1, NATIVE_ENVS):
-            raise ValueError("RoboCasa365 native_envs must be 5 (native) or 1 (smoke)")
+        if self.native_envs != NATIVE_ENVS:
+            raise ValueError(f"RoboCasa365 native_envs must be {NATIVE_ENVS}")
         if self.episodes_per_task % self.native_envs:
             raise ValueError("RoboCasa365 episodes must be divisible by native_envs; no padded records")
         if self.cpu_threads < 1:

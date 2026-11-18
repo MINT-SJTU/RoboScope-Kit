@@ -154,6 +154,12 @@ def save_first_batch(args: argparse.Namespace, task: str, observations: tuple, c
     np.savez(path, **values)
 
 
+def termination(group_success: bool, steps: int, horizon: int) -> str:
+    if group_success:
+        return "native_group_success"
+    return "horizon" if steps >= horizon else "simulator_done"
+
+
 def run_group(
     args: argparse.Namespace, task: Task, environments: list,
     stream_episode: int, client: PolicyClient,
@@ -184,7 +190,7 @@ def run_group(
     inference_s = 0.0
     stepping_s = 0.0
     video_s = 0.0
-    termination = "horizon"
+    group_success = False
     with ExitStack() as stack:
         writers = []
         for identifier in identifiers:
@@ -249,10 +255,8 @@ def run_group(
                             video_s += time.perf_counter() - video_started
                 # Native info['success'][0] is FIRST of its latest two step values.
                 if all(values and values[0] for values in recent_success):
-                    termination = "native_group_success"
+                    group_success = True
                     break
-            if termination != "native_group_success" and any(step < task.horizon for step in steps):
-                termination = "simulator_done"
         finally:
             for identifier in reset_ids:
                 client.end_episode(identifier)
@@ -265,7 +269,8 @@ def run_group(
                 "episode_index": indices[slot], "rollout_label": ROLLOUT_LABEL_BASE + indices[slot],
                 "slot": slot, "stream_episode": stream_episode,
                 "constructor_seed": CONSTRUCTOR_SEED + slot,
-                "horizon": task.horizon, "termination": termination,
+                "horizon": task.horizon,
+                "termination": termination(group_success, steps[slot], task.horizon),
                 "group_elapsed_s": elapsed_s, "group_reset_s": reset_s,
                 **fingerprints[slot],
             },
@@ -278,11 +283,23 @@ def run_group(
     }
 
 
+def close_all(environments: list) -> None:
+    """Close every environment, then raise the first close error."""
+    errors = []
+    for environment in environments:
+        try:
+            environment.close()
+        except Exception as error:
+            errors.append(error)
+    if errors:
+        raise errors[0]
+
+
 def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     task = TASKS_BY_NAME[str(item.payload["task"])]
     episodes = int(item.payload["episodes"])
     count = int(item.payload["native_envs"])
-    if count not in (1, NATIVE_ENVS) or not 1 <= episodes <= EPISODES_PER_TASK or episodes % count:
+    if count != NATIVE_ENVS or not 1 <= episodes <= EPISODES_PER_TASK or episodes % count:
         raise ValueError("invalid RoboCasa365 task workload")
     environments = []
     records = []
@@ -314,8 +331,7 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
                 ))
     finally:
         close_started = time.perf_counter()
-        for environment in environments:
-            environment.close()
+        close_all(environments)
         timings["environment_close_s"] = time.perf_counter() - close_started
     timings["task_elapsed_s"] = time.perf_counter() - started
     return WorkResult(
