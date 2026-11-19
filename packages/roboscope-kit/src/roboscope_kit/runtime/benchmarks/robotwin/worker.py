@@ -56,6 +56,11 @@ def parse_args() -> argparse.Namespace:
         help="keep one launcher process alive across tasks so the shared "
         "CuroboPlanner patch pays planner construction once per worker",
     )
+    parser.add_argument(
+        "--render-service",
+        type=Path,
+        help="Unix socket of this GPU's RoboTwin render service; the evaluator then runs without a GPU",
+    )
     parser.add_argument("--poll-interval", type=float, default=0.05)
     return parser.parse_args()
 
@@ -69,6 +74,15 @@ def _item_window(item: WorkItem) -> tuple[int, int, int]:
             "RoboTwin work item episode window must be positive and within total_episodes"
         )
     return episode_start, episodes, total_episodes
+
+
+def _gpu_env(args: argparse.Namespace) -> dict[str, str]:
+    """GPU visibility of the evaluator: its own GPU natively, none with a render service."""
+
+    render_service = getattr(args, "render_service", None)
+    if render_service is None:
+        return {"CUDA_VISIBLE_DEVICES": str(args.gpu_id)}
+    return {"CUDA_VISIBLE_DEVICES": "", "ROBOTWIN_RENDER_SERVICE": str(render_service)}
 
 
 def _task_spec(args: argparse.Namespace, item: WorkItem, deploy_policy: Path) -> tuple[dict, list[str]]:
@@ -139,7 +153,7 @@ class _EvalSession:
             # planner.CuroboPlanner) intermittently crash. Evaluate without
             # bytecode caching so imports never need to write pyc files.
             "PYTHONDONTWRITEBYTECODE": "1",
-            "CUDA_VISIBLE_DEVICES": str(self.args.gpu_id),
+            **_gpu_env(self.args),
             "ROBOSCOPE_INFERENCE_SOCKET": str(self.args.policy_socket),
             "ROBOTWIN_EVAL_SESSION": "1",
             "ROBOTWIN_DISABLE_VIDEO": "1" if self.args.disable_video else "0",
@@ -356,7 +370,7 @@ def _run_task_single_process(args: argparse.Namespace, item: WorkItem) -> WorkRe
         # planner.CuroboPlanner) intermittently crash. Evaluate without
         # bytecode caching so imports never need to write pyc files.
         "PYTHONDONTWRITEBYTECODE": "1",
-        "CUDA_VISIBLE_DEVICES": str(args.gpu_id),
+        **_gpu_env(args),
         "ROBOSCOPE_INFERENCE_SOCKET": str(args.policy_socket),
         "ROBOTWIN_SEED_CACHE_ENABLED": "1" if args.seed_cache_dir is not None else "0",
         "ROBOSCOPE_PROFILING_MODULE": profiling.__file__,

@@ -301,6 +301,10 @@ class ParallelBenchmarkRuntime:
             self.queue.request_stop()
             samples = sampler.stop()
             self._stop_workers()
+            # A benchmark may own processes its Workers share (RoboTwin's render services).
+            close_benchmark = getattr(self.benchmark, "close", None)
+            if close_benchmark is not None:
+                close_benchmark()
             inference_metadata = self.inference.metadata()
             self._stop_owned_server_pool()
         elapsed_s = time.monotonic() - started
