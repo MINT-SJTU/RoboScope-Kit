@@ -2,9 +2,9 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b68 - 2026-11-18
+## 0.8.0b68 - 2026-11-19
 
-- Spread Workers that recycle on every group change across groups: an idle recycling Worker claims from the group with the most pending items per Worker already on it instead of following the others into the same next group. On eleven ManiSkill tasks this cuts evaluation time by 15% with four Workers and 12% with eight; benchmarks without recycling keep the ordinal claim order.
+- Spread Workers that recycle on every group change across groups: an idle recycling Worker claims from the group with the most pending items per Worker already on it instead of following the others into the same next group. A Worker that loses a claim to another Worker chooses its group again, so Workers that start together do not all start the same group. On eleven ManiSkill tasks this cuts evaluation time by 15% with four Workers and 12% with eight; benchmarks without recycling keep the ordinal claim order.
 - Classify PhysX GPU allocator failures, cuBLAS allocation failures and cuSOLVER handle-creation failures as out-of-memory, so a Worker that runs out of GPU memory in PhysX (which then stops with CUDA error 700) scales its GPU's Workers down instead of retrying at the same count; this applies to every benchmark. A Worker that exits for a planned recycle while its GPU scales down is no longer reported as failed.
 
 ## 0.8.0b67 - 2026-11-18

@@ -84,15 +84,21 @@ class WorkQueue:
     def claim(
         self, worker_id: int, preferred_group: str | None = None, *, spread_groups: bool = False,
     ) -> ClaimedWork | None:
-        for pending_path in self._pending_candidates(preferred_group, spread_groups):
-            claimed_path = self.running_dir / f"worker-{worker_id:03d}-{pending_path.name}"
-            try:
-                pending_path.replace(claimed_path)
-            except FileNotFoundError:
-                continue
-            payload = json.loads(claimed_path.read_text(encoding="utf-8"))
-            return ClaimedWork(claimed_path, WorkItem.from_dict(payload))
-        return None
+        while True:
+            for pending_path in self._pending_candidates(preferred_group, spread_groups):
+                claimed_path = self.running_dir / f"worker-{worker_id:03d}-{pending_path.name}"
+                try:
+                    pending_path.replace(claimed_path)
+                except FileNotFoundError:
+                    # Another Worker claimed this item. A spreading Worker chooses its group
+                    # again, because that claim changed how many Workers run each group.
+                    if spread_groups:
+                        break
+                    continue
+                payload = json.loads(claimed_path.read_text(encoding="utf-8"))
+                return ClaimedWork(claimed_path, WorkItem.from_dict(payload))
+            else:
+                return None
 
     def complete(self, claimed: ClaimedWork, result: WorkResult) -> None:
         self._validate_result(claimed.item, result)
