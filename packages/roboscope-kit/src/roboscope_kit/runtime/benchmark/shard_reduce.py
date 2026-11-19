@@ -239,12 +239,15 @@ def _validate_maniskill_counts(official: Mapping[str, Any], standard: Mapping[st
     expected = {
         "episodes": overall["episodes"], "total_episodes": overall["episodes"],
         "successes": successes, "failures": scored - successes,
-        "success_rate": overall["success_rate"],
         "total_steps": sum(row["actual_steps"] for row in official["tasks"]),
     }
     if returned or "return_evaluated_episodes" in standard:
         expected.update(success_evaluated_episodes=scored, return_evaluated_episodes=returned)
-    if any(standard.get(key) != value for key, value in expected.items()):
+    rate, official_rate = standard.get("success_rate"), overall["success_rate"]
+    if any(standard.get(key) != value for key, value in expected.items()) or (
+        (rate is None) != (official_rate is None)
+        or (rate is not None and not math.isclose(rate, official_rate, rel_tol=1e-12, abs_tol=1e-12))
+    ):
         raise ValueError("ManiSkill standard and official scoring counts disagree")
 
 

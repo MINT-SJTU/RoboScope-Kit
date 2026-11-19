@@ -108,8 +108,11 @@ def validate_shard_accounting(shard: Mapping[str, Any]) -> None:
                 raise ValueError(f"shard {index} scoring counts do not cover its episodes")
             rate = result.get("success_rate")
             expected_rate = successes / scored if scored else None
-            if ("success_rate" not in result or rate != expected_rate
-                    or (rate is not None and (type(rate) not in (int, float) or not math.isfinite(rate)))):
+            # Same tolerance as the ManiSkill metric checks in metrics.py.
+            if ("success_rate" not in result or (rate is None) != (expected_rate is None)
+                    or (rate is not None and (
+                        type(rate) not in (int, float) or not math.isfinite(rate)
+                        or not math.isclose(rate, expected_rate, rel_tol=1e-12, abs_tol=1e-12)))):
                 raise ValueError(f"shard {index} success rate differs from its scored episodes")
         elif any(
             row.get("success_metric") == "return" and row.get("episodes") != 0
