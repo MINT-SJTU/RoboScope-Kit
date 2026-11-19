@@ -83,6 +83,20 @@ host's CPU during the runs, which likely explains the spread between repeats.
 Every image the Policy received and every executed action were hashed per episode; all four arms matched
 episode by episode. No render service restarted.
 
+On a `build-runtime.sh` runtime (CPython 3.8, cuRobo, the pinned embodiment and object archives; the 11 GB
+background textures, which `demo_clean` does not use, were left out for disk space), same host and Policy,
+50 tasks × 1 episode, CUDA MPS, one arm each:
+
+| | native K6/G2 | central K12/G3 | central K12/G3, one service killed |
+| --- | ---: | ---: | ---: |
+| Successes / total steps | 24 / 20,768 | 24 / 20,768 | 24 / 20,768 |
+| Evaluation throughput, steps/s | 87.3 | 116.4 | 139.0 |
+| Episodes with identical actions and Policy images | — | 50 / 50 | 50 / 50 |
+
+In the third arm one of the two services was killed with SIGKILL 150 s into the run. The six Workers connected
+to it reported the lost service and exited, their six tasks were requeued, and the restarted Workers started
+a new service; the run completed, and the two interrupted episodes, rerun from the start, matched native.
+
 ### Prototype
 
 The measurements below come from the prototype that this mode was ported from: the same worker recorders,
