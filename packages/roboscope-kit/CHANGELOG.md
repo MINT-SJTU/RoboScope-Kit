@@ -2,6 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b68 - 2026-11-19
+
+- RoboCasa365 review follow-ups: a failing task's own error is no longer replaced by an environment
+  close error, the Worker `PYTHONPATH` has no empty entry when none was set, and the README tables
+  drop the "partial integration" label now that the target50 native comparison is accepted.
+
 ## 0.8.0b67 - 2026-11-19
 
 - Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,

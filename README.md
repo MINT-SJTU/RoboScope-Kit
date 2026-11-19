@@ -82,7 +82,7 @@ equal hardware.
 | [RoboTwin](https://github.com/RoboTwin-Platform/RoboTwin) | `demo_clean`, `demo_randomized` | [Seed protocol](benchmarks/robotwin/SEED_PROTOCOL.md) |
 | [RoboDojo](https://github.com/RoboDojo-Benchmark/RoboDojo) | `arx_x5`, `arx_x5_randomized` | [RoboDojo guide](benchmarks/robodojo/README.md) |
 | [RoboCasa GR-1 Tabletop](https://github.com/robocasa/robocasa-gr1-tabletop-tasks) | `tabletop` | [Manifest](benchmarks/robocasa/benchmark-manifest.json) |
-| [RoboCasa365](https://github.com/robocasa/robocasa) (partial integration) | `target50`, `atomic_seen`, `composite_seen`, `composite_unseen` | [Protocol and validation scope](packages/roboscope-kit/docs/robocasa365-protocol.md) |
+| [RoboCasa365](https://github.com/robocasa/robocasa) | `target50`, `atomic_seen`, `composite_seen`, `composite_unseen` | [Protocol and validation scope](packages/roboscope-kit/docs/robocasa365-protocol.md) |
 | [CALVIN](https://github.com/mees/calvin) | `task_D_D`, `task_ABC_D`, `task_ABCD_D` | [CALVIN protocol](packages/roboscope-kit/CALVIN_EVALUATION_PROTOCOL.md) |
 | [MetaWorld](https://github.com/Farama-Foundation/Metaworld) | `mt50` | [MetaWorld protocol](packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md) |
 | [RLBench](https://github.com/stepjam/RLBench) | `peract_18` (the PerAct 18-task reproduction profile, not all of RLBench) | [RLBench protocol](packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md) |

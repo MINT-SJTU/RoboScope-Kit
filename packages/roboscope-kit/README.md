@@ -276,7 +276,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | RoboTwin | SDK-native adapter and worker calling the pinned RoboTwin launcher | RoboTwin environment and source, deploy policy, checkpoint assets, and validated seed cache |
 | RoboDojo | SDK-native adapter and worker calling the pinned RoboDojo simulator | Isaac Sim environment, RoboDojo source and evaluation assets |
 | RoboCasa GR-1 Tabletop | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa GR-1 Tabletop environment, simulator and task source, and dataset assets |
-| RoboCasa365 (partial integration) | SDK-native adapter preserving native five-slot task groups and consecutive-frame history | Pinned RoboCasa 1.0.1, robosuite, MuJoCo, all six asset archives, and a compatible 12-dimensional policy |
+| RoboCasa365 | SDK-native adapter preserving native five-slot task groups and consecutive-frame history | Pinned RoboCasa 1.0.1, robosuite, MuJoCo, all six asset archives, and a compatible 12-dimensional policy |
 | CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
 | RLBench | SDK-native adapter and persistent CoppeliaSim worker on a private Xvfb display, with a fixed Python hash seed for paired evaluation | CoppeliaSim 4.1, pinned PyRep and the PerAct RLBench fork, and PerAct's released test split |

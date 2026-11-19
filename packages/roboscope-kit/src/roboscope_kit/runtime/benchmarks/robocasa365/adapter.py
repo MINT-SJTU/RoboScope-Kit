@@ -102,7 +102,9 @@ class RoboCasa365BenchmarkAdapter:
             ),
             cwd=self.config.benchmark_root,
             env={
-                "PYTHONPATH": ":".join((str(kit_import_root()), os.environ.get("PYTHONPATH", ""))),
+                "PYTHONPATH": os.pathsep.join(
+                    filter(None, (str(kit_import_root()), os.environ.get("PYTHONPATH"))),
+                ),
                 "CUDA_VISIBLE_DEVICES": context.gpu_device,
                 "MUJOCO_GL": "egl", "PYOPENGL_PLATFORM": "egl",
                 "MUJOCO_EGL_DEVICE_ID": context.gpu_device,

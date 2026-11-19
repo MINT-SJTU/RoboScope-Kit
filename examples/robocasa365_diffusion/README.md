@@ -154,7 +154,7 @@ python examples/robocasa365_diffusion/run_kit.py \
   --benchmark-manifest /sim/robocasa365/benchmark-manifest.json \
   --policy-config /workspace/robocasa365-policy.json \
   --checkpoint-source /models/robocasa365-diffusion \
-  --concurrency 4 --replicas 1 --output-dir /results/kit/result
+  --concurrency 4 --replicas 1 --cuda-mps --output-dir /results/kit/result
 ```
 
 Then pair two native passes with one or more Kit runs:

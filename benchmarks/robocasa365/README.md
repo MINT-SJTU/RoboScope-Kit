@@ -30,12 +30,14 @@ executable instead of downloading one; it must remain available after building.
 a usable asset-backed runtime. Normal builds verify all asset hashes and finish
 with the Kit self-test. Downloads use GET: Box may reject HEAD for valid links.
 
-The builder applies three source patches, checking original, patch and result
+The builder applies four source patches, checking original, patch and result
 hashes:
 
-- **EGL cleanup.** Renderer resources are freed in their owning context, and
-  delayed destruction restores the interrupted context. Without it, closing or
-  hard-resetting one slot breaks rendering in another slot of the same process.
+- **EGL cleanup**, two robosuite patches (`utils/binding_utils.py` and
+  `renderers/context/egl_context.py`). Renderer resources are freed in their
+  owning context, and delayed destruction restores the interrupted context.
+  Without them, closing or hard-resetting one slot breaks rendering in another
+  slot of the same process.
 - **Counter regions in XML order** (`robocasa/models/fixtures/counter.py`).
   Upstream iterates a `set()` of regions, whose order follows object identity,
   so the same constructor seed places objects differently in two processes
