@@ -202,6 +202,11 @@ and exact Kit source identities outside Git. The [validation status](../../bench
 separates source/scoring checks from current task/model acceptance. A stored-record regression
 fixture is not trained-policy or throughput evidence.
 
+For a diagnostic run, set `ROBOSCOPE_MANISKILL_TRAJECTORY_DIR` to a directory in the Worker's environment.
+Each Worker then writes one `<episode_id>.jsonl` per episode with per-step observation and action
+hashes; `examples/maniskill/compare_native.py --sdk-trajectories` compares them with the native
+evaluator's `--trajectory-dir`. Writing traces adds work to every step, so timed runs leave it unset.
+
 ## Integration-prefix diagnostics and model candidates
 
 A manifest may explicitly set `diagnostic_step_limit` to a positive integer no larger than the

@@ -64,7 +64,7 @@ Stored-record replay is a CPU regression fixture, not a new model evaluation.
 |---|---|---|---|
 | Scoring and shard arithmetic | [`fad25d36b5207d1ff47ee4cf8af68721f98241e0`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/fad25d36b5207d1ff47ee4cf8af68721f98241e0) | CPU replay of stored records and corrupted result documents | No simulator, model competence or throughput evidence |
 | Source review checks | [`f40fbe816ba2d4198ea799c03b78a016bb3caf1b`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/f40fbe816ba2d4198ea799c03b78a016bb3caf1b) | 270 existing pytest cases: 8.71 s; checks below | Precedes the model-scope cleanup; not final-head acceptance |
-| Retained-scope cleanup | Current candidate; source/check hashes bound externally at delivery | 270 existing pytest cases: 7.88 s; eleven-suite CPU factory/quick/reduced checks pass | No new GPU evaluation, runtime build or simulator self-test |
+| Retained-scope cleanup | Current candidate; source/check hashes bound externally at delivery | 270 existing pytest cases: 7.88 s; eleven-suite CPU factory/quick/reduced checks pass | CPU only; the GPU runs below were made on later sources |
 | Official PPO prescribed count | [`6dcbf53dac517f4ab7bf55f3dc4cf042e716da20`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/6dcbf53dac517f4ab7bf55f3dc4cf042e716da20) | 1,100 episodes per side, exact record and per-step trajectory match; 403.8 s evaluation | Eleven official PPO tasks only; see below |
 
 Raw commands, source/check identities and regression fixtures remain outside Git.
@@ -73,9 +73,8 @@ The [source-review CPU evidence](https://github.com/QLL-CCDD/RoboScope-Kit/relea
 is published for `f40fbe816ba2d4198ea799c03b78a016bb3caf1b`; it predates this scope cleanup.
 SDK compatibility passed on the earlier
 [`634d867811401f4812b7580bce0e782af3cdcd19`](https://github.com/MINT-SJTU/RoboScope-Kit/actions/runs/43082168613);
-that does not establish CI or simulator acceptance of a later source revision.
-The [`f40fbe8` workflow](https://github.com/MINT-SJTU/RoboScope-Kit/actions/runs/43158764888)
-still requires approval; the cleanup's eventual exact-head CI result must be checked separately.
+that does not establish CI or simulator acceptance of a later source revision. Exact-head CI is
+reported on the pull request.
 
 ## Official PPO prescribed-count results
 
