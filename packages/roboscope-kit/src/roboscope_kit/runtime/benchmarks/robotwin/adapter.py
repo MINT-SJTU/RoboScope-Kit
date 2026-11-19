@@ -154,7 +154,7 @@ class RoboTwinBenchmarkAdapter:
                     services_per_gpu=self.config.render_services_per_gpu,
                     log_dir=context.output_dir / "render-services",
                 )
-            socket = self.render_services.socket_for(context.gpu_device, context.worker_id)
+            socket = self.render_services.socket_for(context.gpu_device, context.gpu_slot, context.worker_id)
             render_service = ("--render-service", str(socket))
         return ProcessSpec(
             command=(

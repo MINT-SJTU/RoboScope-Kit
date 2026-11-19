@@ -16,9 +16,10 @@ from pathlib import Path
 class RoboTwinRenderServices:
     """Start, restart and stop the render services that the RoboTwin Workers of one pass connect to.
 
-    A service starts when the first Worker that needs it starts, and a Worker that starts after its
-    service has exited starts a new one, so a restarted Worker never waits on a dead service. Each
-    service also exits on its own when this process does.
+    A service starts when the first Worker that needs it starts. A Worker that starts after its service
+    has exited, for example a Worker restarted because its evaluator lost the service, starts a new one,
+    so a restarted Worker never waits on a dead service. Each service also exits on its own when this
+    process does.
     """
 
     def __init__(
@@ -39,41 +40,46 @@ class RoboTwinRenderServices:
         self.services_per_gpu = services_per_gpu
         self.log_dir = log_dir
         self.ready_timeout_s = ready_timeout_s
-        self.processes: dict[tuple[str, int], subprocess.Popen] = {}
-        self.starts: dict[tuple[str, int], int] = {}
-        self.assignments: dict[tuple[str, int], int] = {}
+        # Services are keyed by (GPU slot, service index); the slot is a small integer, so socket and log
+        # names stay short and valid for GPU UUIDs and MIG identifiers.
+        self.processes: dict[tuple[int, int], subprocess.Popen] = {}
+        self.starts: dict[tuple[int, int], int] = {}
+        self.assignments: dict[tuple[int, int], int] = {}
         # Unix socket paths are limited to about 100 bytes, so they live in a short private directory.
         self.socket_dir: Path | None = None
 
-    def socket_for(self, gpu_device: str, worker_id: int) -> Path:
+    def socket_for(self, gpu_device: str, gpu_slot: int, worker_id: int) -> Path:
         """The socket of this Worker's service; starts the service if it is not running.
 
         A GPU's Workers are spread over its services in the order they first start, and a restarted
         Worker keeps its service.
         """
 
-        assigned = [index for (gpu, _), index in self.assignments.items() if gpu == gpu_device]
-        index = self.assignments.setdefault((gpu_device, worker_id), len(assigned) % self.services_per_gpu)
-        key = (gpu_device, index)
+        assigned = sum(1 for slot, _ in self.assignments if slot == gpu_slot)
+        index = self.assignments.setdefault((gpu_slot, worker_id), assigned % self.services_per_gpu)
+        key = (gpu_slot, index)
         process = self.processes.get(key)
-        if process is None or process.poll() is not None:
-            self._start(key)
+        # A service removes its socket while it shuts down, so a running service without one is exiting.
+        if process is None or process.poll() is not None or not self._socket(key).exists():
+            if process is not None:
+                self._stop(process)
+            self._start(key, gpu_device)
         return self._socket(key)
 
-    def _socket(self, key: tuple[str, int]) -> Path:
+    def _socket(self, key: tuple[int, int]) -> Path:
         if self.socket_dir is None:
             self.socket_dir = Path(tempfile.mkdtemp(prefix="roboscope-robotwin-render-"))
-        gpu_device, index = key
-        return self.socket_dir / f"gpu{gpu_device}-{index}.sock"
+        gpu_slot, index = key
+        return self.socket_dir / f"gpu{gpu_slot}-{index}.sock"
 
-    def _start(self, key: tuple[str, int]) -> None:
+    def _start(self, key: tuple[int, int], gpu_device: str) -> None:
         socket = self._socket(key)
         socket.unlink(missing_ok=True)
-        gpu_device, index = key
+        gpu_slot, index = key
         attempt = self.starts.get(key, 0)
         self.starts[key] = attempt + 1
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = self.log_dir / f"gpu-{gpu_device}-service-{index}-attempt-{attempt:03d}.log"
+        log_path = self.log_dir / f"gpu{gpu_slot}-service-{index}-attempt-{attempt:03d}.log"
         with log_path.open("w", encoding="utf-8") as log:
             process = subprocess.Popen(
                 (
@@ -88,6 +94,9 @@ class RoboTwinRenderServices:
                 stdin=subprocess.DEVNULL,
                 stdout=log,
                 stderr=subprocess.STDOUT,
+                # A terminal SIGINT reaches the Kit, which stops the Workers before the services; the
+                # services must not stop first under the Workers.
+                start_new_session=True,
             )
         self.processes[key] = process
         deadline = time.monotonic() + self.ready_timeout_s

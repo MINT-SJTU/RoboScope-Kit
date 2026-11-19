@@ -125,6 +125,11 @@ class RoboTwinBenchmarkFactory:
         seed_cache_dir = manifest.runtime_path("seed_cache_dir", required=False)
         if seed_cache_dir is not None:
             required += (seed_cache_dir,)
+        render_service = manifest.runtime_path("render_service_path", required=False)
+        if render_service is not None:
+            required += (render_service,)
+        elif manifest.defaults.get("render_mode", "native") == "central":
+            raise RuntimeError("RoboTwin render_mode central needs runtime.render_service_path")
         missing = [str(path) for path in required if not path.exists()]
         if missing:
             raise RuntimeError(f"RoboTwin runtime paths are missing: {', '.join(missing)}")

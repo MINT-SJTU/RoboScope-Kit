@@ -32,9 +32,10 @@ step, so the gain is limited to the GPU time the native mode leaves idle.
   memory, and clears SAPIEN's resource cache every five episodes per connected evaluator, as the native
   evaluator does per process.
 - **Kit.** The RoboTwin adapter starts a GPU's services when its first Worker starts and spreads that GPU's
-  Workers over them. A Worker that starts after its service has exited (a crash or an out-of-memory error,
-  which its Workers report) starts a new service. Services stop when the pass ends, and exit on their own if
-  the Kit process exits.
+  Workers over them. An evaluator that loses its service (the service failed, was killed, or closed the
+  connection) reports it, and its Worker exits instead of recording the remaining episodes as failures. The
+  runtime requeues the Worker's task and restarts the Worker, which starts a new service because the old one
+  has exited. Services stop when the pass ends, and exit on their own if the Kit process exits.
 
 Images match native rendering only with a new scene per episode. Re-posing the entities of a reused
 ray-traced scene, even one built from an identical event log, changed about 7% of the first frame's pixels
@@ -126,7 +127,7 @@ GPU is saturated.
 
 - Multi-GPU runs and full 5,000-episode runs have not been measured; on four GPUs the single-GPU ratio
   suggests about 1.2–1.3×.
-- A service failure fails the episodes of every evaluator connected to it; those Workers restart on a new
-  service.
+- A service failure interrupts every Worker connected to it; their tasks are requeued and rerun. Like any
+  other Worker failure, a Worker restarts once; a second failure of the same Worker stops the run.
 - Results match native rendering on the same machine; RoboTwin rollouts on different machines are not
   bit-identical in either mode.

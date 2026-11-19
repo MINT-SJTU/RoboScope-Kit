@@ -43,6 +43,12 @@ from pathlib import Path
 import numpy as np
 
 READY_MARKER = "ROBOSCOPE_ROBOTWIN_RENDER_READY"
+# Printed by an evaluator that lost its render service; the Kit's RoboTwin worker then restarts the Worker,
+# which gets a new service, instead of recording the remaining episodes as failures.
+SERVICE_LOST_MARKER = "ROBOSCOPE_ROBOTWIN_RENDER_SERVICE_LOST"
+# The Kit starts a service and waits for its socket before it starts the Worker, so the socket normally
+# exists already; a missing one means the service has exited.
+CONNECT_TIMEOUT_S = 15.0
 # Native evaluations with video, the viewer, depth, point clouds, segmentation and third-view data off read
 # these cameras only; the launcher's lean-camera and skip-unread patches apply the same selection natively.
 UNCREATED_CAMERAS = ("observer_camera", "world_camera1")
@@ -146,6 +152,11 @@ class _RecordedLight:
         raise RuntimeError(f"central rendering does not support changing a {self.kind} after scene setup")
 
 
+# Render bodies added to entities that are not in a scene yet, by entity id. A scene setup that fails before
+# adding them (an unstable seed) leaves them behind, so each new scene and each closed task clears them.
+_PENDING_BODIES = {}
+
+
 def install_recorders():
     """Replace the visual description classes of ``sapien.render`` in this CPU-only process."""
 
@@ -157,7 +168,7 @@ def install_recorders():
         for name, cls in stubs.items():
             setattr(module, name, cls)
     body_class = stubs["RenderBodyComponent"]
-    pending = {}
+    pending = _PENDING_BODIES
 
     fresh_add_component = sapien.Entity.add_component
 
@@ -245,18 +256,29 @@ def state_digest(body_poses, camera_poses):
 # --------------------------------------------------------------------------- worker side
 
 
+class RenderServiceLost(RuntimeError):
+    pass
+
+
+def service_lost(detail):
+    """Report a lost render service on stdout, where the Kit's worker reads it, and return the error."""
+
+    print(SERVICE_LOST_MARKER, json.dumps({"pid": os.getpid(), "detail": detail}), flush=True)
+    return RenderServiceLost(f"RoboTwin render service lost: {detail}")
+
+
 class RenderClient:
     """One evaluator's connection to its render service."""
 
-    def __init__(self, address, timeout_s=300.0):
+    def __init__(self, address, timeout_s=CONNECT_TIMEOUT_S):
         deadline = time.monotonic() + timeout_s
         while True:
             try:
                 self.connection = Client(address, family="AF_UNIX")
                 break
-            except (FileNotFoundError, ConnectionRefusedError):
+            except (FileNotFoundError, ConnectionRefusedError) as error:
                 if time.monotonic() > deadline:
-                    raise
+                    raise service_lost(f"cannot connect to {address}: {error!r}") from error
                 time.sleep(0.2)
         self.memory = None
         self.images = None
@@ -264,10 +286,15 @@ class RenderClient:
         self.episode = -1
         self.frame = -1
 
-    def _reply(self, kind):
-        reply = self.connection.recv()
+    def _request(self, message, kind):
+        try:
+            self.connection.send(message)
+            reply = self.connection.recv()
+        except (EOFError, OSError) as error:
+            raise service_lost(f"connection closed: {error!r}") from error
         if reply.get("kind") == "error":
-            raise RuntimeError("RoboTwin render service failed:\n" + reply["error"])
+            # The service reports a failure to every client and then exits.
+            raise service_lost("the service failed:\n" + reply["error"])
         if reply.get("kind") != kind:
             raise RuntimeError(f"unexpected RoboTwin render service reply {reply.get('kind')!r}")
         return reply
@@ -275,8 +302,7 @@ class RenderClient:
     def reset(self, spec):
         self.episode += 1
         self.frame = -1
-        self.connection.send({"kind": "reset", "episode": self.episode, "spec": spec})
-        reply = self._reply("reset")
+        reply = self._request({"kind": "reset", "episode": self.episode, "spec": spec}, "reset")
         self.camera_names = list(reply["camera_names"])
         if self.memory is None or self.memory.name != reply["memory"]:
             self._release_memory()
@@ -291,9 +317,9 @@ class RenderClient:
     def render(self, body_poses, camera_poses):
         self.frame += 1
         digest = state_digest(body_poses, camera_poses)
-        self.connection.send({"kind": "render", "episode": self.episode, "frame": self.frame,
-                              "body_poses": body_poses, "camera_poses": camera_poses, "digest": digest})
-        reply = self._reply("rendered")
+        reply = self._request({"kind": "render", "episode": self.episode, "frame": self.frame,
+                               "body_poses": body_poses, "camera_poses": camera_poses, "digest": digest},
+                              "rendered")
         if reply["episode"] != self.episode or reply["frame"] != self.frame or reply["digest"] != digest:
             raise RuntimeError("RoboTwin render service answered a different frame")
         images = {name: self.images[index].copy() for index, name in enumerate(self.camera_names)}
@@ -425,6 +451,7 @@ def install_worker(robotwin_root, address):
 
     def setup_scene(self, **kwargs):
         # The native setup_scene on a CPU system; lights are recorded, with the same random draws.
+        _PENDING_BODIES.clear()
         self.engine, self.renderer = sapien.Engine(), None
         sapien.physx.set_scene_config(sapien.SceneConfig())
         self.scene = sapien.Scene([sapien.physx.PhysxCpuSystem()])
@@ -474,6 +501,7 @@ def install_worker(robotwin_root, address):
 
     def close_env(self, clear_cache=False):
         # The service owns every GPU resource and clears its cache itself.
+        _PENDING_BODIES.clear()
         self.close()
 
     fresh_init = Base_Task._init_task_env_
@@ -715,6 +743,9 @@ def serve(address, parent_pid):
                 gc.collect()
             stats["episodes"] += 1
             if stats["episodes"] % (CLEAR_CACHE_EPISODES_PER_CLIENT * len(clients)) == 0:
+                # Drop the realizer's references too, or clear_cache cannot free the shared materials and
+                # textures; scenes that are still open keep their own references.
+                realizer.cache.clear()
                 sapien.render.clear_cache()
                 stats["cache_clears"] += 1
             state.scene = EpisodeScene(message["spec"], realizer)
@@ -780,8 +811,12 @@ def main():
         if str(path) not in sys.path:
             sys.path.insert(0, str(path))
     # The Kit stops services with SIGTERM; exiting through serve's cleanup prints the stats and removes
-    # the socket.
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    # the socket. A second SIGTERM during that cleanup is ignored.
+    def stop(*_):
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, stop)
     serve(args.socket, args.parent_pid)
 
 

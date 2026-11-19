@@ -8,8 +8,9 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   simulate on the CPU without a GPU, recording each episode's visual scene construction, and
   `render_services_per_gpu` (default 2) render services per GPU replay it into a new render-only scene per
   episode and return the head and wrist RGB through shared memory. The RoboTwin adapter starts a GPU's services
-  with its first Worker, starts a new one for a Worker whose service has exited, and stops them after each
-  pass; benchmark adapters may now define `close()`, which the runtime calls after a pass's Workers stop.
+  with its first Worker and stops them after each pass; benchmark adapters may now define `close()`, which
+  the runtime calls after a pass's Workers stop. An evaluator that loses its service ends its Worker, so the
+  task is requeued and the restarted Worker starts a new service, instead of recording failed episodes.
   Central rendering supports `demo_clean` with qpos actions, a seed cache and videos off. On one RTX 4090 it
   evaluated 50 tasks × 2 episodes at 149.1 steps/s against 102.1 for native K6/G2 (K12/G3, CUDA MPS on both,
   mean of two arms each), with every episode's Policy images and actions identical; see
