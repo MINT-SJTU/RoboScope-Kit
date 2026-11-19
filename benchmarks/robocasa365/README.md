@@ -38,9 +38,11 @@ hashes:
   hard-resetting one slot breaks rendering in another slot of the same process.
 - **Counter regions in XML order** (`robocasa/models/fixtures/counter.py`).
   Upstream iterates a `set()` of regions, whose order follows object identity,
-  so the same constructor seed places objects differently in two processes.
+  so the same constructor seed places objects differently in two processes
+  ([robocasa#236](https://github.com/robocasa/robocasa/issues/236)).
 - **Seeded fixture stack bases** (`robocasa/models/fixtures/fixture_stack.py`).
-  Upstream samples the stack base without the environment's generator.
+  Upstream samples the stack base without the environment's generator
+  ([robocasa#237](https://github.com/robocasa/robocasa/issues/237)).
 
 The last two are reproducibility corrections: without them two native runs with
 the same constructor seeds start from different scenes, and no per-episode
