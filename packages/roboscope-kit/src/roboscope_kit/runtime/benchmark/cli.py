@@ -47,7 +47,7 @@ from .output import reserve_output_directory
 from .policy_process import PolicyProcessAdapter
 from .queue import atomic_json
 from .registry import benchmark_factory
-from .resources import cpu_quota
+from .resources import cpu_quota, host_memory_limit
 from .run_cache import CACHE_MODES, RunCache, checkpoint_identity, gpu_models, task_seconds_from_queues
 from .sharding import DEFAULT_EPISODES_PER_SHARD, shard_build
 from .timing import BenchmarkTimingRecorder, PhaseTimingCallback, benchmark_phase
@@ -391,6 +391,7 @@ def _open_run_cache(
             "policy_config": args.policy_config.read_text(encoding="utf-8"),
             "gpu_models": gpu_models(plan.gpu_devices),
             "cpu_cores": cpu_quota(),
+            "host_memory_bytes": host_memory_limit(),
             "cuda_mps": bool(args.cuda_mps),
         }
     return RunCache(mode, fields)
@@ -459,6 +460,10 @@ def _autotuned_run(
         vram_per_gpu_bytes = detect_gpu_memory_bytes(gpu_devices)
         if vram_per_gpu_bytes is not None:
             defaults["vram_per_gpu_bytes"] = vram_per_gpu_bytes
+    if "host_memory_bytes" not in defaults:
+        host_memory_bytes = host_memory_limit()
+        if host_memory_bytes is not None:
+            defaults["host_memory_bytes"] = host_memory_bytes
     bounds = resolve_bounds(gpu_count, defaults)
     limits = resolve_limits(defaults)
     shared = _build_inference(policy, request, manifest, benchmark_spec)

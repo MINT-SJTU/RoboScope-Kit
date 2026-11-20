@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import resource
 import statistics
@@ -22,11 +23,52 @@ class CpuStat:
     throttled_usec: int
 
 
+CGROUP = Path("/sys/fs/cgroup")
+
+
+def _meminfo() -> dict[str, int]:
+    values = {}
+    for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+        key, value, *_ = line.replace(":", " ").split()
+        values[key] = int(value) * 1024
+    return values
+
+
+def host_memory_limit(root: Path = CGROUP) -> int | None:
+    """Host memory this process tree may use: the cgroup's ``memory.max`` or ``memory.high``, else RAM."""
+
+    limits = []
+    for name in ("memory.max", "memory.high"):
+        path = root / name
+        if path.is_file() and (value := path.read_text(encoding="utf-8").strip()) != "max":
+            limits.append(int(value))
+    with contextlib.suppress(OSError, KeyError):
+        limits.append(_meminfo()["MemTotal"])
+    return min(limits, default=None)
+
+
+def host_memory_used(root: Path = CGROUP) -> int | None:
+    """Host memory in use without page cache: the cgroup's, else the machine's."""
+
+    try:
+        if (root / "memory.current").is_file():
+            stat_text = (root / "memory.stat").read_text(encoding="utf-8")
+            stat = dict(line.split() for line in stat_text.splitlines())
+            return int((root / "memory.current").read_text(encoding="utf-8")) - int(stat.get("file", 0))
+        meminfo = _meminfo()
+        return meminfo["MemTotal"] - meminfo["MemAvailable"]
+    except (OSError, KeyError, ValueError):
+        return None
+
+
 class GpuSampler:
+    """Sample GPU utilization and memory, and host memory, until stopped."""
+
     def __init__(self, interval_s: float = 0.5, gpu_devices: tuple[str, ...] | None = None):
         self._interval_s = interval_s
         self._gpu_devices = set(gpu_devices) if gpu_devices is not None else None
         self._samples: list[list[dict[str, float | str]]] = []
+        self.host_memory_samples: list[int] = []
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, name="gpu-sampler", daemon=True)
 
@@ -44,6 +86,9 @@ class GpuSampler:
             self._stop.wait(self._interval_s)
 
     def _sample_once(self) -> None:
+        host = host_memory_used()
+        if host is not None:
+            self.host_memory_samples.append(host)
         command = [
             "nvidia-smi",
             "--query-gpu=index,uuid,utilization.gpu,memory.used",

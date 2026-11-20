@@ -2,6 +2,14 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b74 - 2026-11-21
+
+- Make autotune account for host memory. Probes record their peak host memory without page cache (cgroup v2,
+  else `/proc/meminfo`), and `result.json` reports it under `resources.host`. A probe above 85% of the host
+  limit is rejected by the `diagonal` search, and the marginal memory per Worker caps its next K step as CPU
+  use does. Manifests can set `host_memory_bytes`. Before this, only GPU memory was checked, so a search could
+  pick a K that fills host memory during the full run. The run cache key includes the host memory limit.
+
 ## 0.8.0b72 - 2026-11-22
 
 - Step RoboCasa365's five native simulator slots on five threads of the Worker. MuJoCo releases the
