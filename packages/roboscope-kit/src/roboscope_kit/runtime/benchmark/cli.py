@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import signal
 import subprocess
 import sys
-from contextlib import ExitStack
+import threading
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -149,7 +152,39 @@ def _cli_error(exc: Exception) -> int:
     return 1
 
 
+@contextmanager
+def _exit_on_termination() -> Iterator[None]:
+    """Turn SIGTERM and SIGHUP into ``SystemExit`` so cleanup runs.
+
+    Workers, Policy replicas and the CUDA MPS daemon run in their own sessions, so
+    a signal to the CLI's process group does not reach them. Without this, the
+    default action ends the CLI before its ``finally`` blocks stop them.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    # Keep a handler someone else installed, such as nohup ignoring SIGHUP.
+    signals = [name for name in (signal.SIGTERM, signal.SIGHUP) if signal.getsignal(name) == signal.SIG_DFL]
+
+    def stop(signum, frame) -> None:
+        for name in signals:  # A repeated signal must not interrupt the cleanup.
+            signal.signal(name, signal.SIG_IGN)
+        raise SystemExit(128 + signum)
+
+    previous = {name: signal.signal(name, stop) for name in signals}
+    try:
+        yield
+    finally:
+        for name, handler in previous.items():
+            signal.signal(name, handler)
+
+
 def main(argv: list[str] | None = None) -> int:
+    with _exit_on_termination():
+        return _main(argv)
+
+
+def _main(argv: list[str] | None) -> int:
     args = parse_args(argv)
     try:
         benchmark = BenchmarkName(args.benchmark)

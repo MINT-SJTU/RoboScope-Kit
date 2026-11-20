@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b70 - 2026-11-20
+
+- Stop Workers, Policy Servers and the CUDA MPS daemon when the benchmark CLI receives SIGTERM or SIGHUP.
+  They run in their own sessions, so before this a terminated CLI left them running, and the leftover
+  MPS daemon made the next run fail. A handler that is already installed, such as `nohup` ignoring
+  SIGHUP, is kept.
+
 ## 0.8.0b67 - 2026-11-19
 
 - Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,

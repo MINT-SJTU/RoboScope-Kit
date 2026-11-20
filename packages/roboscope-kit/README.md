@@ -96,7 +96,9 @@ failures. Pure preflight checks run before any evaluation artifacts are written.
 other artifacts, choose a new directory: restarting the CLI does not resume it.
 
 The CLI reserves the directory with an exclusively created `.run.lock` and removes it on normal exit,
-handled failure, or interruption. A clean run does not create `errors.jsonl`. After an uncatchable kill
+handled failure, or interruption. Ctrl-C, SIGTERM and SIGHUP (unless already ignored, as under `nohup`)
+stop the Workers, Policy Servers and CUDA MPS daemon before the CLI exits; SIGTERM and SIGHUP exit with
+status 128 plus the signal number. A clean run does not create `errors.jsonl`. After an uncatchable kill
 or machine crash, remove a leftover lock only after confirming that its process and children have stopped;
 existing run artifacts still require a new directory. Keep shell `tee` output and scheduler logs outside
 `--output-dir`, since files created before launch also prevent reuse.
