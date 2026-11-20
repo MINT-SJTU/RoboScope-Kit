@@ -1,6 +1,6 @@
 # ManiSkill validation status
 
-**2026-11-18: integration acceptance is incomplete.** The pinned inventory declares
+**2026-11-20: integration acceptance is incomplete.** The pinned inventory declares
 55 evaluation TaskIDs and 77 selectable task/robot/observation/controller profiles.
 All original task IDs and tabletop state/RGB configurations remain in scope.
 Removing borrowed-task/robot model examples does not remove benchmark tasks.
@@ -13,10 +13,11 @@ SDK/configured-reference match cannot establish these requirements. Return-score
 tasks retain their native metric without fabricated binary success. See the
 [maintainer decision](https://github.com/MINT-SJTU/RoboScope-Kit/pull/99#issuecomment-6800683447).
 
-The runs below were made before this source was merged with main 0.8.0b66. Their source carried
-0.8.0b36 (this integration) and 0.8.0b37 (with #126); after the merge these ship as 0.8.0b67 and
-0.8.0b68. The merge brings main's shared runtime changes (run cache, autotune, process handling);
-no GPU run has been made on the merged source yet, because the GPU machine was offline.
+The detailed results below were first made before this source was merged with main 0.8.0b66.
+Their source carried 0.8.0b36 (this integration) and 0.8.0b37 (with #126); after the merge these
+ship as 0.8.0b67 and 0.8.0b68. The merge brings main's shared runtime changes (run cache, autotune,
+process handling). The [post-merge GPU check](#post-merge-gpu-check) reran every retained suite on
+the merged source and reproduced every record.
 
 Tasks that this integration cannot validate, and why, are listed under
 [blockers outside this integration](#blockers-outside-this-integration).
@@ -66,6 +67,7 @@ Stored-record replay is a CPU regression fixture, not a new model evaluation.
 | Source review checks | [`f40fbe816ba2d4198ea799c03b78a016bb3caf1b`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/f40fbe816ba2d4198ea799c03b78a016bb3caf1b) | 270 existing pytest cases: 8.71 s; checks below | Precedes the model-scope cleanup; not final-head acceptance |
 | Retained-scope cleanup | Current candidate; source/check hashes bound externally at delivery | 270 existing pytest cases: 7.88 s; eleven-suite CPU factory/quick/reduced checks pass | CPU only; the GPU runs below were made on later sources |
 | Official PPO prescribed count | [`6dcbf53dac517f4ab7bf55f3dc4cf042e716da20`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/6dcbf53dac517f4ab7bf55f3dc4cf042e716da20) | 1,100 episodes per side, exact record and per-step trajectory match; 403.8 s evaluation | Eleven official PPO tasks only; see below |
+| Post-merge GPU check | [`3c32a4a`](https://github.com/QLL-CCDD/RoboScope-Kit/commit/3c32a4a) (main 0.8.0b66 merged) | New runtime, self-test, Quick Test and all retained suites at the prescribed count; every record matches native | Later commits change only shard checks and tests; see below |
 
 Raw commands, source/check identities and regression fixtures remain outside Git.
 CPU regression receipts do not count any fixture model or TaskID toward acceptance.
@@ -75,6 +77,33 @@ SDK compatibility passed on the earlier
 [`634d867811401f4812b7580bce0e782af3cdcd19`](https://github.com/MINT-SJTU/RoboScope-Kit/actions/runs/43082168613);
 that does not establish CI or simulator acceptance of a later source revision. Exact-head CI is
 reported on the pull request.
+
+## Post-merge GPU check
+
+On 2026-11-19 the merged source `3c32a4a` (Kit 0.8.0b67) was built with `build-runtime.sh` into a
+new directory on a second machine of the same type: RTX 4090 with 49,140 MiB VRAM, driver
+595.71.05 and a 20-core CPU quota. The builder's simulator self-test passed, and the runtime
+manifest SHA-256 is `7232ebd38647bb3e381dffed52a3e31dfb50d53323b3b5689cb69b3e6bd2d16d`. Quick Test of
+`baseline_state_v1` completes 10/10 episodes. Every retained suite then ran at the prescribed count
+with one Policy replica and was compared with its native side, as in the sections below:
+
+| Suite | Episodes | Workers | Evaluation (s) | Records vs native |
+| --- | ---: | ---: | ---: | --- |
+| `official_ppo_state_v1` | 1,100 | 1 (three runs) | 426.2 ± 3.1 | Exact; same table as below |
+| `reference_ppo_state_v1` (G1) | 200 | 4 | 82.4 | Exact; same table as below |
+| `newt_state_v1` | 800 | 4 | 356.3 | Exact; same table as below |
+| `bridge_rgb_v1` (Octo-small) | 400 | 1 | 2,394.2 | Exact; same table as below |
+
+Every per-task count, success flag and mean return equals the tables below, with no Worker failure,
+retry or out-of-memory event. The official suite also ran three times each with 4, 8 and 12
+Workers for #126's comparison; all twelve runs match native. The one-Worker official run is 5.5%
+slower than the 403.8 s recorded on the first machine; the tables keep the first machine's timings.
+The Kit 0.8.0b68 source of #126 built and passed the same self-test and Quick Test; its ten official
+runs also match native, and #126 reports their timing.
+
+The later commits on this branch add simulator-free tests, exclude virtual environments from shard
+Policy hashes and compare shard success rates with the metric tolerance. They do not change the
+evaluated path.
 
 ## Official PPO prescribed-count results
 
@@ -314,8 +343,8 @@ check identities remain external; installing a wheel is not building a simulator
 Initial process-fixture empty-PID-file and Windows CRLF failures remain in the
 receipts. The unchanged process test passed alone in 1.85 s and then in the full
 passing suite; script checks use canonical LF bytes. No test was changed to hide
-either failure. `AGENTS.md` prohibits adding repository tests, so additional
-regression checks remain external.
+either failure. Simulator-free regression tests for profiles, return-only scoring,
+shard merging and Worker recycling are in `packages/roboscope-kit/tests/test_maniskill_runtime.py`.
 
 The retained-scope source/check hashes are bound externally at delivery. No current
 ten-lane model rollout, fresh builder run or GPU self-test is claimed for this
@@ -327,7 +356,7 @@ appropriate competence, complete records and exact-head CI.
 
 The [official PPO results](#official-ppo-prescribed-count-results) report evaluation time,
 episodes/h, steps/s, Policy wait, GPU busy, peak VRAM and CPU use for the eleven official tasks.
-Other retained models have no current-source timing. SM/Tensor/RT throughput is unavailable:
+The [post-merge GPU check](#post-merge-gpu-check) reports evaluation time for every retained suite. SM/Tensor/RT throughput is unavailable:
 the machine denies GPU performance counters. Do not reuse a
 borrowed-policy cohort as that measurement. CPU wall spans can include
 asynchronous GPU work, and concurrent Worker times cannot be summed into
