@@ -2,6 +2,18 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b72 - 2026-11-21
+
+- Step RoboCasa365's five native simulator slots on five threads of the Worker. MuJoCo releases the
+  GIL while stepping; each slot keeps its EGL context on its own thread, and creation and reset stay
+  in slot order. Threaded Workers set `MALLOC_ARENA_MAX=1`, so they use the memory of serial ones.
+  `defaults.slot_threads: false`, video and `--profile` step the slots serially.
+- Sample the RoboCasa365 Diffusion Policy example's DDPM loop through CUDA graphs, with bit-identical
+  actions and generator state; `ROBOCASA365_CUDA_GRAPHS=0` samples eagerly.
+- On target50 × 5 at the official horizons (K4/G2, CUDA MPS, one RTX 4090, three runs per arm), the
+  median formal evaluation takes 4,850 s instead of 9,810 s (2.02x; best against best 2.09x), and all
+  runs pass the native comparison.
+
 ## 0.8.0b71 - 2026-11-20
 
 - Spread Workers that recycle on every group change across groups: an idle recycling Worker claims from the group with the most pending items per Worker already on it instead of following the others into the same next group. A Worker that loses a claim to another Worker chooses its group again, so Workers that start together do not all start the same group. On eleven ManiSkill tasks this cuts evaluation time by 20% with four Workers and 19% with eight (three runs each), reaching 2.33x the single-Worker time with eight; benchmarks without recycling keep the ordinal claim order.

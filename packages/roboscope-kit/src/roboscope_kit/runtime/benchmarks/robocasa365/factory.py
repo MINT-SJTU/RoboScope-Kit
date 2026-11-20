@@ -113,4 +113,5 @@ class RoboCasa365BenchmarkFactory:
             suite=request.suite, tasks=tasks, episodes_per_task=episodes, native_envs=native_envs,
             cpu_threads=int(manifest.defaults.get("client_cpu_threads", 1)),
             save_videos=bool(manifest.defaults.get("save_videos", False)),
+            slot_threads=manifest.defaults.get("slot_threads", True),
         ))

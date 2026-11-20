@@ -78,6 +78,77 @@ The self-test verifies the frozen registry and resets and renders one
 environment twice. The Quick Test runs one native five-slot group of the first
 task at its official horizon. For the full matrix remove `--quick-test` and set
 `--concurrency K --replicas G`; each Worker runs five simulator environments.
+A Worker steps its five environments on five threads; set `defaults.slot_threads:
+false` in the run's manifest to step them one after another
+([protocol](../../packages/roboscope-kit/docs/robocasa365-protocol.md#scenario-sampling-and-environment-lifecycle)).
+
+## Throughput
+
+The full workload (target50 × 5, 250 episodes, 452,250 steps at the official
+horizons, FP32, 100 DDPM steps, no video) was run on 2026-11-20 and 2026-11-21 on
+the comparison machine below, with K4/G2, `--cuda-mps` and rollout traces, three
+times per arm in the order baseline, optimized, optimized, baseline (after a first
+optimized, baseline pair), each run alone. K5/G2 exceeded the 66 GiB memory guard
+on the full workload in both arms. The baseline is `main` at `03667bd`; the
+optimized arm adds threaded slots and the example Policy's
+[CUDA-graph sampler](../../examples/robocasa365_diffusion/README.md#cuda-graph-sampling).
+
+| Run | Formal evaluation | Steps/s | Policy wait per chunk | Host load at end | Successes |
+|---|---:|---:|---:|---:|---:|
+| Baseline 1 | 9,703 s | 46.6 | 0.96 s | 44 | 14/250 |
+| Baseline 2 | 9,810 s | 46.1 | 0.99 s | 46 | 14/250 |
+| Baseline 3 | 10,574 s | 42.8 | 1.08 s | 176 | 14/250 |
+| Optimized 1 | 4,852 s | 93.1 | 0.30 s | 23 | 14/250 |
+| Optimized 2 | 4,850 s | 93.2 | 0.31 s | 30 | 15/250 |
+| Optimized 3 | 4,637 s | 97.5 | 0.31 s | 21 | 14/250 |
+
+| | Baseline | Optimized | Speedup |
+|---|---:|---:|---:|
+| Median | 9,810 s | 4,850 s | 2.02x |
+| Best | 9,703 s | 4,637 s | 2.09x |
+| Range | 9,703–10,574 s (9.0%) | 4,637–4,852 s (4.6%) | 2.00–2.28x per pair |
+
+The physical host is shared with other tenants; the load column is its one-minute
+load average when each run ended. Baseline 3 ran while that load rose to about 176,
+against 21–46 for the other runs, and its simulator time grew from about 23,700 to
+25,449 Worker-seconds with the same code and workload, so its extra 800 s is most
+likely contention rather than run-to-run spread. Without it the baseline median is
+9,757 s and the speedup 2.01x. Host memory peaked at 59–61 GiB in every run. The
+[raw records](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-throughput-20261121)
+hold each run's result, queue records, traces and log, the run scripts and the
+comparison output.
+
+All six runs pass the [native comparison](#native-comparison) checks against both
+native passes, with equal scenario and initial-state digests and step counts. The
+one extra success of Optimized 2 is OpenCabinet episode 3, which also differs
+between Optimized 1 and 2 with the same code; like the other outcome differences, it
+begins in a rendered image. Repeats of one arm share about 140 of 250 bit-identical
+trajectories, against about 94 between the arms, so the optimized path changes
+some trajectories numerically without changing any outcome systematically.
+
+In the first pair, summed over the four Workers, the baseline spends 62% of its
+time stepping the simulator, 29% waiting for the Policy, 5% creating environments
+and 4% resetting them. Two changes target the first two:
+
+- **Threaded slots.** MuJoCo releases the GIL in `mj_step`, so five threads in
+  one Worker step the five slots at once. Each slot is created, reset, stepped
+  and closed on its own thread, where its EGL context stays current; creation and
+  reset still run one slot at a time in slot order. Simulator time drops from
+  23,280 to 11,357 Worker-seconds. The Worker sets `MALLOC_ARENA_MAX=1`, without
+  which per-thread malloc arenas add about 4.7 GiB per Worker.
+- **CUDA-graph sampling** cuts a batch's 100-step DDPM loop from 0.76 to 0.14 s
+  with bit-identical actions and generator state. Policy wait drops from 10,909
+  to 3,449 Worker-seconds.
+
+The optimized arm now spends 61% stepping, 19% waiting for the Policy and 20%
+creating and resetting environments, which still run serially.
+
+An earlier design stepped each slot in a spawned process. Each process costs
+about 1.3 GiB of native memory more than a thread, so memory allows fewer
+Workers. On ten composite tasks × 5, the best configuration that fit (K2/G2,
+42.3 steady steps/s) reached 0.88x of the best serial one (K5/G2, 48.2), and that
+design was dropped. On the same ten tasks, CUDA-graph sampling lifts serial K5/G2
+to 67.2 steady steps/s, and threaded slots with CUDA-graph sampling reach 135.9.
 
 ## Native comparison
 
