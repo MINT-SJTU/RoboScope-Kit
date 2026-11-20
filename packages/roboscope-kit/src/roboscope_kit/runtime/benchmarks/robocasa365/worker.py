@@ -307,6 +307,7 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         "reset_s": 0.0, "inference_wait_s": 0.0, "environment_step_s": 0.0, "video_write_s": 0.0,
     }
     started = time.perf_counter()
+    failed = True
     try:
         from robocasa.models.fixtures.counter import Counter
 
@@ -329,9 +330,14 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
                     item.item_id, item.group_id, args.worker_id, tuple(records),
                     {"task": task.name, "timings": dict(timings)},
                 ))
+        failed = False
     finally:
         close_started = time.perf_counter()
-        close_all(environments)
+        try:
+            close_all(environments)
+        except Exception:
+            if not failed:
+                raise  # Otherwise the task's own error propagates instead of a close error.
         timings["environment_close_s"] = time.perf_counter() - close_started
     timings["task_elapsed_s"] = time.perf_counter() - started
     return WorkResult(

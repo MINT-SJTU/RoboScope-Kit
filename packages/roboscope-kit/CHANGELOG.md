@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b68 - 2026-11-19
+## 0.8.0b69 - 2026-11-20
 
 - Add opt-in RoboTwin central rendering (`render_mode: central` in the manifest's `defaults`): evaluators
   simulate on the CPU without a GPU, recording each episode's visual scene construction, and
@@ -15,6 +15,12 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   evaluated 50 tasks × 2 episodes at 149.1 steps/s against 102.1 for native K6/G2 (K12/G3, CUDA MPS on both,
   mean of two arms each), with every episode's Policy images and actions identical; see
   `benchmarks/robotwin/CENTRAL_RENDER.md`. Native rendering stays the default.
+
+## 0.8.0b68 - 2026-11-19
+
+- RoboCasa365 review follow-ups: a failing task's own error is no longer replaced by an environment
+  close error, the Worker `PYTHONPATH` has no empty entry when none was set, and the README tables
+  drop the "partial integration" label now that the target50 native comparison is accepted.
 
 ## 0.8.0b67 - 2026-11-19
 
