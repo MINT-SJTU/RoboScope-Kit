@@ -1,0 +1,95 @@
+{
+  "schema_version": 3,
+  "supported_benchmarks": [
+    "robocasa365"
+  ],
+  "protocol_versions": {
+    "robocasa365": "robocasa365-multitask-v1"
+  },
+  "supported_suites": {
+    "robocasa365": [
+      "target50",
+      "atomic_seen",
+      "composite_seen",
+      "composite_unseen"
+    ]
+  },
+  "runtime": {
+    "python": "env/bin/python",
+    "benchmark_root": "src/robocasa"
+  },
+  "defaults": {
+    "episodes": 50,
+    "client_cpu_threads": 1,
+    "ready_timeout_s": 900,
+    "save_videos": false,
+    "probe_task_count": 3,
+    "probe_items_per_worker": 3
+  },
+  "benchmark_protocols": {
+    "robocasa365": {
+      "robocasa_revision": "3443cdf3dd20f9ae8ed41adba442059b506891d0",
+      "robosuite_revision": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "scene_split": "pretrain",
+      "native_envs": 5,
+      "constructor_seed": 1111111,
+      "rollout_label_base": 100000,
+      "control_freq_hz": 20,
+      "observation_steps": 2,
+      "action_steps": 8,
+      "action_representation": "robocasa365.panda-omron-hybrid-v1",
+      "task_horizons": {
+        "CloseBlenderLid": 900,
+        "CloseFridge": 900,
+        "CloseToasterOvenDoor": 450,
+        "CoffeeSetupMug": 600,
+        "NavigateKitchen": 450,
+        "OpenCabinet": 1050,
+        "OpenDrawer": 750,
+        "OpenStandMixerHead": 450,
+        "PickPlaceCounterToCabinet": 750,
+        "PickPlaceCounterToStove": 600,
+        "PickPlaceDrawerToCounter": 750,
+        "PickPlaceSinkToCounter": 900,
+        "PickPlaceToasterToCounter": 600,
+        "SlideDishwasherRack": 450,
+        "TurnOffStove": 750,
+        "TurnOnElectricKettle": 450,
+        "TurnOnMicrowave": 450,
+        "TurnOnSinkFaucet": 600,
+        "DeliverStraw": 2550,
+        "GetToastedBread": 3000,
+        "KettleBoiling": 1500,
+        "LoadDishwasher": 1800,
+        "PackIdenticalLunches": 3900,
+        "PreSoakPan": 2400,
+        "PrepareCoffee": 1800,
+        "RinseSinkBasin": 1350,
+        "ScrubCuttingBoard": 1200,
+        "SearingMeat": 4350,
+        "SetUpCuttingStation": 2400,
+        "StackBowlsCabinet": 2100,
+        "SteamInMicrowave": 2100,
+        "StirVegetables": 2400,
+        "StoreLeftoversInBowl": 2550,
+        "WashLettuce": 1650,
+        "ArrangeBreadBasket": 4350,
+        "ArrangeTea": 2250,
+        "BreadSelection": 1950,
+        "CategorizeCondiments": 1650,
+        "CuttingToolSelection": 1200,
+        "GarnishPancake": 2700,
+        "GatherTableware": 2250,
+        "HeatKebabSandwich": 2700,
+        "MakeIceLemonade": 3000,
+        "PanTransfer": 1800,
+        "PortionHotDogs": 2250,
+        "RecycleBottlesByType": 2850,
+        "SeparateFreezerRack": 2400,
+        "WaffleReheat": 4050,
+        "WashFruitColander": 3150,
+        "WeighIngredients": 3000
+      }
+    }
+  }
+}

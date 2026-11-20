@@ -2,12 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b68 - 2026-11-19
+## 0.8.0b71 - 2026-11-20
 
 - Spread Workers that recycle on every group change across groups: an idle recycling Worker claims from the group with the most pending items per Worker already on it instead of following the others into the same next group. A Worker that loses a claim to another Worker chooses its group again, so Workers that start together do not all start the same group. On eleven ManiSkill tasks this cuts evaluation time by 20% with four Workers and 19% with eight (three runs each), reaching 2.33x the single-Worker time with eight; benchmarks without recycling keep the ordinal claim order.
 - Classify PhysX GPU allocator failures, cuBLAS allocation failures and cuSOLVER handle-creation failures as out-of-memory, so a Worker that runs out of GPU memory in PhysX (which then stops with CUDA error 700) scales its GPU's Workers down instead of retrying at the same count; this applies to every benchmark. A Worker that exits for a planned recycle while its GPU scales down is no longer reported as failed.
 
-## 0.8.0b67 - 2026-11-19
+## 0.8.0b70 - 2026-11-20
 
 - Add the partial, pinned ManiSkill integration with explicit task/robot/observation/controller profiles, GPU-vectorized Workers, reproducible simulator/assets builds and real-model correctness references; incomplete task/model acceptance remains documented.
 - Preserve actual terminal masks and recycle simulator Workers when profile or vector width changes while retaining Policy replicas.
@@ -18,6 +18,35 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - Add simulator-free tests for ManiSkill profile validation, return-only scoring in results, metrics and autotune, ManiSkill shard merging and validation, Worker recycling on a task or vector-width change, and probe health during a planned recycle.
 - Remove cross-task/robot transfer Policy examples and their evaluation claims while preserving the original 55-task and tabletop observation/controller contracts; list intended-task checkpoint candidates as unvalidated until native acceptance.
 - Raise the ManiSkill autotune Worker cap from 2 to 16 so autotune can choose more simulator Workers per GPU, and stop counting a Worker that is exiting for a planned recycle as a lost Worker in autotune probes; this shared probe fix applies to every benchmark whose Workers recycle.
+## 0.8.0b69 - 2026-11-20
+
+- Add opt-in RoboTwin central rendering (`render_mode: central` in the manifest's `defaults`): evaluators
+  simulate on the CPU without a GPU, recording each episode's visual scene construction, and
+  `render_services_per_gpu` (default 2) render services per GPU replay it into a new render-only scene per
+  episode and return the head and wrist RGB through shared memory. The RoboTwin adapter starts a GPU's services
+  with its first Worker and stops them after each pass; benchmark adapters may now define `close()`, which
+  the runtime calls after a pass's Workers stop. An evaluator that loses its service ends its Worker, so the
+  task is requeued and the restarted Worker starts a new service, instead of recording failed episodes.
+  Central rendering supports `demo_clean` with qpos actions, a seed cache and videos off. On one RTX 4090 it
+  evaluated 50 tasks × 2 episodes at 149.1 steps/s against 102.1 for native K6/G2 (K12/G3, CUDA MPS on both,
+  mean of two arms each), with every episode's Policy images and actions identical; see
+  `benchmarks/robotwin/CENTRAL_RENDER.md`. Native rendering stays the default.
+
+## 0.8.0b68 - 2026-11-19
+
+- RoboCasa365 review follow-ups: a failing task's own error is no longer replaced by an environment
+  close error, the Worker `PYTHONPATH` has no empty entry when none was set, and the README tables
+  drop the "partial integration" label now that the target50 native comparison is accepted.
+
+## 0.8.0b67 - 2026-11-19
+
+- Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,
+  and official Diffusion Policy example. Freeze all 50 tasks, horizons, pretrain scenes and scoring.
+- Correct EGL context ownership and cleanup, including partially constructed renderers, and stabilize
+  seeded scene sampling. The runtime builder pins the source, patch and resulting-file hashes.
+- Make self-test reset and render twice and Quick Test execute one native five-slot group.
+- Add public grouped Policy lifecycle profiling and simulator-operation markers, plus simulator-free
+  checks for task accounting, configuration, factory sizing, sharding and profiling.
 
 ## 0.8.0b66 - 2026-11-14
 

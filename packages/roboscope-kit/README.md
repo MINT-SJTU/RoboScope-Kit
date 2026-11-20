@@ -188,6 +188,10 @@ package, and without `--profile` nothing is loaded. Capture starts when the Work
 episode, so benchmarks with their own client, such as RoboTwin, record nothing yet. Tracing slows the run, so
 `manifest.json` records `"profile": true`, and such a run is not a throughput measurement.
 
+Native batched evaluators can wrap their ordinary `reset` and `end_episode` calls
+in `with client.episode_group():` to capture the complete group as one episode.
+`profiling.environment("step")` marks a simulator operation within that capture.
+
 How to read the reports, which benchmarks are covered, and the findings so far are in the
 [profiling notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/profiling.md).
 
@@ -273,6 +277,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | RoboTwin | SDK-native adapter and worker calling the pinned RoboTwin launcher | RoboTwin environment and source, deploy policy, checkpoint assets, and validated seed cache |
 | RoboDojo | SDK-native adapter and worker calling the pinned RoboDojo simulator | Isaac Sim environment, RoboDojo source and evaluation assets |
 | RoboCasa GR-1 Tabletop | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa GR-1 Tabletop environment, simulator and task source, and dataset assets |
+| RoboCasa365 | SDK-native adapter preserving native five-slot task groups and consecutive-frame history | Pinned RoboCasa 1.0.1, robosuite, MuJoCo, all six asset archives, and a compatible 12-dimensional policy |
 | CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
 | RLBench | SDK-native adapter and persistent CoppeliaSim worker on a private Xvfb display, with a fixed Python hash seed for paired evaluation | CoppeliaSim 4.1, pinned PyRep and the PerAct RLBench fork, and PerAct's released test split |
@@ -298,6 +303,9 @@ The exact contracts are in the protocol documents:
 - [RLBench](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md):
   the PerAct 18-task reproduction profile `peract_18`: licence gates, pinned stack, test-episode replay,
   cameras and key-frame actions, termination, aggregation, and the native comparison.
+- [RoboCasa365](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/robocasa365-protocol.md):
+  the official multi-task matrix uses 50 tasks in pretrain scenes and 50 rollouts per task.
+  `robocasa365` is isolated from GR1 `robocasa/tabletop`; Quick Tests are smoke subsets.
 - [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md):
   the `ph_low_dim` suite, supported and unsupported task/dataset/observation combinations, version and
   license gates, seeded initial states, upstream rollout semantics, the native comparison, and the baseline.
@@ -338,6 +346,15 @@ concurrently instead of taking turns. It is off by default. With it, the runtime
 The GPU must be in Default or Exclusive-Process compute mode, and the host must provide
 `nvidia-cuda-mps-control`. Replicas pick their GPU by ordinal within the daemon's devices, so a Policy must
 not change `CUDA_VISIBLE_DEVICES`.
+
+## RoboTwin central rendering (opt-in)
+
+With `"render_mode": "central"` in the RoboTwin manifest's `defaults`, RoboTwin evaluators simulate on the CPU
+and two render services per GPU (`render_services_per_gpu`) ray-trace their observations, instead of every
+evaluator holding its own renderer on the GPU. The saved GPU memory fits more Workers and replicas; on one
+RTX 4090 this mode evaluated 50 tasks × 2 episodes 46% faster than native K6/G2, and a prototype of it
+evaluated 50 tasks × 10 episodes 25% faster, with every episode's actions unchanged. It supports `demo_clean` with qpos actions and videos
+off. See [RoboTwin central rendering](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robotwin/CENTRAL_RENDER.md).
 
 ## Cross-instance sharding (Beta)
 
