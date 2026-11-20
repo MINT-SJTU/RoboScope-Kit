@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-05
+Updated: 2026-11-18
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -70,9 +70,12 @@ PY
 
 ## Coverage
 
-Capture starts when the Worker's `PolicyClient` opens the `episode` range, so only benchmarks that call the
-Policy through `PolicyClient` record anything. The Policy Server does not run under `nsys`: its own GPU time
+Capture starts when the Worker opens the `episode` range. Most workers do this through
+`PolicyClient`; RoboCasa365 keeps one range open around its complete native episode group. The Policy Server does not run under `nsys`: its own GPU time
 is not in the report, only the round-trip time of each request.
+RoboCasa365 opens that range after its group's environment resets and before
+Policy reset calls. Construction/reset timing uses separate worker wall timers;
+these timers do not establish verified Nsight hardware coverage.
 
 | Benchmark | Uses `PolicyClient` | Verified on hardware |
 |---|---|---|
@@ -84,6 +87,7 @@ is not in the report, only the round-trip time of each request.
 | ManiSkill | Yes | Worker CPU ranges wired; Nsight GPU capture not yet verified |
 | SimplerEnv | Yes | Not yet |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
+| RoboCasa365 | Yes; first native group after environment resets | Nsight not verified; worker wall timers recorded separately |
 | CALVIN | Yes | Not yet |
 | RoboTwin | No; its launcher writes the same ranges through Kit's helper, loaded from `ROBOSCOPE_PROFILING_MODULE` | Not yet |
 

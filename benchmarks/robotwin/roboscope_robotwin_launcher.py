@@ -1145,7 +1145,7 @@ def install_skip_unread_static_cameras():
         if self.collect_wrist_camera:
             self.left_camera.take_picture()
             self.right_camera.take_picture()
-        for camera, name in zip(self.static_camera_list, self.static_camera_name, strict=True):
+        for camera, name in zip(self.static_camera_list, self.static_camera_name):  # noqa: B905 - CPython 3.8
             if name in used:
                 camera.take_picture()
 
@@ -1153,7 +1153,7 @@ def install_skip_unread_static_cameras():
         if _reads_all(self):
             return fresh_rgba(self)
         cameras, names = self.static_camera_list, self.static_camera_name
-        kept = [(c, n) for c, n in zip(cameras, names, strict=True) if n in used]
+        kept = [(c, n) for c, n in zip(cameras, names) if n in used]  # noqa: B905 - CPython 3.8 has no strict=
         self.static_camera_list, self.static_camera_name = [c for c, _ in kept], [n for _, n in kept]
         try:
             return fresh_rgba(self)
@@ -1315,20 +1315,32 @@ def main():
     install_model_client()
     if os.environ.get("ROBOTWIN_DISABLE_VIDEO") == "1":
         disable_video_logging()
-    # Share one SAPIEN Engine/Renderer across episodes in this process (the
-    # dominant per-episode cost is rebuilding the engine + RT pipeline).
-    # ROBOTWIN_SHARED_ENGINE=0 disables it for A/B timing.
-    if os.environ.get("ROBOTWIN_SHARED_ENGINE", "1") == "1":
-        install_shared_engine()
-    # Unused cameras cost driver calls per scene: 6.3 -> 5.3 s for the first observation of a new scene at 48
-    # concurrent evaluators on 4x RTX PRO 5000; the three used cameras' images are unchanged.
-    if os.environ.get("ROBOTWIN_SKIP_UNUSED_CAMERAS", "1") == "1":
-        install_lean_cameras()
-    # The GPU time-slices the ray tracing of every evaluator on a card, so each rendered camera waits for the
-    # others: at K48/g8 on 4x RTX PRO 5000, not rendering front_camera raises steady throughput from 511 to
-    # 583 steps/s with the three used images unchanged. ROBOTWIN_SKIP_UNREAD_CAMERAS=0 renders every camera.
-    if os.environ.get("ROBOTWIN_SKIP_UNREAD_CAMERAS", "1") == "1":
-        install_skip_unread_static_cameras()
+    render_service = os.environ.get("ROBOTWIN_RENDER_SERVICE")
+    if render_service:
+        # Central rendering: this process simulates on the CPU and its render service on the GPU builds
+        # the same scene, with the cameras of the lean-camera and skip-unread patches below.
+        video_off = os.environ.get("ROBOTWIN_DISABLE_VIDEO") == "1"
+        if action_type != "qpos" or seed_cache_enabled != "1" or not video_off:
+            raise RuntimeError("RoboTwin central rendering requires qpos actions, a seed cache and video off")
+        import roboscope_robotwin_render
+
+        roboscope_robotwin_render.install_worker(robotwin_root, render_service)
+    else:
+        # Share one SAPIEN Engine/Renderer across episodes in this process (the
+        # dominant per-episode cost is rebuilding the engine + RT pipeline).
+        # ROBOTWIN_SHARED_ENGINE=0 disables it for A/B timing.
+        if os.environ.get("ROBOTWIN_SHARED_ENGINE", "1") == "1":
+            install_shared_engine()
+        # Unused cameras cost driver calls per scene: 6.3 -> 5.3 s for the first observation of a new scene at
+        # 48 concurrent evaluators on 4x RTX PRO 5000; the three used cameras' images are unchanged.
+        if os.environ.get("ROBOTWIN_SKIP_UNUSED_CAMERAS", "1") == "1":
+            install_lean_cameras()
+        # The GPU time-slices the ray tracing of every evaluator on a card, so each rendered camera waits for
+        # the others: at K48/g8 on 4x RTX PRO 5000, not rendering front_camera raises steady throughput from
+        # 511 to 583 steps/s with the three used images unchanged. ROBOTWIN_SKIP_UNREAD_CAMERAS=0 renders
+        # every camera.
+        if os.environ.get("ROBOTWIN_SKIP_UNREAD_CAMERAS", "1") == "1":
+            install_skip_unread_static_cameras()
     # Without the bound-method cycle, finished click_bell/click_alarmclock tasks free their scene as soon as
     # the evaluator returns instead of when the cyclic garbage collector runs.
     install_acyclic_check_arm_function()
@@ -1346,10 +1358,14 @@ def main():
     if action_type == "ee" and seed_cache_enabled == "1":
         install_ee_eval_planner()
         install_shared_curobo_planner()
-    if os.environ.get("ROBOTWIN_EVAL_SESSION") == "1":
-        run_eval_session(args.script)
-        return
-    run_single_task(args.script, remaining)
+    try:
+        if os.environ.get("ROBOTWIN_EVAL_SESSION") == "1":
+            run_eval_session(args.script)
+        else:
+            run_single_task(args.script, remaining)
+    finally:
+        if render_service:
+            roboscope_robotwin_render.close_worker_client()
 
 
 if __name__ == "__main__":

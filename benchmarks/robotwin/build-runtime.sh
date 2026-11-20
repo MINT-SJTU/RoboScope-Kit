@@ -8,6 +8,7 @@ set -Eeuo pipefail
 #     env/                             conda environment (CPython 3.8), runtime.benchmark_python
 #     RoboTwin/                        pinned RoboTwin tree with its assets and envs/curobo
 #     roboscope_robotwin_launcher.py   runs RoboTwin's evaluator inside env/
+#     roboscope_robotwin_render.py     the render service of render_mode central, imported by the launcher
 #     roboscope_robotwin_seed_scan.py  the scanner whose SHA-256 the seed generations record
 #     seed-cache-v2.tar.gz             the frozen seed archive
 #     seed-cache/<suite>/<task>.pkl    the archive extracted; used by --quick-test
@@ -84,6 +85,7 @@ CONDA_SPECS="${SCRIPT_DIR}/conda-specs.txt"
 REQUIREMENTS="${SCRIPT_DIR}/runtime-requirements.txt"
 MANIFEST="${SCRIPT_DIR}/benchmark-manifest.json"
 LAUNCHER="${SCRIPT_DIR}/roboscope_robotwin_launcher.py"
+RENDER_SERVICE="${SCRIPT_DIR}/roboscope_robotwin_render.py"
 SCANNER="${SCRIPT_DIR}/roboscope_robotwin_seed_scan.py"
 SEED_ARCHIVE="${SCRIPT_DIR}/seed-cache-v2.tar.gz"
 ENV_PREFIX="${INSTALL_DIR}/env"
@@ -96,7 +98,7 @@ if [[ "$(uname -s):$(uname -m)" != "Linux:x86_64" ]]; then
   echo "RoboTwin runtime builds require Linux x86_64" >&2
   exit 3
 fi
-for required in "${CONDA_SPECS}" "${REQUIREMENTS}" "${MANIFEST}" "${LAUNCHER}" "${SCANNER}" "${SEED_ARCHIVE}"; do
+for required in "${CONDA_SPECS}" "${REQUIREMENTS}" "${MANIFEST}" "${LAUNCHER}" "${RENDER_SERVICE}" "${SCANNER}" "${SEED_ARCHIVE}"; do
   [[ -f "${required}" ]] || {
     echo "RoboTwin runtime input is missing: ${required}" >&2
     exit 3
@@ -458,10 +460,11 @@ PY
   exit 5
 }
 
-# The manifest names the launcher, scanner and seed archive by paths relative to
-# itself, so they are copied next to it.
+# The manifest names the launcher, render service, scanner and seed archive by paths
+# relative to itself, so they are copied next to it.
 install -m 0644 "${MANIFEST}" "${INSTALL_DIR}/benchmark-manifest.json"
 install -m 0644 "${LAUNCHER}" "${INSTALL_DIR}/roboscope_robotwin_launcher.py"
+install -m 0644 "${RENDER_SERVICE}" "${INSTALL_DIR}/roboscope_robotwin_render.py"
 install -m 0644 "${SCANNER}" "${INSTALL_DIR}/roboscope_robotwin_seed_scan.py"
 install -m 0644 "${SEED_ARCHIVE}" "${INSTALL_DIR}/seed-cache-v2.tar.gz"
 [[ "$(sha256sum "${INSTALL_DIR}/seed-cache-v2.tar.gz" | awk '{print $1}')" == "${SEED_ARCHIVE_SHA256}" ]] || {

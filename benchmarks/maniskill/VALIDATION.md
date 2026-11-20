@@ -15,7 +15,7 @@ tasks retain their native metric without fabricated binary success. See the
 
 The detailed results below were first made before this source was merged with main 0.8.0b66.
 Their source carried 0.8.0b36 (this integration) and 0.8.0b37 (with #126); after the merge these
-ship as 0.8.0b67 and 0.8.0b68. The merge brings main's shared runtime changes (run cache, autotune,
+ship as 0.8.0b70 and 0.8.0b71. The merge brings main's shared runtime changes (run cache, autotune,
 process handling). The [post-merge GPU check](#post-merge-gpu-check) reran every retained suite on
 the merged source and reproduced every record.
 

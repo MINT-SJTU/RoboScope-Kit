@@ -33,6 +33,9 @@ MEMORY_FAILURE_TOKENS = (
     "cannot create buffer",
     "failed to allocate device memory",
 )
+# Printed by an evaluator whose render service (render_mode central) exited or broke its connection; the
+# same constant is SERVICE_LOST_MARKER in benchmarks/robotwin/roboscope_robotwin_render.py.
+RENDER_SERVICE_LOST_PREFIX = "ROBOSCOPE_ROBOTWIN_RENDER_SERVICE_LOST"
 
 
 def parse_args() -> argparse.Namespace:
@@ -56,6 +59,11 @@ def parse_args() -> argparse.Namespace:
         help="keep one launcher process alive across tasks so the shared "
         "CuroboPlanner patch pays planner construction once per worker",
     )
+    parser.add_argument(
+        "--render-service",
+        type=Path,
+        help="Unix socket of this GPU's RoboTwin render service; the evaluator then runs without a GPU",
+    )
     parser.add_argument("--poll-interval", type=float, default=0.05)
     return parser.parse_args()
 
@@ -69,6 +77,15 @@ def _item_window(item: WorkItem) -> tuple[int, int, int]:
             "RoboTwin work item episode window must be positive and within total_episodes"
         )
     return episode_start, episodes, total_episodes
+
+
+def _gpu_env(args: argparse.Namespace) -> dict[str, str]:
+    """GPU visibility of the evaluator: its own GPU natively, none with a render service."""
+
+    render_service = getattr(args, "render_service", None)
+    if render_service is None:
+        return {"CUDA_VISIBLE_DEVICES": str(args.gpu_id)}
+    return {"CUDA_VISIBLE_DEVICES": "", "ROBOTWIN_RENDER_SERVICE": str(render_service)}
 
 
 def _task_spec(args: argparse.Namespace, item: WorkItem, deploy_policy: Path) -> tuple[dict, list[str]]:
@@ -139,7 +156,7 @@ class _EvalSession:
             # planner.CuroboPlanner) intermittently crash. Evaluate without
             # bytecode caching so imports never need to write pyc files.
             "PYTHONDONTWRITEBYTECODE": "1",
-            "CUDA_VISIBLE_DEVICES": str(self.args.gpu_id),
+            **_gpu_env(self.args),
             "ROBOSCOPE_INFERENCE_SOCKET": str(self.args.policy_socket),
             "ROBOTWIN_EVAL_SESSION": "1",
             "ROBOTWIN_DISABLE_VIDEO": "1" if self.args.disable_video else "0",
@@ -230,7 +247,7 @@ def _run_task_in_session(args: argparse.Namespace, item: WorkItem) -> WorkResult
         raise RuntimeError("RoboTwin evaluator session failed to start")
     done_ok: bool | None = None
     records: list[EvaluationRecord] = []
-    memory_failures: deque[str] = deque(maxlen=16)
+    failures = _RestartFailures()
     queue = WorkQueue(args.queue_dir)
     started = time.perf_counter()
     with log_path.open("w", encoding="utf-8") as log:
@@ -247,8 +264,7 @@ def _run_task_in_session(args: argparse.Namespace, item: WorkItem) -> WorkResult
             for line in session.process.stdout:
                 log.write(line)
                 log.flush()
-                if any(token in line.lower() for token in MEMORY_FAILURE_TOKENS):
-                    memory_failures.append(line.strip())
+                failures.observe(line)
                 if line.startswith(DONE_PREFIX):
                     done_ok = bool(json.loads(line[len(DONE_PREFIX) :]).get("ok"))
                     break
@@ -295,15 +311,7 @@ def _run_task_in_session(args: argparse.Namespace, item: WorkItem) -> WorkResult
             session.stop()
             returncode = 1
         detail = read_log_tail(log_path)
-        if memory_failures or returncode < 0:
-            memory_detail = ""
-            if memory_failures:
-                memory_detail = "\nNative evaluator memory failures:\n" + "\n".join(memory_failures)
-            raise RuntimeError(
-                f"RoboTwin task {task} exited with {returncode}; see {log_path}"
-                f"{memory_detail}"
-                f"\nNative evaluator log tail:\n{detail}"
-            )
+        failures.raise_if_restart_needed(task, returncode, log_path, detail)
         return _failed_task_result(
             item,
             args.worker_id,
@@ -334,6 +342,36 @@ def _run_task_in_session(args: argparse.Namespace, item: WorkItem) -> WorkResult
     )
 
 
+class _RestartFailures:
+    """Evaluator output that a restarted Worker can recover from: GPU memory failures and a lost render
+    service. A restarted Worker gets fresh GPU state, and in central mode a new render service if its
+    service has exited, so these failures end the Worker and the runtime requeues the item."""
+
+    def __init__(self) -> None:
+        self.memory: deque[str] = deque(maxlen=16)
+        self.render_service: deque[str] = deque(maxlen=16)
+
+    def observe(self, line: str) -> None:
+        if any(token in line.lower() for token in MEMORY_FAILURE_TOKENS):
+            self.memory.append(line.strip())
+        if line.startswith(RENDER_SERVICE_LOST_PREFIX):
+            self.render_service.append(line.strip())
+
+    def raise_if_restart_needed(self, task: str, returncode: int, log_path: Path, detail: str) -> None:
+        if not (self.memory or self.render_service or returncode < 0):
+            return
+        sections = ""
+        if self.memory:
+            sections += "\nNative evaluator memory failures:\n" + "\n".join(self.memory)
+        if self.render_service:
+            sections += "\nRender service lost:\n" + "\n".join(self.render_service)
+        raise RuntimeError(
+            f"RoboTwin task {task} exited with {returncode}; see {log_path}"
+            f"{sections}"
+            f"\nNative evaluator log tail:\n{detail}"
+        )
+
+
 def _run_task_single_process(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     task = str(item.payload["task"])
     suite = str(item.payload["suite"])
@@ -356,7 +394,7 @@ def _run_task_single_process(args: argparse.Namespace, item: WorkItem) -> WorkRe
         # planner.CuroboPlanner) intermittently crash. Evaluate without
         # bytecode caching so imports never need to write pyc files.
         "PYTHONDONTWRITEBYTECODE": "1",
-        "CUDA_VISIBLE_DEVICES": str(args.gpu_id),
+        **_gpu_env(args),
         "ROBOSCOPE_INFERENCE_SOCKET": str(args.policy_socket),
         "ROBOTWIN_SEED_CACHE_ENABLED": "1" if args.seed_cache_dir is not None else "0",
         "ROBOSCOPE_PROFILING_MODULE": profiling.__file__,
@@ -370,7 +408,7 @@ def _run_task_single_process(args: argparse.Namespace, item: WorkItem) -> WorkRe
         *argv_tail,
     )
     records: list[EvaluationRecord] = []
-    memory_failures: deque[str] = deque(maxlen=16)
+    failures = _RestartFailures()
     queue = WorkQueue(args.queue_dir)
     started = time.perf_counter()
     with log_path.open("w", encoding="utf-8") as log:
@@ -389,8 +427,7 @@ def _run_task_single_process(args: argparse.Namespace, item: WorkItem) -> WorkRe
             for line in process.stdout:
                 log.write(line)
                 log.flush()
-                if any(token in line.lower() for token in MEMORY_FAILURE_TOKENS):
-                    memory_failures.append(line.strip())
+                failures.observe(line)
                 if not line.startswith(RECORD_PREFIX):
                     continue
                 payload = json.loads(line[len(RECORD_PREFIX) :])
@@ -429,15 +466,7 @@ def _run_task_single_process(args: argparse.Namespace, item: WorkItem) -> WorkRe
             stop_child_process(process)
     if returncode != 0:
         detail = read_log_tail(log_path)
-        if memory_failures or returncode < 0:
-            memory_detail = ""
-            if memory_failures:
-                memory_detail = "\nNative evaluator memory failures:\n" + "\n".join(memory_failures)
-            raise RuntimeError(
-                f"RoboTwin task {task} exited with {returncode}; see {log_path}"
-                f"{memory_detail}"
-                f"\nNative evaluator log tail:\n{detail}"
-            )
+        failures.raise_if_restart_needed(task, returncode, log_path, detail)
         return _failed_task_result(
             item,
             args.worker_id,
