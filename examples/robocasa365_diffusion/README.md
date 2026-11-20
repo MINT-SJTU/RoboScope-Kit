@@ -122,6 +122,17 @@ diffusion noise. The worker's first-slot/first-episode reset restarts the stream
 for each new workload or retry, so autotune probes cannot consume formal-run
 noise. CLIP initialization and encoding do not consume these streams.
 
+## CUDA-graph sampling
+
+On a CUDA device, `graph_sampler.py` replaces the model's `conditional_sample`
+with a replay of the same 100-step DDPM loop, captured once per batch shape as a
+CUDA graph. It launches the same kernels on the same inputs and draws its noise
+from the default CUDA generator at the same offsets, so actions and the
+generator state after each call are bit-identical to eager sampling. A batch of
+five takes 0.14 s instead of 0.76 s on an RTX 4090. Observation normalization,
+encoding and action denormalization stay eager. Set `ROBOCASA365_CUDA_GRAPHS=0`
+in the Policy environment to sample eagerly.
+
 ## Native comparison
 
 The scripts below compare full rollouts with the pinned upstream

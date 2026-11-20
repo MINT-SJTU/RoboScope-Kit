@@ -166,6 +166,10 @@ class RoboCasa365DiffusionPolicy(Policy):
             self.model.to(self.device)
             self.model.eval()
             self.initial_rng = self._capture_rng()
+        if self.device.type == "cuda" and os.environ.get("ROBOCASA365_CUDA_GRAPHS", "1") != "0":
+            import graph_sampler
+
+            graph_sampler.install(self.model)
         del payload
         with torch.random.fork_rng(devices=self._rng_devices()):
             self.encoder = (

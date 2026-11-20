@@ -69,8 +69,16 @@ Environment wrappers persist between episode groups of a task and close when
 the task completes; native hard resets can rebuild their underlying model and
 renderer. Wrappers are never reused across different tasks.
 
-The worker steps the five slots in its own process; the reference runner uses
-one subprocess per slot. `native_equivalence_verified` remains `false` in
+The worker steps the five slots in its own process, each on its own thread; the
+reference runner uses one subprocess per slot. A slot's environment is created,
+reset, stepped and closed only on its thread, where its EGL context is current.
+Creation and reset run one slot at a time in slot order, so each slot keeps its
+constructor RNG stream; only action chunks run concurrently, and the worker
+waits for all five at every chunk boundary before it sends the next Policy batch
+in slot order and applies the group success check. Threaded workers run with
+`MALLOC_ARENA_MAX=1`. Setting `defaults.slot_threads: false` in the manifest,
+saving videos or `--profile` steps the slots one after another in slot order;
+the last two log that they do. `native_equivalence_verified` remains `false` in
 individual run results; the [native comparison](../../../benchmarks/robocasa365/README.md#native-comparison)
 records the validated scope.
 

@@ -2,6 +2,17 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b69 - 2026-11-20
+
+- Step RoboCasa365's five native simulator slots on five threads of the Worker. MuJoCo releases the
+  GIL while stepping; each slot keeps its EGL context on its own thread, and creation and reset stay
+  in slot order. Threaded Workers set `MALLOC_ARENA_MAX=1`, so they use the memory of serial ones.
+  `defaults.slot_threads: false`, video and `--profile` step the slots serially.
+- Sample the RoboCasa365 Diffusion Policy example's DDPM loop through CUDA graphs, with bit-identical
+  actions and generator state; `ROBOCASA365_CUDA_GRAPHS=0` samples eagerly.
+- On target50 × 5 at the official horizons (K4/G2, CUDA MPS, one RTX 4090), formal evaluation takes
+  4,852 s instead of 9,703 s with unchanged episode outcomes.
+
 ## 0.8.0b67 - 2026-11-19
 
 - Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,
