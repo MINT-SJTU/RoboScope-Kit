@@ -19,7 +19,7 @@ from .metrics import read_jsonl_since, summarize_events
 from .nsys import profiled_process
 from .processes import InferencePool, ManagedProcess, ProcessFailureKind, start_process
 from .queue import WorkQueue, atomic_json
-from .resources import GpuSampler, cpu_quota, cpu_window, gpu_window, read_cpu_stat
+from .resources import GpuSampler, cpu_quota, cpu_window, gpu_window, host_memory_limit, read_cpu_stat
 from .run_cache import longest_first
 from .schema import EvaluationRecord, WorkItem, WorkResult, validate_terminal_accounting
 from .sharding import (
@@ -346,6 +346,10 @@ class ParallelBenchmarkRuntime:
                 "cpu": cpu_window(before_cpu, read_cpu_stat(), elapsed_s, cpu_quota()),
                 "gpu": gpu_window(samples, self.config.gpu_count),
                 "gpu_samples": len(samples),
+                "host": {
+                    "peak_memory_bytes": max(sampler.host_memory_samples, default=None),
+                    "limit_bytes": host_memory_limit(),
+                },
             },
             "recovery": {
                 "worker_failures": self.failure_events,

@@ -82,6 +82,7 @@ class ClientMetrics:
     inference_wait_ratio: float
     throttle_period_ratio: float | None = None
     error_count: int = 0
+    host_memory_bytes: int | None = None
 
 
 @dataclass(frozen=True)

@@ -143,6 +143,12 @@ one on total probe steps over probe wall time, recorded as `"throughput_estimato
 `selection.json` metrics. That rate understates a larger `K`, so a step it keeps is a real gain. Probes it
 measures but does not keep are marked `rejected` in `selection.json`.
 
+`diagonal` also watches host memory. Each probe records its peak host memory without page cache, from the
+cgroup when there is one, and a probe above 85% of the host limit (the cgroup's `memory.max` or `memory.high`,
+else RAM; a manifest can set `host_memory_bytes`) is rejected. As for CPU, the marginal memory of a Worker
+between two probes caps how many Workers the next step may add. Probes are short, so the 15% left free covers
+simulators whose memory grows over a long run.
+
 A manifest can set `autotune_replica_memory_backoff: true` (RoboTwin does): when a replica step's `K` would not
 fit in GPU memory, the step tries the largest smaller `K` that fits, in steps of the GPU count and down to the
 current `K`, instead of stopping. A probe at such a `K` that runs out of memory steps down to the next one.
@@ -153,7 +159,7 @@ Renderer memory per Worker can leave room for another replica on each GPU but no
 After an evaluation, the runtime stores the searched `K`/`g` and the mean episode time of each task in a run
 cache (`$XDG_CACHE_HOME/roboscope-kit/run-cache/`, or `ROBOSCOPE_RUN_CACHE_DIR`). The entry is keyed by the
 kit version and benchmark manifest, the benchmark, suite and episode count, the checkpoint files and Policy
-config, the GPU models, the CPU quota and CUDA MPS. The next evaluation with the same key skips the search
+config, the GPU models, the CPU quota, the host memory limit and CUDA MPS. The next evaluation with the same key skips the search
 and records `"autotune": {"mode": "cached", ...}`. Every evaluation hands out work items of the longest tasks
 first when the cache, or this evaluation's probes, have measured them; tasks without a measurement go
 first, so no long task starts last. `--run-cache refresh` searches again and replaces the entry, and
