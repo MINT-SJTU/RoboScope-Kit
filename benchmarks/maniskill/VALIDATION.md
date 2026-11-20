@@ -191,7 +191,7 @@ Policy start and Worker shutdown. Values are mean ± sample standard deviation.
 Against the single-Worker baseline before the change (426.2 s), spreading reaches 2.16x with four
 Workers, 2.33x with eight and 2.32x with twelve in evaluation time, and 2.14x, 2.29x and 2.26x end
 to end. Without spreading the same Worker counts reach 1.74x, 1.88x and 2.21x. Spreading therefore
-saves 20% of evaluation time at four and eight Workers, and reaches the GPU's limit with eight
+saves 20% of evaluation time at four Workers and 19% at eight, and reaches the GPU's limit with eight
 Workers instead of twelve. One Worker has nothing to spread; 425.1 s against 426.2 s is
 run-to-run variation. An earlier single-run measurement on the first machine, before the claim
 retry, saved 15% and 12%.
