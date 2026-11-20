@@ -168,30 +168,44 @@ simulators for the GPU.
 Workers recycle before every new task. When idle Workers all claimed the next pending item, they
 moved through the tasks together, and nearly every group paid a process restart and a first
 environment build. Recycling Workers now start the task with the most pending groups per Worker
-already on it, so they spread across tasks:
+already on it, so they spread across tasks. A Worker that loses a claim to another Worker chooses
+its task again, so Workers that start together also start on different tasks.
 
-| Workers | Evaluation (s) | Speedup over one Worker | Planned recycles | Peak VRAM (GiB) |
-| ---: | ---: | ---: | ---: | ---: |
-| 1 | 414.5 | 0.97x | 10 | 4.7 |
-| 4 | 207.6 | 1.95x | 14 | 16.8 |
-| 8 | 189.3 | 2.13x | 8 | 32.5 |
-| 10 | 189.8 | 2.13x | 10 | 40.2 |
-| 12 | 189.6 | 2.13x | 3 | 47.4 |
+On 2026-11-19 both sources were measured on the post-merge machine (see the
+[post-merge GPU check](#post-merge-gpu-check)): before is `3c32a4a` (0.8.0b67, without spreading),
+after is `865bae3` (0.8.0b68, with the claim retry), each built with `build-runtime.sh` into its own
+runtime. Later commits change only shard checks and tests. Runs
+alternated between the two sources at each Worker count, three runs per side; the single-Worker
+baseline has three runs before and one after. Every run uses the same checkpoints, one Policy replica
+and no autotune, and its 1,100 records match the native reference exactly. Evaluation is the formal
+evaluation time in `metrics.json`; end to end is the wall time of the whole command, including
+Policy start and Worker shutdown. Values are mean ± sample standard deviation.
 
-Records match the native reference exactly in every run. One Worker has nothing to spread; 414.5 s
-against 403.8 s is run-to-run variation. Spreading saves 15% at four Workers and 12%
-at eight, and reaches the GPU's limit with eight Workers instead of twelve. Different tasks now run
-side by side, so peak VRAM grows faster with Worker count. With twelve Workers the GPU memory was
-full: one run lost three Workers to PhysX allocator errors during `AnymalC-Reach-v1` resets and
-recovered by retrying them, and an earlier run exhausted its retries. PhysX logs only its
+| Workers | Evaluation before (s) | Evaluation after (s) | Speedup | End to end before (s) | End to end after (s) | Speedup | Planned recycles before / after | Peak VRAM after (GiB) |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 426.2 ± 3.1 | 425.1 | 1.00x | 430.4 ± 3.2 | 429.0 | 1.00x | 10 / 10 | 4.7 |
+| 4 | 245.1 ± 1.6 | 196.9 ± 2.4 | 1.24x | 249.7 ± 1.4 | 201.4 ± 2.5 | 1.24x | 40 / 9-11 | 16.5-16.8 |
+| 8 | 226.6 ± 3.3 | 182.7 ± 0.5 | 1.24x | 232.1 ± 3.3 | 188.2 ± 0.8 | 1.23x | 80 / 8-9 | 32.5-32.6 |
+| 12 | 192.5 ± 3.9 | 184.1 ± 0.4 | 1.05x | 198.5 ± 4.1 | 190.2 ± 0.6 | 1.04x | 95 / 8-10 | 47.3-47.4 |
+
+Against the single-Worker baseline before the change (426.2 s), spreading reaches 2.16x with four
+Workers, 2.33x with eight and 2.32x with twelve in evaluation time, and 2.14x, 2.29x and 2.26x end
+to end. Without spreading the same Worker counts reach 1.74x, 1.88x and 2.21x. Spreading therefore
+saves 20% of evaluation time at four and eight Workers, and reaches the GPU's limit with eight
+Workers instead of twelve. One Worker has nothing to spread; 425.1 s against 426.2 s is
+run-to-run variation. An earlier single-run measurement on the first machine, before the claim
+retry, saved 15% and 12%.
+
+Different tasks now run side by side, so peak VRAM grows faster with Worker count: twelve Workers
+reach 47.4 GiB of the 48 GiB, against 35.1-36.8 GiB without spreading. In each of the three
+twelve-Worker runs one Worker hit a PhysX allocator error during a reset. PhysX logs only its
 allocator's source file (`PxgCudaMemoryAllocator.cpp`) and then stops with CUDA error 700 (illegal
-address), so the Kit did not recognize these as out-of-memory and retried at the same Worker count.
-It now classifies them as out-of-memory. With that change, a twelve-Worker run hit the same
-error in one Worker, retired one Worker, finished with eleven in 192.0 s (peak 47.3 GiB) and matched the
-native records exactly.
+address); the Kit classifies this as out-of-memory, requeues the Worker's two unfinished groups,
+retires one Worker and finishes with eleven. All three runs still match the native records exactly.
+Before this classification, such errors were retried at the same Worker count, and one earlier run
+on the first machine exhausted its retries. Eight Workers is the efficient point on this machine.
 
-These runs use the 0.8.0b36 source plus this claim change (0.8.0b37, now 0.8.0b68), and the
-reproduction command below.
+These runs use the reproduction command below.
 
 Autotune previously capped ManiSkill at two Workers; the cap is now 16. Autotune then selects eight
 Workers: evaluation takes 213.0 s after 391.4 s of probing 1, 2, 4, 8 and 16 Workers. Sixteen Workers
