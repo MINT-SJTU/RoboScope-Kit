@@ -58,8 +58,8 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## Results
 
-From the upcoming revision of the [technical report](https://arxiv.org/abs/2611.03850), with a StarVLA
-checkpoint. Evaluation time excludes initialization, concurrency search or offline tuning, and cleanup.
+From the [technical report](https://arxiv.org/abs/2611.03850), with a StarVLA checkpoint. Evaluation time excludes
+initialization, concurrency search or offline tuning, and cleanup.
 LIBERO-Long, 500 episodes on one 48 GiB RTX 4090, with success rates equivalent to the official evaluation's:
 
 | Configuration | vs. official StarVLA | vs. RLinf | vs. vla-eval |
