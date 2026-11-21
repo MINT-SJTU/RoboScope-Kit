@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/speedup.gif" width="100%" alt="Evaluation time in minutes, 500 episodes: on LIBERO-Long RoboScope Kit finishes in 8.1 minutes (6.16× faster than the official StarVLA evaluation); on RoboTwin Easy it goes from 359.7 to 14.4 minutes (25.04×)"/>
+  <img src="docs/speedup.gif" width="100%" alt="Evaluation time in minutes against the official StarVLA evaluation: 500 LIBERO-Long episodes on one RTX 4090 take 8.1 minutes instead of 49.8 (6.16×), and the 5,000 RoboTwin Easy episodes on four RTX PRO 5000 GPUs take 66.4 minutes instead of 1,050.6 (15.8×)"/>
 </p>
 
 RoboScope Kit evaluates your model on standard robot simulation benchmarks. You wrap a model once in a Python
@@ -36,9 +36,9 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## Highlights
 
-- 🚀 **Faster evaluation:** on 500 episodes with a StarVLA checkpoint, evaluation is **6.16×**
-  faster than the official StarVLA evaluator on LIBERO-Long (one RTX 4090, CUDA MPS) and **25.04×** faster on
-  RoboTwin Easy (four RTX 4090s vs. a one-GPU baseline). See [Results](#results).
+- 🚀 **Faster evaluation:** with a StarVLA checkpoint, evaluation is **6.16×** faster than the official StarVLA
+  evaluator on 500 LIBERO-Long episodes (one RTX 4090, CUDA MPS) and **15.8×** faster on the 5,000 RoboTwin Easy
+  episodes (Kit and the official evaluator on the same four RTX PRO 5000 GPUs). See [Results](#results).
 - 🧩 **One interface:** every supported benchmark runs through the same `Policy` API and sends its canonical
   observations unchanged.
 - ⚙️ **Measured concurrency:** simulator Workers and Policy replicas run as separate pools. Autotune sizes both
@@ -58,19 +58,18 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## Results
 
-From the [technical report](https://arxiv.org/abs/2611.03850), each run covering 500 episodes with a StarVLA
+From the upcoming revision of the [technical report](https://arxiv.org/abs/2611.03850), with a StarVLA
 checkpoint. Evaluation time excludes initialization, concurrency search or offline tuning, and cleanup.
-LIBERO-Long, on one 48 GiB RTX 4090, with success rates equivalent to the official evaluation's:
+LIBERO-Long, 500 episodes on one 48 GiB RTX 4090, with success rates equivalent to the official evaluation's:
 
 | Configuration | vs. official StarVLA | vs. RLinf | vs. vla-eval |
 | --- | ---: | ---: | ---: |
 | 12 Workers, 3 replicas | **4.45×** | **2.78×** | **1.52×** |
 | 16 Workers, 4 replicas, CUDA MPS | **6.16×** | **3.85×** | **2.10×** |
 
-RoboTwin Easy, on four GPUs with chunk-boundary observation, takes 14.4 minutes instead of 359.7 with one
-simulator and one model on one GPU (**25.04×**), with identical success outcomes and terminal steps. On the
-same four GPUs, one simulator and one model per GPU takes 98.9 minutes, so RoboScope Kit is **6.88×** faster on
-equal hardware.
+RoboTwin Easy, the standard 5,000 episodes (50 tasks × 100) on the same four RTX PRO 5000 GPUs, takes 3,985 s
+(66.4 minutes) instead of 63,036 s (17.5 hours) with the official StarVLA evaluation (**15.8×**), matching it on
+every success outcome and terminal step.
 
 ## Supported benchmarks
 
