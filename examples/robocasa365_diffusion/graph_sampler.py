@@ -82,7 +82,8 @@ class GraphedSampler:
                     self._loop(*inputs, timesteps_device, timesteps)
             torch.cuda.current_stream(condition_data.device).wait_stream(stream)
             graph = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(graph):
+            # torch.cuda.graph's default capture stream is on the current device, not the Policy's.
+            with torch.cuda.graph(graph, stream=stream):
                 output = self._loop(*inputs, timesteps_device, timesteps)
         torch.cuda.set_rng_state(state, condition_data.device)
         # The graph reads every tensor below by address; keep them alive with it.

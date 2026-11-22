@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b72 - 2026-11-21
+## 0.8.0b72 - 2026-11-22
 
 - Step RoboCasa365's five native simulator slots on five threads of the Worker. MuJoCo releases the
   GIL while stepping; each slot keeps its EGL context on its own thread, and creation and reset stay
