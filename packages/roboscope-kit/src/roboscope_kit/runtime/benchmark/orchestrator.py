@@ -10,7 +10,7 @@ import time
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, Sequence  # noqa: UP035 - this alias is evaluated by Python 3.8
+from typing import Any, Callable, Iterable, Mapping, Sequence  # noqa: UP035 - this alias is evaluated by Python 3.8
 
 from .adapters import BenchmarkAdapter, InferenceAdapter, WorkerContext
 from .autotune import ProbeCapacityReached, ProbeLimits, ProbeTimedOut
@@ -20,6 +20,7 @@ from .nsys import profiled_process
 from .processes import InferencePool, ManagedProcess, ProcessFailureKind, start_process
 from .queue import WorkQueue, atomic_json
 from .resources import GpuSampler, cpu_quota, cpu_window, gpu_window, read_cpu_stat
+from .run_cache import longest_first
 from .schema import EvaluationRecord, WorkItem, WorkResult, validate_terminal_accounting
 from .sharding import (
     DEFAULT_EPISODES_PER_SHARD,
@@ -48,6 +49,9 @@ class RuntimeConfig:
     shard_episodes: int = DEFAULT_EPISODES_PER_SHARD
     shard_build: dict[str, str] | None = None
     profile: bool = False
+    # Mean episode wall time per task from earlier runs; the formal pass hands out the
+    # longest items first so no long task starts last.
+    task_seconds: Mapping[str, float] | None = None
 
     def __post_init__(self) -> None:
         if not self.gpu_devices or len(self.gpu_devices) != len(set(self.gpu_devices)):
@@ -79,17 +83,21 @@ ProgressCallback = Callable[["dict[str, Any]", Sequence[WorkResult]], None]
 
 def aggregate_standard_results(results: Sequence[WorkResult], total_records: int) -> dict[str, Any]:
     records = [record for result in results for record in result.records]
-    successes = sum(record.success for record in records)
+    scored = [record for record in records if record.metadata.get("success_metric") != "return"]
+    successes = sum(record.success for record in scored)
+    return_count = len(records) - len(scored)
     total_steps = sum(record.steps for record in records)
     return {
         "state": "complete" if len(records) == total_records else "running",
         "episodes": len(records),
         "successes": successes,
-        "failures": len(records) - successes,
+        "failures": len(scored) - successes,
         "total_steps": total_steps,
         "total_episodes": total_records,
-        "success_rate": successes / len(records) if records else 0.0,
+        "success_rate": successes / len(scored) if scored else None if return_count else 0.0,
         "completed_items": len(results),
+        **({"success_evaluated_episodes": len(scored), "return_evaluated_episodes": return_count}
+           if return_count else {}),
     }
 
 
@@ -178,6 +186,8 @@ class ParallelBenchmarkRuntime:
             items, shard_metadata = shard
         else:
             shard_metadata = None
+        if self.config.task_seconds and self.config.probe_limits is None:
+            items = longest_first(items, self.config.task_seconds)
         total_records = sum(item.expected_results for item in items)
         benchmark_metadata = self.benchmark.metadata()
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -295,6 +305,10 @@ class ParallelBenchmarkRuntime:
             self.queue.request_stop()
             samples = sampler.stop()
             self._stop_workers()
+            # A benchmark may own processes its Workers share (RoboTwin's render services).
+            close_benchmark = getattr(self.benchmark, "close", None)
+            if close_benchmark is not None:
+                close_benchmark()
             inference_metadata = self.inference.metadata()
             self._stop_owned_server_pool()
         elapsed_s = time.monotonic() - started
@@ -329,6 +343,7 @@ class ParallelBenchmarkRuntime:
             },
             "record_success": {
                 record.record_id: record.success for result in results for record in result.records
+                if record.metadata.get("success_metric") != "return"
             },
             "inference": inference_metadata,
             "policy_io": policy_io,
@@ -640,8 +655,11 @@ class ParallelBenchmarkRuntime:
         return {
             "requested_workers": self.config.concurrency,
             "initial_workers": sum(self.initial_workers_per_gpu.values()),
+            # A Worker that exited for a planned recycle after the last exit scan is
+            # restarted by the next scan; it is not a lost Worker.
             "final_workers": sum(
-                managed.process.poll() is None for managed in self.workers.values()
+                managed.process.poll() is None or self._is_planned_recycle(worker_id, managed)
+                for worker_id, managed in self.workers.items()
             ),
             "worker_failures": len(self.failure_events),
             "oom_events": sum(
@@ -691,6 +709,7 @@ class ParallelBenchmarkRuntime:
             for worker_id, managed in self.workers.items()
             if self.worker_contexts[worker_id].gpu_slot == gpu_slot
             and managed.process.poll() is not None
+            and not self._is_planned_recycle(worker_id, managed)
         ]
         for worker_id, managed in late_failures:
             failed_by_id[worker_id] = managed

@@ -89,7 +89,8 @@ python -m roboscope_kit.runtime.benchmark \
 `--checkpoint-source` is an absolute local path, passed to `Policy.load()` unchanged. Prepare the checkpoint
 before starting the evaluation. The runtime validates the Policy process contract before every run.
 `--quick-test` runs a short real evaluation with one Worker and one Server; without it, the run is a full
-scored evaluation. `--self-test` only checks that the manifest's runtime paths exist. Results, progress,
+scored evaluation. `--self-test` runs benchmark-specific runtime checks without loading your Policy;
+some checks create GPU simulator environments. Results, progress,
 and logs are written under `--output-dir`. Use a new or empty directory for each evaluation or self-test.
 A directory containing only `errors.jsonl` can be retried; new errors are appended to preserve earlier
 failures. Pure preflight checks run before any evaluation artifacts are written. Once a run has produced
@@ -143,6 +144,24 @@ one on total probe steps over probe wall time, recorded as `"throughput_estimato
 `selection.json` metrics. That rate understates a larger `K`, so a step it keeps is a real gain. Probes it
 measures but does not keep are marked `rejected` in `selection.json`.
 
+A manifest can set `autotune_replica_memory_backoff: true` (RoboTwin does): when a replica step's `K` would not
+fit in GPU memory, the step tries the largest smaller `K` that fits, in steps of the GPU count and down to the
+current `K`, instead of stopping. A probe at such a `K` that runs out of memory steps down to the next one.
+Renderer memory per Worker can leave room for another replica on each GPU but not for that many more Workers.
+
+### Reusing what an evaluation learned
+
+After an evaluation, the runtime stores the searched `K`/`g` and the mean episode time of each task in a run
+cache (`$XDG_CACHE_HOME/roboscope-kit/run-cache/`, or `ROBOSCOPE_RUN_CACHE_DIR`). The entry is keyed by the
+kit version and benchmark manifest, the benchmark, suite and episode count, the checkpoint files and Policy
+config, the GPU models, the CPU quota and CUDA MPS. The next evaluation with the same key skips the search
+and records `"autotune": {"mode": "cached", ...}`. Every evaluation hands out work items of the longest tasks
+first when the cache, or this evaluation's probes, have measured them; tasks without a measurement go
+first, so no long task starts last. `--run-cache refresh` searches again and replaces the entry, and
+`--run-cache off` neither reads nor writes it. An evaluation that ran out of GPU memory or lost a Worker
+stores nothing and drops the cached `K`/`g`, so the next evaluation searches again. `result.json` records the
+entry under `run_cache`.
+
 To compare searches without a GPU, the
 [autotune testbed](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/autotune-testbed.md)
 replays recorded workloads through the same controller and scores any registered strategy.
@@ -168,6 +187,10 @@ The ranges are written through Nsight Systems' own injection library, so no envi
 package, and without `--profile` nothing is loaded. Capture starts when the Worker's `PolicyClient` resets an
 episode, so benchmarks with their own client, such as RoboTwin, record nothing yet. Tracing slows the run, so
 `manifest.json` records `"profile": true`, and such a run is not a throughput measurement.
+
+Native batched evaluators can wrap their ordinary `reset` and `end_episode` calls
+in `with client.episode_group():` to capture the complete group as one episode.
+`profiling.environment("step")` marks a simulator operation within that capture.
 
 How to read the reports, which benchmarks are covered, and the findings so far are in the
 [profiling notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/profiling.md).
@@ -224,6 +247,11 @@ The [X-VLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/example
 Policy; the [StarVLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/starvla) is
 stateless.
 
+The [OpenVLA example](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/examples/openvla)
+serves the four fine-tuned LIBERO suites with a separate pinned Python 3.11 Policy environment,
+CPU image preprocessing, BF16/FlashAttention2 inference, and the standard LIBERO simulator Worker.
+It returns one action per observation through the standard Policy lifecycle.
+
 For RoboDojo, a Policy that needs observations between actions in a chunk can declare
 `step_observation_updates=("robodojo",)` in `PolicyCapabilities` and implement `observe(Observation)`.
 The observation passed to `act()` starts each chunk; `observe()` receives the intermediate steps in order.
@@ -249,9 +277,12 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | RoboTwin | SDK-native adapter and worker calling the pinned RoboTwin launcher | RoboTwin environment and source, deploy policy, checkpoint assets, and validated seed cache |
 | RoboDojo | SDK-native adapter and worker calling the pinned RoboDojo simulator | Isaac Sim environment, RoboDojo source and evaluation assets |
 | RoboCasa GR-1 Tabletop | SDK-native adapter and persistent RoboCasa worker | Pinned RoboCasa GR-1 Tabletop environment, simulator and task source, and dataset assets |
+| RoboCasa365 | SDK-native adapter preserving native five-slot task groups and consecutive-frame history | Pinned RoboCasa 1.0.1, robosuite, MuJoCo, all six asset archives, and a compatible 12-dimensional policy |
 | CALVIN | SDK-native adapter and persistent CALVIN worker | Pinned CALVIN environment, benchmark and config source, dataset, and evaluation-sequence list |
 | MetaWorld | SDK-native adapter and persistent MetaWorld MT50 worker | Pinned MetaWorld/MuJoCo environment, task assets, and the frozen MT50 (seed 42) train-goal artifact |
+| RLBench | SDK-native adapter and persistent CoppeliaSim worker on a private Xvfb display, with a fixed Python hash seed for paired evaluation | CoppeliaSim 4.1, pinned PyRep and the PerAct RLBench fork, and PerAct's released test split |
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
+| SimplerEnv | SDK-native adapter and persistent SAPIEN/ManiSkill2_real2sim worker, one fresh environment per episode as upstream | Pinned SimplerEnv and ManiSkill2_real2sim (with their scene and overlay assets), SAPIEN 2.2.2, and the frozen matrix of the official RT-1 scripts |
 
 LIBERO and CALVIN convert native observations to the canonical feature names and send native 7-dimensional
 actions back to their simulators. CALVIN's task-D-to-task-D path runs the official 1,000 long-horizon
@@ -269,16 +300,20 @@ The exact contracts are in the protocol documents:
 - [MetaWorld](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md):
   MT50 manifest, camera setup, official training-goal evaluation, four-difficulty macro aggregation, and
   validation.
+- [RLBench](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md):
+  the PerAct 18-task reproduction profile `peract_18`: licence gates, pinned stack, test-episode replay,
+  cameras and key-frame actions, termination, aggregation, and the native comparison.
+- [RoboCasa365](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/robocasa365-protocol.md):
+  the official multi-task matrix uses 50 tasks in pretrain scenes and 50 rollouts per task.
+  `robocasa365` is isolated from GR1 `robocasa/tabletop`; Quick Tests are smoke subsets.
 - [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md):
   the `ph_low_dim` suite, supported and unsupported task/dataset/observation combinations, version and
   license gates, seeded initial states, upstream rollout semantics, the native comparison, and the baseline.
-  Its [throughput report](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/THROUGHPUT.md)
-  records fixed worker/replica configurations, the compiled-model cache, and paired full evaluations.
-  The [review validation](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/REVIEW_VALIDATION.md)
-  adds matched MPS-off repeats, per-step cache traces and separately timed native throughput;
-  the measured 1.745x combined gain leaves the 2x optimization target open.
-  Status: code candidate, build-verified with a real-model full evaluation and native comparison; ships in
-  `0.8.0b26`, released when that version is merged.
+  Its [throughput notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/THROUGHPUT.md) record the matched fixed-K/G comparison, the compiled-model cache and native throughput.
+- [SimplerEnv](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md):
+  the Google Robot visual-matching and variant-aggregation suites and the WidowX visual-matching suite, kept
+  separate; the frozen pose sweeps, episode loop, termination, aggregation, the native comparison, and the
+  baseline.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md):
   environment build, suites, observation and action layouts, step observation updates, and experimental
   runtime switches.
@@ -312,6 +347,15 @@ concurrently instead of taking turns. It is off by default. With it, the runtime
 The GPU must be in Default or Exclusive-Process compute mode, and the host must provide
 `nvidia-cuda-mps-control`. Replicas pick their GPU by ordinal within the daemon's devices, so a Policy must
 not change `CUDA_VISIBLE_DEVICES`.
+
+## RoboTwin central rendering (opt-in)
+
+With `"render_mode": "central"` in the RoboTwin manifest's `defaults`, RoboTwin evaluators simulate on the CPU
+and two render services per GPU (`render_services_per_gpu`) ray-trace their observations, instead of every
+evaluator holding its own renderer on the GPU. The saved GPU memory fits more Workers and replicas; on one
+RTX 4090 this mode evaluated 50 tasks × 2 episodes 46% faster than native K6/G2, and a prototype of it
+evaluated 50 tasks × 10 episodes 25% faster, with every episode's actions unchanged. It supports `demo_clean` with qpos actions and videos
+off. See [RoboTwin central rendering](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robotwin/CENTRAL_RENDER.md).
 
 ## Cross-instance sharding (Beta)
 
@@ -376,6 +420,10 @@ metrics are undefined on a subset; the merge derives the metrics only after conf
 reduction trusts the reported counts and cannot prove that each record is unique; use the record-tree merge
 when you need that guarantee.
 
+ManiSkill keeps return-scored profiles outside the success-rate denominator and merges each
+profile's return sum and sample count into a weighted mean. Its shards also bind checkpoint
+and Policy content identities; see the [ManiSkill scoring and shard protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md#scoring-and-coverage).
+
 ## Python support
 
 Supported versions follow the [CPython release lifecycle](https://devguide.python.org/versions/): every
@@ -421,6 +469,31 @@ again. To retry a failed upload, run the `SDK compatibility` workflow manually o
 Earlier source releases had a `libero` extra that only installed `imageio[ffmpeg]` and never a runnable
 LIBERO simulator, so it was removed. If you use `imageio` directly, declare `imageio[ffmpeg]>=2.34,<3.0` in
 your own dependencies.
+
+## ManiSkill multi-task integration
+
+The `maniskill` adapter runs selected task, robot, observation and controller profiles in GPU vector
+Workers through the existing `Policy` lifecycle. Official PPO state examples and a Bridge visual
+Policy example provide pinned model-loading and comparison workflows. Each profile reports its
+native success metric or episode return; record-tree shard merging and result-only reduction retain
+that distinction.
+
+The pinned inventory declares 55 TaskIDs. Full integration acceptance remains incomplete: compatible
+intended-task models, current-source prescribed-count evaluation and independent upstream comparison
+are still required. The [validation status](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md)
+separates CPU source/scoring checks, retained candidates and task/model acceptance.
+The selected task-trained catalog has eleven official PPO, two author G1 PPO and eight NEWT
+TaskIDs; NEWT runs the actor prior rather than original MPC. Provisional visual examples do
+not establish per-task acceptance, and all original tabletop state/RGB profiles remain in scope.
+
+Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and choose asset suites with
+`MANISKILL_ASSET_SUITES`. See the
+[build guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/README.md),
+[protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md),
+[task inventory](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/TASK_INVENTORY.md),
+[PPO example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/README.md) and
+[Octo example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/OCTO.md).
+Issue #25 integration and issue #31 throughput work remain separate.
 
 ## License
 

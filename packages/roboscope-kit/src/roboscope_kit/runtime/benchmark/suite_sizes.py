@@ -6,7 +6,8 @@ split it before any instance exists, for example to size a sharded run.
 
 A record is one episode (CALVIN: one sequence). Most sizes are ``tasks * episodes_per_task``.
 RoboDojo has different upstream episode limits by task, so its manifest sets ``defaults.episodes``
-to null and its total is stated explicitly. The manifests are not part of the installed package,
+to null and its total is stated explicitly; so do the SimplerEnv Google Robot suites, whose tasks
+have different episode counts. The manifests are not part of the installed package,
 so the totals are stated here. Suites whose size is not a fixed number (LIBERO+ samples its tasks per run) are
 deliberately absent: they are never sharded.
 """
@@ -59,8 +60,33 @@ SUITE_SIZES: dict[tuple[str, str], SuiteSize] = {
     ("calvin", "task_ABC_D"): SuiteSize(tasks=1, episodes_per_task=1000),
     ("calvin", "task_ABCD_D"): SuiteSize(tasks=1, episodes_per_task=1000),
     ("robocasa", "tabletop"): SuiteSize(tasks=24, episodes_per_task=50),
+    ("robocasa365", "target50"): SuiteSize(tasks=50, episodes_per_task=50),
+    ("robocasa365", "atomic_seen"): SuiteSize(tasks=18, episodes_per_task=50),
+    ("robocasa365", "composite_seen"): SuiteSize(tasks=16, episodes_per_task=50),
+    ("robocasa365", "composite_unseen"): SuiteSize(tasks=16, episodes_per_task=50),
     ("metaworld", "mt50"): SuiteSize(tasks=50, episodes_per_task=50),
+    ("rlbench", "peract_18"): SuiteSize(tasks=18, episodes_per_task=25),
     ("robomimic", "ph_low_dim"): SuiteSize(tasks=5, episodes_per_task=50),
+    ("maniskill", "pickcube_state_v1"): SuiteSize(tasks=1, episodes_per_task=100),
+    ("maniskill", "baseline_state_v1"): SuiteSize(tasks=3, episodes_per_task=100),
+    ("maniskill", "tabletop_state_v1"): SuiteSize(tasks=18, episodes_per_task=100),
+    ("maniskill", "tabletop_rgb_v1"): SuiteSize(tasks=18, episodes_per_task=100),
+    ("maniskill", "official_ppo_state_v1"): SuiteSize(tasks=11, episodes_per_task=100),
+    ("maniskill", "upstream_tasks_v1"): SuiteSize(tasks=55, episodes_per_task=100),
+    ("maniskill", "upstream_state_v1"): SuiteSize(tasks=51, episodes_per_task=100),
+    ("maniskill", "bridge_rgb_v1"): SuiteSize(tasks=4, episodes_per_task=100),
+    ("maniskill", "newt_state_v1"): SuiteSize(tasks=8, episodes_per_task=100),
+    ("maniskill", "reference_ppo_state_v1"): SuiteSize(tasks=2, episodes_per_task=100),
+    ("maniskill", "panda_visual_rgb_v1"): SuiteSize(tasks=2, episodes_per_task=100),
+    ("simpler_env", "google_robot_visual_matching"): SuiteSize(
+        tasks=5, episodes_per_task=None, fixed_total_records=864
+    ),
+    ("simpler_env", "google_robot_variant_aggregation"): SuiteSize(
+        tasks=5, episodes_per_task=None, fixed_total_records=1722
+    ),
+    ("simpler_env", "widowx_visual_matching"): SuiteSize(
+        tasks=4, episodes_per_task=None, fixed_total_records=96
+    ),
     ("robodojo", "arx_x5"): SuiteSize(tasks=42, episodes_per_task=None, fixed_total_records=1800),
     ("robodojo", "arx_x5_randomized"): SuiteSize(tasks=12, episodes_per_task=None, fixed_total_records=300),
 }

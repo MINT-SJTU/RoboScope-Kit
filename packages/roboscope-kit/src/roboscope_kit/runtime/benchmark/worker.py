@@ -24,6 +24,7 @@ class WorkerLoop:
         state_dir: Path,
         poll_interval_s: float = 0.05,
         recycle_after_records: int | None = None,
+        recycle_on_context_change: bool = False,
     ) -> None:
         if worker_id < 0:
             raise ValueError("worker_id must be non-negative")
@@ -36,6 +37,7 @@ class WorkerLoop:
         self.state_dir = state_dir
         self.poll_interval_s = poll_interval_s
         self.recycle_after_records = recycle_after_records
+        self.recycle_on_context_change = recycle_on_context_change
         self.state_path = state_dir / f"worker-{worker_id:03d}.json"
 
     def run(self, evaluate: Callable[[WorkItem], WorkResult]) -> None:
@@ -43,14 +45,25 @@ class WorkerLoop:
         self._write_state("ready")
         self._wait_for_start()
         preferred_group: str | None = None
+        preferred_width: int | None = None
         completed_records = 0
         while True:
-            claimed = self.queue.claim(self.worker_id, preferred_group)
+            # A Worker recycled on every group change spreads over groups instead of following
+            # the others into the next one.
+            claimed = self.queue.claim(
+                self.worker_id, preferred_group, spread_groups=self.recycle_on_context_change,
+            )
             if claimed is None:
                 if (self.queue.root / "stop").exists():
                     return
                 time.sleep(self.poll_interval_s)
                 continue
+            if (self.recycle_on_context_change and preferred_group is not None
+                    and (claimed.item.group_id != preferred_group
+                         or claimed.item.expected_results != preferred_width)):
+                # The orchestrator requeues this unevaluated claim when recycling.
+                self._write_state("recycling", completed_records=completed_records)
+                return
             self._write_state("running", item_id=claimed.item.item_id)
             result = evaluate(claimed.item)
             if result.worker_id != self.worker_id:
@@ -58,6 +71,7 @@ class WorkerLoop:
             self.queue.complete(claimed, result)
             completed_records += len(result.records)
             preferred_group = claimed.item.group_id
+            preferred_width = claimed.item.expected_results
             self._write_state("idle", completed_item_id=claimed.item.item_id)
             if self.recycle_after_records is not None and completed_records >= self.recycle_after_records:
                 self._write_state("recycling", completed_records=completed_records)

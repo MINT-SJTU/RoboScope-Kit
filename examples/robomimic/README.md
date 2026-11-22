@@ -63,11 +63,9 @@ it to `env.step`.
 
    Drop `--quick-test` for the full 5 x 50 evaluation; add `--concurrency K --replicas G` to skip autotuning.
 
-   The matched 12-core, single RTX 4090 review measurements use `--concurrency 20 --replicas 8`,
-   with MPS off on both sides. This is a measured configuration, not a universal default. See the
-   [review report](../../benchmarks/robomimic/REVIEW_VALIDATION.md) for repeated timings, per-step cache
-   checks and native throughput. The historical MPS-on results remain in the
-   [original report](../../benchmarks/robomimic/THROUGHPUT.md); they do not establish the 2x target.
+   The matched 12-core, single RTX 4090 measurements use `--concurrency 20 --replicas 8` with MPS off.
+   This is a measured configuration, not a universal default. See the
+   [throughput notes](../../benchmarks/robomimic/THROUGHPUT.md).
 
 5. Compare with upstream:
 

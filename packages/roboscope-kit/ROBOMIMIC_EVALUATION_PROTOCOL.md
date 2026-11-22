@@ -400,8 +400,8 @@ python examples/robomimic/compare_native.py --runtime /sim/robomimic --checkpoin
 Autotune was not measured: on this shared host its worker search would take most of the CPUs other jobs
 were using, so the baseline uses a fixed K/g.
 
-Throughput measurements on a separate 20-core RTX 4090 container are recorded in the
-[throughput report](../../benchmarks/robomimic/THROUGHPUT.md). They use a newly reproduced baseline on that
+Throughput measurements on a separate 12-core RTX 4090 container are recorded in the
+[throughput notes](../../benchmarks/robomimic/THROUGHPUT.md). They use a newly reproduced baseline on that
 machine, not the historical timing above. The optimized worker prioritizes longer tasks and enables a
 two-entry compiled-model cache installed by the pinned builder. Each environment receives an independent
 model copy, and MuJoCo's last-compiled XML context is restored before serialization. Reset, forward,

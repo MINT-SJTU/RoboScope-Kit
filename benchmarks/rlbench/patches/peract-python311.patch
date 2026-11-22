@@ -1,0 +1,45 @@
+diff --git a/agents/c2farm_lingunet_bc/qattention_lingunet_bc_agent.py b/agents/c2farm_lingunet_bc/qattention_lingunet_bc_agent.py
+index b50e77b..fa1be6f 100644
+--- a/agents/c2farm_lingunet_bc/qattention_lingunet_bc_agent.py
++++ b/agents/c2farm_lingunet_bc/qattention_lingunet_bc_agent.py
+@@ -8,7 +8,6 @@ import torch
+ import torch.nn as nn
+ import torch.nn.functional as F
+ from torchvision import transforms
+-from pytorch3d import transforms as torch3d_tf
+ from yarr.agents.agent import Agent, ActResult, ScalarSummary, \
+     HistogramSummary, ImageSummary, Summary
+ 
+diff --git a/agents/peract_bc/qattention_peract_bc_agent.py b/agents/peract_bc/qattention_peract_bc_agent.py
+index aa17d9a..785e230 100644
+--- a/agents/peract_bc/qattention_peract_bc_agent.py
++++ b/agents/peract_bc/qattention_peract_bc_agent.py
+@@ -8,7 +8,6 @@ import torch
+ import torch.nn as nn
+ import torch.nn.functional as F
+ from torchvision import transforms
+-from pytorch3d import transforms as torch3d_tf
+ from yarr.agents.agent import Agent, ActResult, ScalarSummary, \
+     HistogramSummary, ImageSummary, Summary
+ 
+diff --git a/voxel/augmentation.py b/voxel/augmentation.py
+index 9fec3af..b75cd80 100644
+--- a/voxel/augmentation.py
++++ b/voxel/augmentation.py
+@@ -1,7 +1,6 @@
+ import numpy as np
+ import torch
+ from helpers import utils
+-from pytorch3d import transforms as torch3d_tf
+ 
+ 
+ def perturb_se3(pcd,
+@@ -92,6 +91,8 @@ def apply_se3_augmentation(pcd,
+     :param device: torch device
+     :return: perturbed action_trans, action_rot_grip, pcd
+     """
++    # RoboScope Kit: pytorch3d has no Python 3.11 build; import it only for training.
++    from pytorch3d import transforms as torch3d_tf
+ 
+     # batch size
+     bs = pcd[0].shape[0]

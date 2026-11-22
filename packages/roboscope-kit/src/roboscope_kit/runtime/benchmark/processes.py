@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 import time
 from collections.abc import Iterable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
@@ -39,6 +40,12 @@ OOM_PATTERNS = (
     re.compile(r"(?im)^.*runtimeerror:\s*cannot create buffer\s*$"),
     re.compile(r"(?im)^.*failed to allocate device memory.*$"),
     re.compile(r"(?im)^.*mps backend out of memory.*$"),
+    # PhysX GPU (SAPIEN) logs only the allocator's source path when a device allocation fails;
+    # the simulation then stops with CUDA error 700 (illegal address), not "out of memory".
+    re.compile(r"(?im)^.*\[critical\].*pxgcudamemoryallocator\.cpp(?::\d+)?(?:\s.*)?$"),
+    re.compile(r"(?im)^.*cublas_status_alloc_failed.*$"),
+    # cuSOLVER reports a failed workspace allocation while creating a handle as an internal error.
+    re.compile(r"(?im)^.*cusolver_status_internal_error.*cusolverdncreate.*$"),
 )
 
 FAILURE_LOG_READ_BYTES = 1024 * 1024
@@ -284,14 +291,28 @@ class InferencePool:
         *,
         shared_deadline: bool,
     ) -> None:
-        # Replicas on the same GPU load large checkpoints, so starting them
-        # one at a time avoids a transient VRAM spike that fails replica start.
+        # Replicas on the same GPU load large checkpoints, so they start one at a
+        # time to avoid a transient VRAM spike that fails replica start. GPUs do not
+        # share VRAM, so each GPU's replicas start in parallel with the other GPUs'.
         deadline = time.monotonic() + ready_timeout_s
+
+        def launch_serially(group: Sequence[ReplicaContext]) -> None:
+            for context in group:
+                remaining_s = deadline - time.monotonic() if shared_deadline else ready_timeout_s
+                if remaining_s <= 0:
+                    raise TimeoutError("inference replica scale operation timed out")
+                self._launch_replica(context, remaining_s)
+
+        groups: dict[str, list[ReplicaContext]] = {}
         for context in contexts:
-            remaining_s = deadline - time.monotonic() if shared_deadline else ready_timeout_s
-            if remaining_s <= 0:
-                raise TimeoutError("inference replica scale operation timed out")
-            self._launch_replica(context, remaining_s)
+            groups.setdefault(context.gpu_device, []).append(context)
+        if len(groups) == 1:
+            launch_serially(contexts)
+            return
+        with ThreadPoolExecutor(max_workers=len(groups)) as pool:
+            futures = [pool.submit(launch_serially, group) for group in groups.values()]
+        for future in futures:
+            future.result()
 
     def _launch_replica(self, context: ReplicaContext, ready_timeout_s: float) -> None:
         try:

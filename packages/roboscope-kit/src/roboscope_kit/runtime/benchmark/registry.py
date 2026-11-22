@@ -11,6 +11,10 @@ from .factories import BenchmarkFactory
 
 
 def benchmark_factory(name: BenchmarkName) -> BenchmarkFactory:
+    if name is BenchmarkName.MANISKILL:
+        from roboscope_kit.runtime.benchmarks.maniskill import ManiSkillBenchmarkFactory
+
+        return ManiSkillBenchmarkFactory()
     if name is BenchmarkName.LIBERO:
         from roboscope_kit.runtime.benchmarks.libero import LiberoBenchmarkFactory
 
@@ -39,14 +43,26 @@ def benchmark_factory(name: BenchmarkName) -> BenchmarkFactory:
         from roboscope_kit.runtime.benchmarks.robocasa import RoboCasaBenchmarkFactory
 
         return RoboCasaBenchmarkFactory()
+    if name is BenchmarkName.ROBOCASA365:
+        from roboscope_kit.runtime.benchmarks.robocasa365 import RoboCasa365BenchmarkFactory
+
+        return RoboCasa365BenchmarkFactory()
     if name is BenchmarkName.METAWORLD:
         from roboscope_kit.runtime.benchmarks.metaworld import MetaworldBenchmarkFactory
 
         return MetaworldBenchmarkFactory()
+    if name is BenchmarkName.RLBENCH:
+        from roboscope_kit.runtime.benchmarks.rlbench import RLBenchBenchmarkFactory
+
+        return RLBenchBenchmarkFactory()
     if name is BenchmarkName.ROBOMIMIC:
         from roboscope_kit.runtime.benchmarks.robomimic import RobomimicBenchmarkFactory
 
         return RobomimicBenchmarkFactory()
+    if name is BenchmarkName.SIMPLER_ENV:
+        from roboscope_kit.runtime.benchmarks.simpler_env import SimplerEnvBenchmarkFactory
+
+        return SimplerEnvBenchmarkFactory()
     raise ValueError(f"unsupported benchmark: {name.value}")
 
 

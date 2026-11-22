@@ -1,0 +1,8 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/absolute/openvla-policy/env/bin/python",
+    "/absolute/RoboScope-Kit/examples/openvla/openvla_policy.py"
+  ],
+  "cwd": "/absolute/RoboScope-Kit/examples/openvla"
+}

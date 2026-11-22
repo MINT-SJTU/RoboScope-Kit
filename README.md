@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/speedup.gif" width="100%" alt="Evaluation time in minutes, 500 episodes: on LIBERO-Long RoboScope Kit finishes in 8.1 minutes (6.16× faster than the official StarVLA evaluation); on RoboTwin Easy it goes from 359.7 to 14.4 minutes (25.04×)"/>
+  <img src="docs/speedup.gif" width="100%" alt="Evaluation time in minutes against the official StarVLA evaluation: 500 LIBERO-Long episodes on one RTX 4090 take 8.1 minutes instead of 49.8 (6.16×), and the 5,000 RoboTwin Easy episodes on four RTX PRO 5000 GPUs take 66.4 minutes instead of 1,050.6 (15.8×)"/>
 </p>
 
 RoboScope Kit evaluates your model on standard robot simulation benchmarks. You wrap a model once in a Python
@@ -29,15 +29,16 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## News
 
+- 🤖 **2026-11-10:** [RLBench](packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md) (the PerAct 18-task suite) is supported.
 - 🤖 **2026-11-06:** [robomimic](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) and [LIBERO-Pro](packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro) are supported.
 - 🎉 **2026-11-05:** RoboScope Kit is released! See the [technical report](https://arxiv.org/abs/2611.03850).
 - 🤖 **2026-11-04:** [RoboDojo](benchmarks/robodojo/README.md) is supported.
 
 ## Highlights
 
-- 🚀 **Faster evaluation:** on 500 episodes with a StarVLA checkpoint, evaluation is **6.16×**
-  faster than the official StarVLA evaluator on LIBERO-Long (one RTX 4090, CUDA MPS) and **25.04×** faster on
-  RoboTwin Easy (four RTX 4090s vs. a one-GPU baseline). See [Results](#results).
+- 🚀 **Faster evaluation:** with a StarVLA checkpoint, evaluation is **6.16×** faster than the official StarVLA
+  evaluator on 500 LIBERO-Long episodes (one RTX 4090, CUDA MPS) and **15.8×** faster on the 5,000 RoboTwin Easy
+  episodes (Kit and the official evaluator on the same four RTX PRO 5000 GPUs). See [Results](#results).
 - 🧩 **One interface:** every supported benchmark runs through the same `Policy` API and sends its canonical
   observations unchanged.
 - ⚙️ **Measured concurrency:** simulator Workers and Policy replicas run as separate pools. Autotune sizes both
@@ -57,19 +58,18 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## Results
 
-From the [technical report](https://arxiv.org/abs/2611.03850), each run covering 500 episodes with a StarVLA
+From the upcoming revision of the [technical report](https://arxiv.org/abs/2611.03850), with a StarVLA
 checkpoint. Evaluation time excludes initialization, concurrency search or offline tuning, and cleanup.
-LIBERO-Long, on one 48 GiB RTX 4090, with success rates equivalent to the official evaluation's:
+LIBERO-Long, 500 episodes on one 48 GiB RTX 4090, with success rates equivalent to the official evaluation's:
 
 | Configuration | vs. official StarVLA | vs. RLinf | vs. vla-eval |
 | --- | ---: | ---: | ---: |
 | 12 Workers, 3 replicas | **4.45×** | **2.78×** | **1.52×** |
 | 16 Workers, 4 replicas, CUDA MPS | **6.16×** | **3.85×** | **2.10×** |
 
-RoboTwin Easy, on four GPUs with chunk-boundary observation, takes 14.4 minutes instead of 359.7 with one
-simulator and one model on one GPU (**25.04×**), with identical success outcomes and terminal steps. On the
-same four GPUs, one simulator and one model per GPU takes 98.9 minutes, so RoboScope Kit is **6.88×** faster on
-equal hardware.
+RoboTwin Easy, the standard 5,000 episodes (50 tasks × 100) on the same four RTX PRO 5000 GPUs, takes 3,985 s
+(66.4 minutes) instead of 63,036 s (17.5 hours) with the official StarVLA evaluation (**15.8×**), matching it on
+every success outcome and terminal step.
 
 ## Supported benchmarks
 
@@ -81,9 +81,12 @@ equal hardware.
 | [RoboTwin](https://github.com/RoboTwin-Platform/RoboTwin) | `demo_clean`, `demo_randomized` | [Seed protocol](benchmarks/robotwin/SEED_PROTOCOL.md) |
 | [RoboDojo](https://github.com/RoboDojo-Benchmark/RoboDojo) | `arx_x5`, `arx_x5_randomized` | [RoboDojo guide](benchmarks/robodojo/README.md) |
 | [RoboCasa GR-1 Tabletop](https://github.com/robocasa/robocasa-gr1-tabletop-tasks) | `tabletop` | [Manifest](benchmarks/robocasa/benchmark-manifest.json) |
+| [RoboCasa365](https://github.com/robocasa/robocasa) | `target50`, `atomic_seen`, `composite_seen`, `composite_unseen` | [Protocol and validation scope](packages/roboscope-kit/docs/robocasa365-protocol.md) |
 | [CALVIN](https://github.com/mees/calvin) | `task_D_D`, `task_ABC_D`, `task_ABCD_D` | [CALVIN protocol](packages/roboscope-kit/CALVIN_EVALUATION_PROTOCOL.md) |
 | [MetaWorld](https://github.com/Farama-Foundation/Metaworld) | `mt50` | [MetaWorld protocol](packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md) |
+| [RLBench](https://github.com/stepjam/RLBench) | `peract_18` (the PerAct 18-task reproduction profile, not all of RLBench) | [RLBench protocol](packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md) |
 | [robomimic](https://github.com/ARISE-Initiative/robomimic) | `ph_low_dim` | [robomimic protocol](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) |
+| [SimplerEnv](https://github.com/simpler-env/SimplerEnv) | `google_robot_visual_matching`, `google_robot_variant_aggregation`, `widowx_visual_matching` | [SimplerEnv protocol](packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md) |
 
 The simulators, datasets, and assets are not dependencies of the PyPI package; `build-runtime.sh` builds them
 separately. Simulator builds, real episodes, and model loading need Linux x86_64, a GPU, and network access.
@@ -95,9 +98,13 @@ Start from an existing `Policy` if you use one of these model families:
 | Model | Benchmarks | Example |
 | --- | --- | --- |
 | [StarVLA](https://github.com/starVLA/starVLA) | LIBERO, LIBERO-Plus, LIBERO-Pro, RoboTwin, RoboCasa GR-1 Tabletop, CALVIN, MetaWorld, with a published checkpoint for each | [`examples/starvla/`](examples/starvla/README.md) |
+| [OpenVLA](https://github.com/openvla/openvla) | LIBERO Spatial, Object, Goal, and Long with suite-specific checkpoints | [`examples/openvla/`](examples/openvla/README.md) |
 | [X-VLA](https://github.com/2toINF/X-VLA) | LIBERO, LIBERO-Plus, RoboTwin, CALVIN | [`examples/xvla/`](examples/xvla/README.md) |
 | [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) | RoboDojo | [`examples/xpolicylab/`](examples/xpolicylab/README.md) |
+| [PerAct](https://github.com/peract/peract) | RLBench (the released 600k multi-task checkpoint) | [`examples/peract/`](examples/peract/README.md) |
+| [Official RoboCasa365 Diffusion Policy](https://github.com/robocasa-benchmark/diffusion_policy) | RoboCasa365 multi-task | [`examples/robocasa365_diffusion/`](examples/robocasa365_diffusion/README.md) |
 | [robomimic model zoo](https://robomimic.github.io/docs/model_zoo/robomimic_v0.1.html) | robomimic (the v0.1 PH low-dim BC-RNN checkpoints) | [`examples/robomimic/`](examples/robomimic/README.md) |
+| [RT-1-X](https://github.com/google-deepmind/open_x_embodiment) | SimplerEnv (Google Robot and WidowX, through SimplerEnv's own RT-1 inference code) | [`examples/rt1/`](examples/rt1/README.md) |
 
 ## Quick start
 
@@ -177,11 +184,13 @@ tuning, writing a Policy, CUDA MPS, and cross-instance sharding.
 | Path | Contents |
 | --- | --- |
 | `packages/roboscope-kit/` | The `roboscope-kit` package: public `Policy` API, protocol client and server, benchmark runtime, and the evaluation protocol documents |
-| `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, MetaWorld, RoboCasa GR-1 Tabletop, RoboDojo, RoboTwin, and robomimic: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
+| `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, MetaWorld, RLBench, RoboCasa GR-1 Tabletop, RoboCasa365, RoboDojo, RoboTwin, robomimic, and SimplerEnv: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
 | `examples/starvla/` | The StarVLA `Policy` and one demo per benchmark, including the configurations behind the RoboScope Kit technical report |
 | `examples/xvla/` | An X-VLA `Policy` example: a stateful Policy serving several benchmarks |
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
+| `examples/peract/` | A PerAct `Policy` example for RLBench, with PerAct's native `eval.py` runner and an episode-by-episode comparison |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
+| `examples/rt1/` | An RT-1-X `Policy` example for SimplerEnv, with a runner for SimplerEnv's official scripts and an episode-by-episode comparison |
 | `ci/` | Build, compatibility, and PyPI release scripts used by GitHub Actions |
 
 ## Contributing
@@ -218,6 +227,6 @@ Ask questions, share your results, and discuss new benchmarks in
 [Issues](https://github.com/MINT-SJTU/RoboScope-Kit/issues).
 
 WeChat users can also scan the QR code to join the RoboScope Kit group (the invitation is valid before
-November 12, 2026):
+November 25, 2026):
 
 <img src="docs/community-qr.png" alt="WeChat QR code for the RoboScope Kit community" width="240">

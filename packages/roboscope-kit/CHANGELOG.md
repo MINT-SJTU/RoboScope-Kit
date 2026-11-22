@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b43 - 2026-11-08
+## 0.8.0b72 - 2026-11-22
 
 - Pin MessagePack in the robomimic runtime. The shared Policy client imports it since 0.8.0b27;
   a clean robomimic build previously stopped before initial-state verification with a missing dependency.
@@ -15,6 +15,191 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   source hashes; workers can disable the cache with `ROBOSCOPE_ROBOMIMIC_MODEL_CACHE=0`.
 - Record robomimic initialization, reset, Policy reset/end, observation preparation, simulator,
   and inference round-trip time in work-item metadata.
+
+## 0.8.0b71 - 2026-11-20
+
+- Spread Workers that recycle on every group change across groups: an idle recycling Worker claims from the group with the most pending items per Worker already on it instead of following the others into the same next group. A Worker that loses a claim to another Worker chooses its group again, so Workers that start together do not all start the same group. On eleven ManiSkill tasks this cuts evaluation time by 20% with four Workers and 19% with eight (three runs each), reaching 2.33x the single-Worker time with eight; benchmarks without recycling keep the ordinal claim order.
+- Classify PhysX GPU allocator failures, cuBLAS allocation failures and cuSOLVER handle-creation failures as out-of-memory, so a Worker that runs out of GPU memory in PhysX (which then stops with CUDA error 700) scales its GPU's Workers down instead of retrying at the same count; this applies to every benchmark. A Worker that exits for a planned recycle while its GPU scales down is no longer reported as failed.
+
+## 0.8.0b70 - 2026-11-20
+
+- Add the partial, pinned ManiSkill integration with explicit task/robot/observation/controller profiles, GPU-vectorized Workers, reproducible simulator/assets builds and real-model correctness references; incomplete task/model acceptance remains documented.
+- Preserve actual terminal masks and recycle simulator Workers when profile or vector width changes while retaining Policy replicas.
+- Freeze ManiSkill vector width in the evaluation protocol, preserve complete seeded groups in Quick Test and probes, and derive official PPO native configurations independently from pinned upstream sources.
+- Publish trajectory traces only after successful rollout cleanup, retain retry attempts and self-test timeout logs, and share one manifest PhysX binary pin across build and evaluation paths.
+- Keep return-scored episodes out of binary success/failure statistics, including progress, autotune health and both shard merge paths.
+- Merge ManiSkill profile return sums/counts and success counts separately, check complete record-tree coverage, and bind shards to checkpoint and Policy content identities. The Policy identity skips virtual environments and build trees under the Policy directory, and shard success rates use the same float tolerance as the ManiSkill metrics.
+- Add simulator-free tests for ManiSkill profile validation, return-only scoring in results, metrics and autotune, ManiSkill shard merging and validation, Worker recycling on a task or vector-width change, and probe health during a planned recycle.
+- Remove cross-task/robot transfer Policy examples and their evaluation claims while preserving the original 55-task and tabletop observation/controller contracts; list intended-task checkpoint candidates as unvalidated until native acceptance.
+- Raise the ManiSkill autotune Worker cap from 2 to 16 so autotune can choose more simulator Workers per GPU, and stop counting a Worker that is exiting for a planned recycle as a lost Worker in autotune probes; this shared probe fix applies to every benchmark whose Workers recycle.
+## 0.8.0b69 - 2026-11-20
+
+- Add opt-in RoboTwin central rendering (`render_mode: central` in the manifest's `defaults`): evaluators
+  simulate on the CPU without a GPU, recording each episode's visual scene construction, and
+  `render_services_per_gpu` (default 2) render services per GPU replay it into a new render-only scene per
+  episode and return the head and wrist RGB through shared memory. The RoboTwin adapter starts a GPU's services
+  with its first Worker and stops them after each pass; benchmark adapters may now define `close()`, which
+  the runtime calls after a pass's Workers stop. An evaluator that loses its service ends its Worker, so the
+  task is requeued and the restarted Worker starts a new service, instead of recording failed episodes.
+  Central rendering supports `demo_clean` with qpos actions, a seed cache and videos off. On one RTX 4090 it
+  evaluated 50 tasks × 2 episodes at 149.1 steps/s against 102.1 for native K6/G2 (K12/G3, CUDA MPS on both,
+  mean of two arms each), with every episode's Policy images and actions identical; see
+  `benchmarks/robotwin/CENTRAL_RENDER.md`. Native rendering stays the default.
+
+## 0.8.0b68 - 2026-11-19
+
+- RoboCasa365 review follow-ups: a failing task's own error is no longer replaced by an environment
+  close error, the Worker `PYTHONPATH` has no empty entry when none was set, and the README tables
+  drop the "partial integration" label now that the target50 native comparison is accepted.
+
+## 0.8.0b67 - 2026-11-19
+
+- Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,
+  and official Diffusion Policy example. Freeze all 50 tasks, horizons, pretrain scenes and scoring.
+- Correct EGL context ownership and cleanup, including partially constructed renderers, and stabilize
+  seeded scene sampling. The runtime builder pins the source, patch and resulting-file hashes.
+- Make self-test reset and render twice and Quick Test execute one native five-slot group.
+- Add public grouped Policy lifecycle profiling and simulator-operation markers, plus simulator-free
+  checks for task accounting, configuration, factory sizing, sharding and profiling.
+
+## 0.8.0b66 - 2026-11-14
+
+- Add the `simpler_env` benchmark (protocol `simpler-env-v1`, action `simpler_env.ee-delta-axangle-v1`) with
+  three separate suites transcribed from SimplerEnv's official RT-1 scripts: `google_robot_visual_matching`
+  (864 episodes), `google_robot_variant_aggregation` (1,722 episodes, without the two alternative-camera
+  variants that SimplerEnv's own average leaves out), and `widowx_visual_matching` (96 episodes). Each episode
+  is built, reset, stepped, and scored as SimplerEnv's `maniskill2_evaluator.py` does it, with the policy camera
+  and the current instruction as the observation and the 7-value `env.step` action plus a terminate signal.
+  `benchmarks/simpler_env/build-runtime.sh` builds SimplerEnv and ManiSkill2_real2sim at pinned commits on
+  CPython 3.11 with SAPIEN 2.2.2 and the TensorFlow stack of SimplerEnv's RT-1 inference.
+- Add `examples/rt1/`: an RT-1-X Policy built on SimplerEnv's `RT1Inference`, a runner for SimplerEnv's
+  official scripts, and an episode-by-episode comparison. The runner binds its output directory to one run
+  identity and reuses a finished invocation only when its command line and episode records still match. The
+  comparison matches every native invocation to one frozen variant, including its observation camera and
+  policy configuration, and `--strict` fails on missing, duplicate, unknown, or unpaired episodes.
+- A SimplerEnv result is `formal` only when it holds every episode of the full matrix. One shard's
+  `official_result` is `partial`, and `benchmark.formal_selection` records whether the requested workload is
+  the full matrix. Shards from different hosts or install directories merge, and `shard_merge` runs without
+  the Vulkan ICD check. `build-runtime.sh` fails when the venv holds anything other than the lock and the two
+  checkouts.
+
+## 0.8.0b65 - 2026-11-14
+
+- Add an OpenVLA Policy for the four fine-tuned LIBERO suites, with pinned checkpoints and model code,
+  CPU image preprocessing, and BF16/FlashAttention2 inference through the standard Policy lifecycle.
+- Build the OpenVLA Policy and CLI in a separate pinned Python 3.11 environment while using the
+  standard LIBERO simulator Worker and its existing package versions.
+- Add a pinned official Native evaluation entry point and per-episode Kit/Native comparison.
+
+## 0.8.0b64 - 2026-11-14
+
+- RoboTwin evaluators no longer render `front_camera`. RoboTwin renders four cameras for every observation, and
+  the Policy reads three of them (head and the two wrist cameras); the front camera's image was rendered and
+  dropped. The camera is still created, so each scene is built as before, and every camera has its own renderer:
+  the three images the Policy reads and the joint state are bit-identical (4 seeds, about 31 observations each).
+  At K48/g8 the twelve evaluators and two Policy replicas on a GPU share it, and an observation of three cameras
+  takes 121 ms in a 500-episode run against about 30 ms for one process alone, so one camera less shortens every
+  observation.
+  On four RTX PRO 5000 GPUs at K48/g8 with the longest tasks first, a 5,000-episode run takes 3,851 s instead of
+  4,262 s (3,881 s instead of 4,295 s from launch to exit), steady throughput rises from 511 to 569 steps/s, GPU
+  memory is unchanged (62.4-65.2 GB peak per GPU), and every episode equals the official evaluation. In the
+  default task order, which a first run without a run-cache entry uses, the same run takes 4,023 s (4,119 s from
+  launch to exit, of which replica loading took 94 s instead of 29 s), again with every episode equal to the
+  official evaluation, which takes 63,068 s on the same GPUs. Settings that read every camera (video, the viewer,
+  point clouds, depth, segmentation, observer or third-view data) render all four as before, and
+  `ROBOTWIN_SKIP_UNREAD_CAMERAS=0` turns the change off.
+
+## 0.8.0b63 - 2026-11-14
+
+- RoboTwin eval sessions free each finished task's SAPIEN scene before the next task starts. `Base_Task.close_env`
+  leaves the last scene attached to the task object, and `click_bell` and `click_alarmclock` store a bound method
+  on their task object (`self.check_arm_function = self.is_left_gripper_close`), a reference cycle that kept the
+  scene of every finished task of those two kinds on the GPU until the cyclic garbage collector ran. Over a
+  5,000-episode run each evaluator grew from about 3 GB to 4.4-5.7 GB, and at K48/g8 on four RTX PRO 5000 GPUs the
+  last minutes, which run those two short tasks, reached 72.8 of 73.4 GB per GPU and hit out-of-memory errors. The
+  launcher now stores `check_arm_function` as the gripper method's name and returns the same bound method on every
+  read, and it clears the evaluator's globals and collects after every task. The same 5,000-episode K48/g8 run now
+  peaks at 63.3-64.1 GB per GPU (57.2-58.9 GB in its last five minutes), takes 4,262 s instead of 4,285 s, and every
+  episode equals the previous run and a full 5,000-episode run of the official evaluator.
+
+## 0.8.0b62 - 2026-11-14
+
+- RoboTwin evaluators no longer create the observer camera and the two world cameras when video logging and
+  point-cloud, observer, third-view and segmentation data are off; they never take a picture in such an
+  evaluation. Segmentation data keeps them because scene entities are numbered in creation order. The three cameras the Policy reads keep the same images (12 first observations compared pixel by
+  pixel). Each camera costs GPU-driver calls when a scene is built, which queue across evaluator processes: at 48
+  processes on four RTX PRO 5000 GPUs the first observation of a new scene drops from 6.3 to 5.3 s, and a
+  500-episode K48/g8 run from 643 to 629 s with every episode equal to the official evaluation.
+  `ROBOTWIN_SKIP_UNUSED_CAMERAS=0` keeps them.
+
+## 0.8.0b61 - 2026-11-14
+
+- Run cache: an evaluation stores the searched `K`/`g` and each task's mean episode time, keyed by the kit
+  version, manifest, workload, checkpoint, Policy config, GPU models, CPU quota and CUDA MPS. The next
+  evaluation with the same key skips the search (`"mode": "cached"`). `--run-cache refresh|off` searches again
+  or leaves the cache alone. On four RTX PRO 5000 GPUs the RoboTwin search took 1,130 s of a 1,827 s run.
+  An evaluation that ran out of GPU memory or lost a Worker stores nothing and drops the cached `K`/`g`.
+- The formal pass hands out the longest tasks first when the run cache or this evaluation's probes have measured
+  them; unmeasured tasks go first. On four RTX PRO 5000 GPUs at `K48/g8`, longest-first cut the 500-episode
+  RoboTwin run from 655 s to 579 s (one run each), mostly from the tail.
+- `--profile` records RoboTwin episodes: its launcher, which has its own Policy client, writes the `episode` and
+  `policy.<operation>` NVTX ranges through Kit's helper. It used to record nothing.
+- `diagonal` autotune, with the manifest's `autotune_replica_memory_backoff` (on for RoboTwin): when a replica
+  step's `K = r * g` is predicted not to fit in GPU memory, it tries smaller `K` that fit before stopping, and a
+  step that runs out of memory moves to the next smaller `K`. On four RTX PRO 5000 GPUs the RoboTwin search
+  stopped at `K32/g4` because `K64/g8` did not fit, while the measured `K48/g8` was 32% faster.
+
+## 0.8.0b60 - 2026-11-14
+
+- Policy replicas on different GPUs now start in parallel; replicas on the same GPU still start one at a time.
+  With two replicas on each of four RTX PRO 5000 GPUs, Workers used to wait about 100 s for eight serial loads.
+  Commands to the CUDA MPS control daemon are serialized, since it refuses concurrent connections.
+- RoboTwin draws each episode's language instruction with the suite's `instruction_seed_limit` instead of the
+  number of episodes per task in this run. A run or autotune probe with fewer episodes per task than the
+  protocol used to draw different instructions for the same seeds, so its episodes differed from the formal run
+  (99 of 250 at five episodes per task).
+- RoboTwin work items hold one episode instead of ten (`episode_shard_size: 1`). On four RTX PRO 5000 GPUs at
+  `K16/g4`, steady-state throughput is the same for 5-, 2- and 1-episode items, while the end-of-run tail
+  shrinks: the whole-run rate rises from 81% (5-episode) to 91% (1-episode) of steady state. Ten-episode items
+  also left too few items for autotune to measure `K32`.
+
+## 0.8.0b56 - 2026-11-14
+
+- The StarVLA RoboTwin demo (`examples/starvla/robotwin/demo.yaml`) no longer sends joint state to the
+  Policy. The official StarVLA RoboTwin evaluator drops the state before calling the model, and the technical
+  report's RoboTwin results were produced without it. With the state, the demo scored 190/500 on the report's
+  500 episodes instead of 230/500, and disagreed with the official evaluator on 14 of 40 compared episodes (#108).
+
+## 0.8.0b35 - 2026-11-10
+
+- Add the `rlbench` benchmark with the `peract_18` suite (protocol `rlbench-peract-v2`): the PerAct 18-task
+  reproduction profile, not all of RLBench. Each task replays PerAct's 25 released test episodes from their
+  stored variation and random state, with PerAct's four 128x128 cameras (RGB, depth, point cloud, and
+  calibration), low-dimensional state, the instruction, and key-frame end-effector actions executed by
+  RLBench's motion planner (`rlbench.ee-pose-planning-v1`, 9 `float64` values), for at most 25 actions.
+  `benchmarks/rlbench/build-runtime.sh` builds CoppeliaSim Edu 4.1, PyRep, the PerAct RLBench and YARR
+  forks, PerAct, and the test split on CPython 3.11 after the user accepts the CoppeliaSim Edu and RLBench
+  licences by passing `--accept-licenses`, and checks every task's test episodes against frozen digests.
+  Each episode is reset once from its stored state, as PerAct's `eval.py` does. Records carry
+  `initial_scene_position_error_m`, which compares the scene with the recorded first frame object by object
+  (by handle, over the object list captured when the task is loaded). The build resets each of the 450 test
+  episodes on a freshly loaded task and compares the result with the frozen list of episodes that start more
+  than 1 cm off, `benchmarks/rlbench/peract-initial-scenes.json`.
+- Add `examples/peract/`: a Policy for the released PerAct 600k checkpoint, a runner for PerAct's own
+  `eval.py`, and an episode-by-episode comparison.
+- RLBench sharding is disabled until cross-shard Policy and checkpoint identity can be verified; the native
+  runner checks episode coverage and PerAct's single-task or multi-task CSV metrics before reporting completion,
+  and native comparison rejects missing or mismatched test-episode inputs.
+- Preserve RLBench camera calibration precision and the collision-ignore observation so the PerAct Policy
+  reproduces YARR's initial and subsequent input preparation.
+- Run a formal RLBench evaluation as PerAct's `eval.py` does: one simulator process, all 18 tasks in PerAct's
+  README order (`EVALUATION_ORDER`). RLBench keeps simulator state across task loads, so the outcome of an
+  episode depends on the tasks that ran before it in the same process. Runs with fewer episodes per task
+  still spread single episodes over the workers.
+- Allow the native PerAct runner to report and verify YARR's statistics for a single completed episode.
+- Fix and record `PYTHONHASHSEED=0` in RLBench simulator and native evaluator processes. The pinned
+  `push_buttons` task constructs distractor colors from a set, whose order otherwise differs across Python
+  processes despite matching NumPy states. The comparison rejects records without this execution contract.
 
 ## 0.8.0b33 - 2026-11-08
 

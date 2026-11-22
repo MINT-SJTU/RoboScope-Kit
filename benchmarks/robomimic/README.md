@@ -12,9 +12,7 @@ last-compiled XML context is restored when required by `mj_saveLastXML`. It does
 physics, control, or observation work. All simulator changes live in the builder and its pinned patch.
 
 See the [evaluation protocol](../../packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) for the frozen
-scope, the [review validation](REVIEW_VALIDATION.md) for matched repeats, retained per-step traces and
-native throughput, and the [historical report](THROUGHPUT.md) for the original experiments. Matched
-repeats give 1.745x combined throughput improvement; issue #32's 2x target remains open.
+scope and the [throughput notes](THROUGHPUT.md) for the matched comparison, cache check and native throughput.
 
 ## Profiling
 
@@ -29,6 +27,5 @@ Policy socket waits. The separate Policy profile showed time in the upstream rec
 GMM sampling. The complete unprofiled evaluations then isolated parallelism, task ordering, model caching,
 and transport. Rendering and image preprocessing are absent from this low-dimensional profile. Skipping
 physics forward work changed per-episode results and was rejected. A two-entry compiled-model cache
-retained all terminal outcomes and initial-state digests. The 2026-11-09 review diagnostic additionally
-compared original/cache-off/cache-on observations, actions and state through all five tasks and repeated
-resets/task switches; all retained numeric arrays were byte-identical. See the review report for scope.
+retained all terminal outcomes and initial-state digests; the [throughput notes](THROUGHPUT.md) describe
+the per-step cache check.

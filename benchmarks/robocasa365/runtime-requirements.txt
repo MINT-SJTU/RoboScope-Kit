@@ -1,0 +1,43 @@
+# Linux x86_64, Python 3.11. CPU torch==2.5.1+cpu is installed from its
+# dedicated official wheel index by build-runtime.sh. Simulator source pins
+# live in source-inputs.json. Training / LeRobot / interactive collection tools are
+# excluded: pynput/evdev/python-xlib, hidapi and pygame are only used by device
+# interfaces or interactive scripts, outside the PandaOmron Gym evaluation path.
+absl-py==2.2.2
+cloudpickle==3.1.1
+etils==1.12.2
+farama-notifications==0.0.4
+filelock==3.18.0
+fsspec==2025.3.2
+glfw==2.9.0
+gymnasium==1.1.1
+h5py==3.13.0
+imageio==2.37.0
+imageio-ffmpeg==0.6.0
+importlib-resources==6.5.2
+jinja2==3.1.6
+llvmlite==0.44.0
+lxml==5.4.0
+markupsafe==3.0.2
+mpmath==1.3.0
+msgpack==1.1.0
+mujoco==3.3.1
+networkx==3.4.2
+numba==0.61.2
+numpy==2.2.5
+opencv-python==4.11.0.86
+packaging==25.0
+pillow==11.2.1
+pyopengl==3.1.9
+pyyaml==6.0.2
+qpsolvers==4.6.0
+quadprog==0.1.13
+scipy==1.15.3
+setuptools==80.9.0
+six==1.17.0
+sympy==1.13.1
+termcolor==3.1.0
+tqdm==4.67.1
+typing-extensions==4.13.2
+wheel==0.45.1
+zipp==3.21.0

@@ -16,11 +16,15 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     LIBERO_PLUS = "libero_plus"
     LIBERO_PRO = "libero_pro"
     ROBOCASA = "robocasa"
+    ROBOCASA365 = "robocasa365"
     ROBOTWIN = "robotwin"
     CALVIN = "calvin"
     METAWORLD = "metaworld"
     ROBODOJO = "robodojo"
+    RLBENCH = "rlbench"
     ROBOMIMIC = "robomimic"
+    MANISKILL = "maniskill"
+    SIMPLER_ENV = "simpler_env"
 
 
 class BenchmarkDefinition(ABC):
@@ -58,12 +62,14 @@ def _feature(
     *,
     required: bool = True,
     shape: tuple[int | None, ...] | None = None,
+    dtype: str | None = None,
 ) -> FeatureSpec:
-    dtype = {
-        FeatureKind.IMAGE: "uint8",
-        FeatureKind.STATE: "float32",
-        FeatureKind.LANGUAGE: "string",
-    }[kind]
+    if dtype is None:
+        dtype = {
+            FeatureKind.IMAGE: "uint8",
+            FeatureKind.STATE: "float32",
+            FeatureKind.LANGUAGE: "string",
+        }[kind]
     return FeatureSpec(
         name=name,
         kind=kind,
@@ -117,6 +123,79 @@ class LiberoProBenchmarkDefinition(LiberoBenchmarkDefinition):
     protocol_version = "libero-pro-v1"
 
 
+class ManiSkillBenchmarkDefinition(BenchmarkDefinition):
+    """Task-driven ManiSkill observations and native controller action vectors."""
+
+    name = BenchmarkName.MANISKILL
+    protocol_version = "maniskill-v1"
+    supported_action_representations = ("maniskill.native-controller-v1",)
+    default_action_representation = "maniskill.native-controller-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        return (
+            _feature(
+                "state.proprioception", FeatureKind.STATE,
+                "Upstream state, or nonvisual agent/extra fields for visual observations.",
+                required=False, shape=(None,),
+            ),
+            _feature(
+                "state.root_pose", FeatureKind.STATE,
+                "Optional articulation root pose: scene XYZ followed by quaternion WXYZ.",
+                required=False, shape=(7,),
+            ),
+            _feature(
+                "state.root_linear_velocity", FeatureKind.STATE,
+                "Optional articulation root linear velocity in the scene world frame.",
+                required=False, shape=(3,),
+            ),
+            _feature(
+                "state.root_angular_velocity", FeatureKind.STATE,
+                "Optional articulation root angular velocity in the scene world frame.",
+                required=False, shape=(3,),
+            ),
+            *(_feature(name, FeatureKind.STATE, description, required=False, shape=(dimension,))
+              for name, description, dimension in (
+                  ("state.robot_base_pose", "Optional scene-frame robot base-link XYZ/WXYZ pose.", 7),
+                  ("state.robot_tcp_pose", "Optional scene-frame measured TCP XYZ/WXYZ pose.", 7),
+                  ("state.target_handle_position", "Optional scene-frame cabinet handle position.", 3),
+                  ("state.left_finger_pose", "Optional scene-frame left finger XYZ/WXYZ pose.", 7),
+                  ("state.right_finger_pose", "Optional scene-frame right finger XYZ/WXYZ pose.", 7),
+                  ("state.left_target_contact_force", "Optional left finger/target contact force in N.", 3),
+                  ("state.right_target_contact_force", "Optional right finger/target contact force in N.", 3),
+              )),
+            _feature(
+                "state.depth_head", FeatureKind.STATE, "Optional native head-camera depth in millimeters.",
+                required=False, shape=(None, None, 1),
+            ),
+            _feature(
+                "state.depth_hand", FeatureKind.STATE, "Optional native hand-camera depth in millimeters.",
+                required=False, shape=(None, None, 1),
+            ),
+            _feature(
+                "images.primary", FeatureKind.IMAGE, "Configured primary camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "images.wrist", FeatureKind.IMAGE, "Configured wrist camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "images.auxiliary", FeatureKind.IMAGE, "Configured auxiliary camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "language.instruction", FeatureKind.LANGUAGE, "Task instruction.", required=False,
+            ),
+        )
+
+    def action(self, _suite: str) -> ActionSpec:
+        # Each task validates against its robot/controller action space in the worker.
+        return ActionSpec(
+            "action.robot", "Unmodified action vector for the per-episode ManiSkill controller.",
+            None,
+        )
+
+
 class RoboCasaBenchmarkDefinition(BenchmarkDefinition):
     name = BenchmarkName.ROBOCASA
     protocol_version = "robocasa-v1"
@@ -133,6 +212,38 @@ class RoboCasaBenchmarkDefinition(BenchmarkDefinition):
 
     def action(self, _suite: str) -> ActionSpec:
         return ActionSpec("action.robot", "RoboCasa GR1 arms, hands, and waist action vector.", 29)
+
+
+class RoboCasa365BenchmarkDefinition(BenchmarkDefinition):
+    name = BenchmarkName.ROBOCASA365
+    protocol_version = "robocasa365-multitask-v1"
+    supported_action_representations = ("robocasa365.panda-omron-hybrid-v1",)
+    default_action_representation = "robocasa365.panda-omron-hybrid-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        images = tuple(
+            _feature(name, FeatureKind.IMAGE, "Two consecutive physical-step RGB frames.",
+                     shape=(2, 256, 256, 3))
+            for name in ("images.agentview_left", "images.agentview_right", "images.wrist")
+        )
+        states = tuple(
+            _feature(f"state.{name}", FeatureKind.STATE,
+                     "Two consecutive raw PandaOmron state vectors; quaternions use xyzw.",
+                     shape=(2, dimension))
+            for name, dimension in (
+                ("end_effector_position_relative", 3), ("end_effector_rotation_relative", 4),
+                ("gripper_qpos", 2), ("base_position", 3), ("base_rotation", 4),
+            )
+        )
+        return (*images, *states,
+                _feature("language.instruction", FeatureKind.LANGUAGE, "Upstream episode instruction."))
+
+    def action(self, _suite: str) -> ActionSpec:
+        return ActionSpec(
+            "action.robot",
+            "PandaOmron end-effector delta (6), gripper (1), base/torso (4), hybrid mode (1).",
+            12,
+        )
 
 
 class RoboTwinBenchmarkDefinition(BenchmarkDefinition):
@@ -324,18 +435,174 @@ class RobomimicBenchmarkDefinition(BenchmarkDefinition):
         )
 
 
+# Policy camera resolution per SimplerEnv suite: Google Robot ``overhead_camera`` and WidowX
+# ``3rd_view_camera``, as ``get_image_from_maniskill2_obs_dict`` returns them.
+SIMPLER_ENV_IMAGE_SHAPES = {
+    "google_robot_visual_matching": (512, 640, 3),
+    "google_robot_variant_aggregation": (512, 640, 3),
+    "widowx_visual_matching": (480, 640, 3),
+}
+
+
+class SimplerEnvBenchmarkDefinition(BenchmarkDefinition):
+    """SimplerEnv (SAPIEN / ManiSkill2_real2sim) with its policy camera and current instruction."""
+
+    name = BenchmarkName.SIMPLER_ENV
+    protocol_version = "simpler-env-v1"
+    supported_action_representations = ("simpler_env.ee-delta-axangle-v1",)
+    default_action_representation = "simpler_env.ee-delta-axangle-v1"
+
+    def features(self, suite: str) -> tuple[FeatureSpec, ...]:
+        shape = SIMPLER_ENV_IMAGE_SHAPES.get(suite)
+        if shape is None:
+            raise ValueError(f"unsupported simpler_env suite: {suite}")
+        camera = "WidowX 3rd_view_camera" if suite.startswith("widowx") else "Google Robot overhead_camera"
+        overlay = (
+            "with the real-image background overlay"
+            if suite.endswith("visual_matching")
+            else "rendered without overlay"
+        )
+        return (
+            _feature(
+                "images.primary",
+                FeatureKind.IMAGE,
+                f"SimplerEnv policy camera RGB ({camera}), {overlay}.",
+                shape=shape,
+            ),
+            _feature(
+                "language.instruction",
+                FeatureKind.LANGUAGE,
+                "The environment's current language instruction; it changes when a long-horizon "
+                "task advances to its next subtask.",
+            ),
+        )
+
+    def action(self, suite: str) -> ActionSpec:
+        robot = "WidowX" if suite.startswith("widowx") else "Google Robot"
+        return ActionSpec(
+            "action.robot",
+            f"The {robot} action SimplerEnv's evaluator passes to env.step: end-effector delta "
+            "translation (3), delta rotation as an axis-angle vector (3), and the gripper command "
+            "(1) in the robot's controller convention, followed by a terminate signal (> 0 ends the "
+            "episode, or advances a long-horizon task that is not on its final subtask). float64.",
+            8,
+            dtype="float64",
+        )
+
+
+RLBENCH_CAMERAS = ("front", "left_shoulder", "right_shoulder", "wrist")
+
+
+class RLBenchBenchmarkDefinition(BenchmarkDefinition):
+    """RLBench with PerAct's four 128x128 cameras, low-dimensional state, and key-frame actions."""
+
+    name = BenchmarkName.RLBENCH
+    protocol_version = "rlbench-peract-v2"
+    supported_action_representations = ("rlbench.ee-pose-planning-v1",)
+    default_action_representation = "rlbench.ee-pose-planning-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        cameras: list[FeatureSpec] = []
+        for camera in RLBENCH_CAMERAS:
+            label = camera.replace("_", " ")
+            cameras.extend(
+                (
+                    _feature(
+                        f"images.{camera}",
+                        FeatureKind.IMAGE,
+                        f"RLBench {label} camera RGB.",
+                        shape=(128, 128, 3),
+                    ),
+                    _feature(
+                        f"state.{camera}_depth",
+                        FeatureKind.STATE,
+                        f"RLBench {label} camera depth in metres.",
+                        shape=(128, 128),
+                    ),
+                    _feature(
+                        f"state.{camera}_point_cloud",
+                        FeatureKind.STATE,
+                        f"RLBench {label} camera point cloud: per-pixel world-frame x, y, z in metres.",
+                        shape=(128, 128, 3),
+                    ),
+                    _feature(
+                        f"state.{camera}_camera_extrinsics",
+                        FeatureKind.STATE,
+                        f"RLBench {label} camera-to-world pose as a 4x4 matrix.",
+                        shape=(4, 4),
+                        dtype="float64",
+                    ),
+                    _feature(
+                        f"state.{camera}_camera_intrinsics",
+                        FeatureKind.STATE,
+                        f"RLBench {label} camera intrinsic matrix.",
+                        shape=(3, 3),
+                        dtype="float64",
+                    ),
+                )
+            )
+        return (
+            *cameras,
+            _feature(
+                "state.gripper_open",
+                FeatureKind.STATE,
+                "Gripper open state: 1.0 open, 0.0 closed.",
+                shape=(1,),
+            ),
+            _feature(
+                "state.ignore_collisions",
+                FeatureKind.STATE,
+                "RLBench observation's current-waypoint collision-ignore flag.",
+                shape=(1,),
+            ),
+            _feature(
+                "state.gripper_joint_positions",
+                FeatureKind.STATE,
+                "Panda gripper finger joint positions (unclipped).",
+                shape=(2,),
+            ),
+            _feature(
+                "state.gripper_pose",
+                FeatureKind.STATE,
+                "Gripper tip pose in the world frame: x, y, z, qx, qy, qz, qw.",
+                shape=(7,),
+            ),
+            _feature("state.joint_positions", FeatureKind.STATE, "Panda arm joint positions.", shape=(7,)),
+            _feature("state.joint_velocities", FeatureKind.STATE, "Panda arm joint velocities.", shape=(7,)),
+            _feature(
+                "language.instruction", FeatureKind.LANGUAGE, "The episode's first RLBench task description."
+            ),
+        )
+
+    def action(self, _suite: str) -> ActionSpec:
+        return ActionSpec(
+            "action.robot",
+            "Key-frame gripper pose in the world frame (x, y, z, qx, qy, qz, qw; a unit quaternion), "
+            "gripper open (1) or closed (0), and ignore collisions (1) or not (0) for the motion planner. "
+            "float64, as RLBench receives it.",
+            9,
+            dtype="float64",
+        )
+
+
 _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
     definition.name: definition
     for definition in (
         LiberoBenchmarkDefinition(),
         LiberoPlusBenchmarkDefinition(),
         LiberoProBenchmarkDefinition(),
+
+
+        ManiSkillBenchmarkDefinition(),
         RoboCasaBenchmarkDefinition(),
+        RoboCasa365BenchmarkDefinition(),
         RoboTwinBenchmarkDefinition(),
         RoboDojoBenchmarkDefinition(),
         CalvinBenchmarkDefinition(),
         MetaworldBenchmarkDefinition(),
+        RLBenchBenchmarkDefinition(),
         RobomimicBenchmarkDefinition(),
+        SimplerEnvBenchmarkDefinition(),
     )
 }
 

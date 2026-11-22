@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import subprocess
+import threading
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -60,6 +61,7 @@ class PolicyProcessAdapter:
         self.gpu_vram_baselines: dict[str, int] = {}
         self.replica_vram_bytes: dict[int, int] = {}
         self._execution_contract: PolicyExecutionContract | None = None
+        self._replica_lock = threading.Lock()
 
     def baseline_replicas(self, contexts: Sequence[ReplicaContext]) -> None:
         for gpu_device in sorted({context.gpu_device for context in contexts}):
@@ -110,13 +112,15 @@ class PolicyProcessAdapter:
         with PolicyClient(context.socket_path, timeout_s=self.load_timeout_s) as client:
             capabilities = client.load(session)
         contract = negotiate_policy_action_contract(session.benchmark, capabilities)
-        if self._execution_contract is not None and contract != self._execution_contract:
-            raise ValueError(
-                f"policy replica {context.replica_id} execution contract {contract.to_dict()} "
-                f"does not match {self._execution_contract.to_dict()}"
-            )
-        self.capabilities[context.replica_id] = capabilities
-        self._execution_contract = contract
+        # Replicas on different GPUs initialize concurrently.
+        with self._replica_lock:
+            if self._execution_contract is not None and contract != self._execution_contract:
+                raise ValueError(
+                    f"policy replica {context.replica_id} execution contract {contract.to_dict()} "
+                    f"does not match {self._execution_contract.to_dict()}"
+                )
+            self.capabilities[context.replica_id] = capabilities
+            self._execution_contract = contract
 
     def finalize_replicas(self, contexts: Sequence[ReplicaContext]) -> None:
         groups: dict[str, list[int]] = {}

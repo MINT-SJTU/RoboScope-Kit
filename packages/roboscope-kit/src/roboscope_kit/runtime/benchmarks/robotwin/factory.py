@@ -125,6 +125,11 @@ class RoboTwinBenchmarkFactory:
         seed_cache_dir = manifest.runtime_path("seed_cache_dir", required=False)
         if seed_cache_dir is not None:
             required += (seed_cache_dir,)
+        render_service = manifest.runtime_path("render_service_path", required=False)
+        if render_service is not None:
+            required += (render_service,)
+        elif manifest.defaults.get("render_mode", "native") == "central":
+            raise RuntimeError("RoboTwin render_mode central needs runtime.render_service_path")
         missing = [str(path) for path in required if not path.exists()]
         if missing:
             raise RuntimeError(f"RoboTwin runtime paths are missing: {', '.join(missing)}")
@@ -156,6 +161,7 @@ class RoboTwinBenchmarkFactory:
             seed_cache_dir = manifest.runtime_path("seed_cache_dir", required=False)
             protocol_id = None
             generation_digest = None
+            instruction_seed_limit = None
         else:
             suite_protocol = protocol_suite(protocol, request.suite)
             generations = manifest.runtime.get("seed_generations")
@@ -167,6 +173,7 @@ class RoboTwinBenchmarkFactory:
             generation_root = manifest.runtime_path("seed_generation_root")
             seed_cache_dir = generation_root / generation_digest
             protocol_id = str(protocol["protocol_id"])
+            instruction_seed_limit = int(suite_protocol["seed_selection"]["instruction_seed_limit"])
             if require_exact_episodes and episodes != int(suite_protocol["episodes_per_task"]):
                 raise ValueError("RoboTwin formal episodes must match the benchmark protocol")
         return RoboTwinBenchmarkAdapter(
@@ -184,9 +191,13 @@ class RoboTwinBenchmarkFactory:
                 seed=int(manifest.defaults.get("seed", 0)),
                 save_videos=bool(manifest.defaults.get("save_videos", False)) and not request.quick_test,
                 cpu_threads=int(manifest.defaults.get("client_cpu_threads", 1)),
+                render_mode=str(manifest.defaults.get("render_mode", "native")),
+                render_services_per_gpu=int(manifest.defaults.get("render_services_per_gpu", 2)),
+                render_service_path=manifest.runtime_path("render_service_path", required=False),
                 seed_cache_dir=seed_cache_dir,
                 protocol_id=protocol_id,
                 seed_generation_digest=generation_digest,
+                instruction_seed_limit=instruction_seed_limit,
             )
         )
 

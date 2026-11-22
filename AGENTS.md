@@ -17,7 +17,10 @@ A change is complete when it is committed, carries the required version bump, an
 | `examples/starvla/` | The StarVLA `Policy` and one demo per benchmark, including the configurations behind the RoboScope Kit technical report |
 | `examples/xvla/` | The X-VLA `Policy` example: a stateful Policy serving several benchmarks |
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
+| `examples/peract/` | A PerAct `Policy` example for RLBench, with PerAct's native `eval.py` runner and an episode-by-episode comparison |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
+| `examples/maniskill/` | ManiSkill PPO and visual Policy examples, pinned checkpoint catalogs, native comparisons and task-specific model limitations |
+| `examples/rt1/` | An RT-1-X `Policy` example for SimplerEnv, with a runner for SimplerEnv's official scripts and an episode-by-episode comparison |
 | `ci/` and `.github/workflows/` | Build, compatibility, and PyPI release automation |
 
 When a path moves, update the source and every caller directly. Do not add compatibility wrappers or
@@ -68,6 +71,19 @@ configuration, Kit version) to the benchmark's own documentation and link it fro
 `packages/roboscope-kit/docs/profiling.md`; update that file's coverage table when a benchmark is first
 profiled. The package README is also the PyPI project page, so link to
 other repository files with absolute GitHub URLs.
+
+Compress every image a README shows, so the README loads fast. Keep the total for one README under 1 MB, each
+still image under 200 KB, and each animation under 1 MB. Store an image at no more than twice its displayed
+width; a full-width README image displays at up to about 1,000 px, so store it at 2,000 px or less. Save
+diagrams and screenshots as 256-color palette PNGs: build a palette that keeps every accent color, map the
+image onto it with dithering so gradients stay smooth (Pillow `pal = img.quantize(256,
+method=Image.Quantize.MAXCOVERAGE, kmeans=3)`, then `img.quantize(palette=pal,
+dither=Image.Dither.FLOYDSTEINBERG)`), and run a lossless PNG optimizer such as `oxipng` on the result. Encode
+animations as GIFs with one global palette and transparent inter-frame deltas (ImageMagick `-layers
+OptimizeTransparency`), keeping the frame count and timing. Before committing, compare zoomed crops of the new
+image with the original, covering every accent color, gradient and photo region, and keep the image as RGB
+wherever a color shifts or a gradient bands. In the pull request, show that comparison side by side and list
+both file sizes.
 
 ## Issue and PR titles
 

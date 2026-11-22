@@ -95,5 +95,7 @@ class BenchmarkAdapter(Protocol):
 
     # Optional: ``aggregate_partial(results)`` for adapters whose official metric is undefined on a
     # subset of the workload. Sharded runs call it instead of ``aggregate``; see ``shard_reduce``.
+    # Optional: ``close()`` stops processes that the adapter started for its Workers; the runtime calls
+    # it after every pass, once the Workers have stopped.
 
     def metadata(self) -> dict[str, Any]: ...
