@@ -8,9 +8,9 @@ Policy boundary.
 from __future__ import annotations
 
 import numpy as np
-from starvla_policy import StarVLAPolicy, _build_example, _resize_image_with_opencv
+from starvla_policy import StarVLAPolicy, _resize_image_with_opencv
 
-from roboscope_kit import ActionChunk, Observation, PolicyCapabilities, SessionContext, run
+from roboscope_kit import ActionChunk, PolicyCapabilities, SessionContext, run
 
 
 def decode_actions(normalized: np.ndarray, statistics: dict) -> np.ndarray:
@@ -32,20 +32,8 @@ class StarVLALiberoPolicy(StarVLAPolicy):
         self.image_preprocessor = _resize_image_with_opencv
         return capabilities
 
-    def act(self, observation: Observation) -> ActionChunk:
-        if self.framework is None or self.config is None or self.image_preprocessor is None:
-            raise RuntimeError("StarVLA LIBERO Policy is not loaded")
-        import torch
-
-        example = _build_example(
-            observation.features, self.config.inputs, self.norm_processor, self.image_preprocessor
-        )
-        with torch.inference_mode():
-            output = self.framework.predict_action(examples=[example], **self.config.kwargs)
-        normalized = np.asarray(output["normalized_actions"])
-        if normalized.shape != (1, 8, 7):
-            raise ValueError(f"StarVLA returned action shape {normalized.shape}; expected (1, 8, 7)")
-        actions = decode_actions(normalized[0], self.framework.norm_stats["franka"]["action"])
+    def _action_chunk(self, normalized: np.ndarray) -> ActionChunk:
+        actions = decode_actions(normalized, self.framework.norm_stats["franka"]["action"])
         actions = np.array(actions, copy=True, order="C")
         for transform in self.config.transforms:
             transform.apply(actions)

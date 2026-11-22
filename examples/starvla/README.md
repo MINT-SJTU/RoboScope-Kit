@@ -98,6 +98,11 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
   the training statistics and applies the configured action transforms.
 - `starvla_libero_policy.py` instead resizes LIBERO images with OpenCV `INTER_AREA`, clips the normalized
   actions to [-1, 1], binarizes the gripper, and then unnormalizes with the min/max statistics.
+- `inference.max_batch_size` in the run snapshot's `config.yaml` defaults to 1. Set an integer greater
+  than 1 to let one Policy replica predict several queued observations in one model call. Each
+  prediction uses the same per-observation action decoding as `act`. Actual batch sizes depend on how
+  many Workers share the replica and have requests queued. The full CALVIN comparison used 16 Workers,
+  one replica, and a cap of 8. [CALVIN batching evidence](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/benchmarks/calvin/evidence/2026-11-22-task-d-d-batching)
 - Neither Policy keeps per-episode state, so `reset` does nothing.
 
 ## Run snapshot

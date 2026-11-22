@@ -226,6 +226,11 @@ PolicyCapabilities(
 )
 ```
 
+With `max_batch_size > 1`, a Policy Server combines queued `act` requests from distinct
+episodes up to that cap. It calls `act_batch` for a group and sends one action chunk back
+to each caller. Requests already in the queue can be grouped immediately. Override
+`act_batch` to execute a single native model batch.
+
 The runtime checks each declared representation against the benchmark specification and requires every
 replica to agree on the same action contract before evaluation starts. If you omit
 `action_representations`, the benchmark default is used. The chosen contract and where it came from are
