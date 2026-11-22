@@ -5,7 +5,8 @@ RTX 4090 with an Intel Core i9-14900K and NVIDIA driver 580.173.02. Both used EG
 CUDA MPS off, the run cache off, and the same StarVLA checkpoint and scoring rules.
 GPU process samples show the evaluation and desktop processes in both accepted runs.
 This comparison used the original process-wide action noise RNG. The current CALVIN
-example supports seeding each observation independently for a new comparison.
+example supports seeding each observation independently.
+[Full seeded comparison](../2026-11-22-task-d-d-seeded)
 
 | Metric | Serial baseline | Dynamic batching |
 | --- | ---: | ---: |

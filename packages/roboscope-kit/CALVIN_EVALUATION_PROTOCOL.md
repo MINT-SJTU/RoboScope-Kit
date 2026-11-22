@@ -83,9 +83,9 @@ Set `inference.action_noise_seed: 0` in the snapshot's `config.yaml` for both ar
 comparison. Set `inference.max_batch_size: 8` for the batched arm. Workers send their usual action
 requests, and the shared Policy Server groups requests from distinct episodes. Each observation's
 initial action noise uses its episode ID and step, so it is independent of where the observation
-appears in a batch. GPU computation can still vary numerically with batch shape. The original
-`task_D_D` experiment includes 1,000 sequences per arm, paired scores, timings, and reproduction commands.
-[StarVLA batching evidence](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/benchmarks/calvin/evidence/2026-11-22-task-d-d-batching)
+appears in a batch. GPU computation can still vary numerically with batch shape. The seeded
+`task_D_D` comparison includes 1,000 sequences per arm, paired scores, timings, and reproduction commands.
+[Seeded StarVLA batching evidence](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/benchmarks/calvin/evidence/2026-11-22-task-d-d-seeded)
 
 ## 2. User policy lifecycle
 
