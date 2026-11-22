@@ -52,6 +52,7 @@ INSTALL_DIR="$(cd -- "$1" && pwd -P)"
 
 MANIFEST="${SCRIPT_DIR}/benchmark-manifest.json"
 REQUIREMENTS="${SCRIPT_DIR}/runtime-requirements.txt"
+BUILD_REQUIREMENTS="${SCRIPT_DIR}/build-requirements.txt"
 TORCH_REQUIREMENTS="${SCRIPT_DIR}/torch-requirements.txt"
 ENV_PREFIX="${INSTALL_DIR}/env"
 ENV_PYTHON="${ENV_PREFIX}/bin/python"
@@ -73,7 +74,7 @@ if [[ "$(uname -s):$(uname -m)" != "Linux:x86_64" ]]; then
   echo "CALVIN runtime builds require Linux x86_64" >&2
   exit 3
 fi
-[[ -f "${MANIFEST}" && -f "${REQUIREMENTS}" && -f "${TORCH_REQUIREMENTS}" ]] || {
+[[ -f "${MANIFEST}" && -f "${REQUIREMENTS}" && -f "${BUILD_REQUIREMENTS}" && -f "${TORCH_REQUIREMENTS}" ]] || {
   echo "CALVIN build input is missing next to $0" >&2
   exit 3
 }
@@ -82,7 +83,7 @@ if ! command -v uv >/dev/null 2>&1; then
   exit 3
 fi
 if [[ ! -x "${ENV_PYTHON}" ]]; then
-  uv venv --managed-python --python "${PYTHON_VERSION}" "${ENV_PREFIX}"
+  uv --no-config venv --managed-python --python "${PYTHON_VERSION}" "${ENV_PREFIX}"
 fi
 ACTUAL_PYTHON_VERSION="$("${ENV_PYTHON}" -I -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')"
 [[ "${ACTUAL_PYTHON_VERSION}" == "${PYTHON_VERSION}" ]] || {
@@ -119,21 +120,28 @@ ACTUAL_TACTO_COMMIT="$(git -C "${SOURCE_ROOT}/calvin_env/tacto" rev-parse HEAD)"
   exit 5
 }
 
+# Ignore ambient package indexes and find-links locations as well as uv config files.
+install_packages() {
+  local index="$1"
+  shift
+  env -u UV_INDEX -u UV_INDEX_URL -u UV_EXTRA_INDEX_URL -u UV_DEFAULT_INDEX -u UV_FIND_LINKS \
+    uv --no-config pip install --python "${ENV_PYTHON}" --no-deps --default-index "${index}" "$@"
+}
+
+PYPI_INDEX="https://pypi.org/simple"
 # Seed the build backend before installing any source distributions.
-uv pip install --python "${ENV_PYTHON}" --no-deps \
-  "setuptools==80.10.2" "wheel==0.48.0"
+install_packages "${PYPI_INDEX}" --require-hashes --requirement "${BUILD_REQUIREMENTS}"
 
 # Install the pinned CPU wheel from the official PyTorch index. EGL rendering
 # uses the GPU independently of PyTorch, and the Policy runs in its own process.
-uv --no-config pip install --python "${ENV_PYTHON}" --no-deps --require-hashes \
-  --default-index https://download.pytorch.org/whl/cpu \
+install_packages https://download.pytorch.org/whl/cpu --require-hashes \
   --requirement "${TORCH_REQUIREMENTS}"
-uv pip install --python "${ENV_PYTHON}" --no-deps --no-build-isolation \
+install_packages "${PYPI_INDEX}" --require-hashes --no-build-isolation \
   --requirement "${REQUIREMENTS}"
 
 # The upstream editable packages declare historical training dependencies.
 # Evaluation uses the pinned runtime dependencies above.
-uv pip install --python "${ENV_PYTHON}" --no-deps --no-build-isolation \
+install_packages "${PYPI_INDEX}" --no-build-isolation \
   -e "${SOURCE_ROOT}/calvin_env/tacto" \
   -e "${SOURCE_ROOT}/calvin_env" \
   -e "${SOURCE_ROOT}/calvin_models"
@@ -238,6 +246,7 @@ dataset_root = Path(os.environ["DATASET_ROOT"])
 import hydra
 import numpy
 import pybullet
+import pyhash
 import torch
 from pytorch_lightning import seed_everything
 
@@ -246,6 +255,7 @@ from calvin_env.envs.play_table_env import PlayTableSimEnv
 
 from importlib.metadata import version
 
+pyhash.fnv1_32()(b"calvin")
 for distribution in ("torch", "pytorch-lightning", "hydra-core", "omegaconf", "numpy"):
     print(f"  {distribution}=={version(distribution)}")
 

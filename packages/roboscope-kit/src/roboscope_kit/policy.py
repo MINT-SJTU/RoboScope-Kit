@@ -146,6 +146,7 @@ class PolicyCapabilities:
     action_representations: dict[str, str] = field(default_factory=dict)
     observation_strides: dict[str, int] = field(default_factory=dict)
     step_observation_updates: tuple[str, ...] = ()
+    coalesce_action_requests: bool = False
 
     def __post_init__(self) -> None:
         if not self.supported_benchmarks:
@@ -160,6 +161,8 @@ class PolicyCapabilities:
             raise ValueError(f"supported_suites contains undeclared benchmarks: {names}")
         if self.max_batch_size < 1:
             raise ValueError("max_batch_size must be positive")
+        if self.coalesce_action_requests and self.max_batch_size < 2:
+            raise ValueError("coalesce_action_requests requires max_batch_size greater than one")
         if not self.supported_action_chunk_sizes:
             raise ValueError("supported_action_chunk_sizes cannot be empty")
         if any(size < 1 for size in self.supported_action_chunk_sizes):
@@ -203,6 +206,7 @@ class PolicyCapabilities:
                 for name, stride in (value.get("observation_strides") or {}).items()
             },
             step_observation_updates=tuple(str(item) for item in value.get("step_observation_updates", ())),
+            coalesce_action_requests=value.get("coalesce_action_requests") is True,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -217,6 +221,7 @@ class PolicyCapabilities:
             "action_representations": dict(self.action_representations),
             "observation_strides": dict(self.observation_strides),
             "step_observation_updates": list(self.step_observation_updates),
+            "coalesce_action_requests": self.coalesce_action_requests,
         }
 
 
@@ -378,7 +383,7 @@ class Policy(ABC):
         """Produce one action or an action chunk for a canonical observation."""
 
     def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
-        """Produce actions for an explicit batch; override to use native model batching."""
+        """Produce actions for a batch; override to use native model batching."""
         return tuple(self.act(observation) for observation in observations)
 
     def end_episode(self, episode_id: str) -> None:

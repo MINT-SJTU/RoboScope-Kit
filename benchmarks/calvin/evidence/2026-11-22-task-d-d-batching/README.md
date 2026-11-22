@@ -4,6 +4,8 @@ On 2026-11-22, two runs evaluated the same 1,000 official `task_D_D` sequences o
 RTX 4090 with an Intel Core i9-14900K and NVIDIA driver 580.173.02. Both used EGL,
 CUDA MPS off, the run cache off, and the same StarVLA checkpoint and scoring rules.
 GPU process samples show the evaluation and desktop processes in both accepted runs.
+This comparison used the original process-wide action noise RNG. The current CALVIN
+example supports seeding each observation independently for a new comparison.
 
 | Metric | Serial baseline | Dynamic batching |
 | --- | ---: | ---: |
@@ -48,9 +50,9 @@ draws random numbers.
 
 The serial arm ran Kit `4f9f0dbef8d49c3d04212c401167e23224ea1060` with evaluator and Policy sources
 identical to upstream `4fe7e50ca2700fe63a2926af4f1130db2108465a`. The batched arm used a prototype
-over the same sources, adapted from PR #22 for the current wire encodings. The submitted dispatch
-implementation matches the prototype. The measured StarVLA example also emitted the batch trace
-and accepted an unused clip transform. The submitted example omits those two additions.
+over the same sources, adapted from PR #22 for the current wire encodings. The first PR #138
+revision used the prototype dispatch implementation. The measured StarVLA example also emitted
+the batch trace and accepted an unused clip transform.
 [Serial evaluator source](https://github.com/MINT-SJTU/RoboScope-Kit/tree/4fe7e50ca2700fe63a2926af4f1130db2108465a)
 [Batching prototype upstream PR](https://github.com/MINT-SJTU/RoboScope-Kit/pull/22)
 
@@ -69,6 +71,8 @@ and adding `max_batch_size: 8` under the batched snapshot's `inference` mapping.
 other snapshot settings equal. In the Policy process contract, use the pinned StarVLA
 checkout as `cwd` and the command `[policy_python, seeded_policy.py, starvla_policy.py]`
 with absolute paths. Point `starvla_policy.py` at the corresponding Kit checkout for each arm.
+For the historical batched arm, use the prototype or the initial dispatch implementation at
+[`2b1a002`](https://github.com/MINT-SJTU/RoboScope-Kit/pull/138/commits/2b1a0021d44187fa00ec5b1725bf9f21fed229e7).
 The launcher fixes the process startup seeds.
 
 ```python
