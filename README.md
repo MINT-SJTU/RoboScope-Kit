@@ -29,12 +29,8 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## News
 
-- ⚡ **2026-11-20:** Added opt-in [central rendering](benchmarks/robotwin/CENTRAL_RENDER.md) for RoboTwin (`render_mode: central`).
-- 🤖 **2026-11-20:** Added initial [ManiSkill](benchmarks/maniskill/README.md) support (partial integration, GPU-vectorized Workers).
-- 🤖 **2026-11-19:** [RoboCasa365](packages/roboscope-kit/docs/robocasa365-protocol.md) (`target50` and its three task suites) is supported.
-- ⚡ **2026-11-14:** Added [run cache](packages/roboscope-kit/README.md#reusing-what-an-evaluation-learned), longest-task-first scheduling, and RoboTwin rendering/memory optimizations.
-- 🧩 **2026-11-14:** Added a standalone [OpenVLA Policy](examples/openvla/README.md) example for LIBERO.
-- 🤖 **2026-11-14:** [SimplerEnv](packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md) (Google Robot and WidowX suites) is supported.
+- 🤖 **2026-11-19:** [RoboCasa365](packages/roboscope-kit/docs/robocasa365-protocol.md) is supported.
+- 🤖 **2026-11-14:** [SimplerEnv](packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md) is supported.
 - 🤖 **2026-11-10:** [RLBench](packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md) (the PerAct 18-task suite) is supported.
 - 🤖 **2026-11-06:** [robomimic](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) and [LIBERO-Pro](packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro) are supported.
 - 🎉 **2026-11-05:** RoboScope Kit is released! See the [technical report](https://arxiv.org/abs/2611.03850).
