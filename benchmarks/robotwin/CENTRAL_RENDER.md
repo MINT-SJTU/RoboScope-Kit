@@ -62,20 +62,18 @@ on the GPU, MPS lets Policy replicas overlap (+4–7%), while in native mode it 
 
 ## Measurements
 
-### This implementation
+### 500 episodes (50 tasks × 10)
 
-#### 500 episodes on a `build-runtime.sh` runtime (`0.8.0b72`)
-
-One RTX 4090 (49,140 MiB, driver 595.71.05), Xeon Platinum 8470Q with a 20-core CPU quota, `build-runtime.sh`
+One idle RTX 4090 (49,140 MiB, driver 595.71.05), Xeon Platinum 8470Q with a 20-core CPU quota, `build-runtime.sh`
 RoboTwin runtime (CPython 3.8.20, SAPIEN 3.0.0b1, cuRobo, full pinned assets), StarVLA `Qwen3-VL-OFT-Robotwin2`
 (revision `e9cdfc38`), RoboScope Kit `0.8.0b72` (`96957cf`), `--cuda-mps` and `--run-cache off` (default task
 order) on every arm. Workload: 50 tasks × 10 episodes (500 episodes) of `demo_clean` with
 `instruction_seed_limit: 10`. Two render services per GPU for all central runs.
 
-Arms ran back to back in execution order on an otherwise idle host. `Eval. throughput` divides `total_steps` by
-`phase_timings.evaluation_s` (excluding model loading and teardown), `Steady` is Kit's `result.steady_steps_per_s`
-(measured while all `K` Workers are busy), and `Wall time` is `phase_timings.policy_load_s + result.elapsed_s`
-(including loading, evaluation, and teardown):
+Arms ran back to back in execution order. `Eval. throughput` divides `total_steps` by `phase_timings.evaluation_s`
+(excluding model loading and teardown), `Steady` is Kit's `result.steady_steps_per_s` (while all `K` Workers are
+busy), and `Wall time` is `phase_timings.policy_load_s + result.elapsed_s` (including loading, evaluation, and
+teardown):
 
 | Run | Successes / steps | Eval. time (s) | Eval. throughput (steps/s) | Steady (steps/s) | Wall time (s) | Peak GPU mem (MiB) | GPU util | OIDN / OOM errors | Match vs. run 1 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -100,7 +98,7 @@ Arms ran back to back in execution order on an otherwise idle host. `Eval. throu
 - **Agreement:** all three central runs matched run 1 (`native K9/G1`) on 500/500 success outcomes and 500/500
   terminal steps, with zero OOM or OIDN errors and no render-service restarts.
 
-#### 100-episode concurrency sweep on the same `build-runtime.sh` runtime (`0.8.0b72`)
+### Concurrency sweep (50 tasks × 2)
 
 Same host, runtime, Policy, and flags on 50 tasks × 2 episodes (100 episodes) of `demo_clean`
 (`instruction_seed_limit: 100`), used to pick the configurations above. Every arm matched `native K8/G1` on
@@ -121,85 +119,18 @@ timeout (25.6 s teardown):
 | central K20/G2 (2 svc) | 292.4 | 144.8 | 337.5 | 38,287 | 66.8% | 0 / 0 |
 | central K16/G3 (2 svc) | 289.2 | 146.4 | 369.8 | 46,471 | 64.9% | 0 / 0 |
 
-#### Earlier per-episode image/action-hash and service-recovery checks
+### Image/action hashing and service recovery
 
-One RTX 4090 (49 GB, driver 595.71.05), Xeon Platinum 8470Q with a 20-core CPU quota, StarVLA
-`Qwen3-VL-OFT-Robotwin2` (revision `e9cdfc38`), 50 tasks × 2 episodes of `demo_clean`, CUDA MPS on both modes.
-The arms ran back to back in the order native, central, central, native. The RoboTwin side was the
-prototype's environment (CPython 3.10, SAPIEN 3.0.0b1, RoboTwin at the runtime commit, no cuRobo, so both modes
-loaded the planner without it), not one built by `build-runtime.sh`. Another job was installing packages on the
-host's CPU during the runs, which likely explains the spread between repeats.
-
-| | native K6/G2 | central K12/G3, 2 services per GPU |
-| --- | ---: | ---: |
-| Successes / total steps (each arm) | 47 / 42,347 | 47 / 42,347 |
-| Evaluation throughput, steps/s (two arms) | 99.3, 104.8 | 137.6, 160.5 |
-| Mean | 102.1 | 149.1 (+46%) |
-| Wall time including startup, s (mean) | 447.8 | 335.3 (1.34× faster) |
-| Peak GPU memory, MiB | 44,697 | 44,587 |
-| Episodes with identical actions and Policy images | — | 100 / 100 in every pair |
-
-Every image the Policy received and every executed action were hashed per episode; all four arms matched
-episode by episode. No render service restarted.
-
-On a `build-runtime.sh` runtime (CPython 3.8, cuRobo, the pinned embodiment and object archives; the 11 GB
-background textures, which `demo_clean` does not use, were left out for disk space), same host and Policy,
-50 tasks × 1 episode, CUDA MPS, one arm each:
-
-| | native K6/G2 | central K12/G3 | central K12/G3, one service killed |
-| --- | ---: | ---: | ---: |
-| Successes / total steps | 24 / 20,768 | 24 / 20,768 | 24 / 20,768 |
-| Evaluation throughput, steps/s | 87.3 | 116.4 | 139.0 |
-| Episodes with identical actions and Policy images | — | 50 / 50 | 50 / 50 |
-
-In the third arm one of the two services was killed with SIGKILL 150 s into the run. The six Workers connected
-to it reported the lost service and exited, their six tasks were requeued, and the restarted Workers started
-a new service; the run completed, and the two interrupted episodes, rerun from the start, matched native.
-
-### Prototype
-
-The measurements below come from the prototype that this mode was ported from: the same worker recorders,
-replay, per-episode scenes and cache clearing, run through the Kit 0.8.0b31 SDK and a launcher of that
-time, with StarVLA `Qwen3-VL-OFT-Robotwin2` (revision `e9cdfc38`), action horizon and observation stride 16,
-320×240 RT at 32 spp with OIDN, and `front_camera` not rendered. One RTX 4090 (49 GB, driver 580.105.08),
-12-core CPU quota; the two sides of each comparison ran back to back on the same GPU. `K` is the number of
-Workers and `G` the number of Policy replicas; the native side uses the largest configuration that did not run
-out of GPU memory.
-
-50 tasks × 10 episodes of `demo_clean`, CUDA MPS on both sides:
-
-| | native K6/G2 | central K12/G3, 2 services per GPU |
-| --- | ---: | ---: |
-| Successes / total steps | 233 / 208,789 | 233 / 208,789 |
-| Evaluation throughput, steps/s | 123.5 | 154.5 (+25.1%) |
-| Steady throughput, steps/s (until K−1 Workers remain) | 125.0 | 171.1 (+36.9%) |
-| Wall time including startup, s | 1731.0 | 1407.5 (1.23× faster) |
-| Peak GPU memory, MiB | 43,686 | 44,044 |
-| Episodes with identical action sequences | — | 500 / 500 |
-
-Single task (`adjust_bottle`, 96 episodes):
-
-| Configuration | steps/s | Peak GPU memory |
-| --- | ---: | ---: |
-| native K8/G2 | 106.4 | 48.0 GB (at the limit) |
-| native K8/G2, MPS | 107.4 | 48.0 GB |
-| central K8/G2 | 128.6 (+20.9%) | 29.0 GB |
-| central K12/G2 | 145.8 | 31.9 GB |
-| central K12/G3, MPS | 157.7 (+46.9% vs. native with MPS) | 42.3 GB |
-
-A reversed-order repeat of the last comparison gave 107.8 → 158.8 (+47.3%), and a second RTX 4090 host gave
-103.1 → 145.4 (+41.0%); all 96 episodes had identical actions in each pair. On 50 tasks × 4 episodes, one
-service per GPU gave 143.8 steps/s and two gave 158.3; a third added about 1%. The first observation of an
-episode took 1.5–2.4 s on average in native mode (scene rebuild in the evaluator) and 0.3–0.9 s with a service.
-
-Native K8/G2 does not fit on 50 tasks: OIDN runs out of memory, denoising fails and 3 of 200 episodes changed
-actions, so native K6/G2 is the baseline above. Adding Workers beyond K12–16 per GPU did not help, because the
-GPU is saturated.
+Per-episode hashing of every Policy input image and executed action matched `native` on 100/100 episodes
+(`50 × 2`) and 50/50 episodes (`50 × 1`, `build-runtime.sh`, `central K12/G3` vs. `native K6/G2`). In a
+fault-injection repeat of that 50-episode `build-runtime.sh` run, killing one of the two render services with
+`SIGKILL` 150 s into the run caused its six connected Workers to exit, requeue their tasks, start a replacement
+service on restart, and complete matching native on all 50/50 episodes, including both interrupted episodes rerun
+from the start.
 
 ## Limitations
 
-- Multi-GPU runs and full 5,000-episode runs have not been measured; on four GPUs the single-GPU ratio
-  suggests about 1.2–1.3×.
+- Multi-GPU runs and full 5,000-episode runs have not been measured.
 - A service failure interrupts every Worker connected to it; their tasks are requeued and rerun. Like any
   other Worker failure, a Worker restarts once; a second failure of the same Worker stops the run.
 - Results match native rendering on the same machine; RoboTwin rollouts on different machines are not
