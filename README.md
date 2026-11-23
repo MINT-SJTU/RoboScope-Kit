@@ -29,6 +29,12 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## News
 
+- ⚡ **2026-11-20:** Added opt-in [central rendering](benchmarks/robotwin/CENTRAL_RENDER.md) for RoboTwin (`render_mode: central`).
+- 🤖 **2026-11-20:** Added initial [ManiSkill](benchmarks/maniskill/README.md) support (partial integration, GPU-vectorized Workers).
+- 🤖 **2026-11-19:** [RoboCasa365](packages/roboscope-kit/docs/robocasa365-protocol.md) (`target50` and its three task suites) is supported.
+- ⚡ **2026-11-14:** Added [run cache](packages/roboscope-kit/README.md#reusing-what-an-evaluation-learned), longest-task-first scheduling, and RoboTwin rendering/memory optimizations.
+- 🧩 **2026-11-14:** Added a standalone [OpenVLA Policy](examples/openvla/README.md) example for LIBERO.
+- 🤖 **2026-11-14:** [SimplerEnv](packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md) (Google Robot and WidowX suites) is supported.
 - 🤖 **2026-11-10:** [RLBench](packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md) (the PerAct 18-task suite) is supported.
 - 🤖 **2026-11-06:** [robomimic](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) and [LIBERO-Pro](packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro) are supported.
 - 🎉 **2026-11-05:** RoboScope Kit is released! See the [technical report](https://arxiv.org/abs/2611.03850).
@@ -186,9 +192,11 @@ tuning, writing a Policy, CUDA MPS, and cross-instance sharding.
 | `packages/roboscope-kit/` | The `roboscope-kit` package: public `Policy` API, protocol client and server, benchmark runtime, and the evaluation protocol documents |
 | `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, MetaWorld, RLBench, RoboCasa GR-1 Tabletop, RoboCasa365, RoboDojo, RoboTwin, robomimic, and SimplerEnv: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
 | `examples/starvla/` | The StarVLA `Policy` and one demo per benchmark, including the configurations behind the RoboScope Kit technical report |
+| `examples/openvla/` | An OpenVLA `Policy` example for the four fine-tuned LIBERO suites, with an official native runner and episode-by-episode comparison |
 | `examples/xvla/` | An X-VLA `Policy` example: a stateful Policy serving several benchmarks |
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
 | `examples/peract/` | A PerAct `Policy` example for RLBench, with PerAct's native `eval.py` runner and an episode-by-episode comparison |
+| `examples/robocasa365_diffusion/` | A RoboCasa365 multi-task Diffusion Policy example for `pretrain_human300`, with a native rollout comparison |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
 | `examples/rt1/` | An RT-1-X `Policy` example for SimplerEnv, with a runner for SimplerEnv's official scripts and an episode-by-episode comparison |
 | `ci/` | Build, compatibility, and PyPI release scripts used by GitHub Actions |
