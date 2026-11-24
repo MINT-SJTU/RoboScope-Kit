@@ -87,7 +87,7 @@ Evaluation on `demo_clean` (50 tasks × 10 or 100 episodes), matching the offici
 
 | Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
 | --- | --- | ---: | ---: | ---: | :---: |
-| [`Simate_beta`](https://huggingface.co/SIPAILab/sipai-robodojo-eval-ae) | 2 Workers, 1 replica (`K2/g1`) | 6.6 h (upstream) | **4.4 h** | **1.51×** | [details](docs/results.md#robodojo) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robodojo-simate-acceptance-20261106) |
+| [`Simate_beta`](https://huggingface.co/SIPAILab/sipai-robodojo-eval-ae) | 2 Workers, 1 replica (`K2/g1`) | 6.6 h (official) | **4.4 h** | **1.51×** | [details](docs/results.md#robodojo) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robodojo-simate-acceptance-20261106) |
 
 ### RoboCasa365
 
