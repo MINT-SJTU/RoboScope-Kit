@@ -12,13 +12,13 @@ Evaluated on `libero_10` (10 tasks × 50 initial states, seed 7, 500 episodes) o
 | System | Success | Δ success vs. StarVLA [95% CI] | Agreement | Eval time | Throughput | Speedup vs. StarVLA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | StarVLA official | 90.2% | reference | reference | 2,990 s (49.8 min) | 45.8 steps/s | 1.00× |
-| RLinf (tuned) | 90.3% | +0.1 pp [-2.6, +3.3] | 88.1% | 1,882 s (31.4 min) | 74.2 steps/s | 1.59× |
-| vla-eval (tuned) | 89.8% | -0.4 pp [-1.6, +0.7] | 91.7% | 1,016 s (16.9 min) | 133.5 steps/s | 2.94× |
+| RLinf (tuned) | 90.3% | +0.1 pp [-2.6, +3.3] | 88.1% | 1,882 s (31.4 min) | 74.2 steps/s | 1.60× |
+| vla-eval (tuned) | 89.8% | -0.4 pp [-1.6, +0.7] | 91.7% | 1,016 s (16.9 min) | 133.5 steps/s | 2.93× |
 | **RoboScope Kit** (`K12/g3`) | **89.9%** | -0.3 pp [-0.8, 0.0] | **97.9%** | **671 s (11.2 min)** | **204.6 steps/s** | **4.45×** (2.78× RLinf, 1.52× vla-eval) |
 | **RoboScope Kit** (`K16/g4`, CUDA MPS) | **89.9%** | -0.3 pp [-1.3, +0.8] | **96.5%** | **485 s (8.1 min)** | **282.5 steps/s** | **6.16×** (3.85× RLinf, 2.10× vla-eval) |
 
-Run records: [`v2-w1-best-20261028`](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/v2-w1-best-20261028),
-[`v2-libero-mps-20261029`](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/v2-libero-mps-20261029).
+Run records: [`autotune-diag-w1-20261101`](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/autotune-diag-w1-20261101)
+(and H1 autotune search in [`autotune-paper-20261031`](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/autotune-paper-20261031)).
 
 ### OpenVLA across four LIBERO suites (200-episode subset)
 
@@ -82,9 +82,9 @@ Run records: [`robodojo-simate-acceptance-20261106`](https://github.com/suica/ev
 
 ## RoboCasa365
 
-250 episodes (`target50` × 5, 452,250 steps at official horizons) with the official
+250 episodes (`target50` × 5, 452,250 steps at official horizons) on one 48 GiB RTX 4090 with the official
 [`Diffusion Policy`](https://huggingface.co/robocasa/robocasa365_checkpoints) (`pretrain_human300`, FP32, 100 DDPM
-steps) at `K4/G2` with CUDA MPS, three runs per arm. All six runs pass the native comparison checks. From
+steps) at `K4/g2` with CUDA MPS, three runs per arm. All six runs pass the native comparison checks. From
 [`benchmarks/robocasa365/README.md`](../benchmarks/robocasa365/README.md#throughput):
 
 | Metric | Kit baseline | Kit optimized (threaded slots + CUDA graph) | Speedup |
@@ -97,7 +97,8 @@ Run records: [`robocasa365-throughput-20261121`](https://github.com/QLL-CCDD/Rob
 
 ## ManiSkill
 
-1,100 episodes across the 11 official PPO tasks on one 48 GiB RTX 4090 with
+1,100 episodes across the 11 official PPO tasks (of the 55 inventory tasks; full integration acceptance is incomplete)
+on one 48 GiB RTX 4090 with
 [`Official PPO`](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628)
 checkpoints, matching all native records. From
 [`benchmarks/maniskill/VALIDATION.md`](../benchmarks/maniskill/VALIDATION.md#throughput-by-worker-count):

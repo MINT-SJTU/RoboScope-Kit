@@ -69,17 +69,17 @@ Headline speedups across benchmarks (evaluation time, excluding initialization, 
 
 | Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
 | --- | --- | ---: | ---: | ---: | :---: |
-| [StarVLA (`Qwen2.5-VL`)](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | 12 Workers, 3 replicas (`K12/g3`) | 49.8 min (official) | **11.2 min** | **4.45×** (2.78× RLinf, 1.52× vla-eval) | [details](docs/results.md#libero-long) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/v2-w1-best-20261028) |
-| [StarVLA (`Qwen2.5-VL`)](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | 16 Workers, 4 replicas, MPS (`K16/g4`) | 49.8 min (official) | **8.1 min** | **6.16×** (3.85× RLinf, 2.10× vla-eval) | [details](docs/results.md#libero-long) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/v2-libero-mps-20261029) |
+| [StarVLA (`Qwen2.5-VL`)](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | 12 Workers, 3 replicas (`K12/g3`) | 49.8 min (official) | **11.2 min** | **4.45×** (2.78× RLinf, 1.52× vla-eval) | [details](docs/results.md#libero-long) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/autotune-diag-w1-20261101) |
+| [StarVLA (`Qwen2.5-VL`)](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | 16 Workers, 4 replicas, MPS (`K16/g4`) | 49.8 min (official) | **8.1 min** | **6.16×** (3.85× RLinf, 2.10× vla-eval) | [details](docs/results.md#libero-long) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/autotune-diag-w1-20261101) |
 
 ### RoboTwin Easy
 
-Standard `demo_clean` evaluation, matching the official evaluator on every success outcome and terminal step:
+Evaluation on `demo_clean` (50 tasks × 10 or 100 episodes), matching the official evaluator on every success outcome and terminal step:
 
 | Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
 | --- | --- | ---: | ---: | ---: | :---: |
 | [StarVLA (`Qwen3-VL`)](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robotwin2) | 500 ep., 1× RTX 4090 (`K8/g1`) | 7.0 h (official) | **31.9 min** | **13.2×** (7.3× vla-eval, 2.2× RLinf) | [details](docs/results.md#robotwin-easy) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robotwin-baselines-20261031) |
-| [StarVLA (`Qwen3-VL`)](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robotwin2) | 5,000 ep., 4× PRO 5000 (`K60/g8`) | 17.5 h (official) | **66.4 min** | **15.8×** | [details](docs/results.md#robotwin-easy) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robotwin-4gpu-pro5000-5000-20261111) |
+| [StarVLA (`Qwen3-VL`)](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robotwin2) | 5,000 ep., 4× RTX PRO 5000 (`K60/g8`) | 17.5 h (official) | **66.4 min** | **15.8×** | [details](docs/results.md#robotwin-easy) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robotwin-4gpu-pro5000-5000-20261111) |
 
 ### RoboDojo
 
@@ -87,15 +87,15 @@ Standard `demo_clean` evaluation, matching the official evaluator on every succe
 
 | Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
 | --- | --- | ---: | ---: | ---: | :---: |
-| [`Simate_beta`](https://huggingface.co/SIPAILab/sipai-robodojo-eval-ae) | 2 Workers, 1 replica (`K2/g1`) | 6.6 h (official) | **4.4 h** | **1.51×** | [details](docs/results.md#robodojo) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robodojo-simate-acceptance-20261106) |
+| [`Simate_beta`](https://huggingface.co/SIPAILab/sipai-robodojo-eval-ae) | 2 Workers, 1 replica (`K2/g1`) | 6.6 h (upstream) | **4.4 h** | **1.51×** | [details](docs/results.md#robodojo) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robodojo-simate-acceptance-20261106) |
 
 ### RoboCasa365
 
-250 episodes (`target50` × 5), passing all native comparison checks:
+250 episodes (`target50` × 5) on one RTX 4090, passing all native comparison checks:
 
 | Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
 | --- | --- | ---: | ---: | ---: | :---: |
-| [Diffusion Policy](https://huggingface.co/robocasa/robocasa365_checkpoints) | 4 Workers, 2 replicas, MPS (`K4/G2`) | 163.5 min (Kit, unopt.) | **80.8 min** | **2.02×** (93.2 vs. 46.1 steps/s) | [details](docs/results.md#robocasa365) · [runs](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-throughput-20261121) |
+| [Diffusion Policy](https://huggingface.co/robocasa/robocasa365_checkpoints) | 4 Workers, 2 replicas, MPS (`K4/g2`) | 163.5 min (Kit, unopt.) | **80.8 min** | **2.02×** (93.2 vs. 46.1 steps/s) | [details](docs/results.md#robocasa365) · [runs](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-throughput-20261121) |
 
 ### ManiSkill
 
