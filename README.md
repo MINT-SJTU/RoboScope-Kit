@@ -79,14 +79,14 @@ every success outcome and terminal step.
 | --- | --- | --- |
 | [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) | `libero_spatial`, `libero_object`, `libero_goal`, `libero_10`, `libero_90` | [LIBERO protocol](packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md) |
 | [LIBERO-Plus](https://github.com/sylvestf/LIBERO-plus) | `libero_spatial`, `libero_object`, `libero_goal`, `libero_10` | [LIBERO protocol](packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md) |
-| [LIBERO-Pro](https://github.com/Zxy-MLlab/LIBERO-PRO) | `libero_{goal,spatial,10,object}_{object,swap,lan,task}` (16 single-perturbation suites) | [LIBERO protocol, section 11](packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro) |
+| [LIBERO-Pro](https://github.com/Zxy-MLlab/LIBERO-PRO) | `libero_{goal,spatial,10,object}_{object,swap,lan,task}` | [LIBERO protocol, section 11](packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#11-libero-pro) |
 | [RoboTwin](https://github.com/RoboTwin-Platform/RoboTwin) | `demo_clean`, `demo_randomized` | [Seed protocol](benchmarks/robotwin/SEED_PROTOCOL.md) |
 | [RoboDojo](https://github.com/RoboDojo-Benchmark/RoboDojo) | `arx_x5`, `arx_x5_randomized` | [RoboDojo guide](benchmarks/robodojo/README.md) |
 | [RoboCasa GR-1 Tabletop](https://github.com/robocasa/robocasa-gr1-tabletop-tasks) | `tabletop` | [Manifest](benchmarks/robocasa/benchmark-manifest.json) |
 | [RoboCasa365](https://github.com/robocasa/robocasa) | `target50`, `atomic_seen`, `composite_seen`, `composite_unseen` | [Protocol and validation scope](packages/roboscope-kit/docs/robocasa365-protocol.md) |
 | [CALVIN](https://github.com/mees/calvin) | `task_D_D`, `task_ABC_D`, `task_ABCD_D` | [CALVIN protocol](packages/roboscope-kit/CALVIN_EVALUATION_PROTOCOL.md) |
 | [MetaWorld](https://github.com/Farama-Foundation/Metaworld) | `mt50` | [MetaWorld protocol](packages/roboscope-kit/METAWORLD_EVALUATION_PROTOCOL.md) |
-| [RLBench](https://github.com/stepjam/RLBench) | `peract_18` (the PerAct 18-task reproduction profile, not all of RLBench) | [RLBench protocol](packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md) |
+| [RLBench](https://github.com/stepjam/RLBench) | `peract_18` | [RLBench protocol](packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md) |
 | [robomimic](https://github.com/ARISE-Initiative/robomimic) | `ph_low_dim` | [robomimic protocol](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) |
 | [SimplerEnv](https://github.com/simpler-env/SimplerEnv) | `google_robot_visual_matching`, `google_robot_variant_aggregation`, `widowx_visual_matching` | [SimplerEnv protocol](packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md) |
 
@@ -95,19 +95,18 @@ separately. Simulator builds, real episodes, and model loading need Linux x86_64
 
 ## Ready-made policies
 
-Start from an existing `Policy` if your model is one of these, or is built with one of these frameworks or
-policy libraries:
+Start from an existing `Policy` for these models and frameworks:
 
 | Model / Framework | Benchmarks | Example |
 | --- | --- | --- |
-| [StarVLA](https://github.com/starVLA/starVLA) Compatible | LIBERO, LIBERO-Plus, LIBERO-Pro, RoboTwin, RoboCasa GR-1 Tabletop, CALVIN, MetaWorld, each with a public StarVLA checkpoint (official StarVLA checkpoints, and community checkpoints for CALVIN and MetaWorld) | [`examples/starvla/`](examples/starvla/README.md) |
-| [OpenVLA](https://github.com/openvla/openvla) | LIBERO Spatial, Object, Goal, and Long with suite-specific checkpoints | [`examples/openvla/`](examples/openvla/README.md) |
+| [StarVLA](https://github.com/starVLA/starVLA) Compatible | LIBERO, LIBERO-Plus, LIBERO-Pro, RoboTwin, RoboCasa GR-1 Tabletop, CALVIN, MetaWorld | [`examples/starvla/`](examples/starvla/README.md) |
+| [OpenVLA](https://github.com/openvla/openvla) | LIBERO | [`examples/openvla/`](examples/openvla/README.md) |
 | [X-VLA](https://github.com/2toINF/X-VLA) | LIBERO, LIBERO-Plus, RoboTwin, CALVIN | [`examples/xvla/`](examples/xvla/README.md) |
-| [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) Compatible | RoboDojo (validated with Simate-beta) | [`examples/xpolicylab/`](examples/xpolicylab/README.md) |
-| [PerAct](https://github.com/peract/peract) | RLBench (the released 600k multi-task checkpoint) | [`examples/peract/`](examples/peract/README.md) |
-| [Official RoboCasa365 Diffusion Policy](https://github.com/robocasa-benchmark/diffusion_policy) | RoboCasa365 multi-task | [`examples/robocasa365_diffusion/`](examples/robocasa365_diffusion/README.md) |
-| [robomimic model zoo](https://robomimic.github.io/docs/model_zoo/robomimic_v0.1.html) | robomimic (the v0.1 PH low-dim BC-RNN checkpoints) | [`examples/robomimic/`](examples/robomimic/README.md) |
-| [RT-1-X](https://github.com/google-deepmind/open_x_embodiment) | SimplerEnv (Google Robot and WidowX, through SimplerEnv's own RT-1 inference code) | [`examples/rt1/`](examples/rt1/README.md) |
+| [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) Compatible | RoboDojo | [`examples/xpolicylab/`](examples/xpolicylab/README.md) |
+| [PerAct](https://github.com/peract/peract) | RLBench | [`examples/peract/`](examples/peract/README.md) |
+| [Official RoboCasa365 Diffusion Policy](https://github.com/robocasa-benchmark/diffusion_policy) | RoboCasa365 | [`examples/robocasa365_diffusion/`](examples/robocasa365_diffusion/README.md) |
+| [robomimic model zoo](https://robomimic.github.io/docs/model_zoo/robomimic_v0.1.html) | robomimic | [`examples/robomimic/`](examples/robomimic/README.md) |
+| [RT-1-X](https://github.com/google-deepmind/open_x_embodiment) | SimplerEnv | [`examples/rt1/`](examples/rt1/README.md) |
 
 ## Quick start
 
