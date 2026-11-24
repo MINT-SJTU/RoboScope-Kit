@@ -68,7 +68,7 @@ Headline speedups across benchmarks (evaluation time, excluding initialization, 
 
 500 episodes on one 48 GiB RTX 4090 (`libero_10`), with equivalent success rates (89.9% vs. 90.2%):
 
-| Model | Configuration | Baseline | RoboScope Kit | Speedup | Details |
+| Model | Configuration | Baseline | Kit | Speedup | Details |
 | --- | --- | ---: | ---: | ---: | :---: |
 | [StarVLA (`Qwen2.5-VL`)](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | `K12/G3` | 49.8 min (official) | **11.2 min** | **4.45×** (2.78× RLinf, 1.52× vla-eval) | [📊](docs/results.md#libero-long) |
 | [StarVLA (`Qwen2.5-VL`)](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | `K16/G4`, CUDA MPS | 49.8 min (official) | **8.1 min** | **6.16×** (3.85× RLinf, 2.10× vla-eval) | [📊](docs/results.md#libero-long) |
@@ -77,7 +77,7 @@ Headline speedups across benchmarks (evaluation time, excluding initialization, 
 
 Evaluation on `demo_clean` (50 tasks × 10 or 100 episodes), matching the official evaluator on every success outcome and terminal step:
 
-| Model | Configuration | Baseline | RoboScope Kit | Speedup | Details |
+| Model | Configuration | Baseline | Kit | Speedup | Details |
 | --- | --- | ---: | ---: | ---: | :---: |
 | [StarVLA (`Qwen3-VL`)](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robotwin2) | 500 ep., 1× RTX 4090, `K8/G1` | 7.0 h (official) | **31.9 min** | **13.2×** (7.3× vla-eval, 2.2× RLinf) | [📊](docs/results.md#robotwin-easy) |
 | [StarVLA (`Qwen3-VL`)](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robotwin2) | 5,000 ep., 4× RTX PRO 5000, `K60/G8` | 17.5 h (official) | **66.4 min** | **15.8×** | [📊](docs/results.md#robotwin-easy) |
@@ -86,7 +86,7 @@ Evaluation on `demo_clean` (50 tasks × 10 or 100 episodes), matching the offici
 
 126 episodes (42 `arx_x5` tasks × 3 layouts) on one RTX 4090, matching upstream success rate (20.6%, McNemar *p* = 1.0):
 
-| Model | Configuration | Baseline | RoboScope Kit | Speedup | Details |
+| Model | Configuration | Baseline | Kit | Speedup | Details |
 | --- | --- | ---: | ---: | ---: | :---: |
 | [`Simate_beta`](https://huggingface.co/SIPAILab/sipai-robodojo-eval-ae) | `K2/G1` | 6.6 h (official) | **4.4 h** | **1.51×** | [📊](docs/results.md#robodojo) |
 
@@ -94,7 +94,7 @@ Evaluation on `demo_clean` (50 tasks × 10 or 100 episodes), matching the offici
 
 250 episodes (`target50` × 5) on one RTX 4090, passing all native comparison checks:
 
-| Model | Configuration | Baseline | RoboScope Kit | Speedup | Details |
+| Model | Configuration | Baseline | Kit | Speedup | Details |
 | --- | --- | ---: | ---: | ---: | :---: |
 | [Diffusion Policy](https://huggingface.co/robocasa/robocasa365_checkpoints) | `K4/G2`, CUDA MPS | 163.5 min (Kit, unopt.) | **80.8 min** | **2.02×** (93.2 vs. 46.1 steps/s) | [📊](docs/results.md#robocasa365) |
 
@@ -102,7 +102,7 @@ Evaluation on `demo_clean` (50 tasks × 10 or 100 episodes), matching the offici
 
 1,100 episodes (11 official tasks) on one RTX 4090, matching all native records:
 
-| Model | Configuration | Baseline | RoboScope Kit | Speedup | Details |
+| Model | Configuration | Baseline | Kit | Speedup | Details |
 | --- | --- | ---: | ---: | ---: | :---: |
 | [Official PPO](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628) | `K8/G1` (task-spread) | 7.1 min (Kit, `K1/G1`) | **3.0 min** | **2.33×** (182.7 s vs. 426.2 s) | [📊](docs/results.md#maniskill) |
 
