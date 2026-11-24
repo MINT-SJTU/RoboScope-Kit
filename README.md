@@ -60,18 +60,50 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## Results
 
-From the [technical report](https://arxiv.org/abs/2611.03850), with a StarVLA checkpoint. Evaluation time excludes
-initialization, concurrency search or offline tuning, and cleanup.
-LIBERO-Long, 500 episodes on one 48 GiB RTX 4090, with success rates equivalent to the official evaluation's:
+Headline speedups across benchmarks (evaluation time, excluding initialization, tuning, and cleanup). See
+[full results](docs/results.md) for complete cross-system tables and per-benchmark breakdowns.
 
-| Configuration | vs. official StarVLA | vs. RLinf | vs. vla-eval |
-| --- | ---: | ---: | ---: |
-| 12 Workers, 3 replicas | **4.45×** | **2.78×** | **1.52×** |
-| 16 Workers, 4 replicas, CUDA MPS | **6.16×** | **3.85×** | **2.10×** |
+### LIBERO-Long
 
-RoboTwin Easy, the standard 5,000 episodes (50 tasks × 100) on the same four RTX PRO 5000 GPUs, takes 3,985 s
-(66.4 minutes) instead of 63,036 s (17.5 hours) with the official StarVLA evaluation (**15.8×**), matching it on
-every success outcome and terminal step.
+500 episodes on one 48 GiB RTX 4090 (`libero_10`), with equivalent success rates (89.9% vs. 90.2%):
+
+| Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
+| --- | --- | ---: | ---: | ---: | :---: |
+| [StarVLA (`Qwen2.5-VL`)](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | 12 Workers, 3 replicas (`K12/g3`) | 49.8 min (official) | **11.2 min** | **4.45×** (2.78× RLinf, 1.52× vla-eval) | [details](docs/results.md#libero-long) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/v2-w1-best-20261028) |
+| [StarVLA (`Qwen2.5-VL`)](https://huggingface.co/StarVLA/Qwen2.5-VL-OFT-LIBERO-4in1) | 16 Workers, 4 replicas, MPS (`K16/g4`) | 49.8 min (official) | **8.1 min** | **6.16×** (3.85× RLinf, 2.10× vla-eval) | [details](docs/results.md#libero-long) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/v2-libero-mps-20261029) |
+
+### RoboTwin Easy
+
+Standard `demo_clean` evaluation, matching the official evaluator on every success outcome and terminal step:
+
+| Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
+| --- | --- | ---: | ---: | ---: | :---: |
+| [StarVLA (`Qwen3-VL`)](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robotwin2) | 500 ep., 1× RTX 4090 (`K8/g1`) | 7.0 h (official) | **31.9 min** | **13.2×** (7.3× vla-eval, 2.2× RLinf) | [details](docs/results.md#robotwin-easy) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robotwin-baselines-20261031) |
+| [StarVLA (`Qwen3-VL`)](https://huggingface.co/StarVLA/Qwen3-VL-OFT-Robotwin2) | 5,000 ep., 4× PRO 5000 (`K60/g8`) | 17.5 h (official) | **66.4 min** | **15.8×** | [details](docs/results.md#robotwin-easy) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robotwin-4gpu-pro5000-5000-20261111) |
+
+### RoboDojo
+
+126 episodes (42 `arx_x5` tasks × 3 layouts) on one RTX 4090, matching upstream success rate (20.6%, McNemar *p* = 1.0):
+
+| Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
+| --- | --- | ---: | ---: | ---: | :---: |
+| [`Simate_beta`](https://huggingface.co/SIPAILab/sipai-robodojo-eval-ae) | 2 Workers, 1 replica (`K2/g1`) | 6.6 h (official) | **4.4 h** | **1.51×** | [details](docs/results.md#robodojo) · [runs](https://github.com/suica/evostudio-kit-tech-report/tree/main/data/results/robodojo-simate-acceptance-20261106) |
+
+### RoboCasa365
+
+250 episodes (`target50` × 5), passing all native comparison checks:
+
+| Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
+| --- | --- | ---: | ---: | ---: | :---: |
+| [Diffusion Policy](https://huggingface.co/robocasa/robocasa365_checkpoints) | 4 Workers, 2 replicas, MPS (`K4/G2`) | 163.5 min (Kit, unopt.) | **80.8 min** | **2.02×** (93.2 vs. 46.1 steps/s) | [details](docs/results.md#robocasa365) · [runs](https://github.com/QLL-CCDD/RoboScope-Kit/releases/tag/robocasa365-throughput-20261121) |
+
+### ManiSkill
+
+1,100 episodes (11 official tasks) on one RTX 4090, matching all native records:
+
+| Model | Configuration | Baseline | RoboScope Kit | Speedup | Records |
+| --- | --- | ---: | ---: | ---: | :---: |
+| [Official PPO](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628) | 8 Workers, task-spread (`K8/g1`) | 7.1 min (Kit, 1 Worker) | **3.0 min** | **2.33×** (182.7 s vs. 426.2 s) | [details](docs/results.md#maniskill) · [runs](benchmarks/maniskill/VALIDATION.md#throughput-by-worker-count) |
 
 ## Supported benchmarks
 
