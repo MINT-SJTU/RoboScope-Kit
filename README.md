@@ -29,6 +29,7 @@ Each benchmark is wrapped once in an adapter around its own evaluator, so its ru
 
 ## News
 
+- 📄 **2026-11-24:** [Technical report v2](https://arxiv.org/abs/2611.03850v2) is out with new 4-GPU (**15.8×**) and 1-GPU (**13.2×**) RoboTwin Easy results.
 - 🤖 **2026-11-19:** [RoboCasa365](packages/roboscope-kit/docs/robocasa365-protocol.md) is supported.
 - 🤖 **2026-11-14:** [SimplerEnv](packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md) is supported.
 - 🤖 **2026-11-10:** [RLBench](packages/roboscope-kit/RLBENCH_EVALUATION_PROTOCOL.md) (the PerAct 18-task suite) is supported.
