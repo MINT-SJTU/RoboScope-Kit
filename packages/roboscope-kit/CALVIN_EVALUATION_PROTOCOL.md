@@ -84,8 +84,12 @@ comparison. Set `inference.max_batch_size: 8` for the batched arm. Workers send 
 requests, and the shared Policy Server groups requests from distinct episodes. Each observation's
 initial action noise uses its episode ID and step, so it is independent of where the observation
 appears in a batch. GPU computation can still vary numerically with batch shape. The seeded
-`task_D_D` comparison includes 1,000 sequences per arm, paired scores, timings, and reproduction commands.
-[Seeded StarVLA batching evidence](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/benchmarks/calvin/evidence/2026-11-22-task-d-d-seeded)
+`task_D_D` comparison on one cloud RTX 4090 (49,140 MiB reported) ran 1,000 sequences per arm.
+With 16 Workers, one replica, and batch cap 8, formal evaluation was **2.840×** as fast as the
+fastest full run without batching (16 Workers and two replicas). Mean completed subtasks were
+3.831 with batching and 3.809 for that baseline. Two same-seed serial runs had identical scores
+for all 1,000 sequences. With batching, 219 sequence scores differed from the fastest baseline.
+[Records, logs, traces, and reproduction commands](https://github.com/Ru-hulu/RoboScope-Kit/releases/tag/calvin-pr138-2026-11-24)
 
 ## 2. User policy lifecycle
 
