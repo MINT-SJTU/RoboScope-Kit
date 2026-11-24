@@ -95,14 +95,15 @@ separately. Simulator builds, real episodes, and model loading need Linux x86_64
 
 ## Ready-made policies
 
-Start from an existing `Policy` if you use one of these model families:
+Start from an existing `Policy` if your model is one of these, or is built with one of these frameworks or
+policy libraries:
 
-| Model | Benchmarks | Example |
+| Model / Framework | Benchmarks | Example |
 | --- | --- | --- |
-| [StarVLA](https://github.com/starVLA/starVLA) | LIBERO, LIBERO-Plus, LIBERO-Pro, RoboTwin, RoboCasa GR-1 Tabletop, CALVIN, MetaWorld, with a published checkpoint for each | [`examples/starvla/`](examples/starvla/README.md) |
+| [StarVLA](https://github.com/starVLA/starVLA) Compatible | LIBERO, LIBERO-Plus, LIBERO-Pro, RoboTwin, RoboCasa GR-1 Tabletop, CALVIN, MetaWorld, each with a public StarVLA checkpoint (official StarVLA checkpoints, and community checkpoints for CALVIN and MetaWorld) | [`examples/starvla/`](examples/starvla/README.md) |
 | [OpenVLA](https://github.com/openvla/openvla) | LIBERO Spatial, Object, Goal, and Long with suite-specific checkpoints | [`examples/openvla/`](examples/openvla/README.md) |
 | [X-VLA](https://github.com/2toINF/X-VLA) | LIBERO, LIBERO-Plus, RoboTwin, CALVIN | [`examples/xvla/`](examples/xvla/README.md) |
-| [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) | RoboDojo | [`examples/xpolicylab/`](examples/xpolicylab/README.md) |
+| [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) Compatible | RoboDojo (validated with Simate-beta) | [`examples/xpolicylab/`](examples/xpolicylab/README.md) |
 | [PerAct](https://github.com/peract/peract) | RLBench (the released 600k multi-task checkpoint) | [`examples/peract/`](examples/peract/README.md) |
 | [Official RoboCasa365 Diffusion Policy](https://github.com/robocasa-benchmark/diffusion_policy) | RoboCasa365 multi-task | [`examples/robocasa365_diffusion/`](examples/robocasa365_diffusion/README.md) |
 | [robomimic model zoo](https://robomimic.github.io/docs/model_zoo/robomimic_v0.1.html) | robomimic (the v0.1 PH low-dim BC-RNN checkpoints) | [`examples/robomimic/`](examples/robomimic/README.md) |
@@ -186,7 +187,7 @@ tuning, writing a Policy, CUDA MPS, and cross-instance sharding.
 | Path | Contents |
 | --- | --- |
 | `packages/roboscope-kit/` | The `roboscope-kit` package: public `Policy` API, protocol client and server, benchmark runtime, and the evaluation protocol documents |
-| `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, MetaWorld, RLBench, RoboCasa GR-1 Tabletop, RoboCasa365, RoboDojo, RoboTwin, robomimic, and SimplerEnv: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
+| `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, ManiSkill, MetaWorld, RLBench, RoboCasa GR-1 Tabletop, RoboCasa365, RoboDojo, RoboTwin, robomimic, and SimplerEnv: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
 | `examples/starvla/` | The StarVLA `Policy` and one demo per benchmark, including the configurations behind the RoboScope Kit technical report |
 | `examples/openvla/` | An OpenVLA `Policy` example for the four fine-tuned LIBERO suites, with an official native runner and episode-by-episode comparison |
 | `examples/xvla/` | An X-VLA `Policy` example: a stateful Policy serving several benchmarks |
@@ -194,6 +195,7 @@ tuning, writing a Policy, CUDA MPS, and cross-instance sharding.
 | `examples/peract/` | A PerAct `Policy` example for RLBench, with PerAct's native `eval.py` runner and an episode-by-episode comparison |
 | `examples/robocasa365_diffusion/` | A RoboCasa365 multi-task Diffusion Policy example for `pretrain_human300`, with a native rollout comparison |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
+| `examples/maniskill/` | ManiSkill PPO and visual Policy examples, pinned checkpoint catalogs, and native comparisons |
 | `examples/rt1/` | An RT-1-X `Policy` example for SimplerEnv, with a runner for SimplerEnv's official scripts and an episode-by-episode comparison |
 | `ci/` | Build, compatibility, and PyPI release scripts used by GitHub Actions |
 

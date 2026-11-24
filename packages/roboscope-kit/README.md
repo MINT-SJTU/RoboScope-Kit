@@ -284,10 +284,9 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
 | SimplerEnv | SDK-native adapter and persistent SAPIEN/ManiSkill2_real2sim worker, one fresh environment per episode as upstream | Pinned SimplerEnv and ManiSkill2_real2sim (with their scene and overlay assets), SAPIEN 2.2.2, and the frozen matrix of the official RT-1 scripts |
 
-LIBERO and CALVIN convert native observations to the canonical feature names and send native 7-dimensional
-actions back to their simulators. CALVIN's task-D-to-task-D path runs the official 1,000 long-horizon
-sequences with static and gripper images, proprioception, and language. The suites and runtime paths of
-each benchmark are defined by its benchmark manifest.
+Each adapter converts the simulator's native observations to the canonical feature names and sends the
+Policy's actions back to the simulator in the benchmark's native action format. The suites and runtime paths
+of each benchmark are defined by its benchmark manifest.
 
 The exact contracts are in the protocol documents:
 
@@ -429,10 +428,12 @@ Supported versions follow the [CPython release lifecycle](https://devguide.pytho
 released version in its bugfix or security phase. Today that is Python 3.11–3.15. Python 3.8–3.10 are not
 supported, and loading the package source through `PYTHONPATH` does not make them supported.
 
-Model frameworks and simulators keep their own pinned interpreters and dependencies; installing
-`roboscope-kit` does not install or upgrade them. Simulator environments still pinned to Python 3.8
-(CALVIN, RoboTwin) or 3.10 (LIBERO, LIBERO-Plus) must be upgraded and validated separately before they can
-use this package; the LIBERO-Pro environment is CPython 3.11.18.
+Install `roboscope-kit` and run the benchmark CLI and your Policy in a supported Python. Simulators keep
+their own pinned interpreters and dependencies, which `benchmarks/<benchmark>/build-runtime.sh` builds;
+installing `roboscope-kit` does not install or upgrade them. All supported benchmarks, including CALVIN and
+RoboTwin (Python 3.8 simulator environments) and LIBERO and LIBERO-Plus (Python 3.10), are evaluated this
+way: the runtime starts their simulator workers in the pinned interpreter and loads the Kit's worker modules
+from its own source tree.
 
 The supported list is declared in `pyproject.toml` under `tool.roboscope.python-support`. On every change,
 CI builds one wheel and sdist, installs both on each listed version, imports every module without loading
@@ -469,30 +470,26 @@ Earlier source releases had a `libero` extra that only installed `imageio[ffmpeg
 LIBERO simulator, so it was removed. If you use `imageio` directly, declare `imageio[ffmpeg]>=2.34,<3.0` in
 your own dependencies.
 
-## ManiSkill multi-task integration
+## ManiSkill (preview)
 
-The `maniskill` adapter runs selected task, robot, observation and controller profiles in GPU vector
-Workers through the existing `Policy` lifecycle. Official PPO state examples and a Bridge visual
-Policy example provide pinned model-loading and comparison workflows. Each profile reports its
-native success metric or episode return; record-tree shard merging and result-only reduction retain
-that distinction.
+The `maniskill` adapter runs ManiSkill task, robot, observation, and controller profiles in GPU-vectorized
+Workers through the standard `Policy` lifecycle. Each profile reports its native metric, success or episode
+return, and merged shard results keep that distinction.
 
-The pinned inventory declares 55 TaskIDs. Full integration acceptance remains incomplete: compatible
-intended-task models, current-source prescribed-count evaluation and independent upstream comparison
-are still required. The [validation status](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md)
-separates CPU source/scoring checks, retained candidates and task/model acceptance.
-The selected task-trained catalog has eleven official PPO, two author G1 PPO and eight NEWT
-TaskIDs; NEWT runs the actor prior rather than original MPC. Provisional visual examples do
-not establish per-task acceptance, and all original tabletop state/RGB profiles remain in scope.
+The pinned inventory declares 55 tasks. ManiSkill is not yet listed under supported benchmarks because some
+tasks still need a task-trained model and a comparison with upstream evaluation; the
+[validation status](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md)
+shows which tasks are validated. The ready-made checkpoint catalog covers eleven tasks with official PPO
+checkpoints, two G1 tasks with the task authors' PPO checkpoints, and eight tasks with NEWT (the actor prior,
+without the original MPC planner). A visual Octo example covers the Bridge digital-twin tasks.
 
 Build with `benchmarks/maniskill/build-runtime.sh <install-dir>` and choose asset suites with
 `MANISKILL_ASSET_SUITES`. See the
 [build guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/README.md),
 [protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md),
 [task inventory](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/TASK_INVENTORY.md),
-[PPO example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/README.md) and
+[PPO example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/README.md), and
 [Octo example](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/examples/maniskill/OCTO.md).
-Issue #25 integration and issue #31 throughput work remain separate.
 
 ## License
 
