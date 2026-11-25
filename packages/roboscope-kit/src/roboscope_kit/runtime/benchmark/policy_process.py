@@ -15,6 +15,7 @@ from typing import Any
 from roboscope_kit.benchmark_specs import BenchmarkName
 from roboscope_kit.client import PolicyClient
 from roboscope_kit.contracts import BenchmarkSpec
+from roboscope_kit.image_sizes import CameraSupport
 from roboscope_kit.policy import (
     DEFAULT_EVAL_MODE,
     PolicyCapabilities,
@@ -45,6 +46,7 @@ class PolicyProcessAdapter:
         session_metadata: dict[str, Any] | None = None,
         load_timeout_s: float = 30.0,
         eval_mode: str = DEFAULT_EVAL_MODE,
+        camera_support: dict[str, CameraSupport] | None = None,
     ) -> None:
         if not command:
             raise ValueError("policy command cannot be empty")
@@ -65,6 +67,7 @@ class PolicyProcessAdapter:
         self.session_metadata = dict(session_metadata or {})
         self.load_timeout_s = load_timeout_s
         self.eval_mode = eval_mode
+        self.camera_support = camera_support
         self.capabilities: dict[int, PolicyCapabilities] = {}
         self.gpu_vram_baselines: dict[str, int] = {}
         self.replica_vram_bytes: dict[int, int] = {}
@@ -119,9 +122,12 @@ class PolicyProcessAdapter:
             eval_mode=self.eval_mode,
         )
         with PolicyClient(context.socket_path, timeout_s=self.load_timeout_s) as client:
-            capabilities = client.load(session)
+            capabilities = client.load(session, camera_support=self.camera_support)
         contract = negotiate_policy_action_contract(
-            session.benchmark, capabilities, eval_mode=self.eval_mode
+            session.benchmark,
+            capabilities,
+            eval_mode=self.eval_mode,
+            camera_support=self.camera_support,
         )
         # Replicas on different GPUs initialize concurrently.
         with self._replica_lock:
@@ -138,6 +144,16 @@ class PolicyProcessAdapter:
                 LOGGER.info(
                     "eval_mode=fast was requested, but this Policy declared no fast-mode optimizations; "
                     "running with standard strict execution"
+                )
+            if self._execution_contract is None and contract.image_sizes:
+                sizes = ", ".join(
+                    f"{feature} {height}x{width}"
+                    for feature, (height, width) in sorted(contract.image_sizes.items())
+                )
+                LOGGER.info(
+                    "The Policy negotiated non-canonical camera sizes (%s); results are marked "
+                    "canonical_observations=false",
+                    sizes,
                 )
             self.capabilities[context.replica_id] = capabilities
             self._execution_contract = contract

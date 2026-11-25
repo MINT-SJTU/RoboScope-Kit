@@ -25,7 +25,8 @@ from .queue import atomic_json
 from .schema import WorkItem
 
 CACHE_MODES = ("use", "refresh", "off")
-CACHE_SCHEMA = 1
+CACHE_SCHEMA = 2
+DEFAULT_CONTRACT_KEY = "default"
 
 
 def cache_root() -> Path:
@@ -76,7 +77,12 @@ def cache_key(fields: Mapping[str, Any]) -> str:
 
 
 class RunCache:
-    """One cache entry, read at start and updated after the evaluation."""
+    """One cache file per run configuration, read at start and updated after the evaluation.
+
+    The file keeps one entry per Policy execution contract (for example, per negotiated camera
+    size), because the contract is known only once the Policy has loaded. Until :meth:`bind` is
+    called the default contract entry is used.
+    """
 
     def __init__(self, mode: str, key_fields: Mapping[str, Any], root: Path | None = None) -> None:
         if mode not in CACHE_MODES:
@@ -85,58 +91,79 @@ class RunCache:
         self.key_fields = dict(key_fields)
         self.key = cache_key(self.key_fields)
         self.path = (root or cache_root()) / f"{self.key}.json"
-        self.entry = self._load() if mode == "use" else {}
+        self.contracts: dict[str, dict[str, Any]] = self._load() if mode == "use" else {}
+        self.contract_key = DEFAULT_CONTRACT_KEY
 
-    def _load(self) -> dict[str, Any]:
+    def _load(self) -> dict[str, dict[str, Any]]:
         try:
             entry = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return {}
         if not isinstance(entry, dict) or entry.get("schema") != CACHE_SCHEMA or entry.get("key") != self.key:
             return {}
-        return entry
+        contracts = entry.get("contracts")
+        if not isinstance(contracts, dict):
+            return {}
+        return {str(key): value for key, value in contracts.items() if isinstance(value, dict)}
+
+    @property
+    def has_entries(self) -> bool:
+        return bool(self.contracts)
+
+    def bind(self, contract: Mapping[str, Any]) -> None:
+        """Select the entry recorded under this execution contract."""
+
+        self.contract_key = cache_key(contract)
+
+    def task_seconds_for(self, contract: Mapping[str, Any]) -> dict[str, float]:
+        self.bind(contract)
+        return self.task_seconds
+
+    @property
+    def _entry(self) -> dict[str, Any]:
+        return self.contracts.get(self.contract_key, {})
 
     @property
     def selection(self) -> dict[str, Any] | None:
-        selection = self.entry.get("selection")
+        selection = self._entry.get("selection")
         return dict(selection) if isinstance(selection, dict) else None
 
     @property
     def task_seconds(self) -> dict[str, float]:
-        return {str(task): float(seconds) for task, seconds in self.entry.get("task_seconds", {}).items()}
+        return {str(task): float(seconds) for task, seconds in self._entry.get("task_seconds", {}).items()}
 
     def describe(self) -> dict[str, Any]:
         return {"mode": self.mode, "key": self.key, "path": str(self.path)}
 
+    def _write(self, entry: dict[str, Any]) -> None:
+        self.contracts[self.contract_key] = entry
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_json(
+            self.path,
+            {
+                "schema": CACHE_SCHEMA,
+                "key": self.key,
+                "key_fields": self.key_fields,
+                "contracts": self.contracts,
+            },
+        )
+
     def store(self, *, selection: Mapping[str, Any] | None, task_seconds: Mapping[str, float]) -> None:
         if self.mode == "off":
             return
-        entry = {
-            "schema": CACHE_SCHEMA,
-            "key": self.key,
-            "key_fields": self.key_fields,
-            "selection": dict(selection) if selection is not None else self.entry.get("selection"),
-            "task_seconds": {**self.task_seconds, **dict(task_seconds)},
-        }
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_json(self.path, entry)
-        self.entry = entry
+        self._write(
+            {
+                "selection": dict(selection) if selection is not None else self.selection,
+                "task_seconds": {**self.task_seconds, **dict(task_seconds)},
+            }
+        )
 
     def forget_selection(self) -> None:
         """Drop the stored ``K``/``g`` so the next evaluation searches again; task times stay."""
 
         if self.mode == "off":
             return
-        entry = {
-            "schema": CACHE_SCHEMA,
-            "key": self.key,
-            "key_fields": self.key_fields,
-            "selection": None,
-            "task_seconds": self.task_seconds,
-        }
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_json(self.path, entry)
-        self.entry = entry
+        self._write({"selection": None, "task_seconds": self.task_seconds})
 
 
 def task_seconds_from_queues(queue_dirs: Sequence[Path]) -> dict[str, float]:

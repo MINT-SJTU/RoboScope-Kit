@@ -67,6 +67,10 @@ def validate_shard_set(shards: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
     if len(fast_opt_sets) != 1:
         raise ValueError(f"shards disagree on active_fast_optimizations: {sorted(fast_opt_sets)}")
+    # The negotiated Policy contract (action representation, camera sizes, ...) must match.
+    policy_ios = {json.dumps(shard.get("policy_io"), sort_keys=True) for shard in shards}
+    if len(policy_ios) != 1:
+        raise ValueError("shards ran different Policy execution contracts (policy_io)")
     return {
         key: metas[0][key]
         for key in ("count", "full_total_records", "episodes_per_shard", "explicit_count", "build")

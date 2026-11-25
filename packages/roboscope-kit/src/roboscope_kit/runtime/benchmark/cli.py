@@ -9,6 +9,7 @@ import argparse
 import os
 import subprocess
 import sys
+from collections.abc import Callable, Mapping
 from contextlib import ExitStack
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -18,6 +19,7 @@ from roboscope_kit.benchmark_specs import (
     BenchmarkName,
     BenchmarkSpec,
     MetaworldBenchmarkDefinition,
+    benchmark_camera_support,
     get_benchmark_spec,
 )
 from roboscope_kit.policy import DEFAULT_EVAL_MODE, EVAL_MODES
@@ -340,7 +342,7 @@ def _run_evaluation(
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
                 profile=args.profile,
-                task_seconds=run_cache.task_seconds or None,
+                task_seconds_for=run_cache.task_seconds_for,
                 eval_mode=args.eval_mode,
             )
         else:
@@ -361,7 +363,9 @@ def _run_evaluation(
     finally:
         if cuda_mps is not None:
             cuda_mps.stop()
+    execution_contract = (output.get("inference") or {}).get("execution_contract") or {}
     if not args.quick_test:
+        run_cache.bind(execution_contract)
         recovery = output.get("recovery") or {}
         if recovery.get("oom_events") or recovery.get("worker_failures"):
             # A run that ran out of memory or lost a Worker finished on a scaled-down or retried
@@ -372,7 +376,6 @@ def _run_evaluation(
                 selection=selected if selected.get("mode") == "dynamic-probe" else None,
                 task_seconds=task_seconds_from_queues([args.output_dir / "queue"]),
             )
-    execution_contract = (output.get("inference") or {}).get("execution_contract") or {}
     output["autotune"] = selected
     output["run_cache"] = run_cache.describe()
     output["cuda_mps"] = cuda_mps.metadata() if cuda_mps is not None else {"enabled": False}
@@ -487,8 +490,15 @@ def _autotuned_run(
         ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
         cuda_mps=cuda_mps,
     )
-    cached = run_cache.selection if run_cache is not None else None
+    cached = None
     try:
+        if run_cache is not None and run_cache.has_entries:
+            # Cache entries are recorded per execution contract, which is known once a replica has
+            # loaded. Every probe and the final pass reuse this replica.
+            with benchmark_phase(phase_timing_callback, "policy_load_s"):
+                pool.scale(1)
+            run_cache.bind(shared.execution_contract().to_dict())
+            cached = run_cache.selection
         with autotune_phase(phase_timing_callback):
             if cached is not None:
                 selected = {**cached, "mode": "cached", "searched_mode": cached.get("mode")}
@@ -511,10 +521,9 @@ def _autotuned_run(
                     limits=limits,
                 )
         # Probe episodes ran under other concurrencies; a formal run's times take precedence.
-        task_seconds = {
-            **task_seconds_from_queues(sorted((output_dir / "autotune").glob("candidate-*/queue"))),
-            **(run_cache.task_seconds if run_cache is not None else {}),
-        }
+        task_seconds = task_seconds_from_queues(sorted((output_dir / "autotune").glob("candidate-*/queue")))
+        if run_cache is not None and pool.contexts:
+            task_seconds.update(run_cache.task_seconds_for(shared.execution_contract().to_dict()))
         final = _run_with_pool(
             factory=factory,
             request=request,
@@ -551,6 +560,7 @@ def _build_inference(
         cwd=policy.cwd,
         load_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
         eval_mode=eval_mode,
+        camera_support=benchmark_camera_support(benchmark_spec, dict(manifest.defaults)),
     )
 
 
@@ -653,6 +663,7 @@ def run_candidate(
     cuda_mps: CudaMpsSession | None = None,
     profile: bool = False,
     task_seconds: dict[str, float] | None = None,
+    task_seconds_for: Callable[[dict[str, Any]], Mapping[str, float]] | None = None,
     eval_mode: str = DEFAULT_EVAL_MODE,
 ) -> dict[str, Any]:
     adapter = (
@@ -674,6 +685,7 @@ def run_candidate(
         inference=inference,
         benchmark=adapter,
         cuda_mps=cuda_mps,
+        task_seconds_for=task_seconds_for,
     ).run(phase_timing_callback=phase_timing_callback)
 
 

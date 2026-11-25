@@ -34,6 +34,7 @@ LIBERO_PLUS_SUITES = ("libero_spatial", "libero_object", "libero_goal", "libero_
 PUBLIC_SDK_API = [
     "ActionChunk",
     "ActionSpec",
+    "ANY_SIZE",
     "BenchmarkName",
     "BenchmarkSpec",
     "EpisodeContext",
@@ -240,7 +241,7 @@ def test_policy_replicas_must_negotiate_one_action_contract(
         def __exit__(self, *_args) -> None:
             pass
 
-        def load(self, _session):
+        def load(self, _session, camera_support=None):
             return next(capabilities)
 
     monkeypatch.setattr(policy_process, "PolicyClient", FakePolicyClient)

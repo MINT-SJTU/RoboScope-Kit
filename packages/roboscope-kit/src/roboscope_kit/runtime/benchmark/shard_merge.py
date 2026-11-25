@@ -166,6 +166,11 @@ def merge_shards(
             "build": shards[0][1]["shard"]["build"],
         },
         "benchmark": adapter.metadata(),
+        **(
+            {"policy_io": shards[0][2]["policy_io"]}
+            if shards[0][2].get("policy_io") is not None
+            else {}
+        ),
         "result": standard,
         "official_result": official,
         "shards": shard_summaries,
@@ -226,6 +231,10 @@ def _validate_shard_metadata(
     for shard_dir, manifest, result in shards:
         if manifest.get("benchmark") != result["benchmark"]:
             raise ValueError(f"{shard_dir}: manifest benchmark identity disagrees with result.json")
+        if json.dumps(manifest.get("policy_io"), sort_keys=True) != json.dumps(
+            result.get("policy_io"), sort_keys=True
+        ):
+            raise ValueError(f"{shard_dir}: manifest policy_io disagrees with result.json")
         validate_shard_accounting(result)
 
 

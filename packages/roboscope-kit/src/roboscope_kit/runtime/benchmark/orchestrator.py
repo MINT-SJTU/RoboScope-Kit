@@ -108,6 +108,8 @@ def terminal_records(results: Sequence[WorkResult]) -> list[EvaluationRecord]:
 class ParallelBenchmarkRuntime:
     """Coordinate inference replicas, evaluator workers, queueing, and result accounting."""
 
+    task_seconds_for: Callable[[dict[str, Any]], Mapping[str, float]] | None = None
+
     def __init__(
         self,
         *,
@@ -116,8 +118,11 @@ class ParallelBenchmarkRuntime:
         benchmark: BenchmarkAdapter,
         server_pool: InferencePool | None = None,
         cuda_mps: CudaMpsSession | None = None,
+        task_seconds_for: Callable[[dict[str, Any]], Mapping[str, float]] | None = None,
     ) -> None:
         self.config = config
+        # Per-task times recorded under one execution contract; looked up once the Policy is loaded.
+        self.task_seconds_for = task_seconds_for
         self.inference = inference
         self.benchmark = benchmark
         self.queue = WorkQueue(config.output_dir / "queue")
@@ -186,15 +191,12 @@ class ParallelBenchmarkRuntime:
             items, shard_metadata = shard
         else:
             shard_metadata = None
-        if self.config.task_seconds and self.config.probe_limits is None:
-            items = longest_first(items, self.config.task_seconds)
         total_records = sum(item.expected_results for item in items)
         benchmark_metadata = self.benchmark.metadata()
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         events_path = self.config.output_dir / "events.jsonl"
         events_path.write_text("", encoding="utf-8")
-        self.queue.initialize(items)
         self._clear_worker_state()
         append_event(events_path, {"type": "phase", "phase": "server-starting"})
         previous_replicas = set(self.server_pool.contexts)
@@ -217,6 +219,10 @@ class ParallelBenchmarkRuntime:
             except (OSError, RuntimeError, TimeoutError) as exc:
                 self._record_policy_server_error(events_path, exc)
                 self._stop_owned_server_pool()
+                if _is_policy_contract_error(exc):
+                    # The Policy and benchmark cannot agree (e.g. image sizes); more replicas
+                    # would not help, so this is not a capacity limit.
+                    raise
                 if isinstance(exc, TimeoutError):
                     self._raise_probe_timeout(probe_deadline, total_records, events_path)
                 if self.config.probe_limits is not None:
@@ -254,6 +260,12 @@ class ParallelBenchmarkRuntime:
             },
         )
         policy_io = self.inference.execution_contract().to_dict()
+        task_seconds = self.config.task_seconds
+        if not task_seconds and self.task_seconds_for is not None:
+            task_seconds = self.task_seconds_for(policy_io)
+        if task_seconds and self.config.probe_limits is None:
+            items = longest_first(items, task_seconds)
+        self.queue.initialize(items)
         atomic_json(
             self.config.output_dir / "manifest.json",
             {
@@ -956,3 +968,20 @@ def steady_throughput(
 def append_event(path: Path, payload: dict[str, Any]) -> None:
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
+
+
+def _is_policy_contract_error(exc: BaseException) -> bool:
+    """A Policy ``load`` that failed validation or negotiation, as opposed to a crash or timeout."""
+
+    from roboscope_kit.client import PolicyRemoteError
+
+    cause: BaseException | None = exc
+    while cause is not None:
+        if (
+            isinstance(cause, PolicyRemoteError)
+            and cause.operation == "load"
+            and cause.error_type in {"ValueError", "TypeError"}
+        ):
+            return True
+        cause = cause.__cause__ or cause.__context__
+    return False

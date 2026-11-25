@@ -2,6 +2,20 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b77 - 2026-11-25
+
+- Negotiate camera image sizes between the benchmark and the Policy. `PolicyCapabilities.image_sizes`
+  lists accepted `(height, width)` sizes in order of preference, optionally ending with `ANY_SIZE`; the
+  runtime picks the first size the benchmark renders natively and never resamples. LIBERO and
+  LIBERO-Pro render 64–1024 pixels per side (480 × 640 at most with OSMesa); other benchmarks keep their
+  own size. Without `image_sizes` nothing changes.
+- Record the negotiated sizes and `canonical_observations` in `policy_io`; shard merging requires the
+  same `policy_io` on every shard and keeps it in the merged result.
+- Keep run-cache entries per execution contract (cache schema 2), so autotune selections and task times
+  recorded at one image size are not reused at another.
+- Stop autotune with the Policy's error when replica loading fails validation, instead of treating it as
+  a capacity limit.
+
 ## 0.8.0b75 - 2026-11-25
 
 - Add `--eval-mode {strict,fast}` (default `strict`) as the unified opt-in framework for throughput optimizations that may introduce small numeric or per-episode differences.

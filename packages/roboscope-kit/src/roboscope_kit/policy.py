@@ -12,6 +12,14 @@ from typing import Any
 import numpy as np
 
 from roboscope_kit.contracts import BenchmarkSpec, FeatureKind
+from roboscope_kit.image_sizes import (
+    CameraSupport,
+    ImageSize,
+    SizePreferences,
+    image_sizes_to_dict,
+    negotiate_image_sizes,
+    normalize_image_sizes,
+)
 
 EVAL_MODES: tuple[str, ...] = ("strict", "fast")
 DEFAULT_EVAL_MODE = "strict"
@@ -146,8 +154,13 @@ class PolicyCapabilities:
     action_representations: dict[str, str] = field(default_factory=dict)
     observation_strides: dict[str, int] = field(default_factory=dict)
     step_observation_updates: tuple[str, ...] = ()
+    # Camera sizes the Policy accepts, most preferred first, as (height, width); ``ANY_SIZE`` last
+    # accepts the benchmark's canonical size. A list applies to every image feature, a dict to the
+    # named features. ``None`` accepts the canonical size everywhere.
+    image_sizes: SizePreferences | dict[str, SizePreferences] | None = None
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "image_sizes", normalize_image_sizes(self.image_sizes))
         if not self.supported_benchmarks:
             raise ValueError("supported_benchmarks cannot be empty")
         if len(self.supported_benchmarks) != len(set(self.supported_benchmarks)):
@@ -203,6 +216,7 @@ class PolicyCapabilities:
                 for name, stride in (value.get("observation_strides") or {}).items()
             },
             step_observation_updates=tuple(str(item) for item in value.get("step_observation_updates", ())),
+            image_sizes=value.get("image_sizes"),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -217,6 +231,11 @@ class PolicyCapabilities:
             "action_representations": dict(self.action_representations),
             "observation_strides": dict(self.observation_strides),
             "step_observation_updates": list(self.step_observation_updates),
+            **(
+                {"image_sizes": image_sizes_to_dict(self.image_sizes)}
+                if self.image_sizes is not None
+                else {}
+            ),
         }
 
 
@@ -230,6 +249,12 @@ class PolicyExecutionContract:
     step_observation_updates: bool = False
     eval_mode: str = DEFAULT_EVAL_MODE
     active_fast_optimizations: tuple[str, ...] = ()
+    # Image features rendered at a size other than the benchmark's canonical one, as (height, width).
+    image_sizes: dict[str, ImageSize] = field(default_factory=dict)
+
+    @property
+    def canonical_observations(self) -> bool:
+        return not self.image_sizes
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -241,6 +266,8 @@ class PolicyExecutionContract:
             "step_observation_updates": self.step_observation_updates,
             "eval_mode": self.eval_mode,
             "active_fast_optimizations": list(self.active_fast_optimizations),
+            "image_sizes": {feature: list(size) for feature, size in sorted(self.image_sizes.items())},
+            "canonical_observations": self.canonical_observations,
         }
 
 
@@ -249,7 +276,14 @@ def negotiate_policy_action_contract(
     capabilities: PolicyCapabilities,
     *,
     eval_mode: str = DEFAULT_EVAL_MODE,
+    camera_support: dict[str, CameraSupport] | None = None,
 ) -> PolicyExecutionContract:
+    """Resolve the action representation, observation cadence and image sizes for one run.
+
+    ``camera_support`` lists the sizes each benchmark camera can render; without it every camera
+    renders only the size its spec declares.
+    """
+
     eval_mode = validate_eval_mode(eval_mode)
     action_source = "policy"
     action_representation = capabilities.action_representations.get(benchmark.name)
@@ -276,12 +310,15 @@ def negotiate_policy_action_contract(
         step_observation_updates=benchmark.name in capabilities.step_observation_updates,
         eval_mode=eval_mode,
         active_fast_optimizations=active_fast_optimizations,
+        image_sizes=negotiate_image_sizes(benchmark, capabilities.image_sizes, camera_support),
     )
 
 
 def validate_policy_capabilities(
     benchmark: BenchmarkSpec,
     capabilities: PolicyCapabilities,
+    *,
+    camera_support: dict[str, CameraSupport] | None = None,
 ) -> None:
     if benchmark.name not in capabilities.supported_benchmarks:
         raise ValueError(f"policy does not support benchmark {benchmark.name!r}")
@@ -294,7 +331,7 @@ def validate_policy_capabilities(
     unknown = sorted(set(capabilities.required_features) - available)
     if unknown:
         raise ValueError(f"policy requires features not provided by {benchmark.name}: {', '.join(unknown)}")
-    negotiate_policy_action_contract(benchmark, capabilities)
+    negotiate_policy_action_contract(benchmark, capabilities, camera_support=camera_support)
 
 
 def validate_observation(

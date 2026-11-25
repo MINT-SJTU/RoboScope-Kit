@@ -235,6 +235,26 @@ RoboTwin accepts a positive observation stride. The default is 1, so every new a
 observation. Randomized lighting, the viewer, video logging, and point-cloud observations always render
 every step, whatever stride you declare.
 
+### Camera image sizes
+
+A Policy may list the camera sizes it accepts as `(height, width)`, most preferred first. The runtime
+renders the first size the benchmark can produce natively and never resamples images; `ANY_SIZE` as the
+last entry accepts the benchmark's own size when none of the others can be rendered:
+
+```python
+PolicyCapabilities(..., image_sizes=[(128, 128)])            # every camera at 128 x 128
+PolicyCapabilities(..., image_sizes=[(224, 224), ANY_SIZE])  # prefer 224 x 224
+PolicyCapabilities(..., image_sizes={"images.wrist": [(128, 160), ANY_SIZE]})  # one camera
+```
+
+Without `image_sizes` every camera keeps the benchmark's size, as before. When no listed size can be
+rendered, the run stops before any Worker starts and names what each side supports. LIBERO and LIBERO-Pro
+render any size from 64 to 1024 pixels per side (up to 480 x 640 with `render_backend: osmesa`); the other
+benchmarks render their own size only. The negotiated sizes are recorded in `policy_io.image_sizes`, and
+`policy_io.canonical_observations` is `false` when they differ from the benchmark's own size, so such
+results are not mixed with results under the benchmark's protocol. Inside `load()`,
+`context.benchmark` still carries the benchmark's own sizes.
+
 Concurrency (`K`) and replica count (`g`) are not capabilities; the runtime chooses them, or you fix them
 with `--concurrency` and `--replicas` (see [Automatic tuning](#automatic-tuning-kg)).
 

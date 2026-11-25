@@ -7,8 +7,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Any
 
 from roboscope_kit.contracts import ActionSpec, BenchmarkSpec, FeatureKind, FeatureSpec
+from roboscope_kit.image_sizes import CameraSupport, fixed_camera_support
 
 
 class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include Python 3.10
@@ -605,6 +607,35 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         SimplerEnvBenchmarkDefinition(),
     )
 }
+
+
+# LIBERO and LIBERO-Pro render their cameras natively at any size in these bounds; Kit never
+# resamples. LIBERO-Plus stays at its canonical size because its upstream image corruptions assume
+# square frames of at most 256 pixels.
+LIBERO_CANONICAL_IMAGE_SIZE = (256, 256)
+LIBERO_MIN_IMAGE_SIZE = (64, 64)
+LIBERO_MAX_IMAGE_SIZE = (1024, 1024)
+# robosuite's OSMesa context allocates a fixed 480 x 640 buffer.
+LIBERO_OSMESA_MAX_IMAGE_SIZE = (480, 640)
+
+
+def benchmark_camera_support(
+    benchmark: BenchmarkSpec,
+    defaults: dict[str, Any] | None = None,
+) -> dict[str, CameraSupport]:
+    """The sizes each camera of ``benchmark`` can render under the manifest ``defaults``."""
+
+    table = fixed_camera_support(benchmark)
+    if benchmark.name in {BenchmarkName.LIBERO.value, BenchmarkName.LIBERO_PRO.value}:
+        backend = str((defaults or {}).get("render_backend", "egl"))
+        maximum = LIBERO_OSMESA_MAX_IMAGE_SIZE if backend == "osmesa" else LIBERO_MAX_IMAGE_SIZE
+        for feature in ("images.primary", "images.wrist"):
+            table[feature] = CameraSupport(
+                canonical=LIBERO_CANONICAL_IMAGE_SIZE,
+                min_size=LIBERO_MIN_IMAGE_SIZE,
+                max_size=maximum,
+            )
+    return table
 
 
 def get_benchmark_spec(name: str | BenchmarkName, suite: str) -> BenchmarkSpec:
