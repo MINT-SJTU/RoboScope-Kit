@@ -76,6 +76,13 @@ def cache_key(fields: Mapping[str, Any]) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:32]
 
 
+def _contract_key(contract: Mapping[str, Any]) -> str:
+    """Entries differ only by negotiated camera sizes; canonical runs share the default entry."""
+
+    image_sizes = contract.get("image_sizes")
+    return cache_key(image_sizes) if image_sizes else DEFAULT_CONTRACT_KEY
+
+
 class RunCache:
     """One cache file per run configuration, read at start and updated after the evaluation.
 
@@ -99,7 +106,13 @@ class RunCache:
             entry = json.loads(self.path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return {}
-        if not isinstance(entry, dict) or entry.get("schema") != CACHE_SCHEMA or entry.get("key") != self.key:
+        if not isinstance(entry, dict) or entry.get("key") != self.key:
+            return {}
+        if entry.get("schema") == 1:
+            # Entries written before image-size negotiation describe canonical observations.
+            legacy = {"selection": entry.get("selection"), "task_seconds": entry.get("task_seconds", {})}
+            return {DEFAULT_CONTRACT_KEY: legacy}
+        if entry.get("schema") != CACHE_SCHEMA:
             return {}
         contracts = entry.get("contracts")
         if not isinstance(contracts, dict):
@@ -111,12 +124,12 @@ class RunCache:
         return bool(self.contracts)
 
     def bind(self, contract: Mapping[str, Any]) -> None:
-        """Select the entry recorded under this execution contract."""
+        """Select the entry recorded for this execution contract's camera sizes."""
 
-        self.contract_key = cache_key(contract)
+        self.contract_key = _contract_key(contract)
 
     def task_seconds_for(self, contract: Mapping[str, Any]) -> dict[str, float]:
-        entry = self.contracts.get(cache_key(contract), {})
+        entry = self.contracts.get(_contract_key(contract), {})
         return {str(task): float(seconds) for task, seconds in entry.get("task_seconds", {}).items()}
 
     @property

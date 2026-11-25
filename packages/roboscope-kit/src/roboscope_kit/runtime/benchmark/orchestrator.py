@@ -219,10 +219,6 @@ class ParallelBenchmarkRuntime:
             except (OSError, RuntimeError, TimeoutError) as exc:
                 self._record_policy_server_error(events_path, exc)
                 self._stop_owned_server_pool()
-                if _is_policy_contract_error(exc):
-                    # The Policy and benchmark cannot agree (e.g. image sizes); more replicas
-                    # would not help, so this is not a capacity limit.
-                    raise
                 if isinstance(exc, TimeoutError):
                     self._raise_probe_timeout(probe_deadline, total_records, events_path)
                 if self.config.probe_limits is not None:
@@ -968,20 +964,3 @@ def steady_throughput(
 def append_event(path: Path, payload: dict[str, Any]) -> None:
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, sort_keys=True) + "\n")
-
-
-def _is_policy_contract_error(exc: BaseException) -> bool:
-    """A Policy ``load`` that failed validation or negotiation, as opposed to a crash or timeout."""
-
-    from roboscope_kit.client import PolicyRemoteError
-
-    cause: BaseException | None = exc
-    while cause is not None:
-        if (
-            isinstance(cause, PolicyRemoteError)
-            and cause.operation == "load"
-            and cause.error_type in {"ValueError", "TypeError", "ProtocolError"}
-        ):
-            return True
-        cause = cause.__cause__ or cause.__context__
-    return False

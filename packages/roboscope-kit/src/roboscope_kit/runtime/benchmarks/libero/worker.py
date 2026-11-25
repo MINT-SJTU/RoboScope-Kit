@@ -183,12 +183,20 @@ def create_task_runtime(
 
     task = task_suite.get_task(task_id)
     task_bddl_file = Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
-    env = OffScreenRenderEnv(
-        bddl_file_name=str(task_bddl_file),
-        camera_names=[camera for _feature, camera in LIBERO_CAMERAS],
-        camera_heights=[height for height, _width in image_sizes],
-        camera_widths=[width for _height, width in image_sizes],
-    )
+    canonical = (LIBERO_ENV_RESOLUTION, LIBERO_ENV_RESOLUTION)
+    if all(size == canonical for size in image_sizes):
+        env = OffScreenRenderEnv(
+            bddl_file_name=str(task_bddl_file),
+            camera_heights=LIBERO_ENV_RESOLUTION,
+            camera_widths=LIBERO_ENV_RESOLUTION,
+        )
+    else:
+        env = OffScreenRenderEnv(
+            bddl_file_name=str(task_bddl_file),
+            camera_names=[camera for _feature, camera in LIBERO_CAMERAS],
+            camera_heights=[height for height, _width in image_sizes],
+            camera_widths=[width for _height, width in image_sizes],
+        )
     env.seed(seed)
     # LIBERO-Pro keeps the original BDDL file names while its perturbed (:language ...) differs, so
     # its instruction is the one the environment parsed from the BDDL file, not Task.language.

@@ -118,3 +118,20 @@ def test_run_cache_keeps_one_entry_per_execution_contract(tmp_path: Path) -> Non
     after = RunCache("use", fields, root=tmp_path)
     assert after.task_seconds_for(small) == {"b": 1.0}
     assert after.task_seconds_for(canonical) == {"a": 20.0}
+
+
+def test_run_cache_reads_entries_written_before_image_size_negotiation(tmp_path: Path) -> None:
+    fields = {"benchmark": "libero"}
+    legacy = {
+        "schema": 1,
+        "key": cache_key(fields),
+        "key_fields": fields,
+        "selection": {"k": 8, "g": 1, "mode": "dynamic-probe"},
+        "task_seconds": {"a": 20.0},
+    }
+    (tmp_path / f"{cache_key(fields)}.json").write_text(json.dumps(legacy), encoding="utf-8")
+    cache = RunCache("use", fields, root=tmp_path)
+    cache.bind({"benchmark": "libero", "image_sizes": {}, "canonical_observations": True})
+    assert cache.selection["k"] == 8 and cache.task_seconds == {"a": 20.0}
+    small = {"benchmark": "libero", "image_sizes": {"images.primary": [128, 128]}}
+    assert cache.task_seconds_for(small) == {}
