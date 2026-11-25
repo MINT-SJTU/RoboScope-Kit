@@ -490,11 +490,12 @@ def _autotuned_run(
         ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
         cuda_mps=cuda_mps,
     )
-    cached = None
+    cached = run_cache.selection if run_cache is not None else None
     try:
-        if run_cache is not None and run_cache.has_entries:
-            # Cache entries are recorded per execution contract, which is known once a replica has
-            # loaded. Every probe and the final pass reuse this replica.
+        if run_cache is not None and run_cache.has_sized_entries:
+            # Entries recorded at negotiated camera sizes are told apart by the Policy's execution
+            # contract, which is known once a replica has loaded; every probe and the final pass
+            # reuse that replica. Caches with only canonical entries are read as before.
             with benchmark_phase(phase_timing_callback, "policy_load_s"):
                 pool.scale(1)
             run_cache.bind(shared.execution_contract().to_dict())
@@ -522,8 +523,12 @@ def _autotuned_run(
                 )
         # Probe episodes ran under other concurrencies; a formal run's times take precedence.
         task_seconds = task_seconds_from_queues(sorted((output_dir / "autotune").glob("candidate-*/queue")))
-        if run_cache is not None and pool.contexts:
-            task_seconds.update(run_cache.task_seconds_for(shared.execution_contract().to_dict()))
+        if run_cache is not None:
+            task_seconds.update(
+                run_cache.task_seconds_for(shared.execution_contract().to_dict())
+                if pool.contexts
+                else run_cache.task_seconds
+            )
         final = _run_with_pool(
             factory=factory,
             request=request,

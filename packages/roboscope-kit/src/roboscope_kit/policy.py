@@ -154,11 +154,11 @@ class PolicyCapabilities:
     action_representations: dict[str, str] = field(default_factory=dict)
     observation_strides: dict[str, int] = field(default_factory=dict)
     step_observation_updates: tuple[str, ...] = ()
+    coalesce_action_requests: bool = False
     # Camera sizes the Policy accepts, most preferred first, as (height, width); ``ANY_SIZE`` last
     # accepts the benchmark's canonical size. A list applies to every image feature, a dict to the
     # named features. ``None`` accepts the canonical size everywhere.
     image_sizes: SizePreferences | dict[str, SizePreferences] | None = None
-    coalesce_action_requests: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "image_sizes", normalize_image_sizes(self.image_sizes))

@@ -98,14 +98,15 @@ def test_run_cache_keeps_one_entry_per_execution_contract(tmp_path: Path) -> Non
     canonical = {"benchmark": "libero", "image_sizes": {}}
     small = {"benchmark": "libero", "image_sizes": {"images.primary": [128, 128]}}
     first = RunCache("use", fields, root=tmp_path)
-    assert not first.has_entries
+    assert not first.has_sized_entries
     first.bind(canonical)
     first.store(selection={"k": 8, "g": 1, "mode": "dynamic-probe"}, task_seconds={"a": 20.0})
     second = RunCache("use", fields, root=tmp_path)
     second.bind(small)
-    assert second.has_entries and second.selection is None and second.task_seconds == {}
+    assert not second.has_sized_entries and second.selection is None and second.task_seconds == {}
     second.store(selection={"k": 12, "g": 1, "mode": "dynamic-probe"}, task_seconds={"a": 9.0})
     reread = RunCache("use", fields, root=tmp_path)
+    assert reread.has_sized_entries
     assert reread.task_seconds_for(canonical) == {"a": 20.0}
     assert reread.task_seconds_for(small) == {"a": 9.0}
     reread.bind(canonical)

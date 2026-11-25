@@ -120,8 +120,10 @@ class RunCache:
         return {str(key): value for key, value in contracts.items() if isinstance(value, dict)}
 
     @property
-    def has_entries(self) -> bool:
-        return bool(self.contracts)
+    def has_sized_entries(self) -> bool:
+        """Whether any entry was recorded at negotiated (non-canonical) camera sizes."""
+
+        return any(key != DEFAULT_CONTRACT_KEY for key in self.contracts)
 
     def bind(self, contract: Mapping[str, Any]) -> None:
         """Select the entry recorded for this execution contract's camera sizes."""
