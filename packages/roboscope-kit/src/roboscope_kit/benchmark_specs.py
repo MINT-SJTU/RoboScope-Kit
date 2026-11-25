@@ -617,6 +617,10 @@ LIBERO_MIN_IMAGE_SIZE = (64, 64)
 LIBERO_MAX_IMAGE_SIZE = (1024, 1024)
 # robosuite's OSMesa context allocates a fixed 480 x 640 buffer.
 LIBERO_OSMESA_MAX_IMAGE_SIZE = (480, 640)
+# MetaWorld renders each configured camera natively at any size its camera config accepts; the
+# canonical size is the camera's configured output size.
+METAWORLD_MIN_CAMERA_DIMENSION = 64
+METAWORLD_MAX_CAMERA_DIMENSION = 1024
 
 
 def benchmark_camera_support(
@@ -634,6 +638,13 @@ def benchmark_camera_support(
                 canonical=LIBERO_CANONICAL_IMAGE_SIZE,
                 min_size=LIBERO_MIN_IMAGE_SIZE,
                 max_size=maximum,
+            )
+    elif benchmark.name == BenchmarkName.METAWORLD.value:
+        for feature, support in table.items():
+            table[feature] = CameraSupport(
+                canonical=support.canonical,
+                min_size=(METAWORLD_MIN_CAMERA_DIMENSION, METAWORLD_MIN_CAMERA_DIMENSION),
+                max_size=(METAWORLD_MAX_CAMERA_DIMENSION, METAWORLD_MAX_CAMERA_DIMENSION),
             )
     return table
 

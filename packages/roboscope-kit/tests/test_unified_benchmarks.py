@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -1378,3 +1379,122 @@ def test_libero_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> 
     assert "--primary-size" not in command({}) and "--wrist-size" not in command({})
     sized = command({"images.wrist": (128, 160)})
     assert sized[sized.index("--wrist-size") + 1] == "128x160" and "--primary-size" not in sized
+
+
+def _metaworld_contract(cameras, image_sizes):
+    from roboscope_kit.benchmark_specs import MetaworldBenchmarkDefinition, benchmark_camera_support
+
+    spec = MetaworldBenchmarkDefinition().spec("mt50", cameras)
+    return roboscope_kit.negotiate_policy_action_contract(
+        spec,
+        _image_size_capabilities("metaworld", image_sizes),
+        camera_support=benchmark_camera_support(spec, {}),
+    )
+
+
+def test_metaworld_negotiates_sizes_around_each_configured_camera() -> None:
+    from roboscope_kit.runtime.benchmarks.metaworld.config import resolve_evaluation_config
+
+    cameras = tuple(
+        resolve_evaluation_config(
+            {
+                "cameras": [
+                    {"feature": "images.primary", "camera_name": "corner2"},
+                    {"feature": "images.secondary", "camera_name": "gripperPOV", "output_width": 224,
+                     "output_height": 224},
+                ]
+            }
+        )["cameras"]
+    )
+    assert _metaworld_contract(cameras, None).image_sizes == {}
+    preferred = _metaworld_contract(cameras, [(224, 224), (480, 480)])
+    assert preferred.image_sizes == {"images.primary": (224, 224)}
+    assert _metaworld_contract(cameras, [(96, 160)]).image_sizes == {
+        "images.primary": (96, 160),
+        "images.secondary": (96, 160),
+    }
+    with pytest.raises(ValueError, match="heights 64-1024"):
+        _metaworld_contract(cameras, [(32, 32)])
+
+
+def test_metaworld_cameras_render_negotiated_sizes_natively() -> None:
+    import numpy as np
+
+    from roboscope_kit.runtime.benchmarks.metaworld.agent import process_image
+    from roboscope_kit.runtime.benchmarks.metaworld.config import apply_image_sizes, resolve_evaluation_config
+
+    cameras = tuple(
+        resolve_evaluation_config(
+            {
+                "cameras": [
+                    {"feature": "images.primary", "camera_name": "corner2", "center_crop_ratio": 0.8,
+                     "output_width": 224, "output_height": 224},
+                    {"feature": "images.secondary", "camera_name": "corner", "rotation_deg": 90},
+                ]
+            }
+        )["cameras"]
+    )
+    assert apply_image_sizes(cameras, {}) == cameras
+    sizes = {"images.primary": (96, 160), "images.secondary": (96, 160)}
+    primary, secondary = apply_image_sizes(cameras, sizes)
+    assert (primary["render_height"], primary["render_width"], primary["center_crop_ratio"]) == (96, 160, 1.0)
+    assert (primary["output_height"], primary["output_width"]) == (96, 160)
+    assert (secondary["render_height"], secondary["render_width"]) == (160, 96)
+    assert (secondary["output_height"], secondary["output_width"]) == (96, 160)
+    assert secondary["camera_name"] == "corner" and secondary["rotation_deg"] == 90
+    frame = np.arange(160 * 96 * 3, dtype=np.uint8).reshape(160, 96, 3)
+    assert np.array_equal(process_image(frame, secondary), np.rot90(frame))
+    unchanged = apply_image_sizes(cameras, {"images.secondary": (96, 160)})[0]
+    assert unchanged == cameras[0]
+    with pytest.raises(ValueError, match="unconfigured cameras"):
+        apply_image_sizes(cameras, {"images.tertiary": (96, 160)})
+
+
+def test_metaworld_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> None:
+    from roboscope_kit.policy import PolicyExecutionContract
+    from roboscope_kit.runtime.benchmark.adapters import WorkerContext
+    from roboscope_kit.runtime.benchmarks.metaworld.adapter import (
+        MetaworldBenchmarkAdapter,
+        MetaworldRuntimeConfig,
+    )
+    from roboscope_kit.runtime.benchmarks.metaworld.config import default_evaluation_config
+    from roboscope_kit.runtime.benchmarks.metaworld.worker import _image_size
+
+    adapter = MetaworldBenchmarkAdapter(
+        MetaworldRuntimeConfig(
+            python=Path("/runtime/python"),
+            suite="mt50",
+            tasks=("reach-v3",),
+            episodes_per_task=1,
+            evaluation_config=default_evaluation_config(),
+            evaluation_config_path=tmp_path / "evaluation-config.json",
+        )
+    )
+
+    def command(image_sizes):
+        return adapter.worker_process(
+            WorkerContext(
+                worker_id=0,
+                gpu_slot=0,
+                replica_id=0,
+                gpu_device="0",
+                replica_port=0,
+                replica_socket=Path("/tmp/replica.sock"),
+                queue_dir=tmp_path / "queue",
+                state_dir=tmp_path / "state",
+                output_dir=tmp_path,
+                execution_contract=PolicyExecutionContract(
+                    benchmark="metaworld",
+                    action_representation="metaworld.delta-eef-v1",
+                    image_sizes=image_sizes,
+                ),
+            )
+        ).command
+
+    assert "--image-size" not in command({})
+    sized = command({"images.primary": (96, 160)})
+    assert sized[sized.index("--image-size") + 1] == "images.primary=96x160"
+    assert _image_size("images.primary=96x160") == ("images.primary", (96, 160))
+    for value in ("96x160", "images.primary=96", "images.primary=0x160", "=96x160"):
+        with pytest.raises(argparse.ArgumentTypeError):
+            _image_size(value)

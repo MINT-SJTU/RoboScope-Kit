@@ -124,6 +124,17 @@ Rules:
   checks this at startup. The worker verifies the OpenGL framebuffer can hold the largest configured render
   size and releases every renderer at shutdown.
 
+### Negotiated image sizes
+
+A Policy can request other image sizes with `PolicyCapabilities.image_sizes`. Every configured camera
+renders any `(height, width)` from 64 to 1024 pixels per side natively; its own size is its configured
+`output_height x output_width`. A camera with a negotiated size keeps its `camera_name`,
+`camera_position` and `rotation_deg`, renders at the negotiated size (height and width swapped for a 90
+or 270 degree rotation, so the rotated frame has the negotiated shape), and is neither cropped nor
+resized, so its `center_crop_ratio` and configured render and output sizes do not apply. Cameras
+without a negotiated size are rendered exactly as configured. The negotiated sizes are recorded in
+`policy_io.image_sizes`, and `policy_io.canonical_observations` is then `false`.
+
 Proprioception stays a fixed 4-dimensional vector and the language instruction stays the official text.
 Scoring rules, the task set, the goals, the 500-step horizon, and the difficulty-macro aggregation are not
 user-configurable.
