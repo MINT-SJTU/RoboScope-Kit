@@ -226,6 +226,13 @@ PolicyCapabilities(
 )
 ```
 
+`max_batch_size` caps explicit `act_batch` calls. When a run opts into `--eval-mode fast`,
+a Policy declaring `coalesce_action_requests=True` allows the server to group queued `act`
+requests from distinct episodes up to that cap and return one action chunk per caller.
+Its `act_batch` implementation must support any combination of episodes and tasks in the
+session, including a batch with one observation. The default `--eval-mode strict` serves
+individual `act` requests separately.
+
 The runtime checks each declared representation against the benchmark specification and requires every
 replica to agree on the same action contract before evaluation starts. If you omit
 `action_representations`, the benchmark default is used. The chosen contract and where it came from are

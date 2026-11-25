@@ -158,6 +158,7 @@ class PolicyCapabilities:
     # accepts the benchmark's canonical size. A list applies to every image feature, a dict to the
     # named features. ``None`` accepts the canonical size everywhere.
     image_sizes: SizePreferences | dict[str, SizePreferences] | None = None
+    coalesce_action_requests: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "image_sizes", normalize_image_sizes(self.image_sizes))
@@ -173,6 +174,8 @@ class PolicyCapabilities:
             raise ValueError(f"supported_suites contains undeclared benchmarks: {names}")
         if self.max_batch_size < 1:
             raise ValueError("max_batch_size must be positive")
+        if self.coalesce_action_requests and self.max_batch_size < 2:
+            raise ValueError("coalesce_action_requests requires max_batch_size greater than one")
         if not self.supported_action_chunk_sizes:
             raise ValueError("supported_action_chunk_sizes cannot be empty")
         if any(size < 1 for size in self.supported_action_chunk_sizes):
@@ -217,6 +220,7 @@ class PolicyCapabilities:
             },
             step_observation_updates=tuple(str(item) for item in value.get("step_observation_updates", ())),
             image_sizes=value.get("image_sizes"),
+            coalesce_action_requests=value.get("coalesce_action_requests") is True,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -236,6 +240,7 @@ class PolicyCapabilities:
                 if self.image_sizes is not None
                 else {}
             ),
+            "coalesce_action_requests": self.coalesce_action_requests,
         }
 
 
@@ -299,6 +304,8 @@ def negotiate_policy_action_contract(
     if benchmark.name in capabilities.step_observation_updates and benchmark.name != "robodojo":
         raise ValueError(f"step observation updates are not supported by {benchmark.name}")
     active_fast_optimizations: tuple[str, ...] = ()
+    if eval_mode == "fast" and capabilities.coalesce_action_requests:
+        active_fast_optimizations = ("dynamic-batching",)
     return PolicyExecutionContract(
         benchmark=benchmark.name,
         action_representation=action_representation,
@@ -415,7 +422,7 @@ class Policy(ABC):
         """Produce one action or an action chunk for a canonical observation."""
 
     def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
-        """Produce actions for an explicit batch; override to use native model batching."""
+        """Produce actions for a batch; override to use native model batching."""
         return tuple(self.act(observation) for observation in observations)
 
     def end_episode(self, episode_id: str) -> None:

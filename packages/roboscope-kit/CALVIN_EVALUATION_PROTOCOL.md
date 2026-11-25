@@ -29,9 +29,11 @@ default diagonal search); an official score uses all 1,000 entries.
 
 The CALVIN simulator is not a dependency of `roboscope-kit`. Build it with
 [`benchmarks/calvin/build-runtime.sh`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/calvin/build-runtime.sh) `<install-dir>`
-(Linux x86_64, `conda` or `micromamba`, network access). The script creates the pinned conda environment
-from [`runtime-requirements.txt`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/calvin/runtime-requirements.txt), checks out
-`mees/calvin` at `fa03f01` with `mees/calvin_env` at `797142c` and its `tacto` submodule, downloads
+(Linux x86_64, `uv`, network access). The script creates the virtual environment from
+[`runtime-requirements.txt`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/calvin/runtime-requirements.txt)
+and verifies the CPU PyTorch wheel against
+[`torch-requirements.txt`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/calvin/torch-requirements.txt).
+It checks out `mees/calvin` at `fa03f01` with `mees/calvin_env` at `797142c` and its `tacto` submodule, downloads
 `eval_sequences.json` from starVLA revision `074ce65` and verifies the SHA-256 above, and copies
 [`benchmark-manifest.json`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/calvin/benchmark-manifest.json) into `<install-dir>`.
 Every `runtime` path in that manifest is relative to the manifest file:
@@ -50,10 +52,8 @@ configuration files from `calvin_models/conf` and a `validation/.hydra/merged_co
 `calvin_env/conf` with the long-finger Panda robot of CALVIN's recorded validation environment. It then
 resets and steps the environment once to prove the configuration, assets, and dependencies work together.
 
-Workers import the kit from its source tree through `PYTHONPATH`, so `roboscope-kit` is not installed into
-the CALVIN environment. The pinned environment is CPython 3.8.20, the interpreter of the validated
-dependency set; because the kit requires Python 3.11, that environment must be upgraded and validated
-before its workers can import the kit.
+Workers use the CALVIN environment's CPython 3.11.15 and import the kit through `PYTHONPATH`.
+Use a fresh install directory when migrating a Python 3.8 runtime.
 
 Run an evaluation with the kit installed in any supported Python:
 
@@ -71,6 +71,42 @@ are written under `--output-dir`.
 Use a new or empty output directory for each evaluation or self-test. A directory containing only
 `errors.jsonl` can be retried, preserving earlier errors; other run artifacts require a new directory.
 Keep shell and scheduler logs outside the output directory.
+
+For the pinned StarVLA QwenGR00T demo, apply the action-noise patch to the Policy's StarVLA checkout
+at revision `985c2238627481f25476fbee478083812dd82a21`.
+
+```bash
+git -C /path/to/starVLA apply /path/to/RoboScope-Kit/examples/starvla/calvin/starvla-action-noise.patch
+```
+
+The default `--eval-mode strict` serves each `act` request individually, even when the Policy
+supports coalescing. Choose `--eval-mode fast` to let a Policy with
+`coalesce_action_requests=True` group queued requests from distinct episodes. The result records
+`dynamic-batching` in `active_fast_optimizations` when this optimization is enabled.
+
+For the StarVLA demo, set `inference.action_noise_seed: 0` and `inference.max_batch_size: 8` in the
+snapshot's `config.yaml`. Use the same seed for both modes when making a comparison.
+
+```bash
+python -m roboscope_kit.runtime.benchmark \
+    --benchmark calvin --suite task_D_D --checkpoint-source /models/starvla-calvin \
+    --benchmark-manifest <install-dir>/benchmark-manifest.json \
+    --policy-config /path/to/roboscope-policy.json \
+    --eval-mode fast --concurrency 16 --replicas 1 --output-dir /runs/calvin-task_D_D-fast
+```
+
+The initial action noise is seeded by episode ID and observation step, independent of batch position.
+Controlled probes found action differences due to token padding and BF16 batch arithmetic. In the
+1,000-sequence `task_D_D` runs at Kit `0.8.0b73` on one cloud RTX 4090 (49,140 MiB reported),
+batching achieved **2.840×** the formal evaluation throughput of the fastest unbatched configuration
+(16 Workers and two replicas), with **2.825×** end-to-end speedup. Two same-seed serial runs
+agreed on all 1,000 scores. A same-seed batched repeat changed 216 scores.
+[Throughput records and reproduction commands](https://github.com/Ru-hulu/RoboScope-Kit/releases/tag/calvin-pr138-2026-11-24)
+
+Across seeds 0, 1, and 2, paired 95% confidence intervals for batched minus serial were
+[−0.20, +2.13] percentage points for `task_3` and [−0.90, +2.10] for `task_5`, exceeding
+the +2-point equivalence margin. The other three task success rates and mean completed subtasks
+met their equivalence margins. [Three-seed results and action diagnostics](https://github.com/MINT-SJTU/RoboScope-Kit/pull/138)
 
 ## 2. User policy lifecycle
 

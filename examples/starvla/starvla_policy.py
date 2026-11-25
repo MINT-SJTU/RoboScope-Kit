@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import gc
+import hashlib
+import inspect
+import json
 import math
 import os
 from collections.abc import Callable, Mapping, Sequence
@@ -12,6 +15,14 @@ from typing import Any
 
 import cv2 as cv
 import numpy as np
+from PIL import Image
+from starvla_base_assets import ensure_starvla_base_model
+from starvla_full_checkpoint import (
+    CHECKPOINT_SUFFIXES,
+    LoadedStarVLA,
+    load_full_checkpoint,
+)
+
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -21,13 +32,6 @@ from roboscope_kit.policy import (
     SessionContext,
 )
 from roboscope_kit.server import run
-from PIL import Image
-from starvla_base_assets import ensure_starvla_base_model
-from starvla_full_checkpoint import (
-    CHECKPOINT_SUFFIXES,
-    LoadedStarVLA,
-    load_full_checkpoint,
-)
 
 DTYPES = frozenset({"bfloat16", "float16", "float32"})
 OFFLINE_ENVIRONMENT = ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE")
@@ -74,6 +78,8 @@ class InferenceConfig:
     transforms: tuple[ActionTransform, ...]
     action_dim: int
     action_horizon: int
+    max_batch_size: int = 1
+    action_noise_seed: int | None = None
 
 
 class StarVLAPolicy(Policy):
@@ -102,7 +108,8 @@ class StarVLAPolicy(Policy):
             supported_benchmarks=(context.benchmark.name,),
             supported_suites={context.benchmark.name: (context.benchmark.suite,)},
             required_features=config.inputs.required_features,
-            max_batch_size=1,
+            max_batch_size=config.max_batch_size,
+            coalesce_action_requests=config.max_batch_size > 1 and config.action_noise_seed is not None,
             supported_action_chunk_sizes=(config.action_horizon,),
             action_representations={
                 context.benchmark.name: context.benchmark.default_action_representation
@@ -130,6 +137,14 @@ class StarVLAPolicy(Policy):
         import torch
         from deployment.model_server.policy_norm_processor import PolicyNormProcessor
 
+        if (
+            config.action_noise_seed is not None
+            and "action_noise_seeds" not in inspect.signature(loaded.framework.predict_action).parameters
+        ):
+            raise ValueError(
+                "StarVLA inference.action_noise_seed requires a framework with action_noise_seeds support. "
+                "For the pinned CALVIN QwenGR00T demo, apply calvin/starvla-action-noise.patch."
+            )
         self.framework = loaded.framework.to(dtype=getattr(torch, config.dtype), device="cuda").eval()
         self.norm_processor = PolicyNormProcessor(str(checkpoint), unnorm_key=config.unnorm_key)
         self.config = config
@@ -138,6 +153,9 @@ class StarVLAPolicy(Policy):
         return None
 
     def act(self, observation: Observation) -> ActionChunk:
+        return self.act_batch((observation,))[0]
+
+    def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
         if (
             self.framework is None
             or self.norm_processor is None
@@ -145,28 +163,46 @@ class StarVLAPolicy(Policy):
             or self.image_preprocessor is None
         ):
             raise RuntimeError("StarVLA Policy is not loaded")
+        if not observations or len(observations) > self.config.max_batch_size:
+            raise ValueError("StarVLA observation batch is empty or exceeds inference.max_batch_size")
         import torch
 
-        example = _build_example(
-            observation.features,
-            self.config.inputs,
-            self.norm_processor,
-            self.image_preprocessor,
-        )
+        examples = [
+            _build_example(
+                observation.features,
+                self.config.inputs,
+                self.norm_processor,
+                self.image_preprocessor,
+            )
+            for observation in observations
+        ]
+        kwargs = self.config.kwargs.copy()
+        seed = self.config.action_noise_seed
+        if seed is not None:
+            action_noise_seeds = []
+            for observation in observations:
+                key = json.dumps([seed, observation.episode_id, observation.step]).encode()
+                action_noise_seeds.append(int.from_bytes(hashlib.sha256(key).digest()[:8], "big"))
+            kwargs["action_noise_seeds"] = action_noise_seeds
         with torch.inference_mode():
-            output = self.framework.predict_action(examples=[example], **self.config.kwargs)
+            output = self.framework.predict_action(examples=examples, **kwargs)
         if not isinstance(output, Mapping) or "normalized_actions" not in output:
             raise TypeError("StarVLA predict_action() must return normalized_actions")
         normalized = np.asarray(output["normalized_actions"])
-        expected = (1, self.config.action_horizon, self.config.action_dim)
+        expected = (len(observations), self.config.action_horizon, self.config.action_dim)
         if normalized.shape != expected:
             raise ValueError(
                 f"StarVLA returned normalized action shape {normalized.shape}; expected {expected}"
             )
-        actions = np.asarray(self.norm_processor.unapply_actions(normalized[0]), dtype=np.float32)
-        if actions.shape != expected[1:]:
+        return tuple(self._action_chunk(row) for row in normalized)
+
+    def _action_chunk(self, normalized: np.ndarray) -> ActionChunk:
+        """Unnormalize and transform one observation's (action_horizon, action_dim) prediction."""
+        expected = (self.config.action_horizon, self.config.action_dim)
+        actions = np.asarray(self.norm_processor.unapply_actions(normalized), dtype=np.float32)
+        if actions.shape != expected:
             raise ValueError(
-                f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected[1:]}"
+                f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected}"
             )
         actions = np.array(actions, dtype=np.float32, copy=True, order="C")
         for transform in self.config.transforms:
@@ -239,7 +275,7 @@ def parse_inference_config(config: Mapping[str, Any]) -> InferenceConfig:
     _require_keys(
         inference,
         required={"dtype", "inputs"},
-        optional={"unnorm_key", "kwargs", "action_transforms"},
+        optional={"unnorm_key", "kwargs", "action_transforms", "max_batch_size", "action_noise_seed"},
         field="inference",
     )
     dtype = _required_string(inference, "dtype")
@@ -253,8 +289,11 @@ def parse_inference_config(config: Mapping[str, Any]) -> InferenceConfig:
     kwargs = _optional_mapping(inference, "kwargs")
     if any(not isinstance(key, str) for key in kwargs):
         raise ValueError("StarVLA inference.kwargs keys must be strings")
-    if "examples" in kwargs:
-        raise ValueError("StarVLA inference.kwargs cannot override examples")
+    if {"examples", "action_noise_seeds"} & kwargs.keys():
+        raise ValueError("StarVLA inference.kwargs cannot override examples or action_noise_seeds")
+    action_noise_seed = inference.get("action_noise_seed")
+    if action_noise_seed is not None and (type(action_noise_seed) is not int or action_noise_seed < 0):
+        raise ValueError("StarVLA inference.action_noise_seed must be a nonnegative integer")
     return InferenceConfig(
         dtype=dtype,
         unnorm_key=_optional_string(inference, "unnorm_key"),
@@ -263,6 +302,8 @@ def parse_inference_config(config: Mapping[str, Any]) -> InferenceConfig:
         transforms=transforms,
         action_dim=action_dim,
         action_horizon=action_horizon,
+        max_batch_size=_positive_integer(inference, "max_batch_size") if "max_batch_size" in inference else 1,
+        action_noise_seed=action_noise_seed,
     )
 
 
