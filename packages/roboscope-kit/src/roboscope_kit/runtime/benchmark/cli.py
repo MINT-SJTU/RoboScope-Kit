@@ -497,7 +497,7 @@ def _autotuned_run(
             # contract, which is known once a replica has loaded; every probe and the final pass
             # reuse that replica. Caches with only canonical entries are read as before.
             with benchmark_phase(phase_timing_callback, "policy_load_s"):
-                pool.scale(1)
+                pool.scale(gpu_count)
             run_cache.bind(shared.execution_contract().to_dict())
             cached = run_cache.selection
         with autotune_phase(phase_timing_callback):

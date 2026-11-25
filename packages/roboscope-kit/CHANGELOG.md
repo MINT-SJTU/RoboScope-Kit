@@ -11,9 +11,9 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   own size. Without `image_sizes` nothing changes.
 - Record the negotiated sizes and `canonical_observations` in `policy_io`; shard merging requires the
   same `policy_io` on every shard and keeps it in the merged result.
-- Keep run-cache entries per negotiated image size (cache schema 2), so autotune selections and task
-  times recorded at one size are not reused at another. Existing cache entries keep serving runs at the
-  benchmark's own size.
+- Keep run-cache entries per negotiated image size (cache schema 2). Existing cache entries keep serving
+  runs at the benchmark's own size; the first run at a new size starts from them, and later runs at that
+  size use the selection and task times recorded for it.
 
 ## 0.8.0b76 - 2026-11-25
 
