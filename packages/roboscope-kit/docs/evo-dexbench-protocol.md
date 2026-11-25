@@ -35,6 +35,39 @@ finished environment freezes until its wave ends, so every outcome depends only 
 environment and the Policy, as in the native evaluator. Upstream's native log for each wave is kept
 under `native-logs/`.
 
+## Host memory
+
+Each simulator subprocess holds a whole scene, and the size is set by the task's `scene_class`, not
+by the task. Measured on 2026-11-25 with the upstream evaluator and the Kit (same environment code,
+same numbers), one RTX 4090 host, glibc 2.35, 128 visible cores:
+
+| Scene | Tasks | Per environment after reset | Four environments (one wave) |
+|---|---|---:|---:|
+| `studio` | m01 m03 m05 m07 m13–m15, b02 b04 b06 b09 b11–b15 | 20–22 GiB | 79–89 GiB |
+| `kitchen` | the other 14 | 7–9 GiB | 27–36 GiB |
+
+Memory grows about 35% further during a rollout (a `kitchen` environment reaches about 12 GiB). A
+host needs this much per Worker; a Worker that exceeds its container's memory limit loses
+environment subprocesses (`BrokenPipeError`/`EOFError`), usually with no OOM kill reported.
+
+Much of this is allocator overhead, not scene data. While a scene loads, SAPIEN's native layer
+starts about 1,100 threads per environment (independent of CPU affinity), and glibc gives
+concurrently allocating threads their own malloc arenas, up to eight per visible core. After loading,
+a `kitchen` environment holds about 480 arenas of 64 MiB and a `studio` one about 150; freed memory
+stays in them. Capping the arenas with `MALLOC_ARENA_MAX=2` in the environment of the evaluating
+process (its simulator subprocesses inherit it) measured:
+
+| Scene | Default | `MALLOC_ARENA_MAX=2` |
+|---|---:|---:|
+| `kitchen` (m04) | 9.5 GiB | 3.3–5.3 GiB |
+| `studio` (m01) | 22.6 GiB | 17.4 GiB |
+
+Environment creation and reset took the same time either way. The setting changes only where memory
+comes from, not any computation; its effect on step time and results is being checked in the
+acceptance matrix, which runs with it on both paths for all but its first jobs and records the
+setting per job. Hosts with fewer visible
+cores get fewer arenas by default and see less of the overhead.
+
 ## Policy interface
 
 Per slot the Policy receives the two most recent control-step frames:

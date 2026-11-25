@@ -307,6 +307,12 @@ def run_wave(
     session = KitWaveSession(client, task)
     controller = CentralizedBatchPolicyController.from_session(session, num_envs=NATIVE_ENVS)
     log_path = args.output_dir / "native-logs" / f"worker-{args.worker_id:03d}" / f"{item.item_id}.jsonl"
+    if log_path.exists():
+        # A retried wave: the upstream log refuses to overwrite, so keep the failed attempt aside.
+        attempt = 1
+        while log_path.with_name(f"{log_path.stem}.failed-{attempt}.jsonl").exists():
+            attempt += 1
+        log_path.rename(log_path.with_name(f"{log_path.stem}.failed-{attempt}.jsonl"))
     log = SingleEvaluationLog(log_path)
     timing: dict[str, float] = {"environment_create_s": create_s}
 
