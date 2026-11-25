@@ -9,9 +9,10 @@ postprocessing.
 the simulator workers. Python 3.8–3.10 are unsupported. See the
 [Python support policy](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/README.md#python-support).
 
-Status: integration candidate. The runtime build, the self-test and a real-model Quick Test with its
-native comparison are recorded in section 9, and the performance baseline in section 10; the full 100-task
-evaluation and its native comparison have not been run, so the integration is not accepted.
+Status: integration candidate, not accepted. Section 9 records the runtime build, the self-test, the
+real-model Quick Tests and one episode of every task (instance 301 of all 100 tasks) with BEHAVIOR2026VLA
+on `challenge_2026_rgb224`; section 10 the performance baseline. The formal 1,000 episodes, the native
+comparison of the full workload and the full evaluation of `challenge_2026` have not been run.
 
 ## 1. Benchmark scope
 
@@ -205,7 +206,7 @@ counts.
 
 1. Build with `build-runtime.sh --accept-licenses <install-dir>` and run `--self-test`.
 2. Quick Test with the real Policy (one episode of `turning_on_radio`), then the same episode with the
-   native runner (`examples/gr00t/run_native.py`).
+   example's native runner (`examples/gr00t/run_native.py` or `examples/behavior2026vla/run_native.py`).
 3. The full 1,000-episode evaluation and the same workload natively, compared with
    `examples/gr00t/compare_native.py`.
 
@@ -214,15 +215,47 @@ counts.
 ### Nondeterminism
 
 OmniGibson's physics and rendering are not deterministic across runs (the challenge's evaluation
-documentation states that rollouts of the same policy may differ), and GR00T's diffusion action head
-samples noise from an unseeded torch generator in its server. Paired episodes therefore need not agree
-step for step. The comparison pairs every (task, instance) of the Kit and native runs, rejects missing,
+documentation states that rollouts of the same policy may differ), GR00T's diffusion action head
+samples noise from an unseeded torch generator in its server, and BEHAVIOR2026VLA's flow-matching sampler
+draws its noise from the loaded policy's JAX key, which advances with every model call and so depends on
+the episodes a replica served before. Paired episodes therefore need not agree step for step, and one
+episode per (task, instance) and path is not enough to compare a task's success. The comparison pairs every (task, instance) of the Kit and native runs, rejects missing,
 duplicate and unpaired results, and reports per-task successes, mean Q and mean executed steps of both
 sides and every episode whose outcome differs. Acceptance requires, for the full workload, that the
 difference in overall mean Q and in each task's success count lies within the run-to-run spread of the
 native path measured by repeating a subset of tasks natively.
 
-### Results
+### BEHAVIOR2026VLA on `challenge_2026_rgb224`
+
+The behavior code of this branch built as Kit `0.8.0b75`, before it was rebased onto `0.8.0b77` (the
+rebase changed no behavior code), `IliaLarchenko/BEHAVIOR2026VLA` at revision
+`dc8c443f`, solution commit `68c7f912`, BEHAVIOR-1K `v3.9.3-post1`; one RTX 4090 (48 GB, driver
+580.105.08) with a container quota of 20 CPU cores (Xeon Platinum 8470Q) and 96 GiB of RAM; the runtime
+was built with this branch's `build-runtime.sh` on 2026-11-23 and its build check and `--self-test`
+passed for both suites.
+
+| Run | Workload | Result |
+| --- | --- | --- |
+| Kit Quick Test, K=1 G=1, six runs on successive heads of this branch, the last on Kit `0.8.0b78` after the rebase | `turning_on_radio` instance 301 | 2 successes (Q 1.0, 1,866 and 2,073 actions), 4 time-outs (Q 0.0, 3,225 actions) |
+| Native `run_native.py` | `turning_on_radio` instances 301–303 | 301: time-out, Q 0.0, 3,225 actions; 302: success, 2,035 actions; 303: time-out, Q 0.0 |
+| Kit, 4 shortest tasks after the Quick Test task, K=2 G=2 | instance 301 of 4 tasks | 4 of 4 records, 1 success (`installing_a_modem`) |
+| **Kit, every task, K=2 G=2, 2026-11-24/25** | instance 301 of all 100 tasks (100 episodes, non-formal) | 100 of 100 records, no missing or duplicate record, no worker failure or retry; 23 successes, 77 time-outs; **mean Q 0.410**, mean success rate 0.23; 1,430,844 actions |
+
+The solution's authors report a Q of 0.392 for this checkpoint over instances 301–310 of every task
+(1,000 episodes). The Kit's 0.410 over instance 301 alone is of the same size but is not a comparison:
+it is one episode per task, and the two runs of the same 16 tasks that this branch has (the full run
+above and an earlier, stopped run with K=3 on an earlier head) agree on success for 15 of them but
+differ in mean Q, 0.382 against 0.506, with single-task differences up to 0.625. The run-to-run spread
+of one episode is that large on the Kit path alone.
+
+What these runs establish: the Kit path runs the full frozen task list with the real model end to end
+(runtime, Policy load in its own environment, observation and action mapping, the evaluator's own
+termination and Q score, records, aggregation) with complete coverage and no failure, and its outcomes
+are of the size the model's authors report. What they do not establish: agreement with the native
+evaluator per task. The native path has run three episodes of one task; the paired comparison of the
+same 100-episode workload, the native run-to-run spread and the formal 1,000 episodes are open.
+
+### GR00T N1.7 on `challenge_2026`
 
 All runs on one RTX 4090 (48 GB, driver 580.105.08) in a container limited to 12 CPU cores and 96 GiB of
 RAM, the behavior code of this branch (built as Kit 0.8.0b58 before rebasing onto 0.8.0b66, with the same
@@ -245,7 +278,7 @@ directly: for the same evaluator observation, the request the Kit path sends to 
 also differ in the robot's travelled distance (base 8.5–12.3 m across the two Kit and two native runs),
 which shows the run-to-run nondeterminism described above on both paths.
 
-The full 100-task evaluation and its native comparison have not been run. At the measured rate
+GR00T's 100-task evaluation and its native comparison have not been run. At the measured rate
 (section 10) and K=1, one instance of every task is at most 1,581,928 actions (every episode timing out),
 about 133 hours of rollout plus about 4 hours of scene loads; the formal 1,000 episodes are about ten
 times that on each path. The CPU quota (12 cores, about 7 per worker) leaves little room for more
@@ -253,6 +286,43 @@ workers on this machine, so the full matrix needs more machines or a maintainer-
 instance count per task.
 
 ## 10. Performance baseline
+
+### BEHAVIOR2026VLA on `challenge_2026_rgb224`
+
+The 100-task run of section 9, K=2 workers and G=2 replicas on one GPU, one instance per worker process
+(99 planned recycles):
+
+| Measure | Value |
+| --- | --- |
+| Policy load (two replicas, JAX compilation of both model calls included) | 129 s |
+| Formal evaluation | 86,749 s (24.1 h) for 100 episodes and 1,430,844 actions |
+| Throughput | 16.49 actions/s (steady window 16.42), 9.90 actions/s per worker during rollouts; 0.00115 episodes/s (4.15 per hour) |
+| GPU | mean utilization 34 % (median 27 %, max 100 %), peak memory 42.4 GB, of which 6.3 GB per replica |
+| CPU | 11.6 cores on average of the 20-core quota, throttled in 0.7 % of the cgroup's periods |
+| Disk | each worker's RTX texture cache reached 9–12 GB for a large scene and is removed when the worker exits |
+
+Where the 173,499 worker-seconds (2 workers x evaluation time) went, from the per-episode records and the
+Policy's per-episode timing:
+
+| Part | Seconds | Share | Per action |
+| --- | ---: | ---: | ---: |
+| Isaac Sim launch, scene and instance load (mean 284 s, median 269 s, max 643 s per instance) | 28,416 | 16.4 % | 19.9 ms |
+| Simulator step and render (rollout minus observation and Policy wait) | 115,001 | 66.3 % | 80.4 ms |
+| Observation build | 1,135 | 0.7 % | 0.8 ms |
+| Policy wait | 28,419 | 16.4 % | 19.9 ms |
+| — of which the Policy's `act` (model and chunk replay) | 16,226 | 9.4 % | 11.3 ms |
+| — of which transport (Kit protocol and process boundary) | 12,193 | 7.0 % | 8.5 ms |
+| Process start and teardown outside these | 527 | 0.3 % | 0.4 ms |
+
+The model ran 110,114 times, once per 13 actions; an `act` with a model call averages at most 147 ms.
+
+The simulator dominates: one worker steps about 12 actions/s while it is not waiting, and the scene
+load of every instance adds a sixth. Candidates for a later `perf(behavior)` issue are more workers per
+GPU (the GPU is two-thirds idle; CPU and the per-worker texture cache bound K), reusing a loaded scene
+for the instances of a task, and overlapping the transport with simulation. At this rate the formal
+1,000 episodes take about ten days on this machine.
+
+### GR00T N1.7 on `challenge_2026`
 
 Kit Quick Test, K=1 worker and G=1 replica (`runs/kit-quick-2`):
 

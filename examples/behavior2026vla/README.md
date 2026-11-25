@@ -94,3 +94,11 @@ starts the simulator, which runs in the BEHAVIOR runtime. The checkpoint (10.7 G
    python examples/gr00t/compare_native.py --kit-run /runs/behavior-rgb224-quick \
        --native /runs/behavior-rgb224-native-quick
    ```
+
+## Results
+
+Instance 301 of all 100 tasks on one RTX 4090 with two workers and two replicas (2026-11-25): 100 of 100
+episodes, 23 successes, mean Q 0.410, 16.5 actions/s over 24.1 hours. That is one episode per task, not
+the formal 1,000, and has no paired native run yet; the
+[protocol document](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/BEHAVIOR_EVALUATION_PROTOCOL.md)
+(sections 9 and 10) has the details and the time breakdown.
