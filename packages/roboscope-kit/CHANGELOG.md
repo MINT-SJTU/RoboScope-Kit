@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b79 - 2026-11-26
+## 0.8.0b81 - 2026-11-26
 
 - MetaWorld cameras render Policy-negotiated image sizes natively. Every configured camera accepts 64–1024
   pixels per side through `PolicyCapabilities.image_sizes`; a camera with a negotiated size renders at
