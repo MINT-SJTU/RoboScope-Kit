@@ -50,23 +50,34 @@ Memory grows about 35% further during a rollout (a `kitchen` environment reaches
 host needs this much per Worker; a Worker that exceeds its container's memory limit loses
 environment subprocesses (`BrokenPipeError`/`EOFError`), usually with no OOM kill reported.
 
-Much of this is allocator overhead, not scene data. While a scene loads, SAPIEN's native layer
-starts about 1,100 threads per environment (independent of CPU affinity), and glibc gives
-concurrently allocating threads their own malloc arenas, up to eight per visible core. After loading,
-a `kitchen` environment holds about 480 arenas of 64 MiB and a `studio` one about 150; freed memory
-stays in them. Capping the arenas with `MALLOC_ARENA_MAX=2` in the environment of the evaluating
-process (its simulator subprocesses inherit it) measured:
+Almost none of this is scene data. A `studio` environment needs about 1.3 GiB once reset (0.8 GiB
+with `obs_mode=state_dict`); the files its scene opens total about 90 MiB. The rest comes from the
+first RGB render setup and the allocator:
 
-| Scene | Default | `MALLOC_ARENA_MAX=2` |
-|---|---:|---:|
-| `kitchen` (m04) | 9.5 GiB | 3.3–5.3 GiB |
-| `studio` (m01) | 22.6 GiB | 17.4 GiB |
+- While the scene's render resources load, SAPIEN's native layer runs about 1,100 (`kitchen`) to
+  2,700 (`studio`) threads per environment, independent of CPU affinity. Their working memory
+  peaks at 8–22 GiB per environment.
+- glibc keeps most of that peak after it is freed. By default it gives concurrently allocating
+  threads their own malloc arenas, up to eight per visible core, and a `kitchen` environment keeps
+  about 480 arenas of 64 MiB. Freed large blocks also raise glibc's dynamic mmap threshold, so later
+  large blocks come from the heap and stay there.
 
-Environment creation and reset took the same time either way. The setting changes only where memory
-comes from, not any computation; its effect on step time and results is being checked in the
-acceptance matrix, which runs with it on both paths for all but its first jobs and records the
-setting per job. Hosts with fewer visible
-cores get fewer arenas by default and see less of the overhead.
+Measured per environment after reset, one environment per run:
+
+| Setting | `kitchen` (m04) | `studio` (m01) | `studio` create + reset |
+|---|---:|---:|---:|
+| Default | 9.5 GiB | 22.6 GiB | 56 s |
+| `MALLOC_ARENA_MAX=2` | 3.3–5.3 GiB | 4.2–17.4 GiB | 55–72 s |
+| `MALLOC_ARENA_MAX=2 MALLOC_MMAP_THRESHOLD_=131072` | | 1.3 GiB | 102 s |
+
+Set in the environment of the evaluating process, these are inherited by its simulator
+subprocesses; they change only where memory comes from, not any computation. The arena cap alone
+leaves a residue that varies from run to run; the fixed mmap threshold returns nearly everything
+but slows environment creation, which upstream repeats for most waves. Neither removes the load
+peak, and all four environments of a wave load at once, so size a host for the peak. The
+acceptance matrix runs with `MALLOC_ARENA_MAX=2` on both paths for all but its first jobs and
+records the setting per job; its effect on results is checked there. Hosts with fewer visible cores
+get fewer arenas by default and keep less.
 
 ## Policy interface
 
