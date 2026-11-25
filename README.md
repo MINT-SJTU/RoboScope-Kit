@@ -219,13 +219,14 @@ tuning, writing a Policy, CUDA MPS, and cross-instance sharding.
 | Path | Contents |
 | --- | --- |
 | `packages/roboscope-kit/` | The `roboscope-kit` package: public `Policy` API, protocol client and server, benchmark runtime, and the evaluation protocol documents |
-| `benchmarks/<benchmark>/` | For CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, ManiSkill, MetaWorld, RLBench, RoboCasa GR-1 Tabletop, RoboCasa365, RoboDojo, RoboTwin, robomimic, and SimplerEnv: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
+| `benchmarks/<benchmark>/` | For CALVIN, Evo-DexBench, LIBERO, LIBERO-Plus, LIBERO-Pro, ManiSkill, MetaWorld, RLBench, RoboCasa GR-1 Tabletop, RoboCasa365, RoboDojo, RoboTwin, robomimic, and SimplerEnv: the `benchmark-manifest.json` and `build-runtime.sh`, which builds the pinned simulator environment; RoboTwin also has its launcher and seed-cache tooling |
 | `examples/starvla/` | The StarVLA `Policy` and one demo per benchmark, including the configurations behind the RoboScope Kit technical report |
 | `examples/openvla/` | An OpenVLA `Policy` example for the four fine-tuned LIBERO suites, with an official native runner and episode-by-episode comparison |
 | `examples/xvla/` | An X-VLA `Policy` example: a stateful Policy serving several benchmarks |
 | `examples/xpolicylab/` | An XPolicyLab `Policy` example: serves any XPolicyLab policy on RoboDojo, validated with Simate-beta |
 | `examples/peract/` | A PerAct `Policy` example for RLBench, with PerAct's native `eval.py` runner and an episode-by-episode comparison |
 | `examples/robocasa365_diffusion/` | A RoboCasa365 multi-task Diffusion Policy example for `pretrain_human300`, with a native rollout comparison |
+| `examples/evo_dexbench_dp/` | An Evo-DexBench DP-C / DP-T `Policy` example: one upstream checkpoint per task group, with per-task native comparisons |
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
 | `examples/maniskill/` | ManiSkill PPO and visual Policy examples, pinned checkpoint catalogs, and native comparisons |
 | `examples/rt1/` | An RT-1-X `Policy` example for SimplerEnv, with a runner for SimplerEnv's official scripts and an episode-by-episode comparison |

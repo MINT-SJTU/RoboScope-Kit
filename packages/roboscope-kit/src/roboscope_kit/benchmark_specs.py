@@ -19,6 +19,7 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     LIBERO_PRO = "libero_pro"
     ROBOCASA = "robocasa"
     ROBOCASA365 = "robocasa365"
+    EVO_DEXBENCH = "evo_dexbench"
     ROBOTWIN = "robotwin"
     CALVIN = "calvin"
     METAWORLD = "metaworld"
@@ -251,6 +252,48 @@ class RoboCasa365BenchmarkDefinition(BenchmarkDefinition):
             "action.robot",
             "PandaOmron end-effector delta (6), gripper (1), base/torso (4), hybrid mode (1).",
             12,
+        )
+
+
+class EvoDexBenchBenchmarkDefinition(BenchmarkDefinition):
+    """Evo-DexBench Franka + Shadow Hand tasks; ``single_hand`` is m01-m15, ``bimanual`` is b01-b15."""
+
+    name = BenchmarkName.EVO_DEXBENCH
+    protocol_version = "evo-dexbench-evaluation-v1"
+    supported_action_representations = ("evo-dexbench.semantic-v1",)
+    default_action_representation = "evo-dexbench.semantic-v1"
+
+    def features(self, suite: str) -> tuple[FeatureSpec, ...]:
+        single = suite == "single_hand"
+        # (camera, required); a bimanual scene's interaction camera is optional upstream.
+        cameras = (
+            (("context", True), ("interaction", True), ("wrist_right", True)) if single else
+            (("context", True), ("interaction", False), ("wrist_left", True), ("wrist_right", True))
+        )
+        roles = ("right",) if single else ("left", "right")
+        images = tuple(
+            _feature(f"images.{camera}", FeatureKind.IMAGE,
+                     "Two most recent control-step RGB frames (uint8 HWC), the first repeated at reset.",
+                     required=required, shape=(2, None, None, 3))
+            for camera, required in cameras
+        )
+        states = tuple(
+            _feature(f"state.{role}.{name}", FeatureKind.STATE, description, shape=(2, dimension))
+            for role in roles
+            for name, description, dimension in (
+                ("end_effector_pose",
+                 "Upstream TCP pose: scene-frame position, then quaternion in ManiSkill wxyz order.", 7),
+                ("joint_position", "7 arm joints followed by 24 Shadow Hand joints.", 31),
+            )
+        )
+        instruction = _feature("language.instruction", FeatureKind.LANGUAGE, "Episode instruction.")
+        return (*images, *states, instruction)
+
+    def action(self, suite: str) -> ActionSpec:
+        return ActionSpec(
+            "action.semantic",
+            "Per role (right, or left then right): 6D end-effector delta pose and 24 hand joint targets.",
+            30 if suite == "single_hand" else 60,
         )
 
 
@@ -604,6 +647,7 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         ManiSkillBenchmarkDefinition(),
         RoboCasaBenchmarkDefinition(),
         RoboCasa365BenchmarkDefinition(),
+        EvoDexBenchBenchmarkDefinition(),
         RoboTwinBenchmarkDefinition(),
         RoboDojoBenchmarkDefinition(),
         CalvinBenchmarkDefinition(),

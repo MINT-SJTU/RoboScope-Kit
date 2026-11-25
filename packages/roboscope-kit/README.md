@@ -369,6 +369,9 @@ The exact contracts are in the protocol documents:
 - [RoboCasa365](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/robocasa365-protocol.md):
   the official multi-task matrix uses 50 tasks in pretrain scenes and 50 rollouts per task.
   `robocasa365` is isolated from GR1 `robocasa/tabletop`; Quick Tests are smoke subsets.
+- [Evo-DexBench](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/evo-dexbench-protocol.md):
+  the standard `evaluation_v1` protocol (100 episodes per task over five conditions), the Policy
+  interface, and the native comparison.
 - [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md):
   the `ph_low_dim` suite, supported and unsupported task/dataset/observation combinations, version and
   license gates, seeded initial states, upstream rollout semantics, the native comparison, and the baseline.
