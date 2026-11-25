@@ -8,6 +8,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   pixels per side through `PolicyCapabilities.image_sizes`; a camera with a negotiated size renders at
   that size (transposed for a 90 or 270 degree rotation) without cropping or resampling, and keeps its
   camera name, position and rotation. Without `image_sizes` every camera renders exactly as configured.
+- Pin `msgpack` in the MetaWorld runtime lock, so the MetaWorld worker can import the kit's protocol client.
 
 ## 0.8.0b77 - 2026-11-25
 

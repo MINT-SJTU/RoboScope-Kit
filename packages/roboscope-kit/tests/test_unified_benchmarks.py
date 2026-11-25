@@ -1498,3 +1498,16 @@ def test_metaworld_worker_command_carries_only_negotiated_sizes(tmp_path: Path) 
     for value in ("96x160", "images.primary=96", "images.primary=0x160", "=96x160"):
         with pytest.raises(argparse.ArgumentTypeError):
             _image_size(value)
+
+
+def test_metaworld_offscreen_buffer_grows_to_the_largest_negotiated_camera() -> None:
+    from types import SimpleNamespace
+
+    from roboscope_kit.runtime.benchmarks.metaworld.worker import _fit_offscreen_buffer
+
+    visual = SimpleNamespace(offwidth=160, offheight=96)
+    model = SimpleNamespace(vis=SimpleNamespace(global_=visual))
+    env = SimpleNamespace(unwrapped=SimpleNamespace(model=model))
+    cameras = ({"render_width": 160, "render_height": 96}, {"render_width": 120, "render_height": 200})
+    _fit_offscreen_buffer(env, cameras)
+    assert (visual.offwidth, visual.offheight) == (160, 200)

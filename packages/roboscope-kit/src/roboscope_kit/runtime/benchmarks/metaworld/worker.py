@@ -263,6 +263,14 @@ def _build_env(env_cls, tasks: tuple, camera: dict[str, Any]):
     return env
 
 
+def _fit_offscreen_buffer(env, cameras: tuple[dict[str, Any], ...]) -> None:
+    """Grow the MuJoCo offscreen buffer to the largest camera; the env sizes it for its own camera."""
+
+    visual = env.unwrapped.model.vis.global_
+    visual.offwidth = max(int(visual.offwidth), *(int(camera["render_width"]) for camera in cameras))
+    visual.offheight = max(int(visual.offheight), *(int(camera["render_height"]) for camera in cameras))
+
+
 def _run_task(
     item: WorkItem,
     *,
@@ -271,6 +279,7 @@ def _run_task(
     tasks_by_env: dict[str, tuple],
     env_dict,
     cameras: tuple[dict[str, Any], ...],
+    negotiated_sizes: bool = False,
 ) -> WorkResult:
     import metaworld.evaluation as metaworld_evaluation
 
@@ -280,6 +289,8 @@ def _run_task(
         raise RuntimeError(f"MetaWorld work item references an unknown task {slug!r}")
     started = time.perf_counter()
     env = _build_env(env_dict[slug], tasks_by_env[slug], cameras[0])
+    if negotiated_sizes:
+        _fit_offscreen_buffer(env, cameras)
     vector = None
     agent = None
     try:
@@ -353,6 +364,7 @@ def main() -> None:
                 tasks_by_env=tasks_by_env,
                 env_dict=ALL_V3_ENVIRONMENTS,
                 cameras=cameras,
+                negotiated_sizes=bool(args.image_size),
             )
         )
 
