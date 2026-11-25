@@ -17,6 +17,8 @@ import numpy as np
 from roboscope_kit import EpisodeContext, Observation, PolicyClient
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 
+from .trace import LiberoEpisodeTracer
+
 LIBERO_DUMMY_ACTION = np.asarray([0.0] * 6 + [-1.0], dtype=np.float32)
 LIBERO_ENV_RESOLUTION = 256
 MAX_STEPS = {
@@ -42,6 +44,7 @@ class PolicyActionQueue:
         self.episode_id = ""
         self.actions = np.empty((0, 7), dtype=np.float32)
         self.inference_wait_s = 0.0
+        self.last_inferred = False
 
     def reset(self, context: EpisodeContext) -> None:
         self.episode_id = context.episode_id
@@ -50,6 +53,7 @@ class PolicyActionQueue:
             client.reset(context)
 
     def step(self, observation: dict, task_description: str, step: int) -> np.ndarray:
+        self.last_inferred = not self.actions.size
         if not self.actions.size:
             request = build_observation(self.episode_id, step, observation, task_description)
             started = time.perf_counter()
@@ -92,6 +96,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--queue-dir", type=Path, required=True)
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--video-dir", type=Path)
+    parser.add_argument(
+        "--trace-dir",
+        type=Path,
+        help="write one privileged-state trace per episode attempt for failure attribution",
+    )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=1,
+        help="run every episode this many times in a row; attempts after the first measure outcome stability",
+    )
     parser.add_argument("--poll-interval", type=float, default=0.05)
     args = parser.parse_args()
     if args.max_steps is None:
@@ -100,6 +115,8 @@ def parse_args() -> argparse.Namespace:
         args.max_steps = MAX_STEPS[args.suite]
     if args.max_steps < 1:
         parser.error("--max-steps must be positive")
+    if args.repeats < 1:
+        parser.error("--repeats must be positive")
     return args
 
 
@@ -180,8 +197,12 @@ def run_episode(
     max_steps: int,
     settle_steps: int,
     save_frames: bool,
+    tracer: LiberoEpisodeTracer | None = None,
+    attempt: int = 0,
 ) -> tuple[bool, int, float, list[np.ndarray]]:
     episode_id = f"task-{runtime.task_id:04d}-episode-{episode_index:04d}"
+    if attempt:
+        episode_id += f"-attempt-{attempt:02d}"
     policy.reset(
         EpisodeContext(
             episode_id=episode_id,
@@ -200,6 +221,8 @@ def run_episode(
             if task_done or runtime.env.env.done:
                 return bool(task_done), 0, time.perf_counter() - started, frames
 
+        if tracer is not None:
+            tracer.start(observation)
         for action_step in range(max_steps):
             if save_frames:
                 frames.append(
@@ -207,6 +230,8 @@ def run_episode(
                 )
             action = policy.step(observation, runtime.task_description, action_step)
             observation, _reward, task_done, _info = runtime.env.step(action)
+            if tracer is not None:
+                tracer.record(action_step, action, observation, policy.last_inferred)
             if task_done or runtime.env.env.done:
                 return bool(task_done), action_step + 1, time.perf_counter() - started, frames
 
@@ -241,25 +266,52 @@ def run_chunk(
     inference_wait_before = policy.inference_wait_s
     start_episode = int(item.payload["start_episode"])
     num_trials = int(item.payload["num_trials"])
+    tracer = LiberoEpisodeTracer(runtime.env) if args.trace_dir is not None else None
     for episode_index in range(start_episode, start_episode + num_trials):
-        success, steps, elapsed_s, frames = run_episode(
-            runtime,
-            policy,
-            episode_index,
-            max_steps=args.max_steps,
-            settle_steps=args.settle_steps,
-            save_frames=args.video_dir is not None,
-        )
-        save_video(args.video_dir, runtime.task_id, episode_index, success, frames)
-        records.append(
-            EvaluationRecord(
-                record_id=f"task-{runtime.task_id:04d}-episode-{episode_index:04d}",
-                success=success,
-                steps=steps,
-                elapsed_s=elapsed_s,
-                metadata={"task_id": runtime.task_id, "episode_index": episode_index},
+        for attempt in range(args.repeats):
+            success, steps, elapsed_s, frames = run_episode(
+                runtime,
+                policy,
+                episode_index,
+                max_steps=args.max_steps,
+                settle_steps=args.settle_steps,
+                save_frames=args.video_dir is not None and attempt == 0,
+                tracer=tracer,
+                attempt=attempt,
             )
-        )
+            if attempt == 0:
+                save_video(args.video_dir, runtime.task_id, episode_index, success, frames)
+            record_id = f"task-{runtime.task_id:04d}-episode-{episode_index:04d}"
+            if args.repeats > 1:
+                record_id += f"-attempt-{attempt:02d}"
+            if tracer is not None:
+                tracer.write(
+                    args.trace_dir / f"{record_id}.json.gz",
+                    {
+                        "suite": args.suite,
+                        "task_id": runtime.task_id,
+                        "task_description": runtime.task_description,
+                        "episode_index": episode_index,
+                        "attempt": attempt,
+                        "worker_id": args.worker_id,
+                        "success": success,
+                        "steps_taken": steps,
+                        "max_steps": args.max_steps,
+                    },
+                )
+            records.append(
+                EvaluationRecord(
+                    record_id=record_id,
+                    success=success,
+                    steps=steps,
+                    elapsed_s=elapsed_s,
+                    metadata={
+                        "task_id": runtime.task_id,
+                        "episode_index": episode_index,
+                        "attempt": attempt,
+                    },
+                )
+            )
     return WorkResult(
         item_id=item.item_id,
         group_id=item.group_id,

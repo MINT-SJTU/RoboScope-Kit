@@ -273,7 +273,39 @@ Every file is written under `--output-dir`:
 | `autotune/policy-pool/` | Policy replica logs of an autotuned run; the same replicas serve the probes and the scored pass |
 | `autotune/candidate-k<K>-g<G>/` | Each probe's own manifest, result, events, worker logs, and queue |
 | `video/` | One MP4 per episode, `task-<TT>-episode-<EE>-<success\|failure>.mp4`, when the manifest sets `save_videos: true`; never written by a quick test |
+| `trace/` | One gzipped JSON trace per episode attempt, `task-<TTTT>-episode-<EEEE>[-attempt-<AA>].json.gz`, when the manifest sets `trace: true`; see [7.1](#71-failure-attribution) |
 | `self-test.json` | The runtime paths `--self-test` checked |
+
+### 7.1 Failure attribution
+
+Two manifest defaults turn a LIBERO run into a diagnostic run. Neither changes what the Policy receives.
+
+| Default | Effect |
+| --- | --- |
+| `trace: true` | After every policy step the Worker records the action, the end-effector pose, the truth value of every BDDL goal predicate, the objects the gripper touches and grasps, the positions of the movable objects, and digests of the observation and the action. The tracer only reads simulator state, so a traced episode has the same outcome as an untraced one. |
+| `repeats: N` | The Worker runs every episode N times in a row from the same initial state. Record ids gain an `-attempt-<AA>` suffix and `result.json` counts every attempt, so a run with `repeats` above 1 is a diagnostic run and not an official score; attempt 0 matches the official protocol. |
+
+`python -m roboscope_kit.runtime.benchmarks.libero.attribution <output-dir>/trace --output attribution.json`
+prints the failure causes, the stability verdicts and the divergence origins as Markdown tables and writes the
+per-episode attribution as JSON. Each failed episode gets one cause, from the unmet goal predicate whose object
+the instruction names first:
+
+| Cause | Meaning |
+| --- | --- |
+| `no_contact` | The gripper never touched the goal object. |
+| `wrong_object` | The gripper touched only movable objects that no goal names. |
+| `grasp_failed` | The gripper touched the goal object but never grasped it. |
+| `holding_at_timeout` | The goal object was still grasped when the step budget ran out. |
+| `dropped_before_target` | The object was released more than `--near-target-m` (default 0.10 m) from its destination. |
+| `placement_failed` | The object was released near its destination and the predicate stayed false. |
+| `articulation_incomplete` | The gripper touched the drawer, door or knob but did not finish the motion. |
+| `undone` | The predicate held at some step and was false again at the end. |
+
+With `repeats` above 1, each episode is `stable_success`, `stable_failure` or `flaky`, and every later attempt is
+compared with attempt 0 step by step. The first bitwise difference and the first material difference (an action
+apart by more than 1e-3, or a position apart by more than 1 mm) are each attributed to the initial observation
+(`initial_state`), a different action after the same observations (`policy`), or a different observation after
+the same actions (`simulator`).
 
 ## 8. Error contract
 

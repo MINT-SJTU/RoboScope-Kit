@@ -93,6 +93,8 @@ class LiberoRuntimeConfig:
     settle_steps: int = 10
     render_backend: str = "egl"
     save_videos: bool = False
+    trace: bool = False
+    repeats: int = 1
     cpu_threads: int = 1
 
     def __post_init__(self) -> None:
@@ -102,6 +104,8 @@ class LiberoRuntimeConfig:
             raise ValueError("LIBERO chunk size must be positive and settle steps cannot be negative")
         if self.cpu_threads < 1:
             raise ValueError("LIBERO cpu_threads must be positive")
+        if self.repeats < 1:
+            raise ValueError("LIBERO repeats must be positive")
         if self.render_backend not in {"egl", "osmesa"}:
             raise ValueError(f"unsupported LIBERO render backend: {self.render_backend}")
 
@@ -173,7 +177,7 @@ class LiberoBenchmarkAdapter:
                             "start_episode": start_episode,
                             "num_trials": count,
                         },
-                        expected_results=count,
+                        expected_results=count * self.config.repeats,
                     )
                 )
                 ordinal += 1
@@ -205,6 +209,10 @@ class LiberoBenchmarkAdapter:
         )
         if self.config.save_videos:
             command += ("--video-dir", str(context.output_dir / "video"))
+        if self.config.trace:
+            command += ("--trace-dir", str(context.output_dir / "trace"))
+        if self.config.repeats > 1:
+            command += ("--repeats", str(self.config.repeats))
         threads = str(self.config.cpu_threads)
         env = {
             "PYTHONPATH": f"{self.config.libero_home}:{kit_import_root()}:{os.environ.get('PYTHONPATH', '')}",
@@ -271,6 +279,8 @@ class LiberoBenchmarkAdapter:
             "episodes_per_task": self.config.num_trials,
             "seed": self.config.seed,
             "render_backend": self.config.render_backend,
+            "trace": self.config.trace,
+            "repeats": self.config.repeats,
         }
 
 

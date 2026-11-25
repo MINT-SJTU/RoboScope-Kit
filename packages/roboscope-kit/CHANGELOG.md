@@ -2,6 +2,14 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b78 - 2026-11-25
+
+- Add LIBERO failure attribution. `trace: true` records per-step privileged simulator state (BDDL goal
+  predicates, gripper contacts and grasps, object positions, observation and action digests) for every episode;
+  `repeats: N` runs each episode N times from the same initial state. The new
+  `roboscope_kit.runtime.benchmarks.libero.attribution` command assigns every failed episode one of eight
+  causes, classifies episodes as stable or flaky, and locates where repeated attempts first diverge.
+
 ## 0.8.0b76 - 2026-11-25
 
 - Build the CALVIN worker runtime with CPython 3.11.15 and hash-pinned dependencies.

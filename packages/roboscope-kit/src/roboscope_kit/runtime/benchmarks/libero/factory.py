@@ -108,6 +108,8 @@ class LiberoBenchmarkFactory:
                 settle_steps=int(manifest.defaults.get("settle_steps", 10)),
                 render_backend=str(manifest.defaults.get("render_backend", "egl")),
                 save_videos=bool(manifest.defaults.get("save_videos", False)) and not request.quick_test,
+                trace=bool(manifest.defaults.get("trace", False)),
+                repeats=int(manifest.defaults.get("repeats", 1)),
                 cpu_threads=int(manifest.defaults.get("client_cpu_threads", 1)),
             )
         )
