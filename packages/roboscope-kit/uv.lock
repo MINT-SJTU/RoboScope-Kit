@@ -232,7 +232,7 @@ wheels = [
 
 [[package]]
 name = "roboscope-kit"
-version = "0.8.0b75"
+version = "0.8.0b76"
 source = { editable = "." }
 dependencies = [
     { name = "msgpack" },

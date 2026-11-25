@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b76 - 2026-11-25
+
+- Build the CALVIN worker runtime with CPython 3.11.15 and hash-pinned dependencies.
+- Allow Policies to opt into coalescing queued actions from distinct episodes in `--eval-mode fast`.
+  The CALVIN StarVLA example seeds action noise by episode and observation step.
+- Document the CALVIN throughput, repeatability, and score equivalence results on a single RTX 4090.
+
 ## 0.8.0b75 - 2026-11-25
 
 - Add `--eval-mode {strict,fast}` (default `strict`) as the unified opt-in framework for throughput optimizations that may introduce small numeric or per-episode differences.

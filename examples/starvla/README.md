@@ -100,9 +100,10 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
   actions to [-1, 1], binarizes the gripper, and then unnormalizes with the min/max statistics.
 - To coalesce CALVIN requests with the pinned QwenGR00T demo, apply the action-noise patch to the
   StarVLA checkout and set `inference.action_noise_seed: 0` and `inference.max_batch_size: 8` in the
-  snapshot's `config.yaml`. Use the same seed for serial comparisons. The Policy seeds each prediction
-  from the configured seed, the episode ID, and the observation step. Actual batch sizes depend on how
-  many Workers share the replica and have requests queued.
+  snapshot's `config.yaml`. Run the evaluation with `--eval-mode fast`. The default `strict` mode
+  serves each action request separately. Use the same seed for comparisons. The Policy seeds each
+  prediction from the configured seed, the episode ID, and the observation step. Actual batch sizes
+  depend on how many Workers share the replica and have requests queued.
   [CALVIN batching setup and evidence](../../packages/roboscope-kit/CALVIN_EVALUATION_PROTOCOL.md)
 - Neither Policy keeps per-episode state, so `reset` does nothing.
 

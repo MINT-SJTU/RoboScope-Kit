@@ -79,17 +79,34 @@ at revision `985c2238627481f25476fbee478083812dd82a21`.
 git -C /path/to/starVLA apply /path/to/RoboScope-Kit/examples/starvla/calvin/starvla-action-noise.patch
 ```
 
-Set `inference.action_noise_seed: 0` in the snapshot's `config.yaml` for both arms of a seeded
-comparison. Set `inference.max_batch_size: 8` for the batched arm. Workers send their usual action
-requests, and the shared Policy Server groups requests from distinct episodes. Each observation's
-initial action noise uses its episode ID and step, so it is independent of where the observation
-appears in a batch. GPU computation can still vary numerically with batch shape. The seeded
-`task_D_D` comparison on one cloud RTX 4090 (49,140 MiB reported) ran 1,000 sequences per arm.
-With 16 Workers, one replica, and batch cap 8, formal evaluation was **2.840×** as fast as the
-fastest full run without batching (16 Workers and two replicas). Mean completed subtasks were
-3.831 with batching and 3.809 for that baseline. Two same-seed serial runs had identical scores
-for all 1,000 sequences. With batching, 219 sequence scores differed from the fastest baseline.
-[Records, logs, traces, and reproduction commands](https://github.com/Ru-hulu/RoboScope-Kit/releases/tag/calvin-pr138-2026-11-24)
+The default `--eval-mode strict` serves each `act` request individually, even when the Policy
+supports coalescing. Choose `--eval-mode fast` to let a Policy with
+`coalesce_action_requests=True` group queued requests from distinct episodes. The result records
+`dynamic-batching` in `active_fast_optimizations` when this optimization is enabled.
+
+For the StarVLA demo, set `inference.action_noise_seed: 0` and `inference.max_batch_size: 8` in the
+snapshot's `config.yaml`. Use the same seed for both modes when making a comparison.
+
+```bash
+python -m roboscope_kit.runtime.benchmark \
+    --benchmark calvin --suite task_D_D --checkpoint-source /models/starvla-calvin \
+    --benchmark-manifest <install-dir>/benchmark-manifest.json \
+    --policy-config /path/to/roboscope-policy.json \
+    --eval-mode fast --concurrency 16 --replicas 1 --output-dir /runs/calvin-task_D_D-fast
+```
+
+The initial action noise is seeded by episode ID and observation step, independent of batch position.
+Controlled probes found action differences due to token padding and BF16 batch arithmetic. In the
+1,000-sequence `task_D_D` runs at Kit `0.8.0b73` on one cloud RTX 4090 (49,140 MiB reported),
+batching achieved **2.840×** the formal evaluation throughput of the fastest unbatched configuration
+(16 Workers and two replicas), with **2.825×** end-to-end speedup. Two same-seed serial runs
+agreed on all 1,000 scores. A same-seed batched repeat changed 216 scores.
+[Throughput records and reproduction commands](https://github.com/Ru-hulu/RoboScope-Kit/releases/tag/calvin-pr138-2026-11-24)
+
+Across seeds 0, 1, and 2, paired 95% confidence intervals for batched minus serial were
+[−0.20, +2.13] percentage points for `task_3` and [−0.90, +2.10] for `task_5`, exceeding
+the +2-point equivalence margin. The other three task success rates and mean completed subtasks
+met their equivalence margins. [Three-seed results and action diagnostics](https://github.com/MINT-SJTU/RoboScope-Kit/pull/138)
 
 ## 2. User policy lifecycle
 

@@ -115,6 +115,8 @@ class PolicyServer:
                 request, encoding = received
                 if (
                     request.get("operation") == "act"
+                    and self.context is not None
+                    and self.context.eval_mode == "fast"
                     and self.capabilities is not None
                     and self.capabilities.coalesce_action_requests
                 ):

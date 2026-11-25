@@ -270,6 +270,8 @@ def negotiate_policy_action_contract(
     if benchmark.name in capabilities.step_observation_updates and benchmark.name != "robodojo":
         raise ValueError(f"step observation updates are not supported by {benchmark.name}")
     active_fast_optimizations: tuple[str, ...] = ()
+    if eval_mode == "fast" and capabilities.coalesce_action_requests:
+        active_fast_optimizations = ("dynamic-batching",)
     return PolicyExecutionContract(
         benchmark=benchmark.name,
         action_representation=action_representation,
