@@ -116,8 +116,8 @@ class RunCache:
         self.contract_key = cache_key(contract)
 
     def task_seconds_for(self, contract: Mapping[str, Any]) -> dict[str, float]:
-        self.bind(contract)
-        return self.task_seconds
+        entry = self.contracts.get(cache_key(contract), {})
+        return {str(task): float(seconds) for task, seconds in entry.get("task_seconds", {}).items()}
 
     @property
     def _entry(self) -> dict[str, Any]:
@@ -136,6 +136,9 @@ class RunCache:
         return {"mode": self.mode, "key": self.key, "path": str(self.path)}
 
     def _write(self, entry: dict[str, Any]) -> None:
+        if self.mode == "refresh":
+            # A refresh ignores this contract's old entry but keeps the other contracts' entries.
+            self.contracts = {**self._load(), **self.contracts}
         self.contracts[self.contract_key] = entry
         self.path.parent.mkdir(parents=True, exist_ok=True)
         atomic_json(

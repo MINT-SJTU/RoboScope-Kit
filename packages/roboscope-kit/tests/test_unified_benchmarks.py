@@ -1223,3 +1223,158 @@ def test_robotwin_lean_camera_scene_skips_only_the_unused_cameras() -> None:
     observer.entity.set_pose(None)
     with pytest.raises(RuntimeError, match="world_camera1"):
         world.take_picture()
+
+
+def _image_size_capabilities(benchmark: str, image_sizes) -> PolicyCapabilities:
+    return PolicyCapabilities(
+        supported_benchmarks=(benchmark,), required_features=(), image_sizes=image_sizes
+    )
+
+
+def _negotiate_image_sizes(benchmark: str, suite: str, image_sizes, defaults=None):
+    from roboscope_kit.benchmark_specs import benchmark_camera_support, get_benchmark_spec
+
+    spec = get_benchmark_spec(benchmark, suite)
+    return roboscope_kit.negotiate_policy_action_contract(
+        spec,
+        _image_size_capabilities(benchmark, image_sizes),
+        camera_support=benchmark_camera_support(spec, defaults or {}),
+    )
+
+
+def test_image_sizes_default_to_the_benchmark_size() -> None:
+    contract = _negotiate_image_sizes("libero", "libero_10", None)
+    assert contract.image_sizes == {} and contract.canonical_observations
+    assert contract.to_dict()["image_sizes"] == {} and contract.to_dict()["canonical_observations"] is True
+
+
+def test_image_sizes_pick_the_first_size_the_benchmark_renders() -> None:
+    from roboscope_kit.image_sizes import apply_image_sizes
+
+    preferences = [(2000, 2000), (128, 160), roboscope_kit.ANY_SIZE]
+    contract = _negotiate_image_sizes("libero", "libero_10", preferences)
+    assert contract.image_sizes == {"images.primary": (128, 160), "images.wrist": (128, 160)}
+    assert contract.to_dict()["canonical_observations"] is False
+    spec = apply_image_sizes(roboscope_kit.get_benchmark_spec("libero", "libero_10"), contract.image_sizes)
+    assert {feature.name: feature.shape for feature in spec.features if feature.kind.value == "image"} == {
+        "images.primary": (128, 160, 3),
+        "images.wrist": (128, 160, 3),
+    }
+    wrist_only = _negotiate_image_sizes("libero_pro", "libero_goal_swap", {"images.wrist": [(96, 128)]})
+    assert wrist_only.image_sizes == {"images.wrist": (96, 128)}
+    fallback = _negotiate_image_sizes("libero", "libero_10", [(2000, 2000), roboscope_kit.ANY_SIZE])
+    assert fallback.image_sizes == {}
+
+
+@pytest.mark.parametrize(
+    ("benchmark", "suite", "image_sizes", "defaults", "message"),
+    [
+        ("libero_plus", "libero_10", [(128, 128)], None, "renders only 256x256"),
+        ("libero", "libero_10", [(600, 600)], {"render_backend": "osmesa"}, "heights 64-480"),
+        ("robotwin", "demo_clean", [(128, 128)], None, "unspecified"),
+        ("libero", "libero_10", {"images.agentview": [(128, 128)]}, None, "not libero images"),
+    ],
+)
+def test_image_size_negotiation_names_both_sides_when_it_fails(
+    benchmark: str, suite: str, image_sizes, defaults, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        _negotiate_image_sizes(benchmark, suite, image_sizes, defaults)
+
+
+@pytest.mark.parametrize(
+    "image_sizes",
+    [[], "any", [roboscope_kit.ANY_SIZE, (128, 128)], [(128, 128), (128, 128)], [(True, 128)], [b"AB"],
+     [(0, 128)], {1: [(128, 128)]}, {}],
+)
+def test_image_size_preferences_are_validated(image_sizes) -> None:
+    with pytest.raises(ValueError):
+        _image_size_capabilities("libero", image_sizes)
+
+
+def test_image_size_preferences_round_trip() -> None:
+    capabilities = _image_size_capabilities("libero", {"images.wrist": [(128, 160), roboscope_kit.ANY_SIZE]})
+    payload = capabilities.to_dict()
+    assert payload["image_sizes"] == {"images.wrist": [[128, 160], "any"]}
+    assert PolicyCapabilities.from_dict(json.loads(json.dumps(payload))) == capabilities
+    assert "image_sizes" not in _image_size_capabilities("libero", None).to_dict()
+
+
+def test_policy_server_validates_observations_at_the_negotiated_size(tmp_path: Path) -> None:
+    import numpy as np
+
+    from roboscope_kit.benchmark_specs import benchmark_camera_support
+    from roboscope_kit.image_sizes import camera_support_to_dict
+
+    class SmallImagePolicy(roboscope_kit.Policy):
+        def load(self, context):
+            assert context.benchmark.features[0].shape == (256, 256, 3)
+            return PolicyCapabilities(
+                supported_benchmarks=("libero",), required_features=(), image_sizes=[(128, 160)]
+            )
+
+        def act(self, observation):
+            return roboscope_kit.ActionChunk(np.zeros((1, 7), dtype=np.float32))
+
+    spec = roboscope_kit.get_benchmark_spec("libero", "libero_10")
+    server = roboscope_kit.PolicyServer(SmallImagePolicy(), tmp_path / "policy.sock")
+    context = roboscope_kit.SessionContext(session_id="s", checkpoint_path="/ckpt", benchmark=spec)
+    server._dispatch(
+        "load",
+        {
+            "context": context.to_dict(),
+            "camera_support": camera_support_to_dict(benchmark_camera_support(spec, {})),
+        },
+    )
+    episode = roboscope_kit.EpisodeContext(episode_id="e", task_id="0")
+    server._dispatch("reset", {"context": episode.to_dict()})
+
+    def observation(height: int, width: int) -> dict:
+        return roboscope_kit.Observation(
+            episode_id="e",
+            step=0,
+            timestamp_s=0.0,
+            features={
+                "images.primary": np.zeros((height, width, 3), dtype=np.uint8),
+                "images.wrist": np.zeros((height, width, 3), dtype=np.uint8),
+                "state.proprioception": np.zeros(16, dtype=np.float32),
+                "language.instruction": "task",
+            },
+        ).to_dict()
+
+    server._dispatch("act", {"observation": observation(128, 160)})
+    with pytest.raises(ValueError, match="shape"):
+        server._dispatch("act", {"observation": observation(256, 256)})
+
+
+def test_libero_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> None:
+    from roboscope_kit.policy import PolicyExecutionContract
+    from roboscope_kit.runtime.benchmark.adapters import WorkerContext
+
+    adapter = LiberoBenchmarkFactory().create(
+        _request(BenchmarkName.LIBERO, "libero_10"), _libero_manifest(episodes=1)
+    )
+
+    def command(image_sizes):
+        return adapter.worker_process(
+            WorkerContext(
+                worker_id=0,
+                gpu_slot=0,
+                replica_id=0,
+                gpu_device="0",
+                replica_port=0,
+                replica_socket=Path("/tmp/replica.sock"),
+                queue_dir=tmp_path / "queue",
+                state_dir=tmp_path / "state",
+                output_dir=tmp_path,
+                execution_contract=PolicyExecutionContract(
+                    benchmark="libero",
+                    action_representation="libero.delta-eef-v1",
+                    image_sizes=image_sizes,
+                ),
+            )
+        ).command
+
+    assert "--primary-size" not in command({}) and "--wrist-size" not in command({})
+    sized = command({"images.wrist": (128, 160)})
+    assert sized[sized.index("--wrist-size") + 1] == "128x160" and "--primary-size" not in sized

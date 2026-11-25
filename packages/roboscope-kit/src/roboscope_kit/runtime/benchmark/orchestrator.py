@@ -980,7 +980,7 @@ def _is_policy_contract_error(exc: BaseException) -> bool:
         if (
             isinstance(cause, PolicyRemoteError)
             and cause.operation == "load"
-            and cause.error_type in {"ValueError", "TypeError"}
+            and cause.error_type in {"ValueError", "TypeError", "ProtocolError"}
         ):
             return True
         cause = cause.__cause__ or cause.__context__

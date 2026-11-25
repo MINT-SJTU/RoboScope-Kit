@@ -403,3 +403,21 @@ def test_full_aggregate_still_demands_complete_coverage(name: str) -> None:
     with pytest.raises(RuntimeError):
         adapter.aggregate(subset)
     _whole_and_partial_agree(adapter, subset)
+
+
+def test_shards_must_share_the_policy_execution_contract() -> None:
+    documents = _libero_documents()
+    canonical = {"benchmark": "libero", "image_sizes": {}, "canonical_observations": True}
+    for document in documents:
+        document["policy_io"] = dict(canonical)
+    assert merge_shard_results(documents)["policy_io"] == canonical
+    documents[2]["policy_io"] = {
+        "benchmark": "libero",
+        "image_sizes": {"images.primary": [128, 128]},
+        "canonical_observations": False,
+    }
+    with pytest.raises(ValueError, match="different Policy execution contracts"):
+        merge_shard_results(documents)
+    del documents[2]["policy_io"]
+    with pytest.raises(ValueError, match="different Policy execution contracts"):
+        merge_shard_results(documents)

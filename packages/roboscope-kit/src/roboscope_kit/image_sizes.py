@@ -26,7 +26,7 @@ SizePreferences = tuple[SizePreference, ...]
 def _image_size(value: Any, where: str) -> ImageSize:
     if (
         not isinstance(value, Sequence)
-        or isinstance(value, str)
+        or isinstance(value, (str, bytes, bytearray))
         or len(value) != 2
         or any(type(dimension) is not int or dimension < 1 for dimension in value)
     ):
@@ -37,7 +37,7 @@ def _image_size(value: Any, where: str) -> ImageSize:
 def normalize_size_preferences(value: Any, where: str) -> SizePreferences:
     """Validate one ordered preference list: sizes, optionally ending with ``ANY_SIZE``."""
 
-    if isinstance(value, str) or not isinstance(value, Sequence) or not value:
+    if isinstance(value, (str, bytes, bytearray)) or not isinstance(value, Sequence) or not value:
         raise ValueError(f"{where} must be a non-empty list of (height, width) sizes")
     preferences: list[SizePreference] = []
     for index, item in enumerate(value):
@@ -61,8 +61,11 @@ def normalize_image_sizes(value: Any) -> SizePreferences | dict[str, SizePrefere
     if isinstance(value, Mapping):
         if not value:
             raise ValueError("image_sizes must not be an empty mapping")
+        for feature in value:
+            if not isinstance(feature, str) or not feature:
+                raise ValueError(f"image_sizes keys must be feature names; got {feature!r}")
         return {
-            str(feature): normalize_size_preferences(preferences, f"image_sizes[{feature!r}]")
+            feature: normalize_size_preferences(preferences, f"image_sizes[{feature!r}]")
             for feature, preferences in value.items()
         }
     return normalize_size_preferences(value, "image_sizes")
@@ -89,6 +92,14 @@ class CameraSupport:
     canonical: ImageSize | None
     min_size: ImageSize | None = None
     max_size: ImageSize | None = None
+
+    def __post_init__(self) -> None:
+        if (self.min_size is None) != (self.max_size is None):
+            raise ValueError("camera support needs both min_size and max_size, or neither")
+        if self.min_size is not None and self.max_size is not None and (
+            self.min_size[0] > self.max_size[0] or self.min_size[1] > self.max_size[1]
+        ):
+            raise ValueError("camera support min_size must not exceed max_size")
 
     def renders(self, size: ImageSize) -> bool:
         if self.min_size is None or self.max_size is None:
@@ -117,6 +128,9 @@ class CameraSupport:
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> CameraSupport:
+        if not isinstance(value, Mapping):
+            raise ValueError(f"camera support must be an object; got {value!r}")
+
         def size(key: str) -> ImageSize | None:
             item = value.get(key)
             return _image_size(item, f"camera support {key}") if item is not None else None
@@ -154,6 +168,8 @@ def camera_support_to_dict(table: Mapping[str, CameraSupport]) -> dict[str, Any]
 
 
 def camera_support_from_dict(value: Mapping[str, Any]) -> CameraSupportTable:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"camera support table must be an object; got {value!r}")
     return {str(feature): CameraSupport.from_dict(support) for feature, support in value.items()}
 
 
