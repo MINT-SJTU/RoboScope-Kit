@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import threading
 from collections.abc import Sequence
@@ -15,13 +16,17 @@ from roboscope_kit.benchmark_specs import BenchmarkName
 from roboscope_kit.client import PolicyClient
 from roboscope_kit.contracts import BenchmarkSpec
 from roboscope_kit.policy import (
+    DEFAULT_EVAL_MODE,
     PolicyCapabilities,
     PolicyExecutionContract,
     SessionContext,
     negotiate_policy_action_contract,
+    validate_eval_mode,
 )
 
 from .adapters import ProcessSpec, ReplicaContext
+
+LOGGER = logging.getLogger(__name__)
 
 
 class PolicyProcessAdapter:
@@ -39,6 +44,7 @@ class PolicyProcessAdapter:
         env: dict[str, str] | None = None,
         session_metadata: dict[str, Any] | None = None,
         load_timeout_s: float = 30.0,
+        eval_mode: str = DEFAULT_EVAL_MODE,
     ) -> None:
         if not command:
             raise ValueError("policy command cannot be empty")
@@ -48,6 +54,7 @@ class PolicyProcessAdapter:
             raise ValueError("benchmark_spec does not match the policy process benchmark and suite")
         if load_timeout_s <= 0:
             raise ValueError("policy load timeout must be positive")
+        eval_mode = validate_eval_mode(eval_mode)
         self.command = command
         self.checkpoint_path = str(checkpoint_path)
         self.benchmark = benchmark
@@ -57,6 +64,7 @@ class PolicyProcessAdapter:
         self.env = dict(env or {})
         self.session_metadata = dict(session_metadata or {})
         self.load_timeout_s = load_timeout_s
+        self.eval_mode = eval_mode
         self.capabilities: dict[int, PolicyCapabilities] = {}
         self.gpu_vram_baselines: dict[str, int] = {}
         self.replica_vram_bytes: dict[int, int] = {}
@@ -108,16 +116,28 @@ class PolicyProcessAdapter:
                 "gpu_slot": context.gpu_slot,
                 "gpu_device": context.gpu_device,
             },
+            eval_mode=self.eval_mode,
         )
         with PolicyClient(context.socket_path, timeout_s=self.load_timeout_s) as client:
             capabilities = client.load(session)
-        contract = negotiate_policy_action_contract(session.benchmark, capabilities)
+        contract = negotiate_policy_action_contract(
+            session.benchmark, capabilities, eval_mode=self.eval_mode
+        )
         # Replicas on different GPUs initialize concurrently.
         with self._replica_lock:
             if self._execution_contract is not None and contract != self._execution_contract:
                 raise ValueError(
                     f"policy replica {context.replica_id} execution contract {contract.to_dict()} "
                     f"does not match {self._execution_contract.to_dict()}"
+                )
+            if (
+                self._execution_contract is None
+                and self.eval_mode == "fast"
+                and not contract.active_fast_optimizations
+            ):
+                LOGGER.info(
+                    "eval_mode=fast was requested, but this Policy declared no fast-mode optimizations; "
+                    "running with standard strict execution"
                 )
             self.capabilities[context.replica_id] = capabilities
             self._execution_contract = contract

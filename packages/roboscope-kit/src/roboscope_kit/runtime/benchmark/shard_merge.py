@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from roboscope_kit.benchmark_specs import BenchmarkName
+from roboscope_kit.policy import DEFAULT_EVAL_MODE
 
 from .factories import BenchmarkRunRequest
 from .manifest import BenchmarkManifest, load_benchmark_manifest
@@ -156,6 +157,8 @@ def merge_shards(
     return {
         "sdk_version": 1,
         "merged": True,
+        "eval_mode": shards[0][2].get("eval_mode", DEFAULT_EVAL_MODE),
+        "active_fast_optimizations": list(shards[0][2].get("active_fast_optimizations") or ()),
         "shard": {
             "count": shards[0][1]["shard"]["count"],
             "indexes": [shard_manifest["shard"]["index"] for _, shard_manifest, _ in shards],

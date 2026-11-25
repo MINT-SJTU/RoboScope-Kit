@@ -13,6 +13,18 @@ import numpy as np
 
 from roboscope_kit.contracts import BenchmarkSpec, FeatureKind
 
+EVAL_MODES: tuple[str, ...] = ("strict", "fast")
+DEFAULT_EVAL_MODE = "strict"
+
+
+def validate_eval_mode(value: str) -> str:
+    """Validate that an evaluation consistency mode is one of EVAL_MODES."""
+
+    if value not in EVAL_MODES:
+        supported = ", ".join(EVAL_MODES)
+        raise ValueError(f"eval_mode must be one of {supported}; got {value!r}")
+    return value
+
 
 @dataclass(frozen=True)
 class SessionContext:
@@ -22,10 +34,12 @@ class SessionContext:
     checkpoint_path: str
     benchmark: BenchmarkSpec
     metadata: dict[str, Any] = field(default_factory=dict)
+    eval_mode: str = DEFAULT_EVAL_MODE
 
     def __post_init__(self) -> None:
         if not self.session_id:
             raise ValueError("session_id cannot be empty")
+        validate_eval_mode(self.eval_mode)
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> SessionContext:
@@ -34,6 +48,7 @@ class SessionContext:
             checkpoint_path=str(value["checkpoint_path"]),
             benchmark=BenchmarkSpec.from_dict(value["benchmark"]),
             metadata=dict(value.get("metadata") or {}),
+            eval_mode=str(value.get("eval_mode", DEFAULT_EVAL_MODE)),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -42,6 +57,7 @@ class SessionContext:
             "checkpoint_path": self.checkpoint_path,
             "benchmark": self.benchmark.to_dict(),
             "metadata": self.metadata,
+            "eval_mode": self.eval_mode,
         }
 
 
@@ -212,6 +228,8 @@ class PolicyExecutionContract:
     observation_stride: int = 1
     observation_stride_source: str = "safe_default"
     step_observation_updates: bool = False
+    eval_mode: str = DEFAULT_EVAL_MODE
+    active_fast_optimizations: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -221,13 +239,18 @@ class PolicyExecutionContract:
             "observation_stride": self.observation_stride,
             "observation_stride_source": self.observation_stride_source,
             "step_observation_updates": self.step_observation_updates,
+            "eval_mode": self.eval_mode,
+            "active_fast_optimizations": list(self.active_fast_optimizations),
         }
 
 
 def negotiate_policy_action_contract(
     benchmark: BenchmarkSpec,
     capabilities: PolicyCapabilities,
+    *,
+    eval_mode: str = DEFAULT_EVAL_MODE,
 ) -> PolicyExecutionContract:
+    eval_mode = validate_eval_mode(eval_mode)
     action_source = "policy"
     action_representation = capabilities.action_representations.get(benchmark.name)
     if action_representation is None:
@@ -241,6 +264,7 @@ def negotiate_policy_action_contract(
         )
     if benchmark.name in capabilities.step_observation_updates and benchmark.name != "robodojo":
         raise ValueError(f"step observation updates are not supported by {benchmark.name}")
+    active_fast_optimizations: tuple[str, ...] = ()
     return PolicyExecutionContract(
         benchmark=benchmark.name,
         action_representation=action_representation,
@@ -250,6 +274,8 @@ def negotiate_policy_action_contract(
             "policy" if benchmark.name in capabilities.observation_strides else "safe_default"
         ),
         step_observation_updates=benchmark.name in capabilities.step_observation_updates,
+        eval_mode=eval_mode,
+        active_fast_optimizations=active_fast_optimizations,
     )
 
 

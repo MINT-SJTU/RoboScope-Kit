@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b75 - 2026-11-25
+
+- Add `--eval-mode {strict,fast}` (default `strict`) as the unified opt-in framework for throughput optimizations that may introduce small numeric or per-episode differences.
+- Pass `eval_mode` through `SessionContext` and `PolicyExecutionContract`, record `eval_mode` and `active_fast_optimizations` in `result.json`, and isolate `strict` and `fast` runs in the run cache and shard merging.
+
 ## 0.8.0b72 - 2026-11-22
 
 - Step RoboCasa365's five native simulator slots on five threads of the Worker. MuJoCo releases the

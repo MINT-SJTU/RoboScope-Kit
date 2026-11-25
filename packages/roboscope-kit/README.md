@@ -154,7 +154,7 @@ Renderer memory per Worker can leave room for another replica on each GPU but no
 After an evaluation, the runtime stores the searched `K`/`g` and the mean episode time of each task in a run
 cache (`$XDG_CACHE_HOME/roboscope-kit/run-cache/`, or `ROBOSCOPE_RUN_CACHE_DIR`). The entry is keyed by the
 kit version and benchmark manifest, the benchmark, suite and episode count, the checkpoint files and Policy
-config, the GPU models, the CPU quota and CUDA MPS. The next evaluation with the same key skips the search
+config, the GPU models, the CPU quota, CUDA MPS and the evaluation mode (`--eval-mode`). The next evaluation with the same key skips the search
 and records `"autotune": {"mode": "cached", ...}`. Every evaluation hands out work items of the longest tasks
 first when the cache, or this evaluation's probes, have measured them; tasks without a measurement go
 first, so no long task starts last. `--run-cache refresh` searches again and replaces the entry, and
@@ -326,6 +326,22 @@ checkout. Pass the new installation's manifest to the evaluation command.
 
 Integration, autotune, and throughput measurements are in the
 [RoboScope Kit technical report](https://arxiv.org/abs/2611.03850).
+
+## Evaluation modes (`--eval-mode`)
+
+`--eval-mode` chooses between two consistency modes:
+
+- `strict` (default): protocol-faithful evaluation. Optimizations that can introduce small numeric or
+  per-episode differences remain off even if a Policy supports them.
+- `fast` (opt-in): allows throughput optimizations declared by the Policy or benchmark (for example,
+  cross-episode dynamic batching) that may introduce small numeric or per-episode differences from
+  strict runs. If the Policy declares no fast-mode optimizations, the run logs a notice and executes
+  with standard strict behavior.
+
+The selected mode is passed to `Policy.load()` via `SessionContext.eval_mode`, negotiated into
+`PolicyExecutionContract` so every replica agrees, recorded at the top level of `result.json`
+(`eval_mode` and `active_fast_optimizations`), and isolated in both the run cache and cross-instance
+shard merging.
 
 ## CUDA MPS (opt-in)
 

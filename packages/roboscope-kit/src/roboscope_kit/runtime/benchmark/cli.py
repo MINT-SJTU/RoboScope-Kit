@@ -20,6 +20,7 @@ from roboscope_kit.benchmark_specs import (
     MetaworldBenchmarkDefinition,
     get_benchmark_spec,
 )
+from roboscope_kit.policy import DEFAULT_EVAL_MODE, EVAL_MODES
 from roboscope_kit.policy_config import PolicyRuntimeConfig, load_policy_runtime_config
 from roboscope_kit.runtime.benchmarks.metaworld.config import (
     load_evaluation_config,
@@ -69,6 +70,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--cuda-mps",
         action="store_true",
         help="run the Policy replicas under a private NVIDIA CUDA MPS daemon (default: off)",
+    )
+    parser.add_argument(
+        "--eval-mode",
+        choices=EVAL_MODES,
+        default=DEFAULT_EVAL_MODE,
+        help="evaluation consistency mode: strict (default, protocol-faithful) or fast "
+        "(opt-in throughput optimizations that may introduce small numeric or per-episode differences)",
     )
     parser.add_argument(
         "--shard-index",
@@ -333,6 +341,7 @@ def _run_evaluation(
                 cuda_mps=cuda_mps,
                 profile=args.profile,
                 task_seconds=run_cache.task_seconds or None,
+                eval_mode=args.eval_mode,
             )
         else:
             output, selected = _autotuned_run(
@@ -347,6 +356,7 @@ def _run_evaluation(
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
                 run_cache=run_cache,
+                eval_mode=args.eval_mode,
             )
     finally:
         if cuda_mps is not None:
@@ -362,9 +372,12 @@ def _run_evaluation(
                 selection=selected if selected.get("mode") == "dynamic-probe" else None,
                 task_seconds=task_seconds_from_queues([args.output_dir / "queue"]),
             )
+    execution_contract = (output.get("inference") or {}).get("execution_contract") or {}
     output["autotune"] = selected
     output["run_cache"] = run_cache.describe()
     output["cuda_mps"] = cuda_mps.metadata() if cuda_mps is not None else {"enabled": False}
+    output["eval_mode"] = args.eval_mode
+    output["active_fast_optimizations"] = list(execution_contract.get("active_fast_optimizations") or ())
     atomic_json(args.output_dir / "result.json", output)
     return 0
 
@@ -392,6 +405,7 @@ def _open_run_cache(
             "gpu_models": gpu_models(plan.gpu_devices),
             "cpu_cores": cpu_quota(),
             "cuda_mps": bool(args.cuda_mps),
+            "eval_mode": getattr(args, "eval_mode", DEFAULT_EVAL_MODE),
         }
     return RunCache(mode, fields)
 
@@ -441,6 +455,7 @@ def _autotuned_run(
     shard_kwargs: dict[str, Any] | None = None,
     cuda_mps: CudaMpsSession | None = None,
     run_cache: RunCache | None = None,
+    eval_mode: str = DEFAULT_EVAL_MODE,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Load the policy pool once, probe candidates against it, then run for real.
 
@@ -461,7 +476,7 @@ def _autotuned_run(
             defaults["vram_per_gpu_bytes"] = vram_per_gpu_bytes
     bounds = resolve_bounds(gpu_count, defaults)
     limits = resolve_limits(defaults)
-    shared = _build_inference(policy, request, manifest, benchmark_spec)
+    shared = _build_inference(policy, request, manifest, benchmark_spec, eval_mode=eval_mode)
     from .processes import InferencePool
 
     pool = InferencePool(
@@ -519,7 +534,14 @@ def _autotuned_run(
         pool.stop()
 
 
-def _build_inference(policy, request, manifest, benchmark_spec: BenchmarkSpec) -> PolicyProcessAdapter:
+def _build_inference(
+    policy,
+    request,
+    manifest,
+    benchmark_spec: BenchmarkSpec,
+    *,
+    eval_mode: str = DEFAULT_EVAL_MODE,
+) -> PolicyProcessAdapter:
     return PolicyProcessAdapter(
         command=policy.command,
         checkpoint_path=request.checkpoint_path,
@@ -528,6 +550,7 @@ def _build_inference(policy, request, manifest, benchmark_spec: BenchmarkSpec) -
         benchmark_spec=benchmark_spec,
         cwd=policy.cwd,
         load_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
+        eval_mode=eval_mode,
     )
 
 
@@ -630,11 +653,12 @@ def run_candidate(
     cuda_mps: CudaMpsSession | None = None,
     profile: bool = False,
     task_seconds: dict[str, float] | None = None,
+    eval_mode: str = DEFAULT_EVAL_MODE,
 ) -> dict[str, Any]:
     adapter = (
         factory.create_probe(request, manifest, concurrency) if probe else factory.create(request, manifest)
     )
-    inference = _build_inference(policy, request, manifest, benchmark_spec)
+    inference = _build_inference(policy, request, manifest, benchmark_spec, eval_mode=eval_mode)
     return ParallelBenchmarkRuntime(
         config=RuntimeConfig(
             output_dir=output_dir,
