@@ -273,7 +273,12 @@ sizes need roboscope-kit 0.8.0b83 or later in the Policy environment; older ones
 RoboDojo's head and wrist cameras render any size from 64 to 2048 pixels per side, keeping each camera's
 horizontal field of view (RoboDojo keeps 480 x 640 on a runtime built before this release until it is rebuilt
 with the new `build-runtime.sh`, and other RoboDojo sizes need roboscope-kit 0.8.0b83 or later in the Policy
-environment); the other benchmarks render their own size only. Sizes that differ from the benchmark's own are recorded in
+environment); RoboTwin renders its head and wrist cameras at 64 to 1024 pixels per side with the vertical
+field of view of its task config, so the horizontal view follows the aspect ratio (at 224 x 224 the
+horizontal field of view narrows from about 48° to 37°). RoboTwin keeps 240 x 320 with
+`render_mode: central` and on a runtime built before this release until it is rebuilt, and other RoboTwin
+sizes need roboscope-kit 0.8.0b83 or later in the Policy environment; the other benchmarks render their own
+size only. Sizes that differ from the benchmark's own are recorded in
 `policy_io.image_sizes`, and `policy_io.canonical_observations` is then `false`, so such results are not
 mixed with results under the benchmark's protocol. Inside `load()`,
 `context.benchmark` still carries the benchmark's own sizes.

@@ -1333,7 +1333,8 @@ def test_image_sizes_pick_the_first_size_the_benchmark_renders() -> None:
         ("libero_plus", "libero_10", {"images.primary": [(320, 320)]}, None, "square sizes 64-256"),
         ("libero_plus", "libero_10", {"images.wrist": [(600, 600)]}, {"render_backend": "osmesa"}, "64-480"),
         ("libero", "libero_10", [(600, 600)], {"render_backend": "osmesa"}, "heights 64-480"),
-        ("robotwin", "demo_clean", [(128, 128)], None, "unspecified"),
+        ("robodojo", "arx_x5", [(128, 128)], None, "unspecified"),
+        ("robotwin", "demo_clean", [(2000, 2000)], {"negotiated_camera_sizes": True}, "heights 64-1024"),
         ("calvin", "task_D_D", [(2048, 2048)], None, "heights 64-1024"),
         ("libero", "libero_10", {"images.agentview": [(128, 128)]}, None, "not libero images"),
     ],
@@ -1910,3 +1911,192 @@ def test_robodojo_worker_renders_only_negotiated_cameras(tmp_path: Path) -> None
     for value in ("images.primary=224x224", "images.head=224", "images.head=0x224"):
         with pytest.raises(argparse.ArgumentTypeError):
             _camera_size(value)
+
+
+ROBOTWIN_SIZED = {"negotiated_camera_sizes": True}
+
+
+def test_robotwin_cameras_negotiate_any_size_in_range_and_keep_d435_by_default() -> None:
+    from roboscope_kit.image_sizes import apply_image_sizes
+
+    cameras = {"images.head", "images.left_wrist", "images.right_wrist"}
+    assert _negotiate_image_sizes("robotwin", "demo_clean", None, ROBOTWIN_SIZED).image_sizes == {}
+    assert _negotiate_image_sizes("robotwin", "demo_clean", [(240, 320)], ROBOTWIN_SIZED).image_sizes == {}
+    contract = _negotiate_image_sizes("robotwin", "demo_randomized", [(224, 224)], ROBOTWIN_SIZED)
+    assert contract.image_sizes == {name: (224, 224) for name in cameras}
+    head_only = _negotiate_image_sizes(
+        "robotwin", "demo_clean", {"images.head": [(180, 320)]}, ROBOTWIN_SIZED
+    )
+    assert head_only.image_sizes == {"images.head": (180, 320)}
+    # RoboTwin leaves its image shapes open, so the negotiated spec checks height and width only.
+    spec = roboscope_kit.get_benchmark_spec("robotwin", "demo_clean")
+    spec = apply_image_sizes(spec, head_only.image_sizes)
+    assert {feature.name: feature.shape for feature in spec.features if feature.name in cameras} == {
+        "images.head": (180, 320, None),
+        "images.left_wrist": None,
+        "images.right_wrist": None,
+    }
+
+
+def _robotwin_sized_command(tmp_path: Path, image_sizes, **config):
+    from roboscope_kit.runtime.benchmark.adapters import WorkerContext
+
+    values = {
+        "sdk_python": Path("/opt/kit/bin/python"),
+        "benchmark_python": Path("/sim/robotwin/bin/python"),
+        "robotwin_root": Path("/sim/robotwin"),
+        "checkpoint_path": Path("/models/checkpoint"),
+        "deploy_policy_path": Path("/sim/robotwin/deploy_policy.yml"),
+        "launcher_path": Path("/sim/robotwin/launcher.py"),
+        "suite": "demo_clean",
+        "tasks": ROBOTWIN_ALL_TASKS[:1],
+        "episodes_per_task": 1,
+        "episode_shard_size": 1,
+        **config,
+    }
+    adapter = RoboTwinBenchmarkAdapter(RoboTwinRuntimeConfig(**values))
+    return adapter.worker_process(
+        WorkerContext(
+            worker_id=0,
+            gpu_slot=0,
+            gpu_device="0",
+            replica_id=0,
+            replica_port=0,
+            replica_socket=tmp_path / "replica.sock",
+            queue_dir=tmp_path / "queue",
+            state_dir=tmp_path / "state",
+            output_dir=tmp_path / "out",
+            execution_contract=roboscope_kit.PolicyExecutionContract(
+                benchmark="robotwin",
+                action_representation="robotwin.qpos-v1",
+                image_sizes=image_sizes,
+            ),
+        )
+    ).command
+
+
+def test_robotwin_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> None:
+    flags = ("--head-size", "--left-wrist-size", "--right-wrist-size")
+    assert not set(flags) & set(_robotwin_sized_command(tmp_path, {}))
+    sized = _robotwin_sized_command(tmp_path, {"images.left_wrist": (128, 160)})
+    assert sized[sized.index("--left-wrist-size") + 1] == "128x160"
+    assert "--head-size" not in sized and "--right-wrist-size" not in sized
+
+
+def test_robotwin_camera_ranges_need_a_flagged_runtime_and_native_rendering(tmp_path: Path) -> None:
+    from roboscope_kit.benchmark_specs import benchmark_camera_support
+    from roboscope_kit.image_sizes import CameraSupport
+
+    spec = roboscope_kit.get_benchmark_spec("robotwin", "demo_clean")
+    cameras = ("images.head", "images.left_wrist", "images.right_wrist")
+    fixed = {name: CameraSupport(canonical=None) for name in cameras}
+    # A runtime built before negotiated sizes has no flag, and its launcher renders 240 x 320 only.
+    assert benchmark_camera_support(spec, {}) == fixed
+    assert benchmark_camera_support(spec, {"negotiated_camera_sizes": "yes"}) == fixed
+    assert benchmark_camera_support(spec, {**ROBOTWIN_SIZED, "render_mode": "central"}) == fixed
+    ranged = benchmark_camera_support(spec, {**ROBOTWIN_SIZED, "render_mode": "native"})
+    assert ranged == benchmark_camera_support(spec, ROBOTWIN_SIZED)
+    assert {name: (support.canonical, support.min_size, support.max_size) for name, support in ranged.items()
+            if name in cameras} == {name: ((240, 320), (64, 64), (1024, 1024)) for name in cameras}
+    # The shipped manifest carries the flag.
+    manifest_path = Path(__file__).parents[3] / "benchmarks/robotwin/benchmark-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    assert manifest["defaults"]["negotiated_camera_sizes"] is True
+    central = {
+        "seed_cache_dir": Path("/sim/robotwin/seed-cache"),
+        "render_mode": "central",
+        "render_service_path": Path("/sim/robotwin/render.py"),
+    }
+    with pytest.raises(ValueError, match="task config's camera sizes"):
+        _robotwin_sized_command(tmp_path, {"images.head": (224, 224)}, **central)
+
+
+def test_robotwin_worker_passes_camera_sizes_to_the_launcher_only_when_negotiated(monkeypatch) -> None:
+    from roboscope_kit.runtime.benchmarks.robotwin import worker
+
+    base = [
+        "worker", "--worker-id", "0", "--gpu-id", "0", "--policy-socket", "/p", "--robotwin-dir", "/r",
+        "--robotwin-python", "/py", "--checkpoint-path", "/c", "--deploy-policy", "/d", "--launcher", "/l",
+        "--queue-dir", "/q", "--worker-state-dir", "/s", "--output-dir", "/o",
+    ]
+    monkeypatch.setattr("sys.argv", base)
+    assert worker._camera_env(worker.parse_args()) == {}
+    monkeypatch.setenv(worker.CAMERA_SIZES_ENV, '{"head_camera": [96, 96]}')
+    assert worker.CAMERA_SIZES_ENV not in worker._inherited_env()
+    monkeypatch.setattr("sys.argv", [*base, "--head-size", "224x224", "--right-wrist-size", "128x160"])
+    env = worker._camera_env(worker.parse_args())
+    assert json.loads(env[worker.CAMERA_SIZES_ENV]) == {"head_camera": [224, 224], "right_camera": [128, 160]}
+    monkeypatch.setattr("sys.argv", [*base, "--head-size", "224"])
+    with pytest.raises(SystemExit):
+        worker.parse_args()
+
+
+def test_robotwin_sized_camera_scene_changes_only_the_named_cameras_sizes(monkeypatch) -> None:
+    from benchmarks.robotwin import roboscope_robotwin_launcher as render
+
+    created = []
+
+    class Scene:
+        timestep = 0.004
+
+        def add_camera(self, name, *args, **kwargs):
+            created.append((name, kwargs))
+            return name
+
+    sized = render.SizedCameraScene(Scene(), {"head_camera": (128, 160)})
+    sized.add_camera(name="head_camera", width=320, height=240, fovy=0.6, near=0.1, far=100)
+    sized.add_camera(name="front_camera", width=320, height=240, fovy=0.6, near=0.1, far=100)
+    assert created == [
+        ("head_camera", {"width": 160, "height": 128, "fovy": 0.6, "near": 0.1, "far": 100}),
+        ("front_camera", {"width": 320, "height": 240, "fovy": 0.6, "near": 0.1, "far": 100}),
+    ]
+    assert sized.timestep == 0.004
+
+    monkeypatch.delenv(render.CAMERA_SIZES_ENV, raising=False)
+    assert render.camera_sizes_from_env() == {}
+    monkeypatch.setenv(render.CAMERA_SIZES_ENV, '{"left_camera": [96, 128]}')
+    assert render.camera_sizes_from_env() == {"left_camera": (96, 128)}
+    monkeypatch.setenv(render.CAMERA_SIZES_ENV, '{"observer_camera": [96, 128]}')
+    with pytest.raises(ValueError, match="observer_camera"):
+        render.camera_sizes_from_env()
+
+
+def test_robotwin_launcher_sizes_videos_only_with_a_negotiated_head_camera(monkeypatch) -> None:
+    from benchmarks.robotwin import roboscope_robotwin_launcher as launcher
+
+    source = (
+        '    if args["eval_video_log"]:\n'
+        '        video_size = str(camera_config["w"]) + "x" + str(camera_config["h"])\n'
+        '                    "-pix_fmt",\n'
+    )
+    monkeypatch.delenv("ROBOTWIN_CAMERA_SIZES", raising=False)
+    assert launcher._inject_camera_sizes(source) == source
+    monkeypatch.setenv("ROBOTWIN_CAMERA_SIZES", '{"left_camera": [96, 128]}')
+    assert launcher._inject_camera_sizes(source) == source
+    monkeypatch.setenv("ROBOTWIN_CAMERA_SIZES", '{"head_camera": [180, 320]}')
+    assert '        video_size = "320x180"\n' in launcher._inject_camera_sizes(source)
+    assert "pad=" not in launcher._inject_camera_sizes(source)
+    monkeypatch.setenv("ROBOTWIN_CAMERA_SIZES", '{"head_camera": [181, 321]}')
+    padded = launcher._inject_camera_sizes(source)
+    assert '"pad=ceil(iw/2)*2:ceil(ih/2)*2",\n                    "-pix_fmt"' in padded
+
+
+def test_robotwin_camera_sizes_are_offered_only_to_servers_with_open_shape_ranges() -> None:
+    from roboscope_kit.benchmark_specs import benchmark_camera_support
+    from roboscope_kit.image_sizes import (
+        BASELINE_IMAGE_SIZE_FEATURES,
+        IMAGE_SIZE_FEATURES,
+        camera_support_for_server,
+        negotiate_image_sizes,
+    )
+
+    spec = roboscope_kit.get_benchmark_spec("robotwin", "demo_clean")
+    table = benchmark_camera_support(spec, ROBOTWIN_SIZED)
+    assert "open_shape_ranges" in IMAGE_SIZE_FEATURES
+    assert camera_support_for_server(spec, table, frozenset(IMAGE_SIZE_FEATURES)) == table
+    # A roboscope-kit 0.8.0b77 server keeps RoboTwin's own size, as 0.8.0b77 does.
+    older = camera_support_for_server(spec, table, BASELINE_IMAGE_SIZE_FEATURES)
+    assert negotiate_image_sizes(spec, ((224, 224), roboscope_kit.ANY_SIZE), older) == {}
+    assert negotiate_image_sizes(spec, ((240, 320),), older) == {}
+    with pytest.raises(ValueError, match="renders only 240x320"):
+        negotiate_image_sizes(spec, ((224, 224),), older)

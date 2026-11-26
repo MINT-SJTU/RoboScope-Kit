@@ -25,6 +25,7 @@
     "seed": 0,
     "client_cpu_threads": 1,
     "render_mode": "native",
+    "negotiated_camera_sizes": true,
     "render_services_per_gpu": 2,
     "autotune_candidate_timeout_s": 1800,
     "autotune_total_budget_s": 1800,

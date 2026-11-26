@@ -664,6 +664,14 @@ ROBODOJO_CAMERAS = (
     ("images.left_wrist", "cam_left_wrist"),
     ("images.right_wrist", "cam_right_wrist"),
 )
+# RoboTwin creates each SAPIEN camera at the width and height of its camera type; the task configs
+# name D435 (240 x 320) for the head and wrist cameras. Kit creates the cameras at a negotiated size
+# instead, keeping the vertical field of view and everything else the task config sets, so the
+# horizontal view follows the aspect ratio.
+ROBOTWIN_CANONICAL_IMAGE_SIZE = (240, 320)
+ROBOTWIN_MIN_IMAGE_SIZE = (64, 64)
+ROBOTWIN_MAX_IMAGE_SIZE = (1024, 1024)
+ROBOTWIN_CAMERA_FEATURES = ("images.head", "images.left_wrist", "images.right_wrist")
 
 
 def benchmark_camera_support(
@@ -749,6 +757,18 @@ def benchmark_camera_support(
                 canonical=ROBODOJO_CANONICAL_IMAGE_SIZE,
                 min_size=ROBODOJO_MIN_IMAGE_SIZE,
                 max_size=ROBODOJO_MAX_IMAGE_SIZE,
+            )
+    elif (benchmark.name == BenchmarkName.ROBOTWIN.value
+          and (defaults or {}).get("negotiated_camera_sizes") is True
+          and (defaults or {}).get("render_mode", "native") == "native"):
+        # A runtime built before negotiated sizes has an older launcher, which renders the task config's
+        # size whatever the Kit asks; its manifest has no negotiated_camera_sizes flag. Central rendering
+        # renders the task config's size too.
+        for feature in ROBOTWIN_CAMERA_FEATURES:
+            table[feature] = CameraSupport(
+                canonical=ROBOTWIN_CANONICAL_IMAGE_SIZE,
+                min_size=ROBOTWIN_MIN_IMAGE_SIZE,
+                max_size=ROBOTWIN_MAX_IMAGE_SIZE,
             )
     return table
 
