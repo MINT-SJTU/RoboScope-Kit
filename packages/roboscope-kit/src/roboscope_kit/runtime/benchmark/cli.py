@@ -50,7 +50,7 @@ from .output import reserve_output_directory
 from .policy_process import PolicyProcessAdapter
 from .queue import atomic_json
 from .registry import benchmark_factory
-from .resources import cpu_quota
+from .resources import cpu_quota, host_memory_limit
 from .run_cache import CACHE_MODES, RunCache, checkpoint_identity, gpu_models, task_seconds_from_queues
 from .sharding import DEFAULT_EPISODES_PER_SHARD, shard_build
 from .timing import BenchmarkTimingRecorder, PhaseTimingCallback, benchmark_phase
@@ -463,6 +463,7 @@ def _open_run_cache(
             "policy_config": args.policy_config.read_text(encoding="utf-8"),
             "gpu_models": gpu_models(plan.gpu_devices),
             "cpu_cores": cpu_quota(),
+            "host_memory_bytes": host_memory_limit(),
             "cuda_mps": bool(args.cuda_mps),
             "eval_mode": getattr(args, "eval_mode", DEFAULT_EVAL_MODE),
         }
@@ -527,6 +528,10 @@ def _autotuned_run(
         vram_per_gpu_bytes = detect_gpu_memory_bytes(gpu_devices)
         if vram_per_gpu_bytes is not None:
             defaults["vram_per_gpu_bytes"] = vram_per_gpu_bytes
+    if "host_memory_bytes" not in defaults:
+        host_memory_bytes = host_memory_limit()
+        if host_memory_bytes is not None:
+            defaults["host_memory_bytes"] = host_memory_bytes
     bounds = resolve_bounds(gpu_count, defaults)
     limits = resolve_limits(defaults)
     shared = _build_inference(policy, request, manifest, benchmark_spec, eval_mode=eval_mode)
@@ -666,6 +671,13 @@ def _shard_kwargs(args: argparse.Namespace, manifest: BenchmarkManifest) -> dict
     }
 
 
+def _manifest_host_memory(manifest: BenchmarkManifest) -> int | None:
+    """The manifest's ``host_memory_bytes``, which autotune uses in place of the detected limit."""
+
+    value = manifest.defaults.get("host_memory_bytes")
+    return int(value) if value else None
+
+
 def _run_with_pool(
     *,
     factory: BenchmarkFactory,
@@ -694,6 +706,7 @@ def _run_with_pool(
             concurrency=concurrency,
             base_port=int(manifest.defaults.get("base_port", 16694)),
             ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
+            host_memory_bytes=_manifest_host_memory(manifest),
             probe_limits=probe_limits,
             task_seconds=task_seconds,
             **(shard_kwargs or {}),
@@ -740,6 +753,7 @@ def run_candidate(
             concurrency=concurrency,
             base_port=int(manifest.defaults.get("base_port", 16694)),
             ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
+            host_memory_bytes=_manifest_host_memory(manifest),
             profile=profile,
             task_seconds=task_seconds,
             **(shard_kwargs or {}),

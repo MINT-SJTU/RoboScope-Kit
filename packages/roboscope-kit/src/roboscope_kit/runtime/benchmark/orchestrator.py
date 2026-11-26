@@ -19,7 +19,7 @@ from .metrics import read_jsonl_since, summarize_events
 from .nsys import profiled_process
 from .processes import InferencePool, ManagedProcess, ProcessFailureKind, start_process
 from .queue import WorkQueue, atomic_json
-from .resources import GpuSampler, cpu_quota, cpu_window, gpu_window, read_cpu_stat
+from .resources import GpuSampler, cpu_quota, cpu_window, gpu_window, host_memory_limit, read_cpu_stat
 from .run_cache import longest_first
 from .schema import EvaluationRecord, WorkItem, WorkResult, validate_terminal_accounting
 from .sharding import (
@@ -52,6 +52,8 @@ class RuntimeConfig:
     # Mean episode wall time per task from earlier runs; the formal pass hands out the
     # longest items first so no long task starts last.
     task_seconds: Mapping[str, float] | None = None
+    # Host memory limit from the manifest (``host_memory_bytes``); detected when unset.
+    host_memory_bytes: int | None = None
 
     def __post_init__(self) -> None:
         if not self.gpu_devices or len(self.gpu_devices) != len(set(self.gpu_devices)):
@@ -363,6 +365,10 @@ class ParallelBenchmarkRuntime:
                 "cpu": cpu_window(before_cpu, read_cpu_stat(), elapsed_s, cpu_quota()),
                 "gpu": gpu_window(samples, self.config.gpu_count),
                 "gpu_samples": len(samples),
+                "host": {
+                    "peak_memory_bytes": max(sampler.host_memory_samples, default=None),
+                    "limit_bytes": self.config.host_memory_bytes or host_memory_limit(),
+                },
             },
             "recovery": {
                 "worker_failures": self.failure_events,

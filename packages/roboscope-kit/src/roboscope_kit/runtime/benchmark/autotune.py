@@ -35,6 +35,9 @@ from .resources import cpu_quota
 from .timing import PhaseTimingCallback, benchmark_phase
 
 RESERVED_VRAM_PER_GPU_BYTES = 2 * 1024**3
+# Share of the host memory limit a probe may reach. Probes are short, and a full run can
+# grow further (simulators that keep state across resets), so leave headroom.
+HOST_MEMORY_LIMIT_RATIO = 0.85
 
 DEFAULT_CANDIDATE_TIMEOUT_S = 15 * 60.0
 DEFAULT_TOTAL_BUDGET_S = 30 * 60.0
@@ -216,6 +219,7 @@ class AutotuneBounds:
     # Worker ceiling without the per-worker CPU estimate; the diagonal strategy
     # refines it from measured CPU use instead.
     max_workers_hard: int = ABSOLUTE_MAX_WORKERS
+    host_memory_bytes: int | None = None
 
 
 def resolve_bounds(
@@ -253,6 +257,7 @@ def resolve_bounds(
         min(int(manifest_defaults.get("maximum_replicas", ABSOLUTE_MAX_REPLICAS)), int(cpu_cores)),
     )
     vram_raw = manifest_defaults.get("vram_per_gpu_bytes")
+    host_raw = manifest_defaults.get("host_memory_bytes")
     return AutotuneBounds(
         gpu_count=gpu_count,
         cpu_cores=cpu_cores,
@@ -261,6 +266,7 @@ def resolve_bounds(
         worker_cpu_cores=worker_cpu_cores,
         vram_per_gpu_bytes=int(vram_raw) if vram_raw else None,
         max_workers_hard=max(gpu_count, hard),
+        host_memory_bytes=int(host_raw) if host_raw else None,
     )
 
 
@@ -448,8 +454,27 @@ class BenchmarkAutotuneController:
             available = max(self.bounds.cpu_cores - 1.0, 1.0)
             headroom = max(available - incumbent.clients.cpu_cores, 0.0)
             cap = incumbent.k + int(headroom / slope)
+        host_cap = self.host_memory_worker_cap(incumbent)
+        if host_cap is not None:
+            cap = min(cap, host_cap)
         cap = min(cap, self.bounds.max_workers_hard)
         return max(cap, incumbent.k, self.bounds.gpu_count)
+
+    def host_memory_worker_cap(self, incumbent: KTrial) -> int | None:
+        """Worker ceiling from the host memory left at the incumbent, or ``None`` if unknown.
+
+        As for CPU, the marginal memory of one worker is the slope between two probes at
+        one replica per GPU; until two exist, all of the incumbent's memory is charged to
+        its workers, which overestimates and only lowers the cap.
+        """
+
+        used = incumbent.clients.host_memory_bytes
+        if used is None or self.bounds.host_memory_bytes is None:
+            return None
+        slope = self.base_slope(lambda trial: trial.clients.host_memory_bytes or 0)
+        per_worker = slope if slope is not None and slope > 0 else used / max(incumbent.k, 1)
+        headroom = max(HOST_MEMORY_LIMIT_RATIO * self.bounds.host_memory_bytes - used, 0.0)
+        return incumbent.k + int(headroom // max(per_worker, 1.0))
 
     def predicted_memory_limit(self, incumbent: KTrial, k_next: int, g_next: int) -> str | None:
         """Skip a probe whose busiest GPU, extrapolated from the incumbent, would not fit.
@@ -502,7 +527,14 @@ class BenchmarkAutotuneController:
         return g_candidate_plan(self.bounds, replica_vram)[-1]
 
     def resource_limit(self, trial: KTrial) -> str | None:
-        return resource_limit_reason(trial, cpu_quota=self.bounds.cpu_cores)
+        reason = resource_limit_reason(trial, cpu_quota=self.bounds.cpu_cores)
+        used, limit = trial.clients.host_memory_bytes, self.bounds.host_memory_bytes
+        if reason is None and None not in (used, limit) and used > HOST_MEMORY_LIMIT_RATIO * limit:
+            reason = (
+                f"host memory {used / 1024**3:.1f} GiB above "
+                f"{HOST_MEMORY_LIMIT_RATIO * limit / 1024**3:.1f} GiB"
+            )
+        return reason
 
     def reject(self, trial: KTrial, reason: str) -> None:
         """Mark a measured probe that the strategy did not keep as rejected in selection.json."""
@@ -525,6 +557,7 @@ class BenchmarkAutotuneController:
             "worker_cpu_cores": self.bounds.worker_cpu_cores,
             "vram_per_gpu_bytes": self.bounds.vram_per_gpu_bytes,
             "replica_vram_bytes": replica_vram,
+            "host_memory_bytes": self.bounds.host_memory_bytes,
         }
 
     def gain(self, trial: KTrial, incumbent: KTrial) -> float:
@@ -1050,6 +1083,7 @@ def _as_trial(
     resources = output["resources"]
     cpu = resources["cpu"]
     gpu = resources["gpu"]
+    host_memory = resources.get("host", {}).get("peak_memory_bytes")
     inference = output.get("inference_metrics", {})
     queue_wait = inference.get("queue_wait_ms") or {}
     if (
@@ -1087,6 +1121,7 @@ def _as_trial(
             cpu_cores=float(cpu["cpu_cores"]),
             throttle_time_ratio=float(cpu["throttle_time_ratio"]),
             inference_wait_ratio=0.0,
+            host_memory_bytes=None if host_memory is None else int(host_memory),
         ),
         servers=ServerMetrics(
             replicas=g,
@@ -1124,6 +1159,7 @@ def _trial_dict(trial: KTrial) -> dict[str, Any]:
         "gpu_utilization": trial.servers.gpu_utilization,
         "vram_bytes": trial.servers.vram_bytes,
         "queue_wait_p95_ms": trial.servers.queue_wait_p95_ms,
+        "host_memory_bytes": trial.clients.host_memory_bytes,
     }
 
 

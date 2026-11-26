@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import resource
 import statistics
@@ -22,11 +23,84 @@ class CpuStat:
     throttled_usec: int
 
 
+CGROUP = Path("/sys/fs/cgroup")
+PROC_SELF_CGROUP = Path("/proc/self/cgroup")
+
+
+def _meminfo() -> dict[str, int]:
+    values = {}
+    for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+        key, value, *_ = line.replace(":", " ").split()
+        values[key] = int(value) * 1024
+    return values
+
+
+def _own_cgroup(root: Path, proc_cgroup: Path) -> Path | None:
+    """This process's cgroup v2 directory, or ``None`` without a unified hierarchy.
+
+    Inside a container with its own cgroup namespace the path is ``/``, so this is ``root``.
+    On a host, Slurm jobs and systemd scopes or services are cgroups below ``root``.
+    """
+
+    try:
+        lines = proc_cgroup.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        if line.startswith("0::"):
+            own = root / line[3:].strip().lstrip("/")
+            # A cgroup outside the mounted hierarchy: the mount is this process's own cgroup.
+            return own if own.is_dir() else root
+    return None
+
+
+def host_memory_limit(root: Path = CGROUP, proc_cgroup: Path = PROC_SELF_CGROUP) -> int | None:
+    """Host memory this process tree may use, else RAM.
+
+    The limit is the smallest ``memory.max`` or ``memory.high`` of this process's cgroup and its
+    ancestors, since a parent slice can hold the limit while the leaf reads ``max``.
+    """
+
+    limits = []
+    cgroup = _own_cgroup(root, proc_cgroup)
+    while cgroup is not None:
+        for name in ("memory.max", "memory.high"):
+            with contextlib.suppress(OSError, ValueError):
+                path = cgroup / name
+                if path.is_file() and (value := path.read_text(encoding="utf-8").strip()) != "max":
+                    limits.append(int(value))
+        cgroup = cgroup.parent if cgroup != root and root in cgroup.parents else None
+    with contextlib.suppress(OSError, KeyError):
+        limits.append(_meminfo()["MemTotal"])
+    return min(limits, default=None)
+
+
+def host_memory_used(root: Path = CGROUP, proc_cgroup: Path = PROC_SELF_CGROUP) -> int | None:
+    """Host memory in use without reclaimable page cache: this process's cgroup's, else the machine's."""
+
+    try:
+        cgroup = _own_cgroup(root, proc_cgroup)
+        if cgroup is not None and (cgroup / "memory.current").is_file():
+            stat_text = (cgroup / "memory.stat").read_text(encoding="utf-8")
+            stat = dict(line.split() for line in stat_text.splitlines())
+            # ``file`` includes ``shmem`` (tmpfs, /dev/shm, shared memory segments), which
+            # counts toward the limit and cannot be reclaimed without swap.
+            reclaimable = int(stat.get("file", 0)) - int(stat.get("shmem", 0))
+            return int((cgroup / "memory.current").read_text(encoding="utf-8")) - reclaimable
+        meminfo = _meminfo()
+        return meminfo["MemTotal"] - meminfo["MemAvailable"]
+    except (OSError, KeyError, ValueError):
+        return None
+
+
 class GpuSampler:
+    """Sample GPU utilization and memory, and host memory, until stopped."""
+
     def __init__(self, interval_s: float = 0.5, gpu_devices: tuple[str, ...] | None = None):
         self._interval_s = interval_s
         self._gpu_devices = set(gpu_devices) if gpu_devices is not None else None
         self._samples: list[list[dict[str, float | str]]] = []
+        self.host_memory_samples: list[int] = []
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, name="gpu-sampler", daemon=True)
 
@@ -44,6 +118,9 @@ class GpuSampler:
             self._stop.wait(self._interval_s)
 
     def _sample_once(self) -> None:
+        host = host_memory_used()
+        if host is not None:
+            self.host_memory_samples.append(host)
         command = [
             "nvidia-smi",
             "--query-gpu=index,uuid,utilization.gpu,memory.used",
