@@ -165,10 +165,14 @@ def native_entries(run_dir: Path) -> list[tuple[int | None, dict]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--suite", choices=sorted(SUITE_TASKS), required=True)
-    parser.add_argument("--kit-run", type=Path, required=True)
-    parser.add_argument("--native-run", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--suite", choices=sorted(SUITE_TASKS), required=True, help="the suite both runs used"
+    )
+    parser.add_argument("--kit-run", type=Path, required=True, help="the Kit run's --output-dir")
+    parser.add_argument(
+        "--native-run", type=Path, required=True, help="the --output directory of run_native.py"
+    )
+    parser.add_argument("--output", type=Path, required=True, help="the comparison JSON file to write")
     parser.add_argument(
         "--strict",
         action="store_true",

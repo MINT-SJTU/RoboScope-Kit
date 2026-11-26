@@ -2,6 +2,10 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b94 - 2026-11-26
+
+- Describe the options of the RT-1-X example's `run_native.py` and `compare_native.py` in `--help`.
+
 ## 0.8.0b90 - 2026-11-26
 
 - Remove the `inference_metrics` summary from `result.json` and the `queue_wait_p95_ms` signal from autotune
