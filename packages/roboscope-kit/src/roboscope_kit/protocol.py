@@ -112,7 +112,7 @@ def _msgpack_default(value: Any) -> Any:
     if isinstance(value, np.ndarray):
         if value.dtype.hasobject:
             raise TypeError("object arrays are not supported")
-        contiguous = np.ascontiguousarray(value)
+        contiguous = np.asarray(value, order="C")
         return {
             _TYPE_KEY: "ndarray",
             "dtype": contiguous.dtype.str,
@@ -151,7 +151,7 @@ def _array(data: bytes, value: dict[str, Any]) -> np.ndarray:
 
 def _encode(value: Any) -> Any:
     if isinstance(value, np.ndarray):
-        contiguous = np.ascontiguousarray(value)
+        contiguous = np.asarray(value, order="C")
         return {
             _TYPE_KEY: "ndarray",
             "dtype": contiguous.dtype.str,
