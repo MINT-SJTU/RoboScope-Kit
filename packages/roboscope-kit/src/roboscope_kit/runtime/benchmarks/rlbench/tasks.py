@@ -22,6 +22,7 @@ This module must import without the simulator: the kit, the CLI, and the build s
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import os
 import sys
@@ -40,6 +41,7 @@ EPISODES_PER_TASK = 25
 # PerAct ``rlbench.episode_length``: at most 25 key-frame actions per episode.
 EPISODE_LENGTH = 25
 CAMERAS = ("front", "left_shoulder", "right_shoulder", "wrist")
+# PerAct's camera size; a Policy may negotiate another size per camera (``--camera-size``).
 IMAGE_SIZE = (128, 128)
 ACTION_REPRESENTATION = "rlbench.ee-pose-planning-v1"
 # x, y, z, qx, qy, qz, qw, gripper open, ignore collisions
@@ -204,6 +206,34 @@ def episode_state_sha256(variation: int, random_state: Any) -> str:
     return digest.hexdigest()
 
 
+def camera_size(value: str) -> tuple[str, tuple[int, int]]:
+    """Parse a ``CAMERA=HEIGHTxWIDTH`` command-line value; argparse reports the error message."""
+
+    camera, _, size = value.partition("=")
+    if camera not in CAMERAS:
+        raise argparse.ArgumentTypeError(
+            f"unknown RLBench camera in {value!r}; expected one of {', '.join(CAMERAS)}"
+        )
+    try:
+        height, width = (int(part) for part in size.lower().split("x"))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected CAMERA=HEIGHTxWIDTH, got {value!r}") from exc
+    if height < 1 or width < 1:
+        raise argparse.ArgumentTypeError(f"RLBench camera size must be positive, got {value!r}")
+    return camera, (height, width)
+
+
+def camera_sizes(values: Iterable[tuple[str, tuple[int, int]]]) -> dict[str, tuple[int, int]]:
+    """The ``--camera-size`` values as one size per camera; a camera may be given only once."""
+
+    sizes: dict[str, tuple[int, int]] = {}
+    for camera, size in values:
+        if camera in sizes:
+            raise ValueError(f"RLBench camera {camera} is given more than one size")
+        sizes[camera] = size
+    return sizes
+
+
 def test_episodes_sha256(episode_digests: Iterable[tuple[int, str]]) -> str:
     """Per-task digest over ``(episode, episode_state_sha256)`` in episode order."""
 
@@ -233,6 +263,8 @@ __all__ = [
     "TASK_NAMES",
     "TEST_SET_SPLIT",
     "RLBenchTask",
+    "camera_size",
+    "camera_sizes",
     "episode_state_sha256",
     "require_python_hash_seed",
     "test_episodes_sha256",

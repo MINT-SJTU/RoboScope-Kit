@@ -5,15 +5,20 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import socket
 import threading
 import traceback
 import uuid
+from concurrent.futures import Future
+from dataclasses import replace
 from enum import Enum
 from pathlib import Path
+from queue import Empty, Queue
 from typing import Any
 
+from roboscope_kit.image_sizes import IMAGE_SIZE_FEATURES, apply_image_sizes, camera_support_from_dict
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -21,6 +26,7 @@ from roboscope_kit.policy import (
     Policy,
     PolicyCapabilities,
     SessionContext,
+    negotiate_policy_action_contract,
     validate_action_chunk,
     validate_observation,
     validate_policy_capabilities,
@@ -36,6 +42,8 @@ from roboscope_kit.protocol import (
 )
 
 DEFAULT_SOCKET_PATH = "/tmp/roboscope-inference.sock"
+SHUTDOWN_TIMEOUT_S = 2
+LOGGER = logging.getLogger(__name__)
 
 
 class PolicyState(str, Enum):  # noqa: UP042 -- benchmark environments include Python 3.10
@@ -55,6 +63,10 @@ class PolicyServer:
         self.context: SessionContext | None = None
         self.capabilities: PolicyCapabilities | None = None
         self._request_lock = threading.Lock()
+        self._batch_lock = threading.Lock()
+        self._batch_queue: Queue[tuple[dict[str, Any], Future] | None] = Queue()
+        self._batch_thread: threading.Thread | None = None
+        self._batch_stopping = False
 
     def serve(self) -> None:
         self.socket_path.parent.mkdir(parents=True, exist_ok=True)
@@ -76,8 +88,20 @@ class PolicyServer:
                         daemon=True,
                     ).start()
         finally:
-            self._close_policy()
-            self.socket_path.unlink(missing_ok=True)
+            self._stop_batching()
+            try:
+                if self._request_lock.acquire(timeout=SHUTDOWN_TIMEOUT_S):
+                    try:
+                        self._close_policy()
+                    finally:
+                        self._request_lock.release()
+                else:
+                    self.state = PolicyState.CLOSED
+                    LOGGER.warning("Policy shutdown timed out waiting for an active request")
+            finally:
+                if self._batch_thread is not None:
+                    self._batch_thread.join(timeout=SHUTDOWN_TIMEOUT_S)
+                self.socket_path.unlink(missing_ok=True)
 
     def _serve_client(self, connection: socket.socket) -> None:
         with connection:
@@ -92,12 +116,102 @@ class PolicyServer:
                 if received is None:
                     return
                 request, encoding = received
-                with self._request_lock:
-                    response = self._handle(request)
+                if (
+                    request.get("operation") == "act"
+                    and self.context is not None
+                    and self.context.eval_mode == "fast"
+                    and self.capabilities is not None
+                    and self.capabilities.coalesce_action_requests
+                ):
+                    response = self._submit_action(request)
+                else:
+                    with self._request_lock:
+                        response = self._handle(request)
             except Exception as exc:
                 request_id = str(request.get("request_id") or "") if request is not None else ""
                 response = self._error_response(exc, request_id=request_id)
             send_message(connection, response, encoding)
+
+    def _submit_action(self, request: dict[str, Any]) -> dict[str, Any]:
+        future: Future = Future()
+        with self._batch_lock:
+            if not self._batch_stopping:
+                self._batch_queue.put((request, future))
+                if self._batch_thread is None:
+                    self._batch_thread = threading.Thread(target=self._batch_actions, daemon=True)
+                    self._batch_thread.start()
+            else:
+                raise ProtocolError("policy server is shutting down")
+        return future.result()
+
+    def _batch_actions(self) -> None:
+        deferred = None
+        while True:
+            first = deferred if deferred is not None else self._batch_queue.get()
+            deferred = None
+            if first is None:
+                return
+            pending = [first]
+            stopping = False
+            # Never batch two observations from the same episode, or pass a
+            # duplicate to a later request. No collection delay is introduced.
+            episodes: set[str] = set()
+            maximum = self.capabilities.max_batch_size if self.capabilities is not None else 1
+            while len(pending) <= maximum:
+                request = pending[-1][0]
+                payload = request.get("payload")
+                observation = payload.get("observation") if isinstance(payload, dict) else None
+                episode = observation.get("episode_id") if isinstance(observation, dict) else None
+                if not isinstance(episode, str) or episode in episodes:
+                    if len(pending) > 1:
+                        deferred = pending.pop()
+                    break
+                episodes.add(episode)
+                if len(pending) == maximum:
+                    break
+                try:
+                    item = self._batch_queue.get_nowait()
+                except Empty:
+                    break
+                if item is None:
+                    stopping = True
+                    break
+                pending.append(item)
+            with self._request_lock:
+                try:
+                    self._handle_action_batch(pending)
+                except BaseException as exc:
+                    # A worker failure must resolve every waiting connection.
+                    if self.state not in {PolicyState.CLOSED, PolicyState.UNLOADING}:
+                        self.state = PolicyState.FAILED
+                    for request, future in pending:
+                        if not future.done():
+                            future.set_result(
+                                self._error_response(
+                                    exc, request_id=str(request.get("request_id") or ""), operation="act"
+                                )
+                            )
+            if stopping:
+                return
+
+    def _handle_action_batch(self, pending: list[tuple[dict[str, Any], Future]]) -> None:
+        valid: list[tuple[str, Observation, Future]] = []
+        for request, future in pending:
+            request_id = str(request.get("request_id") or uuid.uuid4())
+            try:
+                validate_version(request)
+                self._require_state("act", PolicyState.READY)
+                context, capabilities = self._loaded_contract()
+                observation = Observation.from_dict(request["payload"]["observation"])
+                validate_observation(observation, context.benchmark, capabilities)
+            except Exception as exc:
+                future.set_result(self._error_response(exc, request_id=request_id, operation="act"))
+            else:
+                valid.append((request_id, observation, future))
+        if valid:
+            actions = self._predict_batch(tuple(observation for _, observation, _ in valid))
+            for (request_id, _, future), action in zip(valid, actions, strict=True):
+                future.set_result(self._success_response(request_id, {"action_chunk": action.to_dict()}))
 
     def _handle(self, request: dict[str, Any]) -> dict[str, Any]:
         request_id = str(request.get("request_id") or uuid.uuid4())
@@ -110,6 +224,7 @@ class PolicyServer:
             if (
                 operation in {"load", "reset", "act", "act_batch", "observe", "end_episode"}
                 and not isinstance(exc, ProtocolError)
+                and self.state is not PolicyState.CLOSED
             ):
                 self.state = PolicyState.FAILED
             return self._error_response(exc, request_id=request_id, operation=operation)
@@ -118,16 +233,36 @@ class PolicyServer:
         if operation == "health":
             # A client offering encodings learns which ones this server can receive.
             if "encodings" in payload:
-                return {"state": self.state.value, "encodings": list(ENCODINGS)}
-            return {"state": self.state.value}
+                return {
+                    "state": self.state.value,
+                    "encodings": list(ENCODINGS),
+                    "image_size_features": list(IMAGE_SIZE_FEATURES),
+                }
+            return {"state": self.state.value, "image_size_features": list(IMAGE_SIZE_FEATURES)}
         if operation == "load":
             self._require_state(operation, PolicyState.CREATED)
             self.state = PolicyState.LOADING
             context = SessionContext.from_dict(payload["context"])
+            camera_support = (
+                camera_support_from_dict(payload["camera_support"])
+                if payload.get("camera_support") is not None
+                else None
+            )
             capabilities = self.policy.load(context)
             if not isinstance(capabilities, PolicyCapabilities):
                 raise TypeError("Policy.load() must return PolicyCapabilities")
-            validate_policy_capabilities(context.benchmark, capabilities)
+            validate_policy_capabilities(context.benchmark, capabilities, camera_support=camera_support)
+            contract = negotiate_policy_action_contract(
+                context.benchmark,
+                capabilities,
+                eval_mode=context.eval_mode,
+                camera_support=camera_support,
+            )
+            # Observations are checked against the negotiated camera sizes.
+            context = replace(
+                context,
+                benchmark=apply_image_sizes(context.benchmark, contract.image_sizes, camera_support),
+            )
             if capabilities.step_observation_updates and type(self.policy).observe is Policy.observe:
                 raise TypeError("Policy must implement observe() when it declares step observation updates")
             self.context = context
@@ -171,14 +306,7 @@ class PolicyServer:
                 )
             for observation in observations:
                 validate_observation(observation, context.benchmark, capabilities)
-            actions = self.policy.act_batch(observations)
-            if len(actions) != len(observations):
-                raise ValueError("Policy.act_batch() must return one ActionChunk per observation")
-            for action in actions:
-                if not isinstance(action, ActionChunk):
-                    raise TypeError("Policy.act_batch() must return ActionChunk values")
-                validate_action_chunk(action, context.benchmark)
-                self._validate_action_chunk_size(action, capabilities)
+            actions = self._predict_batch(observations)
             return {"action_chunks": [action.to_dict() for action in actions]}
         if operation == "end_episode":
             self._require_state(operation, PolicyState.READY)
@@ -193,7 +321,27 @@ class PolicyServer:
             return {"state": self.state.value}
         raise ProtocolError(f"unknown operation {operation!r}")
 
+    def _predict_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
+        context, capabilities = self._loaded_contract()
+        actions = self.policy.act_batch(observations)
+        if len(actions) != len(observations):
+            raise ValueError("Policy.act_batch() must return one ActionChunk per observation")
+        for action in actions:
+            if not isinstance(action, ActionChunk):
+                raise TypeError("Policy.act_batch() must return ActionChunk values")
+            validate_action_chunk(action, context.benchmark)
+            self._validate_action_chunk_size(action, capabilities)
+        return actions
+
+    def _stop_batching(self) -> None:
+        with self._batch_lock:
+            if not self._batch_stopping:
+                self._batch_stopping = True
+                if self._batch_thread is not None:
+                    self._batch_queue.put(None)
+
     def _close_policy(self) -> None:
+        self._stop_batching()
         if self.state in {PolicyState.UNLOADING, PolicyState.CLOSED}:
             return
         should_unload = self.state is not PolicyState.CREATED
@@ -238,7 +386,7 @@ class PolicyServer:
 
     def _error_response(
         self,
-        exc: Exception,
+        exc: BaseException,
         *,
         request_id: str,
         operation: str = "protocol",

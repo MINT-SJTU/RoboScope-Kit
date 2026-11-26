@@ -53,7 +53,7 @@ if [[ ! -f "${MANIFEST}" || ! -f "${LOCK}" || ! -d "${KIT_SOURCE}/roboscope_kit"
   echo "robomimic manifest, runtime lock or kit source is missing" >&2
   exit 3
 fi
-for pin in "mujoco==2.3.7" "torch==" "numpy==" \
+for pin in "mujoco==2.3.7" "torch==" "numpy==" "msgpack==1.2.4" \
   "robomimic @ git+${ROBOMIMIC_URL}@${ROBOMIMIC_COMMIT}" \
   "robosuite @ git+https://github.com/ARISE-Initiative/robosuite.git@${ROBOSUITE_COMMIT}"; do
   grep -qF "${pin}" "${LOCK}" || {
@@ -95,6 +95,56 @@ fi
   --requirements "${LOCK}"
 "${UV_BIN}" pip freeze --python "${PYTHON}" > "${INSTALL_DIR}/pip-freeze.txt"
 
+# Apply the pinned source patch only through this builder. Replace the file atomically
+# so uv's hard-linked package cache and other runtime environments remain untouched.
+env -u PYTHONPATH "${PYTHON}" -I - "${SCRIPT_DIR}/runtime-patches.json" \
+  "${INSTALL_DIR}/runtime-patches.json" <<'PY'
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from importlib.metadata import distribution
+from pathlib import Path
+
+pins_path, report = map(Path, sys.argv[1:])
+pins = json.loads(pins_path.read_text())
+for pin in pins["patches"]:
+    patch = pins_path.parent / pin["patch"]
+    if hashlib.sha256(patch.read_bytes()).hexdigest() != pin["sha256"]:
+        raise SystemExit(f"source patch checksum differs from its pin: {patch}")
+    package = distribution(pin["distribution"])
+    targets = [(entry, Path(package.locate_file(entry["path"]))) for entry in pin["files"]]
+    states = [hashlib.sha256(target.read_bytes()).hexdigest() for _, target in targets]
+    if states == [entry["patched_sha256"] for entry, _ in targets]:
+        continue
+    if states != [entry["original_sha256"] for entry, _ in targets]:
+        raise SystemExit(f"installed files differ from the pinned original or patched set: {patch}")
+    with tempfile.TemporaryDirectory(prefix="roboscope-robomimic-patch-") as temporary:
+        for entry, target in targets:
+            source = Path(temporary) / entry["path"]
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_bytes(target.read_bytes())
+        subprocess.run(["git", "apply", "--check", str(patch)], cwd=temporary, check=True)
+        subprocess.run(["git", "apply", str(patch)], cwd=temporary, check=True)
+        patched_files = [(Path(temporary) / entry["path"]).read_bytes() for entry, _ in targets]
+    for (entry, _), patched in zip(targets, patched_files, strict=True):
+        if hashlib.sha256(patched).hexdigest() != entry["patched_sha256"]:
+            raise SystemExit(f"source patch produced unexpected bytes: {entry['path']}")
+    for (_, target), patched in zip(targets, patched_files, strict=True):
+        with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as output:
+            replacement = Path(output.name)
+            output.write(patched)
+        try:
+            replacement.chmod(target.stat().st_mode & 0o777)
+            os.replace(replacement, target)
+        finally:
+            replacement.unlink(missing_ok=True)
+report.write_text(json.dumps(pins, indent=2) + "\n")
+print("robomimic simulator source patches verified")
+PY
+
 env -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 "${PYTHON}" -I - "${ROBOMIMIC_COMMIT}" "${ROBOSUITE_COMMIT}" <<'PY'
 import json
 import sys
@@ -104,6 +154,7 @@ robomimic_commit, robosuite_commit = sys.argv[1:3]
 for name, locked in (
     ("mujoco", "2.3.7"),
     ("numpy", "1.26.4"),
+    ("msgpack", "1.2.4"),
     ("torch", "2.4.1"),
     ("robomimic", "0.4.0"),
     ("robosuite", "1.4.1"),

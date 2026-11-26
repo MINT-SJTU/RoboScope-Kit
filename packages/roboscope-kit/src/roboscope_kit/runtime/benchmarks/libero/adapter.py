@@ -198,6 +198,8 @@ class LiberoBenchmarkAdapter:
             str(self.config.seed),
             "--settle-steps",
             str(self.config.settle_steps),
+            "--action-representation",
+            context.execution_contract.action_representation,
             "--queue-dir",
             str(context.queue_dir),
             "--worker-state-dir",
@@ -205,6 +207,11 @@ class LiberoBenchmarkAdapter:
         )
         if self.config.save_videos:
             command += ("--video-dir", str(context.output_dir / "video"))
+        image_sizes = context.execution_contract.image_sizes
+        for feature, flag in (("images.primary", "--primary-size"), ("images.wrist", "--wrist-size")):
+            if feature in image_sizes:
+                height, width = image_sizes[feature]
+                command += (flag, f"{height}x{width}")
         threads = str(self.config.cpu_threads)
         env = {
             "PYTHONPATH": f"{self.config.libero_home}:{kit_import_root()}:{os.environ.get('PYTHONPATH', '')}",

@@ -254,6 +254,8 @@ class XvlaDemoPolicy(Policy):
                 benchmark: {
                     "robotwin": "robotwin.ee-compact-quat-v1",
                     "calvin": "calvin.absolute-compact-quat-v1",
+                    "libero": "libero.absolute-eef-v1",
+                    "libero_plus": "libero.absolute-eef-v1",
                 }.get(benchmark, context.benchmark.default_action_representation)
             },
             observation_strides={benchmark: 1},

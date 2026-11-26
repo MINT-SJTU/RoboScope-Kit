@@ -2,12 +2,191 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b73 - 2026-11-21
+## 0.8.0b87 - 2026-11-26
 
 - Stop Workers, Policy Servers and the CUDA MPS daemon when the benchmark CLI receives SIGTERM or SIGHUP.
   They run in their own sessions, so before this a terminated CLI left them running, and the leftover
   MPS daemon made the next run fail. A handler that is already installed, such as `nohup` ignoring
   SIGHUP, is kept.
+
+## 0.8.0b84 - 2026-11-26
+
+- Pin MessagePack in the robomimic runtime. The shared Policy client imports it since 0.8.0b27;
+  a clean robomimic build previously stopped before initial-state verification with a missing dependency.
+- Evaluate the robomimic model-zoo Policy without retaining backward graphs, preserving its
+  upstream FP32 forward calls, per-episode recurrent state, and random-number streams.
+- Schedule longer robomimic tasks first so short tasks can fill the tail of a parallel run;
+  all task/seed identities, horizons, reset behavior, and scoring stay unchanged.
+- Reuse two compiled XML models in the pinned robomimic runtime, copying each model before use
+  and restoring MuJoCo's XML serialization context when needed. The builder verifies patch and
+  source hashes; workers can disable the cache with `ROBOSCOPE_ROBOMIMIC_MODEL_CACHE=0`.
+- Record robomimic initialization, reset, Policy reset/end, observation preparation, simulator,
+  and inference round-trip time in work-item metadata.
+
+## 0.8.0b83 - 2026-11-26
+
+- Remove `--evaluation-config` from `roboscope_kit.runtime.benchmark` and
+  `roboscope_kit.runtime.benchmark.shard_merge`. MetaWorld cameras come from the Policy contract's
+  `benchmark_config.metaworld` declaration, or the default camera when it is absent. To keep a camera
+  setup that was passed with `--evaluation-config`, put the same `{"cameras": [...]}` object under
+  `benchmark_config.metaworld` in `roboscope-policy.json`.
+- A MetaWorld shard merge reads the camera configuration each shard recorded in its
+  `evaluation-config.json` and requires every shard to match.
+- Add one-line `--help` descriptions for `--benchmark`, `--suite`, `--episodes`, `--quick-test`,
+  `--self-test`, and `--benchmark-manifest` in `roboscope_kit.runtime.benchmark`,
+  and for `--benchmark`, `--suite`, `--episodes`, `--benchmark-manifest`, and `--output-dir` in
+  `roboscope_kit.runtime.benchmark.shard_merge`.
+- The shard-merge `--help` usage example includes the required `--benchmark-manifest` and keeps its
+  line breaks.
+- RoboTwin cameras render Policy-negotiated image sizes natively. The head and both wrist cameras accept
+  64–1024 pixels per side through `PolicyCapabilities.image_sizes`; a camera with a negotiated size is
+  created at that width and height with the field of view, pose and random draws of its task config, so
+  the `task_config` files and the frozen seed protocol are unchanged. The vertical field of view stays,
+  so the horizontal view follows the aspect ratio: at 224 × 224 the horizontal field of view narrows from
+  about 48° to 37°. Evaluation videos of an odd head-camera size are padded by one pixel, since libx264's
+  yuv420p needs even dimensions. Each evaluator receives only the negotiated sizes, so a
+  `ROBOTWIN_CAMERA_SIZES` exported in the Kit's environment has no effect. Without `image_sizes` the
+  simulator is set up exactly as before.
+- RoboTwin offers these sizes only with native rendering on a runtime whose manifest sets
+  `negotiated_camera_sizes` (built by this release's `build-runtime.sh`). `render_mode: central`, and a
+  runtime built before this release until it is rebuilt, keep 240 × 320.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RoboTwin images with
+  `canonical_observations: false`.
+- RoboTwin's camera specs leave the image shape open, so other RoboTwin sizes need roboscope-kit 0.8.0b83
+  or later in the Policy environment, the first version whose server reports `open_shape_ranges`; a
+  Policy server on an earlier version keeps 240 × 320.
+
+- RoboDojo cameras render Policy-negotiated image sizes natively. The head and both wrist cameras each
+  accept 64–2048 pixels per side through `PolicyCapabilities.image_sizes`; a camera with a negotiated size
+  renders at that size with its own lens and pose, without cropping or resampling. The horizontal field of
+  view stays the camera's own and the vertical one follows the aspect ratio. Without `image_sizes`
+  every camera renders 480 × 640 exactly as before. RoboDojo sizes need roboscope-kit 0.8.0b83 or later in
+  the Policy environment; older Policy servers are offered RoboDojo's own size only.
+- RoboDojo runtimes declare `negotiated_camera_sizes` in their manifest. A runtime built before this
+  release lacks it, and the Kit offers it only the cameras' own size (480 × 640), as before; rebuild it
+  to use other sizes.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RoboDojo images with
+  `canonical_observations: false`.
+
+- RoboCasa365 cameras render Policy-negotiated image sizes natively: 64–640 pixels per side through
+  `PolicyCapabilities.image_sizes`, one size shared by all three cameras because the official Gym wrapper
+  takes a single width and height. The simulator renders directly at that size and Kit never resamples.
+  At 640 × 640 an `act_batch` request (five slots, three cameras, two frames) is 47 MiB as JSON, within
+  the 64 MiB message limit. Without `image_sizes` the environments are created exactly as before, at
+  256 × 256.
+- `CameraSupport.size_group` makes cameras render one size, negotiated jointly: the first size, in
+  feature order and each camera's preference order, that every camera of the group accepts (a listed
+  size, or its canonical size when its list ends with `ANY_SIZE`). When none suits every camera, the run
+  stops before any Worker starts and names the group, each camera's list and the cameras the Policy did
+  not list. Negotiation checks that the cameras of a group declare one canonical size, range and
+  squareness. Policy servers report the `shared_sizes` image-size feature for it; a Policy whose own
+  environment runs an older roboscope-kit gets RoboCasa365's 256 × 256, as before.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RoboCasa365 images with
+  `canonical_observations: false` instead of 256 × 256.
+
+- Render ManiSkill's field-of-view cameras at Policy-negotiated sizes, 16–512 pixels per side; the
+  Worker sets each negotiated camera's `sensor_configs` width and height, so the simulator renders that
+  size directly. The Bridge camera keeps 480 × 640, because it is defined by a pixel intrinsic for that
+  size over a real photo: an image feature that a suite's Bridge profile maps keeps its own size in that
+  suite (`images.primary` of `bridge_rgb_v1` and `upstream_tasks_v1`), whatever the suite is named.
+  `policy_io.image_sizes` records only the cameras the suite renders, those its task profiles map to an
+  image feature. Without `image_sizes` every camera keeps its task's own size and the Worker builds the
+  environment exactly as before.
+- A flat `image_sizes` list applies to the cameras each suite renders, so a Policy that already
+  declares, for example, `[(224, 224)]` or `[(224, 224), ANY_SIZE]` now receives native 224 × 224 images
+  from the cameras of ManiSkill suites without Bridge tasks, with `canonical_observations: false`.
+  ManiSkill's own size varies by task, so any negotiated size counts as non-canonical, even one equal to
+  a task's own size.
+
+- LIBERO-Plus renders its cameras at Policy-negotiated sizes: the wrist camera at 64–1024 pixels per side
+  (480 × 640 at most with OSMesa) and the agent view at square sizes from 64 × 64 to 256 × 256, the sizes
+  its image corruptions support. `CameraSupport.square` limits a camera to square sizes. Without
+  `image_sizes` nothing changes. A Policy server on an older roboscope-kit keeps the agent view at
+  256 × 256, since it does not report the `square_sizes` image-size feature, while the wrist camera
+  still follows its `image_sizes`.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 LIBERO-Plus images with
+  `canonical_observations: false` instead of 256 × 256.
+
+- Render RLBench cameras at Policy-negotiated sizes. Each of the four cameras renders natively at 32–768
+  pixels per side, so an observation of all four stays inside the 64 MiB Policy message limit. Its depth
+  and point cloud follow the camera's size, and the camera intrinsics are the ones RLBench computes for
+  that resolution. PerAct's 128 × 128 stays the protocol size, and without
+  `image_sizes` the worker builds its observation configuration exactly as before.
+- `CameraSupport.spatial_features` names the observation features rendered by a camera whose first two
+  dimensions follow its negotiated size; the Policy server checks them at that size. Such entries need
+  the `spatial_features` image-size feature, so a Policy server from an older roboscope-kit is offered
+  RLBench's 128 × 128 only.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RLBench images, depth and point clouds with
+  `canonical_observations: false` instead of 128 × 128.
+
+- Let Policies negotiate CALVIN camera sizes. The static (200 × 200) and gripper (84 × 84) cameras render
+  natively at 64–1024 pixels per side; the worker sets the negotiated width, height and aspect ratio in
+  the merged environment config. Without `image_sizes` CALVIN runs exactly as before.
+- Policy servers report the `open_shape_ranges` image-size feature: an image feature whose spec leaves its
+  shape open takes the negotiated `(height, width)`. A Policy whose own environment runs an older
+  roboscope-kit is offered only CALVIN's own 200 × 200 static and 84 × 84 gripper sizes.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 CALVIN frames with
+  `canonical_observations: false` instead of the canonical sizes.
+
+- Add the `libero.absolute-eef-v1` action representation to LIBERO, LIBERO+, and LIBERO-Pro: the seven values
+  are the absolute end-effector target position, axis-angle orientation, and gripper command. The adapters pass
+  the negotiated representation to the shared LIBERO worker, which keeps the 10 settle steps under delta control
+  and then sets `use_delta = False` on each robot's OSC controller for the rest of the episode, as the X-VLA
+  LIBERO client does. The default `libero.delta-eef-v1` path is unchanged.
+- Fix `examples/xvla` on LIBERO: the Policy returns absolute targets but declared the default delta
+  representation, and no worker patch switched the controller, so the targets were executed as deltas. It now
+  declares `libero.absolute-eef-v1` for LIBERO and LIBERO+; only LIBERO has been run with it. Episodes keep the
+  benchmark's suite horizons, so X-VLA's published LIBERO scores (800- and 900-step episodes) are not directly
+  comparable.
+
+## 0.8.0b82 - 2026-11-26
+
+- The Policy server reports which image-size features it understands (`image_size_features` in its
+  `health` reply), and the Kit offers a Policy only the camera sizes its roboscope-kit version can
+  apply, so the Kit and a Policy environment on an older roboscope-kit always agree on observation
+  shapes. A camera whose sizes that version cannot apply is offered only the benchmark's own size; a camera
+  whose sizes it can apply follows the Policy's `image_sizes`. The Kit logs which cameras were limited and
+  which features the Policy's roboscope-kit lacks, and says to upgrade roboscope-kit in the Policy
+  environment; a Policy `load` that then fails on those cameras' sizes carries the same hint.
+
+## 0.8.0b81 - 2026-11-26
+
+- MetaWorld cameras render Policy-negotiated image sizes natively. Every configured camera accepts 64–1024
+  pixels per side through `PolicyCapabilities.image_sizes`; a camera with a negotiated size renders at
+  that size (transposed for a 90 or 270 degree rotation) without cropping or resampling, and keeps its
+  camera name, position and rotation. Without `image_sizes` every camera renders exactly as configured.
+- Pin `msgpack` in the MetaWorld runtime lock, so the MetaWorld worker can import the kit's protocol client.
+
+## 0.8.0b77 - 2026-11-25
+
+- Negotiate camera image sizes between the benchmark and the Policy. `PolicyCapabilities.image_sizes`
+  lists accepted `(height, width)` sizes in order of preference, optionally ending with `ANY_SIZE`; the
+  runtime picks the first size the benchmark renders natively and never resamples. LIBERO and
+  LIBERO-Pro render 64–1024 pixels per side (480 × 640 at most with OSMesa); other benchmarks keep their
+  own size. Without `image_sizes` nothing changes.
+- Record the negotiated sizes and `canonical_observations` in `policy_io`; shard merging requires the
+  same `policy_io` on every shard and keeps it in the merged result.
+- Keep run-cache entries per negotiated image size (cache schema 2). Existing cache entries keep serving
+  runs at the benchmark's own size; the first run at a new size starts from them, and later runs at that
+  size use the selection and task times recorded for it.
+
+## 0.8.0b76 - 2026-11-25
+
+- Build the CALVIN worker runtime with CPython 3.11.15 and hash-pinned dependencies.
+- Allow Policies to opt into coalescing queued actions from distinct episodes in `--eval-mode fast`.
+  The CALVIN StarVLA example seeds action noise by episode and observation step.
+- Document the CALVIN throughput, repeatability, and score equivalence results on a single RTX 4090.
+
+## 0.8.0b75 - 2026-11-25
+
+- Add `--eval-mode {strict,fast}` (default `strict`) as the unified opt-in framework for throughput optimizations that may introduce small numeric or per-episode differences.
+- Pass `eval_mode` through `SessionContext` and `PolicyExecutionContract`, record `eval_mode` and `active_fast_optimizations` in `result.json`, and isolate `strict` and `fast` runs in the run cache and shard merging.
 
 ## 0.8.0b72 - 2026-11-22
 

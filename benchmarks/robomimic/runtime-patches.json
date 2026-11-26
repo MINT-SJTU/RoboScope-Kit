@@ -1,0 +1,16 @@
+{
+  "patches": [
+    {
+      "distribution": "robosuite",
+      "patch": "patches/robosuite-model-cache.patch",
+      "sha256": "a3c3e7376ee32ca899cf3031220a42dec59c6158c524c4193221d759ec5a549a",
+      "files": [
+        {
+          "path": "robosuite/utils/binding_utils.py",
+          "original_sha256": "f282a5a48dd215363ce3f981ce4126d91639c6e00fa530f0615cd5ab598372a8",
+          "patched_sha256": "6c0e92b95378c7297f826ef3ef732bc2f066425ae9d59d7e98b38a60c753acc2"
+        }
+      ]
+    }
+  ]
+}

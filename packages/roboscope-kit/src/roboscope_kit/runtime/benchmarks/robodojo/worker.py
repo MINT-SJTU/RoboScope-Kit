@@ -13,6 +13,7 @@ import subprocess
 import uuid
 from pathlib import Path
 
+from roboscope_kit.benchmark_specs import ROBODOJO_CAMERAS
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 
 
@@ -36,10 +37,44 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--physics-threads", type=int, choices=(1, 4, 8))
     parser.add_argument("--step-observation-updates", action="store_true")
     parser.add_argument("--observation-queue-size", type=int, choices=range(0, 11), default=0)
+    parser.add_argument(
+        "--camera-size", action="append", type=_camera_size, default=[],
+        help="render one camera at a negotiated size, as FEATURE=HEIGHTxWIDTH",
+    )
     args = parser.parse_args()
     if args.observation_queue_size and not args.step_observation_updates:
         parser.error("observation overlap requires step observation updates")
     return args
+
+
+_CAMERA_NAMES = dict(ROBODOJO_CAMERAS)
+
+
+def _camera_size(value: str) -> tuple[str, int, int]:
+    feature, separator, size = value.partition("=")
+    if not separator or feature not in _CAMERA_NAMES:
+        raise argparse.ArgumentTypeError(
+            f"expected one of {', '.join(_CAMERA_NAMES)}=HEIGHTxWIDTH, got {value!r}"
+        )
+    try:
+        height, width = (int(part) for part in size.lower().split("x"))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected FEATURE=HEIGHTxWIDTH, got {value!r}") from exc
+    if height < 1 or width < 1:
+        raise argparse.ArgumentTypeError(f"image size must be positive, got {value!r}")
+    return feature, height, width
+
+
+def camera_resolutions(sizes: list[tuple[str, int, int]]) -> dict[str, list[int]]:
+    """RoboDojo camera name -> [width, height], the order of its camera templates."""
+
+    resolutions: dict[str, list[int]] = {}
+    for feature, height, width in sizes:
+        camera = _CAMERA_NAMES[feature]
+        if camera in resolutions:
+            raise ValueError(f"camera size for {feature} is given twice")
+        resolutions[camera] = [width, height]
+    return resolutions
 
 
 def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
@@ -82,9 +117,11 @@ def run_item(args: argparse.Namespace, item: WorkItem) -> WorkResult:
     }
     for name in (
         "ROBODOJO_ASYNC_VIDEO", "ROBODOJO_UNPACED_RENDER", "ROBODOJO_CONTROL_STATE_REUSE",
-        "ROBODOJO_PHYSICS_THREADS",
+        "ROBODOJO_PHYSICS_THREADS", "ROBODOJO_CAMERA_RESOLUTIONS",
     ):
         env.pop(name, None)
+    if args.camera_size:
+        env["ROBODOJO_CAMERA_RESOLUTIONS"] = json.dumps(camera_resolutions(args.camera_size), sort_keys=True)
     if args.async_video:
         env["ROBODOJO_ASYNC_VIDEO"] = "1"
     if args.unpaced_render:

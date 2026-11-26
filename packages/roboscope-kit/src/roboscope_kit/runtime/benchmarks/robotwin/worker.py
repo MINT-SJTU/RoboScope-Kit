@@ -36,6 +36,14 @@ MEMORY_FAILURE_TOKENS = (
 # Printed by an evaluator whose render service (render_mode central) exited or broke its connection; the
 # same constant is SERVICE_LOST_MARKER in benchmarks/robotwin/roboscope_robotwin_render.py.
 RENDER_SERVICE_LOST_PREFIX = "ROBOSCOPE_ROBOTWIN_RENDER_SERVICE_LOST"
+# Worker flag -> RoboTwin camera it sizes. The launcher reads the sizes from CAMERA_SIZES_ENV, the same
+# constant as in benchmarks/robotwin/roboscope_robotwin_launcher.py.
+CAMERA_SIZE_FLAGS = (
+    ("--head-size", "head_camera"),
+    ("--left-wrist-size", "left_camera"),
+    ("--right-wrist-size", "right_camera"),
+)
+CAMERA_SIZES_ENV = "ROBOTWIN_CAMERA_SIZES"
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,8 +72,45 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="Unix socket of this GPU's RoboTwin render service; the evaluator then runs without a GPU",
     )
+    for flag, camera in CAMERA_SIZE_FLAGS:
+        parser.add_argument(
+            flag,
+            dest=camera,
+            type=_image_size,
+            help=f"create {camera} at HEIGHTxWIDTH instead of the task config's size",
+        )
     parser.add_argument("--poll-interval", type=float, default=0.05)
     return parser.parse_args()
+
+
+def _image_size(value: str) -> tuple[int, int]:
+    try:
+        height, width = (int(part) for part in value.lower().split("x"))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected HEIGHTxWIDTH, got {value!r}") from exc
+    if height < 1 or width < 1:
+        raise argparse.ArgumentTypeError(f"image size must be positive, got {value!r}")
+    return height, width
+
+
+def _inherited_env() -> dict[str, str]:
+    """The Worker's environment for an evaluator, without a camera-size override it may have inherited.
+
+    Only ``_camera_env`` sets CAMERA_SIZES_ENV, so the evaluator renders the sizes ``policy_io`` records.
+    """
+
+    return {name: value for name, value in os.environ.items() if name != CAMERA_SIZES_ENV}
+
+
+def _camera_env(args: argparse.Namespace) -> dict[str, str]:
+    """The launcher's camera-size override: set only for cameras created at a negotiated size."""
+
+    sizes = {
+        camera: list(getattr(args, camera))
+        for _flag, camera in CAMERA_SIZE_FLAGS
+        if getattr(args, camera, None) is not None
+    }
+    return {CAMERA_SIZES_ENV: json.dumps(sizes, sort_keys=True)} if sizes else {}
 
 
 def _item_window(item: WorkItem) -> tuple[int, int, int]:
@@ -150,13 +195,14 @@ class _EvalSession:
 
     def _spawn(self) -> subprocess.Popen:
         env = {
-            **os.environ,
+            **_inherited_env(),
             # The RoboTwin runtime may live on read-only or inode-limited storage,
             # where writing __pycache__ fails and makes imports (e.g.
             # planner.CuroboPlanner) intermittently crash. Evaluate without
             # bytecode caching so imports never need to write pyc files.
             "PYTHONDONTWRITEBYTECODE": "1",
             **_gpu_env(self.args),
+            **_camera_env(self.args),
             "ROBOSCOPE_INFERENCE_SOCKET": str(self.args.policy_socket),
             "ROBOTWIN_EVAL_SESSION": "1",
             "ROBOTWIN_DISABLE_VIDEO": "1" if self.args.disable_video else "0",
@@ -388,13 +434,14 @@ def _run_task_single_process(args: argparse.Namespace, item: WorkItem) -> WorkRe
     write_deploy_policy(args.deploy_policy, deploy_policy)
     task_env, argv_tail = _task_spec(args, item, deploy_policy)
     env = {
-        **os.environ,
+        **_inherited_env(),
         # The RoboTwin runtime may live on read-only or inode-limited storage,
         # where writing __pycache__ fails and makes imports (e.g.
         # planner.CuroboPlanner) intermittently crash. Evaluate without
         # bytecode caching so imports never need to write pyc files.
         "PYTHONDONTWRITEBYTECODE": "1",
         **_gpu_env(args),
+        **_camera_env(args),
         "ROBOSCOPE_INFERENCE_SOCKET": str(args.policy_socket),
         "ROBOTWIN_SEED_CACHE_ENABLED": "1" if args.seed_cache_dir is not None else "0",
         "ROBOSCOPE_PROFILING_MODULE": profiling.__file__,

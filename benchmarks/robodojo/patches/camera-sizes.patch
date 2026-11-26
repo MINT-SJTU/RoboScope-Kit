@@ -1,0 +1,64 @@
+diff --git a/env/camera_manager/camera_manager.py b/env/camera_manager/camera_manager.py
+index 501b741..b493aeb 100644
+--- a/env/camera_manager/camera_manager.py
++++ b/env/camera_manager/camera_manager.py
+@@ -1,5 +1,6 @@
+ from collections.abc import Sequence
+ from copy import deepcopy
++import json
+ import os
+ from typing import List, Tuple
+ 
+@@ -30,6 +31,21 @@ REAL_MAP = {
+     "large_d435": LARGE_D435,
+ }
+ 
++# RoboScope Kit: per-camera (width, height) render sizes negotiated with the Policy.
++# Without ROBODOJO_CAMERA_RESOLUTIONS every camera keeps its template resolution.
++ROBOSCOPE_CAMERA_RESOLUTIONS = {
++    str(name): (int(size[0]), int(size[1]))
++    for name, size in json.loads(os.environ.get("ROBODOJO_CAMERA_RESOLUTIONS") or "{}").items()
++}
++
++
++def roboscope_camera_args(camera_type, camera_name):
++    args_info = REAL_MAP.get(camera_type, None)
++    if args_info is not None and camera_name in ROBOSCOPE_CAMERA_RESOLUTIONS:
++        args_info = {**args_info, "resolution": ROBOSCOPE_CAMERA_RESOLUTIONS[camera_name]}
++    return args_info
++
++
+ VISUAL_MAP = {
+     "pinhole": PINHOLE,
+     "d435": PINHOLE,
+@@ -225,7 +241,7 @@ class CameraManager:
+                     )
+ 
+                 # Args
+-                args_info = REAL_MAP.get(camera_config.camera.type, None)
++                args_info = roboscope_camera_args(camera_config.camera.type, camera_name)
+                 if args_info is None:
+                     raise ValueError(f"Camera type {camera_config.camera.type} not found in template map.")
+ 
+@@ -458,7 +474,7 @@ class CameraManager:
+         """
+         camera_name = self.camera_names[env_id][cam_id]
+         camera_cfg = self.camera_config[camera_name]
+-        args_info = REAL_MAP.get(camera_cfg.camera.type, None)
++        args_info = roboscope_camera_args(camera_cfg.camera.type, camera_name)
+         if args_info is None or "focal_length" not in args_info or "horizontal_aperture" not in args_info:
+             return np.eye(3, dtype=np.float64)
+         width, height = args_info["resolution"]
+diff --git a/utils/save_file.py b/utils/save_file.py
+index 51245a1..027e87f 100644
+--- a/utils/save_file.py
++++ b/utils/save_file.py
+@@ -69,6 +69,8 @@ class VideoStreamWriter:
+                 str(fps),
+                 "-i",
+                 "-",
++                # yuv420p needs even dimensions; pad odd negotiated sizes by one pixel.
++                *(["-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2"] if width % 2 or height % 2 else []),
+                 "-pix_fmt",
+                 "yuv420p",
+                 "-vcodec",

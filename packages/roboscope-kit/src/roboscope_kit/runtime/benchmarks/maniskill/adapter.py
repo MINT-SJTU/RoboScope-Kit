@@ -13,7 +13,7 @@ from typing import Any
 from roboscope_kit.runtime.benchmark import ProcessSpec, WorkerContext, WorkItem, WorkResult
 
 from .metrics import overall_task_results
-from .profile import PROTOCOL_ID
+from .profile import PROTOCOL_ID, fixed_size_cameras
 
 
 @dataclass(frozen=True)
@@ -60,16 +60,29 @@ class ManiSkillBenchmarkAdapter:
 
     def worker_process(self, context: WorkerContext) -> ProcessSpec:
         threads = str(self.config.cpu_threads)
+        command = (
+            str(self.config.python), "-m", "roboscope_kit.runtime.benchmarks.maniskill.worker",
+            "--benchmark-manifest", str(self.config.manifest_path), "--suite", self.config.suite,
+            "--worker-id", str(context.worker_id),
+            "--policy-socket", str(context.replica_socket),
+            "--queue-dir", str(context.queue_dir),
+            "--worker-state-dir", str(context.state_dir),
+            "--policy-batch-size", str(self.config.policy_batch_size),
+        )
+        image_sizes = context.execution_contract.image_sizes
+        for profile in self.config.profiles:
+            fixed = sorted(set(image_sizes) & set(fixed_size_cameras(profile)))
+            if fixed:
+                raise ValueError(
+                    f"ManiSkill {profile['profile_id']} renders {', '.join(fixed)} only at the task's own "
+                    "size: its camera uses a fixed pixel intrinsic over a real-image background. "
+                    "Request [ANY_SIZE], or leave that feature out of an image_sizes mapping; the stock "
+                    "bridge_rgb_v1 suite runs the Bridge tasks at their own size."
+                )
+        for feature, (height, width) in sorted(image_sizes.items()):
+            command += ("--image-size", f"{feature}={height}x{width}")
         return ProcessSpec(
-            command=(
-                str(self.config.python), "-m", "roboscope_kit.runtime.benchmarks.maniskill.worker",
-                "--benchmark-manifest", str(self.config.manifest_path), "--suite", self.config.suite,
-                "--worker-id", str(context.worker_id),
-                "--policy-socket", str(context.replica_socket),
-                "--queue-dir", str(context.queue_dir),
-                "--worker-state-dir", str(context.state_dir),
-                "--policy-batch-size", str(self.config.policy_batch_size),
-            ),
+            command=command,
             env={
                 "CUDA_VISIBLE_DEVICES": context.gpu_device,
                 "HOME": str(self.config.runtime_home),

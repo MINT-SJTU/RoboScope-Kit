@@ -1,0 +1,79 @@
+--- a/robosuite/utils/binding_utils.py
++++ b/robosuite/utils/binding_utils.py
+@@ -4,7 +4,10 @@
+ 
+ import gc
+ import os
++from copy import copy
++from functools import lru_cache
+ from tempfile import TemporaryDirectory
++from threading import RLock
+ 
+ # DIRTY HACK copied from mujoco-py - a global lock on rendering
+ from threading import Lock
+@@ -258,6 +261,25 @@
+                     # pylint: enable=protected-access
+                     dct[attr] = property(fget, fset)
+         return super().__new__(cls, name, bases, dct)
++
++
++# The pinned robomimic rollout alternates source and saved XML during reset_to.
++# Assets are immutable in this runtime. Keep two pristine models per process and
++# copy each one before exposing mutable arrays to an environment.
++_XML_MODEL_LOCK = RLock()
++_LAST_COMPILED_XML = None
++
++
++def _compile_xml_model(xml, directory):
++    global _LAST_COMPILED_XML
++    model = mujoco.MjModel.from_xml_string(xml)
++    _LAST_COMPILED_XML = (xml, directory)
++    return model
++
++
++@lru_cache(maxsize=2)
++def _cached_xml_model(xml, directory):
++    return _compile_xml_model(xml, directory)
+ 
+ 
+ class MjModel(metaclass=_MjModelMeta):
+@@ -496,10 +518,17 @@
+     #     return self._userdata_name2id[name]
+ 
+     def get_xml(self):
+-        with TemporaryDirectory() as td:
+-            filename = os.path.join(td, "model.xml")
+-            ret = mujoco.mj_saveLastXML(filename.encode(), self._model)
+-            return open(filename).read()
++        # mj_saveLastXML uses the last compiled XML's global schema. Restore that
++        # schema before saving a copied cached model, while retaining this model's
++        # actual mutable values. MuJoCo's own serializer still produces the XML.
++        with _XML_MODEL_LOCK:
++            source = getattr(self, "_source_xml", None)
++            if source is not None and source != _LAST_COMPILED_XML:
++                _compile_xml_model(*source)
++            with TemporaryDirectory() as td:
++                filename = os.path.join(td, "model.xml")
++                ret = mujoco.mj_saveLastXML(filename.encode(), self._model)
++                return open(filename).read()
+ 
+     def get_joint_qpos_addr(self, name):
+         """
+@@ -1069,8 +1098,15 @@
+ 
+     @classmethod
+     def from_xml_string(cls, xml):
+-        model = mujoco.MjModel.from_xml_string(xml)
+-        return cls(model)
++        with _XML_MODEL_LOCK:
++            key = (xml, os.getcwd())
++            if os.environ.get("ROBOSCOPE_ROBOMIMIC_MODEL_CACHE") == "1":
++                model = copy(_cached_xml_model(*key))
++            else:
++                model = _compile_xml_model(*key)
++            sim = cls(model)
++            sim.model._source_xml = key
++            return sim
+ 
+     @classmethod
+     def from_xml_file(cls, xml_file):

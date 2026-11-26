@@ -119,8 +119,8 @@ legacy interpreter tiers or workarounds.
 
 Keep the distribution metadata, dependency resolution, Ruff, and CI consistent. On every declared
 interpreter, CI must build and install the sdist and wheel, import every module, and run the existing
-regressions. Do not add tests; change an existing test's compatibility syntax only after reproducing its
-failure. Check the policy against the official release-cycle API with `python ci/python_support.py check`
+regressions. Change an existing test's compatibility syntax only after reproducing its failure. Check the
+policy against the official release-cycle API with `python ci/python_support.py check`
 (Python 3.11+).
 
 ## Checks

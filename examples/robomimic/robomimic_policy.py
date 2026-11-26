@@ -166,7 +166,9 @@ class RobomimicModelZooPolicy(Policy):
         }
         algo._rnn_hidden_state = state.rnn_hidden_state
         algo._rnn_counter = state.rnn_counter
-        with torch.random.fork_rng(devices=self._rng_devices()):
+        # Evaluation never backpropagates through the recurrent history. Keep the
+        # same upstream FP32 forward and sampling calls without retaining graphs.
+        with torch.no_grad(), torch.random.fork_rng(devices=self._rng_devices()):
             torch.set_rng_state(state.cpu_rng)
             if state.cuda_rng is not None:
                 torch.cuda.set_rng_state(state.cuda_rng, self.device)
