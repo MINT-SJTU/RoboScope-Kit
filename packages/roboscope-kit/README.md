@@ -474,9 +474,9 @@ supported, and loading the package source through `PYTHONPATH` does not make the
 Install `roboscope-kit` and run the benchmark CLI and your Policy in a supported Python. Simulators keep
 their own pinned interpreters and dependencies, which `benchmarks/<benchmark>/build-runtime.sh` builds;
 installing `roboscope-kit` does not install or upgrade them. Benchmarks with a pinned simulator interpreter
-older than Python 3.11—RoboTwin (Python 3.8) and LIBERO and LIBERO-Plus (Python 3.10)—are evaluated the same
-way: the runtime starts their simulator workers in that interpreter and loads the Kit's worker modules from
-its own source tree.
+older than Python 3.11—RoboTwin (Python 3.8) and LIBERO, LIBERO-Plus and RoboCasa GR-1 Tabletop
+(Python 3.10)—are evaluated the same way: the runtime starts their simulator workers in that interpreter and
+loads the Kit's worker modules from its own source tree.
 
 The supported list is declared in `pyproject.toml` under `tool.roboscope.python-support`. On every change,
 CI builds one wheel and sdist, installs both on each listed version, imports every module without loading
