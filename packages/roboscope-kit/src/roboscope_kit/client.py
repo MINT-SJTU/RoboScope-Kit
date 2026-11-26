@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from roboscope_kit import profiling
+from roboscope_kit.image_sizes import CameraSupport, camera_support_to_dict
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -98,8 +99,16 @@ class PolicyClient:
     def health(self) -> dict[str, Any]:
         return self._request("health", {})
 
-    def load(self, context: SessionContext) -> PolicyCapabilities:
-        result = self._request("load", {"context": context.to_dict()})
+    def load(
+        self,
+        context: SessionContext,
+        camera_support: dict[str, CameraSupport] | None = None,
+    ) -> PolicyCapabilities:
+        payload: dict[str, Any] = {"context": context.to_dict()}
+        if camera_support is not None:
+            # Servers that predate image-size negotiation ignore this key.
+            payload["camera_support"] = camera_support_to_dict(camera_support)
+        result = self._request("load", payload)
         return PolicyCapabilities.from_dict(result["capabilities"])
 
     def reset(self, context: EpisodeContext) -> dict[str, Any]:

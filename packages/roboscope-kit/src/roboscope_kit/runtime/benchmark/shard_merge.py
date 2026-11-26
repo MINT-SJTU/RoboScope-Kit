@@ -1,7 +1,7 @@
 # Copyright 2026 RoboScope Team
 # SPDX-License-Identifier: Apache-2.0
 
-"""Merge sharded evaluation results from independent GPU instances.
+r"""Merge sharded evaluation results from independent GPU instances.
 
 Each shard instance runs the same benchmark command with ``--shard-index I``
 (``--shard-count N`` explicit or derived from the workload size) and produces
@@ -17,6 +17,7 @@ shard keeps its own values as provenance.
 Usage:
     python -m roboscope_kit.runtime.benchmark.shard_merge \
         --benchmark robotwin --suite demo_clean \
+        --benchmark-manifest /path/to/benchmark-manifest.json \
         --shard-dir /runs/shard-0 --shard-dir /runs/shard-1 \
         --output-dir /runs/merged
 """
@@ -31,6 +32,8 @@ from pathlib import Path
 from typing import Any
 
 from roboscope_kit.benchmark_specs import BenchmarkName
+from roboscope_kit.policy import DEFAULT_EVAL_MODE
+from roboscope_kit.runtime.benchmarks.metaworld.config import load_evaluation_config
 
 from .factories import BenchmarkRunRequest
 from .manifest import BenchmarkManifest, load_benchmark_manifest
@@ -44,12 +47,31 @@ from .sharding import plan_shard, shard_build
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--benchmark", choices=tuple(item.value for item in BenchmarkName), required=True)
-    parser.add_argument("--suite", required=True)
-    parser.add_argument("--episodes", type=int)
-    parser.add_argument("--evaluation-config", type=Path, help="resolved MetaWorld run configuration")
-    parser.add_argument("--benchmark-manifest", type=Path, required=True)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--benchmark",
+        choices=tuple(item.value for item in BenchmarkName),
+        required=True,
+        help="benchmark evaluated by the shards",
+    )
+    parser.add_argument(
+        "--suite",
+        required=True,
+        help="benchmark suite evaluated by the shards",
+    )
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        help="positive episode count overriding the manifest default; must match the shard runs",
+    )
+    parser.add_argument(
+        "--benchmark-manifest",
+        type=Path,
+        required=True,
+        help="benchmark manifest (benchmark-manifest.json) used by the shard runs",
+    )
     parser.add_argument(
         "--shard-dir",
         action="append",
@@ -57,7 +79,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         required=True,
         help="output directory of one shard run; repeat for every shard",
     )
-    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="new or empty output directory for the merged result.json",
+    )
     return parser.parse_args(argv)
 
 
@@ -73,7 +100,6 @@ def main(argv: list[str] | None = None) -> int:
                 episodes=args.episodes,
                 manifest_path=args.benchmark_manifest,
                 shard_dirs=args.shard_dir,
-                evaluation_config_path=args.evaluation_config,
             )
             atomic_json(args.output_dir / "result.json", merged)
     except (ValueError, RuntimeError, OSError, KeyError, TypeError) as exc:
@@ -104,7 +130,6 @@ def merge_shards(
     episodes: int | None,
     manifest_path: Path,
     shard_dirs: list[Path],
-    evaluation_config_path: Path | None = None,
 ) -> dict[str, Any]:
     if benchmark is BenchmarkName.RLBENCH:
         raise ValueError("RLBench shard merging is unavailable until policy identity can be verified")
@@ -120,7 +145,7 @@ def merge_shards(
         output_dir=Path("/unused/shard-merge-output"),
         episodes=episodes,
         quick_test=False,
-        evaluation_config_path=evaluation_config_path,
+        evaluation_config_path=_shard_evaluation_config(benchmark, shard_dirs),
     )
     adapter = factory.create(request, manifest)
     full_items = list(adapter.work_items())
@@ -156,6 +181,8 @@ def merge_shards(
     return {
         "sdk_version": 1,
         "merged": True,
+        "eval_mode": shards[0][2].get("eval_mode", DEFAULT_EVAL_MODE),
+        "active_fast_optimizations": list(shards[0][2].get("active_fast_optimizations") or ()),
         "shard": {
             "count": shards[0][1]["shard"]["count"],
             "indexes": [shard_manifest["shard"]["index"] for _, shard_manifest, _ in shards],
@@ -163,6 +190,11 @@ def merge_shards(
             "build": shards[0][1]["shard"]["build"],
         },
         "benchmark": adapter.metadata(),
+        **(
+            {"policy_io": shards[0][2]["policy_io"]}
+            if shards[0][2].get("policy_io") is not None
+            else {}
+        ),
         "result": standard,
         "official_result": official,
         "shards": shard_summaries,
@@ -173,6 +205,22 @@ def merge_shards(
             "coverage": "complete",
         },
     }
+
+
+def _shard_evaluation_config(benchmark: BenchmarkName, shard_dirs: list[Path]) -> Path | None:
+    """Return the MetaWorld camera configuration that every shard run recorded."""
+
+    if benchmark is not BenchmarkName.METAWORLD:
+        return None
+    paths = [shard_dir / "evaluation-config.json" for shard_dir in shard_dirs]
+    configs = []
+    for path in paths:
+        if not path.is_file():
+            raise ValueError(f"{path.parent}: evaluation-config.json missing")
+        configs.append(load_evaluation_config(path))
+    if any(config != configs[0] for config in configs[1:]):
+        raise ValueError("MetaWorld shards were run with different camera configurations")
+    return paths[0]
 
 
 def _index_full_items(full_items: list[WorkItem]) -> dict[str, WorkItem]:
@@ -223,6 +271,10 @@ def _validate_shard_metadata(
     for shard_dir, manifest, result in shards:
         if manifest.get("benchmark") != result["benchmark"]:
             raise ValueError(f"{shard_dir}: manifest benchmark identity disagrees with result.json")
+        if json.dumps(manifest.get("policy_io"), sort_keys=True) != json.dumps(
+            result.get("policy_io"), sort_keys=True
+        ):
+            raise ValueError(f"{shard_dir}: manifest policy_io disagrees with result.json")
         validate_shard_accounting(result)
 
 

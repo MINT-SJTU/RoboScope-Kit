@@ -18,7 +18,11 @@ from roboscope_kit import EpisodeContext, Observation, PolicyClient
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 
 LIBERO_DUMMY_ACTION = np.asarray([0.0] * 6 + [-1.0], dtype=np.float32)
+LIBERO_DELTA_ACTION = "libero.delta-eef-v1"
+LIBERO_ABSOLUTE_ACTION = "libero.absolute-eef-v1"
 LIBERO_ENV_RESOLUTION = 256
+# Observation feature -> robosuite camera; the order is the order robosuite renders them.
+LIBERO_CAMERAS = (("images.primary", "agentview"), ("images.wrist", "robot0_eye_in_hand"))
 MAX_STEPS = {
     "libero_spatial": 220,
     "libero_object": 280,
@@ -87,12 +91,30 @@ def parse_args() -> argparse.Namespace:
         default="task",
         help="task: the benchmark's Task.language; bddl: the (:language ...) of the task's BDDL file",
     )
+    parser.add_argument(
+        "--action-representation",
+        choices=(LIBERO_DELTA_ACTION, LIBERO_ABSOLUTE_ACTION),
+        default=LIBERO_DELTA_ACTION,
+        help="negotiated action representation; absolute targets switch the OSC controller after settling",
+    )
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--settle-steps", type=int, default=10)
     parser.add_argument("--queue-dir", type=Path, required=True)
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--video-dir", type=Path)
     parser.add_argument("--poll-interval", type=float, default=0.05)
+    parser.add_argument(
+        "--primary-size",
+        type=_image_size,
+        default=(LIBERO_ENV_RESOLUTION, LIBERO_ENV_RESOLUTION),
+        help="agent-view render size as HEIGHTxWIDTH",
+    )
+    parser.add_argument(
+        "--wrist-size",
+        type=_image_size,
+        default=(LIBERO_ENV_RESOLUTION, LIBERO_ENV_RESOLUTION),
+        help="wrist render size as HEIGHTxWIDTH",
+    )
     args = parser.parse_args()
     if args.max_steps is None:
         if args.suite not in MAX_STEPS:
@@ -101,6 +123,16 @@ def parse_args() -> argparse.Namespace:
     if args.max_steps < 1:
         parser.error("--max-steps must be positive")
     return args
+
+
+def _image_size(value: str) -> tuple[int, int]:
+    try:
+        height, width = (int(part) for part in value.lower().split("x"))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected HEIGHTxWIDTH, got {value!r}") from exc
+    if height < 1 or width < 1:
+        raise argparse.ArgumentTypeError(f"image size must be positive, got {value!r}")
+    return height, width
 
 
 def build_observation(
@@ -149,17 +181,30 @@ def create_task_runtime(
     task_id: int,
     seed: int,
     instruction_source: str = "task",
+    image_sizes: tuple[tuple[int, int], tuple[int, int]] = (
+        (LIBERO_ENV_RESOLUTION, LIBERO_ENV_RESOLUTION),
+        (LIBERO_ENV_RESOLUTION, LIBERO_ENV_RESOLUTION),
+    ),
 ) -> TaskRuntime:
     from libero.libero import get_libero_path
     from libero.libero.envs import OffScreenRenderEnv
 
     task = task_suite.get_task(task_id)
     task_bddl_file = Path(get_libero_path("bddl_files")) / task.problem_folder / task.bddl_file
-    env = OffScreenRenderEnv(
-        bddl_file_name=str(task_bddl_file),
-        camera_heights=LIBERO_ENV_RESOLUTION,
-        camera_widths=LIBERO_ENV_RESOLUTION,
-    )
+    canonical = (LIBERO_ENV_RESOLUTION, LIBERO_ENV_RESOLUTION)
+    if all(size == canonical for size in image_sizes):
+        env = OffScreenRenderEnv(
+            bddl_file_name=str(task_bddl_file),
+            camera_heights=LIBERO_ENV_RESOLUTION,
+            camera_widths=LIBERO_ENV_RESOLUTION,
+        )
+    else:
+        env = OffScreenRenderEnv(
+            bddl_file_name=str(task_bddl_file),
+            camera_names=[camera for _feature, camera in LIBERO_CAMERAS],
+            camera_heights=[height for height, _width in image_sizes],
+            camera_widths=[width for _height, width in image_sizes],
+        )
     env.seed(seed)
     # LIBERO-Pro keeps the original BDDL file names while its perturbed (:language ...) differs, so
     # its instruction is the one the environment parsed from the BDDL file, not Task.language.
@@ -172,6 +217,12 @@ def create_task_runtime(
     )
 
 
+def set_delta_control(env: object, use_delta: bool) -> None:
+    """Make every robot's OSC controller read actions as deltas (LIBERO's default) or absolute targets."""
+    for robot in env.env.robots:
+        robot.controller.use_delta = use_delta
+
+
 def run_episode(
     runtime: TaskRuntime,
     policy: PolicyActionQueue,
@@ -180,6 +231,7 @@ def run_episode(
     max_steps: int,
     settle_steps: int,
     save_frames: bool,
+    absolute_actions: bool = False,
 ) -> tuple[bool, int, float, list[np.ndarray]]:
     episode_id = f"task-{runtime.task_id:04d}-episode-{episode_index:04d}"
     policy.reset(
@@ -195,10 +247,17 @@ def run_episode(
         frames: list[np.ndarray] = []
         started = time.perf_counter()
 
+        # The settle steps are zero deltas. robosuite rebuilds the controller on every reset, so delta
+        # control is already on here and setting it is a guard. Absolute-target policies then get absolute
+        # control, as the X-VLA recipe does.
+        if absolute_actions:
+            set_delta_control(runtime.env, True)
         for _ in range(settle_steps):
             observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
             if task_done or runtime.env.env.done:
                 return bool(task_done), 0, time.perf_counter() - started, frames
+        if absolute_actions:
+            set_delta_control(runtime.env, False)
 
         for action_step in range(max_steps):
             if save_frames:
@@ -249,6 +308,7 @@ def run_chunk(
             max_steps=args.max_steps,
             settle_steps=args.settle_steps,
             save_frames=args.video_dir is not None,
+            absolute_actions=args.action_representation == LIBERO_ABSOLUTE_ACTION,
         )
         save_video(args.video_dir, runtime.task_id, episode_index, success, frames)
         records.append(
@@ -292,7 +352,13 @@ def main() -> None:
         if runtime is None or runtime.task_id != task_id:
             if runtime is not None:
                 runtime.env.close()
-            runtime = create_task_runtime(task_suite, task_id, args.seed, args.instruction_source)
+            runtime = create_task_runtime(
+                task_suite,
+                task_id,
+                args.seed,
+                args.instruction_source,
+                image_sizes=(args.primary_size, args.wrist_size),
+            )
         return run_chunk(args, item, runtime, policy)
 
     try:

@@ -38,7 +38,7 @@ from .adapter import (
     SEED,
 )
 from .agent import SUCCESS_CRITERION, MetaworldAgent
-from .config import load_evaluation_config
+from .config import apply_image_sizes, load_evaluation_config
 from .instructions import FROZEN_MT50_TASKS_SHA256, INSTRUCTIONS, MT50_TASKS, mt50_train_tasks_sha256
 
 
@@ -50,7 +50,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--queue-dir", type=Path, required=True)
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--poll-interval", type=float, default=0.05)
+    parser.add_argument(
+        "--image-size",
+        type=_image_size,
+        action="append",
+        default=[],
+        metavar="FEATURE=HEIGHTxWIDTH",
+        help="render the camera of FEATURE natively at the Policy-negotiated size",
+    )
     return parser.parse_args()
+
+
+def _image_size(value: str) -> tuple[str, tuple[int, int]]:
+    feature, separator, size = value.partition("=")
+    try:
+        height, width = (int(part) for part in size.lower().split("x"))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected FEATURE=HEIGHTxWIDTH, got {value!r}") from exc
+    if not separator or not feature or height < 1 or width < 1:
+        raise argparse.ArgumentTypeError(f"expected FEATURE=HEIGHTxWIDTH, got {value!r}")
+    return feature, (height, width)
 
 
 class RecordingVectorWrapper:
@@ -244,6 +263,14 @@ def _build_env(env_cls, tasks: tuple, camera: dict[str, Any]):
     return env
 
 
+def _fit_offscreen_buffer(env, cameras: tuple[dict[str, Any], ...]) -> None:
+    """Grow the MuJoCo offscreen buffer to the largest camera; the env sizes it for its own camera."""
+
+    visual = env.unwrapped.model.vis.global_
+    visual.offwidth = max(int(visual.offwidth), *(int(camera["render_width"]) for camera in cameras))
+    visual.offheight = max(int(visual.offheight), *(int(camera["render_height"]) for camera in cameras))
+
+
 def _run_task(
     item: WorkItem,
     *,
@@ -252,6 +279,7 @@ def _run_task(
     tasks_by_env: dict[str, tuple],
     env_dict,
     cameras: tuple[dict[str, Any], ...],
+    negotiated_sizes: bool = False,
 ) -> WorkResult:
     import metaworld.evaluation as metaworld_evaluation
 
@@ -261,6 +289,8 @@ def _run_task(
         raise RuntimeError(f"MetaWorld work item references an unknown task {slug!r}")
     started = time.perf_counter()
     env = _build_env(env_dict[slug], tasks_by_env[slug], cameras[0])
+    if negotiated_sizes:
+        _fit_offscreen_buffer(env, cameras)
     vector = None
     agent = None
     try:
@@ -311,6 +341,11 @@ def main() -> None:
 
     evaluation_config = load_evaluation_config(args.evaluation_config)
     cameras = tuple(evaluation_config["cameras"])
+    if args.image_size:
+        image_sizes = dict(args.image_size)
+        if len(image_sizes) != len(args.image_size):
+            raise ValueError("MetaWorld worker received one camera's image size twice")
+        cameras = apply_image_sizes(cameras, image_sizes)
     _validate_upstream(metaworld, ALL_V3_ENVIRONMENTS)
     tasks_by_env = _load_mt50_tasks(metaworld)
     _validate_cameras(cameras, ALL_V3_ENVIRONMENTS)
@@ -329,6 +364,7 @@ def main() -> None:
                 tasks_by_env=tasks_by_env,
                 env_dict=ALL_V3_ENVIRONMENTS,
                 cameras=cameras,
+                negotiated_sizes=bool(args.image_size),
             )
         )
 

@@ -165,10 +165,42 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--queue-dir", type=Path, required=True)
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--poll-interval", type=float, default=0.05)
+    parser.add_argument("--static-size", type=_image_size, help="static camera render size as HEIGHTxWIDTH")
+    parser.add_argument("--gripper-size", type=_image_size, help="gripper camera render size as HEIGHTxWIDTH")
     return parser.parse_args()
 
 
-def create_calvin_env(dataset_path: Path, asset_root: Path):
+def _image_size(value: str) -> tuple[int, int]:
+    try:
+        height, width = (int(part) for part in value.lower().split("x"))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected HEIGHTxWIDTH, got {value!r}") from exc
+    if height < 1 or width < 1:
+        raise argparse.ArgumentTypeError(f"image size must be positive, got {value!r}")
+    return height, width
+
+
+def apply_camera_sizes(env_config, camera_sizes: dict[str, tuple[int, int]]) -> None:
+    """Render each named calvin_env camera natively at its (height, width).
+
+    The aspect ratio follows the new size, so the vertical field of view and square pixels stay
+    as upstream defines them; calvin_env sizes the EGL framebuffer from the largest camera.
+    """
+
+    for camera, (height, width) in camera_sizes.items():
+        camera_config = env_config.cameras.get(camera)
+        if camera_config is None:
+            raise RuntimeError(f"CALVIN merged environment config has no {camera} camera")
+        camera_config.width = width
+        camera_config.height = height
+        camera_config.aspect = width / height
+
+
+def create_calvin_env(
+    dataset_path: Path,
+    asset_root: Path,
+    camera_sizes: dict[str, tuple[int, int]] | None = None,
+):
     import hydra
     from hydra.core.global_hydra import GlobalHydra
     from omegaconf import OmegaConf
@@ -184,6 +216,8 @@ def create_calvin_env(dataset_path: Path, asset_root: Path):
     if env_config is None or env_config.get("scene_cfg") is None or env_config.get("robot_cfg") is None:
         raise RuntimeError(f"CALVIN merged environment config is invalid: {merged_config}")
     env_config.scene_cfg.data_path = str(asset_root)
+    if camera_sizes:
+        apply_camera_sizes(env_config, camera_sizes)
 
     if not GlobalHydra.instance().is_initialized():
         hydra.initialize(".")
@@ -211,7 +245,12 @@ def main() -> None:
         raise RuntimeError("CALVIN evaluation-sequence manifest changed before worker start")
     eval_sequences = json.loads(sequence_bytes)
 
-    env = create_calvin_env(args.dataset_path, args.asset_root)
+    camera_sizes = {
+        camera: size
+        for camera, size in (("static", args.static_size), ("gripper", args.gripper_size))
+        if size is not None
+    }
+    env = create_calvin_env(args.dataset_path, args.asset_root, camera_sizes)
     policy = PolicyActionQueue(args.policy_socket, args.action_representation)
     step_counter = 0
     original_step = env.step

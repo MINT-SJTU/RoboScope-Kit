@@ -13,6 +13,7 @@ from roboscope_kit.benchmark_specs import (
     get_benchmark_spec,
 )
 from roboscope_kit.client import PolicyClient, PolicyRemoteError
+from roboscope_kit.image_sizes import ANY_SIZE
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -37,6 +38,7 @@ from roboscope_kit.server import PolicyServer, PolicyState, run
 __all__ = [
     "ActionChunk",
     "ActionSpec",
+    "ANY_SIZE",
     "BenchmarkName",
     "BenchmarkSpec",
     "EpisodeContext",

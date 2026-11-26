@@ -69,8 +69,16 @@ Environment wrappers persist between episode groups of a task and close when
 the task completes; native hard resets can rebuild their underlying model and
 renderer. Wrappers are never reused across different tasks.
 
-The worker steps the five slots in its own process; the reference runner uses
-one subprocess per slot. `native_equivalence_verified` remains `false` in
+The worker steps the five slots in its own process, each on its own thread; the
+reference runner uses one subprocess per slot. A slot's environment is created,
+reset, stepped and closed only on its thread, where its EGL context is current.
+Creation and reset run one slot at a time in slot order, so each slot keeps its
+constructor RNG stream; only action chunks run concurrently, and the worker
+waits for all five at every chunk boundary before it sends the next Policy batch
+in slot order and applies the group success check. Threaded workers run with
+`MALLOC_ARENA_MAX=1`. Setting `defaults.slot_threads: false` in the manifest,
+saving videos or `--profile` steps the slots one after another in slot order;
+the last two log that they do. `native_equivalence_verified` remains `false` in
 individual run results; the [native comparison](../../../benchmarks/robocasa365/README.md#native-comparison)
 records the validated scope.
 
@@ -93,11 +101,27 @@ The robot is PandaOmron at 20 control steps/s. The official Gym wrapper renders
 three RGB cameras at 256 x 256, vertically flips each image exactly once, and
 supplies raw float32 state and episode language. No depth is requested.
 
+A Policy can negotiate another native render size with
+`PolicyCapabilities.image_sizes`: 64–640 pixels per side, one size for all
+three cameras, because the official Gym wrapper takes one width and one height.
+At 640 x 640 one `act_batch` request (five slots, three cameras, two frames)
+is 47 MiB as JSON, within the 64 MiB Policy message limit.
+The three cameras form one size group: the negotiation takes the first size,
+in camera order and each camera's preference order, that every camera accepts
+(a listed size, or 256 x 256 when the camera's list ends with `ANY_SIZE`). The
+cameras then render directly at that size, the images have shape `(2,H,W,3)`,
+and `policy_io.canonical_observations` is `false`. MuJoCo keeps each camera's
+`fovy`, so a non-square size widens or narrows the horizontal view of all three
+cameras. When no size suits every camera, the run stops before any Worker starts
+and names each camera's list, or marks a camera the Policy did not list.
+These sizes need roboscope-kit 0.8.0b83 or later in the Policy environment;
+an older Policy SDK gets 256 x 256, as before.
+
 | Kit feature | Upstream source | Shape / dtype |
 |---|---|---|
-| `images.agentview_left` | `video.robot0_agentview_left` | `(2,256,256,3)`, uint8 |
-| `images.agentview_right` | `video.robot0_agentview_right` | `(2,256,256,3)`, uint8 |
-| `images.wrist` | `video.robot0_eye_in_hand` | `(2,256,256,3)`, uint8 |
+| `images.agentview_left` | `video.robot0_agentview_left` | `(2,256,256,3)` or negotiated, uint8 |
+| `images.agentview_right` | `video.robot0_agentview_right` | `(2,256,256,3)` or negotiated, uint8 |
+| `images.wrist` | `video.robot0_eye_in_hand` | `(2,256,256,3)` or negotiated, uint8 |
 | `state.end_effector_position_relative` | same state suffix | `(2,3)`, float32 |
 | `state.end_effector_rotation_relative` | same state suffix, xyzw quaternion | `(2,4)`, float32 |
 | `state.gripper_qpos` | same state suffix | `(2,2)`, float32 |

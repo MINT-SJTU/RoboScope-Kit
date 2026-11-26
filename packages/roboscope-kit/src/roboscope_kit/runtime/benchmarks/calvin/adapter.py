@@ -159,6 +159,11 @@ class CalvinBenchmarkAdapter:
             "--worker-state-dir",
             str(context.state_dir),
         )
+        image_sizes = context.execution_contract.image_sizes
+        for feature, flag in (("images.static", "--static-size"), ("images.gripper", "--gripper-size")):
+            if feature in image_sizes:
+                height, width = image_sizes[feature]
+                command += (flag, f"{height}x{width}")
         threads = str(self.config.cpu_threads)
         env = {
             "PYTHONPATH": ":".join(

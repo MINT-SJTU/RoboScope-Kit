@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -20,6 +20,7 @@ from .protocol import (
     CONSTRUCTOR_SEED,
     CONTROL_FREQ_HZ,
     EPISODES_PER_TASK,
+    IMAGE_KEYS,
     NATIVE_ENVS,
     OBSERVATION_STEPS,
     PROTOCOL_VERSION,
@@ -43,6 +44,7 @@ class RoboCasa365RuntimeConfig:
     native_envs: int = NATIVE_ENVS
     cpu_threads: int = 1
     save_videos: bool = False
+    slot_threads: bool = True
 
     def __post_init__(self) -> None:
         if self.suite not in SUITES:
@@ -59,6 +61,8 @@ class RoboCasa365RuntimeConfig:
             raise ValueError("RoboCasa365 episodes must be divisible by native_envs; no padded records")
         if self.cpu_threads < 1:
             raise ValueError("RoboCasa365 cpu_threads must be positive")
+        if not isinstance(self.slot_threads, bool):
+            raise ValueError("RoboCasa365 slot_threads must be a boolean")
 
     @property
     def full_suite(self) -> bool:
@@ -90,6 +94,7 @@ class RoboCasa365BenchmarkAdapter:
 
     def worker_process(self, context: WorkerContext) -> ProcessSpec:
         threads = str(self.config.cpu_threads)
+        image_size = render_size(context.execution_contract.image_sizes)
         return ProcessSpec(
             command=(
                 str(self.config.python), "-m", "roboscope_kit.runtime.benchmarks.robocasa365.worker",
@@ -99,6 +104,8 @@ class RoboCasa365BenchmarkAdapter:
                 "--worker-state-dir", str(context.state_dir),
                 "--output-dir", str(context.output_dir),
                 *(("--save-videos",) if self.config.save_videos else ()),
+                *(("--slot-threads",) if self.config.slot_threads else ()),
+                *(("--image-size", f"{image_size[0]}x{image_size[1]}") if image_size else ()),
             ),
             cwd=self.config.benchmark_root,
             env={
@@ -112,6 +119,8 @@ class RoboCasa365BenchmarkAdapter:
                 "OPENBLAS_NUM_THREADS": threads, "NUMEXPR_NUM_THREADS": threads,
                 "NUMBA_NUM_THREADS": threads, "TOKENIZERS_PARALLELISM": "false",
                 "PYTHONDONTWRITEBYTECODE": "1",
+                # Per-thread malloc arenas would add about 4.7 GiB to a threaded Worker.
+                **({"MALLOC_ARENA_MAX": "1"} if self.config.slot_threads else {}),
             },
         )
 
@@ -179,6 +188,7 @@ class RoboCasa365BenchmarkAdapter:
             "scene_split": SCENE_SPLIT, "full_suite": self.config.full_suite,
             "native_equivalence_verified": False,
             "native_envs_per_worker": self.config.native_envs,
+            "slot_threads_requested": self.config.slot_threads,
             "task_order": list(self.config.tasks),
             "horizons": {name: TASKS_BY_NAME[name].horizon for name in self.config.tasks},
             "episodes_per_task": self.config.episodes_per_task,
@@ -192,6 +202,23 @@ class RoboCasa365BenchmarkAdapter:
                 self.config.tasks, self.config.episodes_per_task, self.config.native_envs
             ),
         }
+
+
+def render_size(image_sizes: Mapping[str, tuple[int, int]]) -> tuple[int, int] | None:
+    """The one size the official Gym wrapper renders all cameras at, or ``None`` for its own size."""
+
+    if not image_sizes:
+        return None
+    sizes = {image_sizes.get(feature) for feature in IMAGE_KEYS}
+    if len(sizes) != 1:
+        negotiated = ", ".join(
+            f"{feature}={'x'.join(map(str, image_sizes[feature])) if feature in image_sizes else 'canonical'}"
+            for feature in IMAGE_KEYS
+        )
+        raise ValueError(
+            "RoboCasa365 renders all three cameras at one size; the Policy negotiated " + negotiated
+        )
+    return sizes.pop()
 
 
 def split_results(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

@@ -484,3 +484,183 @@ def test_probe_health_counts_a_recycling_worker_as_live(tmp_path: Path) -> None:
     assert health["initial_workers"] == 3
     assert health["final_workers"] == 2
     assert health["expected_episodes"] == 12
+
+
+# ---- negotiated camera image sizes -----------------------------------------------------------
+
+
+def _camera_profile(**changes: Any) -> dict[str, Any]:
+    profile = {
+        "profile_id": "pick_rgb", "task_id": "PickCube-v1",
+        "cameras": {"images.primary": "base_camera", "images.wrist": "hand_camera"},
+        "sensor_configs": {},
+    }
+    profile.update(changes)
+    return profile
+
+
+def test_maniskill_cameras_negotiate_any_native_size() -> None:
+    import roboscope_kit
+    from roboscope_kit.benchmark_specs import (
+        benchmark_camera_support,
+        benchmark_rendered_image_features,
+        get_benchmark_spec,
+    )
+    from roboscope_kit.policy import PolicyCapabilities
+
+    manifest_path = Path(__file__).parents[3] / "benchmarks/maniskill/benchmark-manifest.json"
+    protocol = json.loads(manifest_path.read_text())["benchmark_protocols"]["maniskill"]
+    spec = get_benchmark_spec("maniskill", "tabletop_rgb_v1")
+    support = benchmark_camera_support(spec, {}, protocol)
+
+    def negotiate(image_sizes):
+        return roboscope_kit.negotiate_policy_action_contract(spec, PolicyCapabilities(
+            supported_benchmarks=("maniskill",), required_features=(), image_sizes=image_sizes,
+        ), camera_support=support).image_sizes
+
+    assert negotiate(None) == {} and negotiate([roboscope_kit.ANY_SIZE]) == {}
+    assert negotiate({"images.primary": [(96, 160)]}) == {"images.primary": (96, 160)}
+    assert negotiate([(1024, 1024), (224, 224)])["images.auxiliary"] == (224, 224)
+    assert negotiate({"images.wrist": [(96, 160)]}) == {"images.wrist": (96, 160)}
+    # The Kit records sizes only for the cameras the suite renders: images.primary here, none in a
+    # state suite.
+    assert benchmark_rendered_image_features(spec, protocol) == {"images.primary"}
+    state_spec = get_benchmark_spec("maniskill", "tabletop_state_v1")
+    assert benchmark_rendered_image_features(state_spec, protocol) == frozenset()
+    assert benchmark_rendered_image_features(spec) is None
+    with pytest.raises(ValueError, match="heights 16-512"):
+        negotiate([(8, 8)])
+    with pytest.raises(ValueError, match="widths 16-512"):
+        negotiate([(512, 640)])
+
+    from roboscope_kit.image_sizes import (
+        BASELINE_IMAGE_SIZE_FEATURES,
+        IMAGE_SIZE_FEATURES,
+        CameraSupport,
+        camera_support_for_server,
+    )
+
+    # A Policy server on an SDK without open-shape ranges keeps every camera at the task's own size.
+    old_server = camera_support_for_server(spec, support, BASELINE_IMAGE_SIZE_FEATURES)
+    assert set(old_server.values()) == {CameraSupport(canonical=None)}
+    assert camera_support_for_server(spec, support, frozenset(IMAGE_SIZE_FEATURES)) == support
+
+
+def test_maniskill_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> None:
+    from roboscope_kit.policy import PolicyExecutionContract
+    from roboscope_kit.runtime.benchmark.adapters import WorkerContext
+
+    def command(image_sizes):
+        return _adapter().worker_process(WorkerContext(
+            worker_id=0, gpu_slot=0, replica_id=0, gpu_device="0", replica_port=0,
+            replica_socket=tmp_path / "replica.sock", queue_dir=tmp_path / "queue",
+            state_dir=tmp_path / "state", output_dir=tmp_path,
+            execution_contract=PolicyExecutionContract(
+                benchmark="maniskill", action_representation="maniskill.native-controller-v1",
+                image_sizes=image_sizes,
+            ),
+        )).command
+
+    assert "--image-size" not in command({})
+    sized = command({"images.wrist": (96, 160), "images.primary": (224, 224)})
+    assert sized[len(command({})):] == (
+        "--image-size", "images.primary=224x224", "--image-size", "images.wrist=96x160",
+    )
+
+
+def test_maniskill_negotiated_sizes_set_only_their_cameras() -> None:
+    from roboscope_kit.runtime.benchmarks.maniskill.worker import parse_image_size, with_image_sizes
+
+    profile = _camera_profile(sensor_configs={"shader_pack": "default", "base_camera": {"fov": 1.0}})
+    assert with_image_sizes(profile, {}) is profile
+    state_profile = _camera_profile(cameras={})
+    assert with_image_sizes(state_profile, {"images.primary": (96, 160)}) is state_profile
+    sized = with_image_sizes(profile, dict([parse_image_size("images.primary=96x160")]))
+    assert sized["sensor_configs"] == {
+        "shader_pack": "default", "base_camera": {"fov": 1.0, "height": 96, "width": 160},
+    }
+    assert profile["sensor_configs"] == {"shader_pack": "default", "base_camera": {"fov": 1.0}}
+    shared = _camera_profile(cameras={"images.primary": "base_camera", "images.wrist": "base_camera"})
+    with pytest.raises(ValueError, match="several image features"):
+        with_image_sizes(shared, {"images.primary": (96, 96), "images.wrist": (128, 128)})
+    for value in ("images.primary", "images.primary=96", "=96x96", "images.primary=0x96"):
+        with pytest.raises(Exception, match="FEATURE=HEIGHTxWIDTH"):
+            parse_image_size(value)
+
+
+def test_maniskill_bridge_cameras_keep_their_own_size(tmp_path: Path) -> None:
+    import roboscope_kit
+    from roboscope_kit.benchmark_specs import benchmark_camera_support, get_benchmark_spec
+    from roboscope_kit.policy import PolicyCapabilities, PolicyExecutionContract
+    from roboscope_kit.runtime.benchmark.adapters import WorkerContext
+    from roboscope_kit.runtime.benchmarks.maniskill.profile import (
+        FIXED_SIZE_CAMERA_TASKS,
+        fixed_size_camera_features,
+        rendered_camera_features,
+    )
+
+    # Every stock suite with a Bridge task keeps the cameras its Bridge profiles map at their own size.
+    manifest_path = Path(__file__).parents[3] / "benchmarks/maniskill/benchmark-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    protocol = manifest["benchmark_protocols"]["maniskill"]
+    with_bridge = {
+        suite for suite, ids in protocol["suites"].items()
+        if any(protocol["profiles"][i]["task_id"] in FIXED_SIZE_CAMERA_TASKS for i in ids)
+    }
+    assert with_bridge == {"bridge_rgb_v1", "upstream_tasks_v1"}
+    assert all(fixed_size_camera_features(protocol, suite) == {"images.primary"} for suite in with_bridge)
+    assert fixed_size_camera_features(protocol, "tabletop_rgb_v1") == frozenset()
+
+    spec = get_benchmark_spec("maniskill", "bridge_rgb_v1")
+    support = benchmark_camera_support(spec, {}, protocol)
+
+    def negotiate(image_sizes):
+        return roboscope_kit.negotiate_policy_action_contract(spec, PolicyCapabilities(
+            supported_benchmarks=("maniskill",), required_features=(), image_sizes=image_sizes,
+        ), camera_support=support).image_sizes
+
+    # The Bridge camera keeps its own size; the suite renders no camera for the other two features,
+    # so the Kit records nothing.
+    assert set(negotiate([(224, 224), roboscope_kit.ANY_SIZE])) == {"images.wrist", "images.auxiliary"}
+    assert rendered_camera_features(protocol, "bridge_rgb_v1") == {"images.primary"}
+    with pytest.raises(ValueError, match="images.primary: the benchmark renders only its own"):
+        negotiate([(224, 224)])
+
+    # A custom suite that mixes Bridge with resizable tasks stops before any Worker starts.
+    custom = _protocol()
+    custom["profiles"]["carrot"] = {
+        "task_id": "PutCarrotOnPlateInScene-v1", "obs_mode": "rgb+segmentation",
+        "robot_uid": "widowx", "control_mode": "arm_pd_ee_delta_pose", "max_episode_steps": 60,
+        "cameras": {"images.primary": "3rd_view_camera"},
+    }
+    custom["suites"]["mixed"].append("carrot")
+    custom["suites"]["carrot_only"] = ["carrot"]
+    assert fixed_size_camera_features(custom, "mixed") == {"images.primary"}
+    assert fixed_size_camera_features(custom, "carrot_only") == {"images.primary"}
+    adapter = ManiSkillBenchmarkAdapter(ManiSkillRuntimeConfig(
+        python=Path("python"), manifest_path=Path("manifest.json"), runtime_home=Path("home"),
+        asset_dir=Path("assets"), suite="mixed", profiles=validate_profiles(custom, "mixed"),
+        envs_per_worker=2,
+    ))
+
+    def command(image_sizes):
+        return adapter.worker_process(WorkerContext(
+            worker_id=0, gpu_slot=0, replica_id=0, gpu_device="0", replica_port=0,
+            replica_socket=tmp_path / "replica.sock", queue_dir=tmp_path / "queue",
+            state_dir=tmp_path / "state", output_dir=tmp_path,
+            execution_contract=PolicyExecutionContract(
+                benchmark="maniskill", action_representation="maniskill.native-controller-v1",
+                image_sizes=image_sizes,
+            ),
+        )).command
+
+    assert "--image-size" not in command({})
+    with pytest.raises(ValueError, match="carrot renders images.primary only at the task's own size"):
+        command({"images.primary": (224, 224)})
+
+    from roboscope_kit.runtime.benchmarks.maniskill.worker import with_image_sizes
+
+    carrot = next(p for p in adapter.config.profiles if p["profile_id"] == "carrot")
+    assert with_image_sizes(carrot, {}) is carrot
+    with pytest.raises(ValueError, match="renders only the task's own size"):
+        with_image_sizes(carrot, {"images.primary": (224, 224)})

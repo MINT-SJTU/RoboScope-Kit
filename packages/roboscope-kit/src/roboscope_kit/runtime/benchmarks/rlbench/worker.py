@@ -38,6 +38,7 @@ import select
 import signal
 import subprocess
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,8 @@ from .tasks import (
     PROTOCOL_VERSION,
     PYTHON_HASH_SEED,
     SUCCESS_CRITERION,
+    camera_size,
+    camera_sizes,
     require_python_hash_seed,
 )
 from .test_set import TestEpisode, load_test_episode
@@ -74,7 +77,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--test-set", type=Path, required=True)
     parser.add_argument("--xvfb", type=Path, required=True)
     parser.add_argument("--poll-interval", type=float, default=0.05)
-    return parser.parse_args()
+    parser.add_argument(
+        "--camera-size",
+        dest="camera_sizes",
+        type=camera_size,
+        action="append",
+        default=[],
+        metavar="CAMERA=HEIGHTxWIDTH",
+        help=f"render CAMERA at this size instead of {IMAGE_SIZE[0]}x{IMAGE_SIZE[1]}; repeatable",
+    )
+    args = parser.parse_args()
+    args.camera_sizes = camera_sizes(args.camera_sizes)
+    return args
 
 
 def _die_with_parent() -> None:
@@ -124,11 +138,14 @@ def start_xvfb(xvfb: Path, timeout_s: float = 30.0) -> subprocess.Popen:
     return process
 
 
-def observation_config():
+def observation_config(image_sizes: Mapping[str, tuple[int, int]] | None = None):
     """PerAct's ``create_obs_config`` for its four cameras, with depth kept for the Policy.
 
     Keeping depth does not change rendering or the point clouds: RLBench captures the depth
     buffer for the point cloud either way and only drops it when depth is not requested.
+    ``image_sizes`` renders the named cameras at another (height, width). RLBench passes
+    ``CameraConfig.image_size`` to PyRep's ``VisionSensor.set_resolution``, which takes (x, y), so
+    it is given (width, height); RGB, depth, point cloud and intrinsics all come from that render.
     """
 
     from pyrep.const import RenderMode
@@ -144,7 +161,21 @@ def observation_config():
         image_size=IMAGE_SIZE,
         render_mode=RenderMode.OPENGL,
     )
-    cameras = {name: used for name in CAMERAS}
+    sizes = image_sizes or {}
+
+    def camera(name: str):
+        if name not in sizes:
+            return used
+        return CameraConfig(
+            rgb=True,
+            point_cloud=True,
+            mask=False,
+            depth=True,
+            image_size=(sizes[name][1], sizes[name][0]),
+            render_mode=RenderMode.OPENGL,
+        )
+
+    cameras = {name: camera(name) for name in CAMERAS}
     return ObservationConfig(
         front_camera=cameras.get("front", unused),
         left_shoulder_camera=cameras.get("left_shoulder", unused),
@@ -164,7 +195,7 @@ def observation_config():
     )
 
 
-def create_environment(test_set: Path):
+def create_environment(test_set: Path, image_sizes: Mapping[str, tuple[int, int]] | None = None):
     from rlbench.action_modes.action_mode import MoveArmThenGripper
     from rlbench.action_modes.arm_action_modes import EndEffectorPoseViaPlanning
     from rlbench.action_modes.gripper_action_modes import Discrete
@@ -172,7 +203,7 @@ def create_environment(test_set: Path):
 
     environment = Environment(
         action_mode=MoveArmThenGripper(EndEffectorPoseViaPlanning(), Discrete()),
-        obs_config=observation_config(),
+        obs_config=observation_config(image_sizes),
         dataset_root=str(test_set),
         headless=True,
     )
@@ -468,7 +499,7 @@ def main() -> None:
     # Runtimes may live on read-only or inode-limited storage; never write pyc.
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     start_xvfb(args.xvfb)
-    environment = create_environment(args.test_set)
+    environment = create_environment(args.test_set, args.camera_sizes)
     counter = StepCounter()
     current: dict[str, Any] = {"task": None, "env": None}
 

@@ -28,7 +28,13 @@ from roboscope_kit.benchmark_specs import BenchmarkName
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
 from roboscope_kit.runtime.benchmark.manifest import load_benchmark_manifest
 
-from .profile import PROTOCOL_ID, physx_library_sha256, self_test_profiles, validate_profiles
+from .profile import (
+    PROTOCOL_ID,
+    fixed_size_cameras,
+    physx_library_sha256,
+    self_test_profiles,
+    validate_profiles,
+)
 
 # Raw states sample the first two, midpoint and final episodes of the 100-episode
 # reference. Every episode still retains complete initial-state/observation hashes.
@@ -39,6 +45,49 @@ def as_numpy(value: Any) -> np.ndarray:
     if hasattr(value, "detach"):
         value = value.detach().cpu().numpy()
     return np.asarray(value)
+
+
+def parse_image_size(value: str) -> tuple[str, tuple[int, int]]:
+    """Parse one ``FEATURE=HEIGHTxWIDTH`` negotiated camera size."""
+    feature, separator, size = value.partition("=")
+    try:
+        height, width = (int(part) for part in size.lower().split("x"))
+    except ValueError:
+        height = width = 0
+    if not separator or not feature or height < 1 or width < 1:
+        raise argparse.ArgumentTypeError(f"expected FEATURE=HEIGHTxWIDTH, got {value!r}")
+    return feature, (height, width)
+
+
+def with_image_sizes(
+    profile: dict[str, Any], image_sizes: Mapping[str, tuple[int, int]],
+) -> dict[str, Any]:
+    """Render each negotiated image feature's camera natively at its negotiated size.
+
+    The size is set on that camera's own ``sensor_configs`` entry, so it takes precedence over the
+    task default and any profile-wide size. Without negotiated sizes the profile is returned as is.
+    """
+    sizes: dict[str, tuple[int, int]] = {}
+    fixed = fixed_size_cameras(profile) if image_sizes else {}
+    for feature, size in image_sizes.items():
+        camera = profile.get("cameras", {}).get(feature)
+        if camera is None:
+            continue
+        if feature in fixed:
+            raise ValueError(
+                f"ManiSkill {profile['profile_id']} camera {camera!r} renders only the task's own size"
+            )
+        if sizes.setdefault(camera, size) != size:
+            raise ValueError(
+                f"ManiSkill {profile['profile_id']} camera {camera!r} serves several image features "
+                "at different negotiated sizes"
+            )
+    if not sizes:
+        return profile
+    sensor_configs = deepcopy(profile.get("sensor_configs", {}))
+    for camera, (height, width) in sizes.items():
+        sensor_configs[camera] = {**sensor_configs.get(camera, {}), "height": height, "width": width}
+    return {**profile, "sensor_configs": sensor_configs}
 
 
 def create_environment(profile: dict[str, Any], num_envs: int):
@@ -526,6 +575,10 @@ def main() -> None:
     parser.add_argument("--queue-dir", type=Path)
     parser.add_argument("--worker-state-dir", type=Path)
     parser.add_argument("--policy-batch-size", type=int, default=1)
+    parser.add_argument(
+        "--image-size", type=parse_image_size, action="append", default=[],
+        help="negotiated camera size as FEATURE=HEIGHTxWIDTH; the task's own size otherwise",
+    )
     args = parser.parse_args()
     manifest = load_benchmark_manifest(args.benchmark_manifest)
     os.environ["HOME"] = str(manifest.runtime_path("home"))
@@ -545,7 +598,11 @@ def main() -> None:
     )):
         parser.error("worker execution requires suite, id, Policy socket, queue, and state directory")
     manifest.validate_request(BenchmarkName.MANISKILL, args.suite)
-    profiles = {profile["profile_id"]: profile for profile in validate_profiles(protocol, args.suite)}
+    image_sizes = dict(args.image_size)
+    profiles = {
+        profile["profile_id"]: with_image_sizes(profile, image_sizes)
+        for profile in validate_profiles(protocol, args.suite)
+    }
     if args.policy_batch_size < 1:
         raise ValueError("Policy batch size must be positive")
     with PolicyClient(args.policy_socket, timeout_s=300) as client:

@@ -1,0 +1,5 @@
+# Build backends for the pinned CALVIN source distributions and editables.
+setuptools==80.10.2 \
+    --hash=sha256:95b30ddfb717250edb492926c92b5221f7ef3fbcc2b07579bcd4a27da21d0173
+wheel==0.48.0 \
+    --hash=sha256:3217dcc807155e45db462d7ef2431f5ddda0d7273b700d05a67b271ceb1287ab
