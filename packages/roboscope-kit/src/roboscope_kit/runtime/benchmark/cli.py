@@ -25,10 +25,7 @@ from roboscope_kit.benchmark_specs import (
 )
 from roboscope_kit.policy import DEFAULT_EVAL_MODE, EVAL_MODES
 from roboscope_kit.policy_config import PolicyRuntimeConfig, load_policy_runtime_config
-from roboscope_kit.runtime.benchmarks.metaworld.config import (
-    load_evaluation_config,
-    resolve_evaluation_config,
-)
+from roboscope_kit.runtime.benchmarks.metaworld.config import resolve_evaluation_config
 
 from .autotune import (
     ProbeLimits,
@@ -125,11 +122,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="benchmark manifest (benchmark-manifest.json) defining suites, runtime paths, and defaults",
     )
     parser.add_argument("--policy-config", type=Path, help="Policy process contract (roboscope-policy.json)")
-    parser.add_argument(
-        "--evaluation-config",
-        type=Path,
-        help="MetaWorld run configuration JSON (metaworld only); overrides the Policy config",
-    )
     parser.add_argument(
         "--profile",
         action="store_true",
@@ -285,7 +277,7 @@ def _preflight_evaluation(
     factory.validate_suite(args.suite)
     _validate_checkpoint(args.checkpoint_source)
     policy = load_policy_runtime_config(args.policy_config)
-    evaluation_config = _resolve_evaluation_config(benchmark, args.evaluation_config, policy)
+    evaluation_config = _resolve_evaluation_config(benchmark, policy)
     benchmark_spec = _build_benchmark_spec(benchmark, args.suite, evaluation_config)
     gpu_devices = detect_gpu_devices()
     if not gpu_devices:
@@ -445,23 +437,17 @@ def _open_run_cache(
 
 def _resolve_evaluation_config(
     benchmark: BenchmarkName,
-    path: Path | None,
     policy: PolicyRuntimeConfig,
 ) -> dict[str, Any] | None:
-    """Resolve the benchmark evaluation config without writing run artifacts.
+    """Resolve the MetaWorld camera configuration without writing run artifacts.
 
-    Priority is an explicit ``--evaluation-config`` file, then the Policy file's
-    ``benchmark_config`` declaration, then the default. Every worker and
-    the Policy ``load`` spec therefore consume the same resolved object.
+    The Policy file's ``benchmark_config.metaworld`` declaration applies when present, otherwise the
+    default camera. Every worker and the Policy ``load`` spec consume the same resolved object.
     """
 
     if benchmark is not BenchmarkName.METAWORLD:
-        if path is not None:
-            raise ValueError("--evaluation-config is only supported for the metaworld benchmark")
         return None
-    declared = policy.benchmark_config.get("metaworld")
-    config = load_evaluation_config(path) if path is not None else resolve_evaluation_config(declared)
-    return config
+    return resolve_evaluation_config(policy.benchmark_config.get("metaworld"))
 
 
 def _build_benchmark_spec(

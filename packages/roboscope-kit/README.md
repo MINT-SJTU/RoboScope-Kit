@@ -459,8 +459,8 @@ The merge also reserves its output directory and refuses existing artifacts, inc
 Use a new directory for each completed merge.
 
 This merge rebuilds the workload from the benchmark manifest, so it needs the same manifest and benchmark
-runtime assets (including RoboTwin's seed cache). MetaWorld runs and merges must use the same
-`--evaluation-config` file.
+runtime assets (including RoboTwin's seed cache). For MetaWorld, the merge reads the camera configuration
+each shard recorded in its `evaluation-config.json` and requires every shard to match.
 
 The merged `result.json` contains only counts (successes, episodes, steps) plus each shard's provenance and
 `result.json` SHA-256. Rates such as `steps_per_s` or `elapsed_s` are never combined across instances; report

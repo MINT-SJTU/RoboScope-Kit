@@ -33,6 +33,7 @@ from typing import Any
 
 from roboscope_kit.benchmark_specs import BenchmarkName
 from roboscope_kit.policy import DEFAULT_EVAL_MODE
+from roboscope_kit.runtime.benchmarks.metaworld.config import load_evaluation_config
 
 from .factories import BenchmarkRunRequest
 from .manifest import BenchmarkManifest, load_benchmark_manifest
@@ -65,7 +66,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=int,
         help="positive episode count overriding the manifest default; must match the shard runs",
     )
-    parser.add_argument("--evaluation-config", type=Path, help="resolved MetaWorld run configuration")
     parser.add_argument(
         "--benchmark-manifest",
         type=Path,
@@ -100,7 +100,6 @@ def main(argv: list[str] | None = None) -> int:
                 episodes=args.episodes,
                 manifest_path=args.benchmark_manifest,
                 shard_dirs=args.shard_dir,
-                evaluation_config_path=args.evaluation_config,
             )
             atomic_json(args.output_dir / "result.json", merged)
     except (ValueError, RuntimeError, OSError, KeyError, TypeError) as exc:
@@ -131,7 +130,6 @@ def merge_shards(
     episodes: int | None,
     manifest_path: Path,
     shard_dirs: list[Path],
-    evaluation_config_path: Path | None = None,
 ) -> dict[str, Any]:
     if benchmark is BenchmarkName.RLBENCH:
         raise ValueError("RLBench shard merging is unavailable until policy identity can be verified")
@@ -147,7 +145,7 @@ def merge_shards(
         output_dir=Path("/unused/shard-merge-output"),
         episodes=episodes,
         quick_test=False,
-        evaluation_config_path=evaluation_config_path,
+        evaluation_config_path=_shard_evaluation_config(benchmark, shard_dirs),
     )
     adapter = factory.create(request, manifest)
     full_items = list(adapter.work_items())
@@ -207,6 +205,22 @@ def merge_shards(
             "coverage": "complete",
         },
     }
+
+
+def _shard_evaluation_config(benchmark: BenchmarkName, shard_dirs: list[Path]) -> Path | None:
+    """Return the MetaWorld camera configuration that every shard run recorded."""
+
+    if benchmark is not BenchmarkName.METAWORLD:
+        return None
+    paths = [shard_dir / "evaluation-config.json" for shard_dir in shard_dirs]
+    configs = []
+    for path in paths:
+        if not path.is_file():
+            raise ValueError(f"{path.parent}: evaluation-config.json missing")
+        configs.append(load_evaluation_config(path))
+    if any(config != configs[0] for config in configs[1:]):
+        raise ValueError("MetaWorld shards were run with different camera configurations")
+    return paths[0]
 
 
 def _index_full_items(full_items: list[WorkItem]) -> dict[str, WorkItem]:

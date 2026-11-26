@@ -4,8 +4,15 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 ## 0.8.0b83 - 2026-11-26
 
+- Remove `--evaluation-config` from `roboscope_kit.runtime.benchmark` and
+  `roboscope_kit.runtime.benchmark.shard_merge`. MetaWorld cameras come from the Policy contract's
+  `benchmark_config.metaworld` declaration, or the default camera when it is absent. To keep a camera
+  setup that was passed with `--evaluation-config`, put the same `{"cameras": [...]}` object under
+  `benchmark_config.metaworld` in `roboscope-policy.json`.
+- A MetaWorld shard merge reads the camera configuration each shard recorded in its
+  `evaluation-config.json` and requires every shard to match.
 - Add one-line `--help` descriptions for `--benchmark`, `--suite`, `--episodes`, `--quick-test`,
-  `--self-test`, `--benchmark-manifest`, and `--evaluation-config` in `roboscope_kit.runtime.benchmark`,
+  `--self-test`, and `--benchmark-manifest` in `roboscope_kit.runtime.benchmark`,
   and for `--benchmark`, `--suite`, `--episodes`, `--benchmark-manifest`, and `--output-dir` in
   `roboscope_kit.runtime.benchmark.shard_merge`.
 - The shard-merge `--help` usage example includes the required `--benchmark-manifest` and keeps its

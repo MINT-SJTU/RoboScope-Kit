@@ -92,8 +92,8 @@ belongs inside the user policy.
 ### Camera configuration
 
 The evaluation configuration has one JSON shape, shared by the Policy contract's
-`benchmark_config.metaworld` declaration, the `--evaluation-config` file, and the resolved
-`<output-dir>/evaluation-config.json` the runtime writes for the workers:
+`benchmark_config.metaworld` declaration and the resolved `<output-dir>/evaluation-config.json` the
+runtime writes for the workers:
 
 ```json
 {"cameras": [{"feature": "images.primary", "camera_name": "corner2", "render_width": 480,
@@ -237,18 +237,18 @@ The runtime reads the user Policy process contract from `--policy-config`; it ha
 ```
 
 `benchmark_config` is optional and is read from the contract file without importing the Policy or loading
-a model. The final evaluation configuration is resolved once, with this priority:
+a model. The final evaluation configuration is resolved once: the Policy contract's
+`benchmark_config.metaworld` declaration when present, otherwise the default camera. To evaluate the same
+Policy with another camera setup, use a second contract file with a different declaration.
 
-1. the `--evaluation-config <file>` supplied for the current run;
-2. the Policy contract's `benchmark_config.metaworld` declaration;
-3. the default camera.
-
-The camera list is replaced as a whole; it is never merged by index. Every configured camera then has its
-missing fields filled from the default camera and is validated. A request that omits the configuration
-(or passes `null`) means "no explicit override"; a provided object must contain a non-empty `cameras` list.
+The camera list replaces the default as a whole; it is never merged by index. Every configured camera then
+has its missing fields filled from the default camera and is validated. A contract that omits the
+declaration (or sets it to `null`) uses the default camera; a provided object must contain a non-empty
+`cameras` list.
 The runtime writes the resolved configuration to `<output-dir>/evaluation-config.json` and passes that file
 to every worker; every worker and the Policy `load` session consume that same resolved object, and the
-effective configuration is recorded as `evaluation_config` in the result metadata.
+effective configuration is recorded as `evaluation_config` in the result metadata. A shard merge reads
+each shard's `evaluation-config.json` and requires all of them to match.
 
 Workers never re-resolve the configuration from the Policy contract. The contract's `schema_version` `2` is
 distinct from the benchmark protocol version `metaworld-v1`.

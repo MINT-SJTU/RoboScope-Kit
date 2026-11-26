@@ -2118,3 +2118,54 @@ def test_robotwin_camera_sizes_are_offered_only_to_servers_with_open_shape_range
     assert negotiate_image_sizes(spec, ((240, 320),), older) == {}
     with pytest.raises(ValueError, match="renders only 240x320"):
         negotiate_image_sizes(spec, ((224, 224),), older)
+
+
+def test_metaworld_cameras_resolve_from_the_policy_contract(tmp_path: Path) -> None:
+    from roboscope_kit.policy_config import PolicyRuntimeConfig
+    from roboscope_kit.runtime.benchmark.cli import _resolve_evaluation_config, parse_args
+    from roboscope_kit.runtime.benchmarks.metaworld.config import default_evaluation_config
+
+    def policy(benchmark_config: dict) -> PolicyRuntimeConfig:
+        return PolicyRuntimeConfig(
+            tmp_path / "roboscope-policy.json", ("python",), tmp_path, benchmark_config
+        )
+
+    declared = {
+        "metaworld": {
+            "cameras": [
+                {"feature": "images.primary", "camera_name": "corner", "output_width": 224,
+                 "output_height": 224},
+            ]
+        }
+    }
+    (camera,) = _resolve_evaluation_config(BenchmarkName.METAWORLD, policy(declared))["cameras"]
+    assert (camera["camera_name"], camera["output_height"], camera["output_width"]) == ("corner", 224, 224)
+    assert _resolve_evaluation_config(BenchmarkName.METAWORLD, policy({})) == default_evaluation_config()
+    assert _resolve_evaluation_config(BenchmarkName.LIBERO, policy(declared)) is None
+    with pytest.raises(SystemExit):
+        parse_args([
+            "--benchmark", "metaworld", "--output-dir", str(tmp_path / "run"),
+            "--benchmark-manifest", str(tmp_path / "benchmark-manifest.json"),
+            "--evaluation-config", str(tmp_path / "cameras.json"),
+        ])
+
+
+def test_shard_merge_uses_the_camera_config_every_metaworld_shard_recorded(tmp_path: Path) -> None:
+    from roboscope_kit.runtime.benchmark.shard_merge import _shard_evaluation_config
+    from roboscope_kit.runtime.benchmarks.metaworld.config import default_evaluation_config
+
+    shards = [tmp_path / "shard-0", tmp_path / "shard-1"]
+    for shard in shards:
+        shard.mkdir()
+        (shard / "evaluation-config.json").write_text(json.dumps(default_evaluation_config()))
+    assert _shard_evaluation_config(BenchmarkName.METAWORLD, shards) == shards[0] / "evaluation-config.json"
+    assert _shard_evaluation_config(BenchmarkName.ROBOTWIN, [tmp_path / "unused"]) is None
+
+    rotated = default_evaluation_config()
+    rotated["cameras"][0]["rotation_deg"] = 0
+    (shards[1] / "evaluation-config.json").write_text(json.dumps(rotated))
+    with pytest.raises(ValueError, match="different camera configurations"):
+        _shard_evaluation_config(BenchmarkName.METAWORLD, shards)
+    (shards[1] / "evaluation-config.json").unlink()
+    with pytest.raises(ValueError, match="evaluation-config.json missing"):
+        _shard_evaluation_config(BenchmarkName.METAWORLD, shards)
