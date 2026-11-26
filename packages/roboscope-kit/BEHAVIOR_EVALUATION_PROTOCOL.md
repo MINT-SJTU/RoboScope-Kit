@@ -327,7 +327,7 @@ The simulator dominates: one worker steps about 12 actions/s while it is not wai
 load of every instance adds a sixth. At this rate the formal 1,000 episodes take about ten days on this
 machine.
 
-### Throughput changes (Kit `0.8.0b83`)
+### Throughput changes (Kit `0.8.0b86`)
 
 Three changes leave every simulated step, rendered image and score as before and raise the throughput:
 
@@ -346,7 +346,7 @@ Checks on the same machine:
   absolute difference 1–4 of 255).
 - 16 tasks of 6 scenes, instance 301. The "before" runs are the 100-task run of section 9 and a run of the
   same code the day after; of the "after" runs, the first two used a prototype of these changes behind
-  switches and the third this version (`0.8.0b83`):
+  switches and the third this change, built as `0.8.0b83` before its rebase onto `main`:
 
 | Configuration | Mean Q | Successes | Evaluation | Actions/s |
 | --- | ---: | ---: | ---: | ---: |

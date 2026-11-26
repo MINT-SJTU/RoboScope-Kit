@@ -106,5 +106,5 @@ episodes, 23 successes, mean Q 0.410, 16.5 actions/s over 24.1 hours. That is on
 the formal 1,000, and has no paired native run yet; the
 [protocol document](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/BEHAVIOR_EVALUATION_PROTOCOL.md)
 (sections 9 and 10) has the details and the time breakdown. With K=4 and G=2, the chunked actions and
-the scene texture caches of Kit `0.8.0b83`, the same machine evaluates about 1.6 times as many actions per
+the scene texture caches of Kit `0.8.0b86`, the same machine evaluates about 1.6 times as many actions per
 second (section 10).
