@@ -1,0 +1,242 @@
+# Pinned ManiSkill task inventory
+
+The source revision is `baab60ede2e89167c1b7aaed41a9aa8e690a9d1e`. Its archive SHA-256 is
+`db7f1fb49038a1a11612876022ba31fdb8c9095e4e3f4a408728abf8b821f49e`. An AST scan of
+`mani_skill/envs/tasks/**/*.py` finds 58 literal `register_env` decorators. The default registry
+also contains nine scene exploration IDs, for 67 registered environments. The minimal template
+is a separate source example and is not imported into that registry.
+
+Of the 58 task-directory IDs, 55 define evaluation tasks. Three are helper/reference environments
+with source-backed reasons below. `upstream_tasks_v1` declares all 55 evaluation IDs at their
+upstream horizons, with 100 episodes and seeds 0–99 per profile. Its 51 state profiles and four
+Bridge `rgb+segmentation` profiles are also selectable as `upstream_state_v1` and `bridge_rgb_v1`.
+These are explicitly named Kit protocols. ManiSkill does not define one unified official full suite.
+
+## Protocol and validation scope
+
+Each profile freezes the robot, native controller, observation mode, simulation/control frequency,
+full time limit, reset behavior, scoring and required asset IDs in `benchmark-manifest.json`.
+Defaults retain 100 Hz physics and 20 Hz control. DM-Control Ant/Humanoid use 200/40 Hz,
+Hopper uses 100/25 Hz and Bridge uses 500/5 Hz, following their source configurations. Each
+episode group performs a complete seeded reconfiguration. Evaluation runs the fixed horizon
+and records native terminal masks, success-once/end where defined, and return.
+
+The nine `MS-*` control tasks, both humanoid standing tasks and `AnymalC-Spin-v1` have no native
+`success` field. Their primary metric is mean episode return. Their success counts remain absent.
+Helper scenes are not converted into artificial success benchmarks.
+
+`official_ppo_state_v1` selects 11 public checkpoint-compatible profiles. The original three-task
+`baseline_state_v1` and 18-task state/RGB suites remain selectable with their original profile IDs.
+LiftPegUpright and both dual-arm checkpoints use separate profiles for their required controllers.
+RGB task definitions do not establish trained RGB-policy acceptance. The four Bridge profiles
+also have the separate public [Octo-small visual example](../../examples/maniskill/OCTO.md).
+
+The [validation status](VALIDATION.md) records exact source identities, source checks and
+remaining acceptance. The manifest retains 77 profiles and all 55 original evaluation TaskIDs.
+Eleven official PPO and two author G1 PPO entries select thirteen task-trained PPO candidates.
+The table's PPO column is specific to that catalog: its other 42 entries do not mean that no
+compatible model exists. Eight of those tasks have retained task/robot-trained NEWT candidates:
+
+| NEWT task | Selected profile | Evaluation limit |
+|---|---|---|
+| `MS-AntWalk-v1` | `ms_ant_walk_state` | Deterministic actor prior; native return |
+| `MS-AntRun-v1` | `ms_ant_run_state` | Deterministic actor prior; native return |
+| `MS-CartpoleBalance-v1` | `ms_cartpole_balance_state` | Deterministic actor prior; native return |
+| `MS-CartpoleSwingUp-v1` | `ms_cartpole_swing_up_state` | Deterministic actor prior; native return |
+| `MS-HopperStand-v1` | `ms_hopper_stand_state` | Actor prior; author 500 / Kit 600 ticks; native return |
+| `MS-HopperHop-v1` | `ms_hopper_hop_state` | Actor prior; author 500 / Kit 600 ticks; native return |
+| `PlaceSphere-v1` | `place_sphere_state` | Current-source competence and independent comparison pending |
+| `PullCubeTool-v1` | `pull_cube_tool_newt_state` | Separate pose controller; does not validate the original position-controller profile |
+
+These 21 TaskIDs have selected task-trained candidates, not accepted models. The other 34
+TaskIDs have no selected intended task/robot checkpoint in this inventory. The provisional
+Bridge Octo and the author Peg/Plug RGB Octo examples are not added to this count. NEWT's
+actor-prior branch is not its default MPC evaluator, and source/backend/horizon agreement
+still requires validation. See [NEWT](../../examples/maniskill/NEWT.md) and the
+[compatibility notes](REMAINING_COMPATIBILITY.md).
+
+Four TaskIDs still lack original assets: AssemblingKits, TurnFaucet, OpenCabinetDoor and
+OpenCabinetDrawer. All original state/RGB profiles remain declared. Full acceptance requires
+intended models, competence where applicable, independently configured native evaluation
+and current-source prescribed-count results; neither catalog presence nor a prefix is sufficient.
+
+The [frozen official demonstration repository](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/3558f72cf99d51d04a6ac4779e88b3da4bbf1628)
+contains 26 PPO files for the same eleven TaskIDs; fifteen are alternate controllers for existing
+tasks. Motion-planning demonstrations are not trained policy checkpoints. This selected inventory
+does not assert that no other public model is available. The
+[public checkpoint search](#public-checkpoint-search) records the result for each of the other 42 TaskIDs.
+
+## Evaluation task definitions
+
+| Task | Profile in `upstream_tasks_v1` | Horizon | Metric | Selected PPO catalog | Source |
+| --- | --- | ---: | --- | --- | --- |
+| `AnymalC-Reach-v1` | `anymal_c_reach_state` | 200 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/quadruped/quadruped_reach.py#L161) |
+| `AnymalC-Spin-v1` | `anymal_c_spin_state` | 200 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/quadruped/quadruped_spin.py#L129) |
+| `AssemblingKits-v1` | `assembling_kits_state` | 200 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/assembling_kits.py#L25) |
+| `FMBAssembly1Easy-v1` | `fmb_assembly1_easy_state` | 500 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/fmb/fmb.py#L22) |
+| `LiftPegUpright-v1` | `lift_peg_upright_ppo_state` | 50 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/lift_peg_upright.py#L22) |
+| `MS-AntRun-v1` | `ms_ant_run_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/ant.py#L315) |
+| `MS-AntWalk-v1` | `ms_ant_walk_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/ant.py#L298) |
+| `MS-CartpoleBalance-v1` | `ms_cartpole_balance_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/cartpole.py#L179) |
+| `MS-CartpoleSwingUp-v1` | `ms_cartpole_swing_up_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/cartpole.py#L214) |
+| `MS-HopperHop-v1` | `ms_hopper_hop_state` | 600 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/hopper.py#L245) |
+| `MS-HopperStand-v1` | `ms_hopper_stand_state` | 600 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/hopper.py#L218) |
+| `MS-HumanoidRun-v1` | `ms_humanoid_run_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/humanoid.py#L387) |
+| `MS-HumanoidStand-v1` | `ms_humanoid_stand_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/humanoid.py#L285) |
+| `MS-HumanoidWalk-v1` | `ms_humanoid_walk_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/control/humanoid.py#L355) |
+| `OpenCabinetDoor-v1` | `open_cabinet_door_state` | 100 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/mobile_manipulation/open_cabinet_drawer.py#L362) |
+| `OpenCabinetDrawer-v1` | `open_cabinet_drawer_state` | 100 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/mobile_manipulation/open_cabinet_drawer.py#L33) |
+| `PegInsertionSide-v1` | `peg_insertion_side_state` | 100 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/peg_insertion_side.py#L51) |
+| `PickClutterYCB-v1` | `pick_clutter_ycb_state` | 100 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/pick_clutter_ycb.py#L195) |
+| `PickCube-v1` | `pickcube_state` | 50 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/pick_cube.py#L20) |
+| `PickSingleYCB-v1` | `pick_single_ycb_state` | 50 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/pick_single_ycb.py#L28) |
+| `PlaceSphere-v1` | `place_sphere_state` | 50 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/place_sphere.py#L24) |
+| `PlugCharger-v1` | `plug_charger_state` | 200 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/plug_charger.py#L21) |
+| `PokeCube-v1` | `poke_cube_state` | 50 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/poke_cube.py#L21) |
+| `PullCube-v1` | `pull_cube_state` | 50 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/pull_cube.py#L21) |
+| `PullCubeTool-v1` | `pull_cube_tool_state` | 100 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/pull_cube_tool.py#L20) |
+| `PushCube-v1` | `pushcube_state` | 50 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/push_cube.py#L38) |
+| `PushT-v1` | `pusht_state` | 100 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/push_t.py#L66) |
+| `PutCarrotOnPlateInScene-v1` | `put_carrot_on_plate_in_scene_rgb` | 60 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/put_on_in_scene.py#L17) |
+| `PutEggplantInBasketScene-v1` | `put_eggplant_in_basket_scene_rgb` | 120 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/put_on_in_scene.py#L75) |
+| `PutSpoonOnTableClothInScene-v1` | `put_spoon_on_table_cloth_in_scene_rgb` | 60 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/put_on_in_scene.py#L215) |
+| `RollBall-v1` | `rollball_state` | 80 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/roll_ball.py#L21) |
+| `RotateSingleObjectInHandLevel0-v1` | `rotate_single_object_in_hand_level0_state` | 300 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py#L321) |
+| `RotateSingleObjectInHandLevel1-v1` | `rotate_single_object_in_hand_level1_state` | 300 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py#L333) |
+| `RotateSingleObjectInHandLevel2-v1` | `rotate_single_object_in_hand_level2_state` | 300 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py#L349) |
+| `RotateSingleObjectInHandLevel3-v1` | `rotate_single_object_in_hand_level3_state` | 300 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_single_object_in_hand.py#L365) |
+| `RotateValveLevel0-v1` | `rotate_valve_level0_state` | 80 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_valve.py#L256) |
+| `RotateValveLevel1-v1` | `rotate_valve_level1_state` | 150 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_valve.py#L268) |
+| `RotateValveLevel2-v1` | `rotate_valve_level2_state` | 150 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_valve.py#L280) |
+| `RotateValveLevel3-v1` | `rotate_valve_level3_state` | 150 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_valve.py#L292) |
+| `RotateValveLevel4-v1` | `rotate_valve_level4_state` | 300 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/dexterity/rotate_valve.py#L304) |
+| `StackCube-v1` | `stackcube_state` | 50 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/stack_cube.py#L19) |
+| `StackGreenCubeOnYellowCubeBakedTexInScene-v1` | `stack_green_cube_on_yellow_cube_baked_tex_in_scene_rgb` | 60 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/put_on_in_scene.py#L155) |
+| `TriFingerRotateCubeLevel0-v1` | `tri_finger_rotate_cube_level0_state` | 250 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/rotate_cube.py#L352) |
+| `TriFingerRotateCubeLevel1-v1` | `tri_finger_rotate_cube_level1_state` | 250 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/rotate_cube.py#L363) |
+| `TriFingerRotateCubeLevel2-v1` | `tri_finger_rotate_cube_level2_state` | 250 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/rotate_cube.py#L374) |
+| `TriFingerRotateCubeLevel3-v1` | `tri_finger_rotate_cube_level3_state` | 250 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/rotate_cube.py#L385) |
+| `TriFingerRotateCubeLevel4-v1` | `tri_finger_rotate_cube_level4_state` | 250 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/rotate_cube.py#L396) |
+| `TurnFaucet-v1` | `turn_faucet_state` | 200 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/turn_faucet.py#L24) |
+| `TwoRobotPickCube-v1` | `two_robot_pickcube_ppo_state` | 100 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/two_robot_pick_cube.py#L21) |
+| `TwoRobotStackCube-v1` | `two_robot_stackcube_ppo_state` | 100 | success_once | Official PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/tabletop/two_robot_stack_cube.py#L22) |
+| `UnitreeG1PlaceAppleInBowl-v1` | `unitree_g1_place_apple_in_bowl_state` | 100 | success_once | Author state PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/humanoid_pick_place.py#L210) |
+| `UnitreeG1Stand-v1` | `unitree_g1_stand_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/humanoid_stand.py#L100) |
+| `UnitreeG1TransportBox-v1` | `unitree_g1_transport_box_state` | 100 | success_once | Author state PPO | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/transport_box.py#L25) |
+| `UnitreeGo2-Reach-v1` | `unitree_go2_reach_state` | 200 | success_once | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/quadruped/quadruped_reach.py#L191) |
+| `UnitreeH1Stand-v1` | `unitree_h1_stand_state` | 1000 | return | No PPO entry | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/humanoid/humanoid_stand.py#L67) |
+
+## Public checkpoint search
+
+On 2026-11-12, every TaskID without an official or author PPO entry (42 TaskIDs: 34 marked
+`public_checkpoint: missing`, eight NEWT candidates) was searched for a public checkpoint trained
+for that task and robot with a published non-zero result. A checkpoint for another task, robot or
+simulator does not qualify. "Found" records a candidate and the score its authors published; it
+does not establish acceptance on the pinned source. Each candidate still requires an independently
+configured native comparison at the prescribed episode count.
+
+Sources, all opened on that date:
+
+- **D**: [`haosulab/ManiSkill_Demonstrations`](https://huggingface.co/datasets/haosulab/ManiSkill_Demonstrations/tree/main/demos)
+  `demos/<Task>/rl` on `main` (`d674485b`, 2025-07-06). It adds no `.pt` file for any of the 42 TaskIDs;
+  `PegInsertionSide-v1/rl` holds trajectories and a video only.
+- **B**: ManiSkill baselines at the pin (`examples/baselines/{ppo,sac,rfcl,rlpd,tdmpc2,bc,dp,act}`,
+  `ppo/baselines.sh`, `ppo/examples.sh`), the RL baselines documentation, task documentation pages,
+  and GitHub issues searched for `checkpoint`. `examples.sh` lists training commands, not weights.
+- **H**: Hugging Face model and dataset search for `maniskill`, every TaskID and robot/task keywords.
+- **P**: the ManiSkill3 paper ([arXiv 2410.00425](https://arxiv.org/abs/2410.00425)), the ManiSkill2 paper
+  ([arXiv 2302.04659](https://arxiv.org/abs/2302.04659)) and the SIMPLER paper ([arXiv 2405.05941](https://arxiv.org/abs/2405.05941), Table V).
+- **N**: [NEWT](https://github.com/nicklashansen/newt/tree/1d3fc058b81ddf8d36a5457c29ea407dd374c1b8) checkpoints and its
+  `csv/tdmpc2-singletask/tdmpc2_by_task.csv` final rows at 5M steps. NEWT normalizes Cartpole returns by
+  1000 and Hopper returns by 600; other tasks report success. It runs `mani_skill-nightly==2025.9.19.39`
+  and overrides some horizons, so its scores are not pinned-source results.
+- **T**: [TD-MPC2](https://huggingface.co/nicklashansen/tdmpc2) `maniskill2/*.pt` and `results/tdmpc2/*.csv`.
+- **R**: [RDT ManiSkill model](https://huggingface.co/robotics-diffusion-transformer/maniskill-model) and its README;
+  one checkpoint fine-tuned on five tasks, evaluated with `pd_joint_pos`, a render camera and 400 steps.
+- **S**: [SimplerEnv](https://github.com/simpler-env/SimplerEnv) (`maniskill3` branch) for the Bridge tasks.
+
+| Task | Finding | Candidate | Published result | Sources |
+| --- | --- | --- | --- | --- |
+| `AnymalC-Spin-v1` | None found | – | – | D, B, H, P, N |
+| `AssemblingKits-v1` | None found | – | ManiSkill2 `-v0` DAPG+PPO 0.00 | D, B, H, P, N |
+| `FMBAssembly1Easy-v1` | None found | – | – | D, B, H, P, N |
+| `MS-AntRun-v1` | Candidate; no usable published result | NEWT `ms-ant-run.pt` | NEWT reports success, which this task lacks: 0.0 | N |
+| `MS-AntWalk-v1` | Candidate; no usable published result | NEWT `ms-ant-walk.pt` | NEWT reports success, which this task lacks: 0.0 | N |
+| `MS-CartpoleBalance-v1` | Found | NEWT `ms-cartpole-balance.pt` | Return/1000 0.999 | N |
+| `MS-CartpoleSwingUp-v1` | Found | NEWT `ms-cartpole-swingup.pt` | Return/1000 0.991 | N |
+| `MS-HopperHop-v1` | Found | NEWT `ms-hopper-hop.pt` | Return/600 0.797 | N |
+| `MS-HopperStand-v1` | Found | NEWT `ms-hopper-stand.pt` | Return/600 0.806 | N |
+| `MS-HumanoidRun-v1` | None found | – | – | D, B, H, P, N, T (DM Control MuJoCo only) |
+| `MS-HumanoidStand-v1` | None found | – | – | D, B, H, P, N, T (DM Control MuJoCo only) |
+| `MS-HumanoidWalk-v1` | None found | – | – | D, B, H, P, N, T (DM Control MuJoCo only) |
+| `OpenCabinetDoor-v1` | None found | – | – | D, B, H, P, N |
+| `OpenCabinetDrawer-v1` | None found | – | – | D, B, H, P, N |
+| `PegInsertionSide-v1` | Candidate; different protocol | RDT five-task fine-tune | 13.2% success, non-default controller/camera/horizon | D, B, H, P, R, T |
+| `PickClutterYCB-v1` | None found | – | – | D, B, H, P, N, T |
+| `PickSingleYCB-v1` | ManiSkill2 only | TD-MPC2 `maniskill2/pick-ycb-*.pt` (`-v0`) | 0.8/0.8/0.5 success; NEWT fixed-object variants do not cover the task distribution | T, N, P |
+| `PlaceSphere-v1` | Found | NEWT `ms-place-sphere.pt` | Success 0.9 (NEWT horizon 25) | N, B |
+| `PlugCharger-v1` | Candidate; different protocol | RDT five-task fine-tune | 1.2% success, non-default controller/camera/horizon | D, B, H, P, R |
+| `PullCubeTool-v1` | Found | NEWT `ms-pull-cube-tool.pt` | Success 1.0 (`pd_ee_delta_pose`) | N, D |
+| `PutCarrotOnPlateInScene-v1` | Candidate; generalist model | Octo-small/base, RT-1-X | SIMPLER visual matching: 0.097/0.083/0.042 | S, P, H |
+| `PutEggplantInBasketScene-v1` | Candidate; generalist model | Octo-small/base, RT-1-X | SIMPLER visual matching: 0.569/0.431/0.000 | S, P, H |
+| `PutSpoonOnTableClothInScene-v1` | Candidate; generalist model | Octo-small/base, RT-1-X | SIMPLER visual matching: 0.472/0.125/0.000 | S, P, H |
+| `RotateSingleObjectInHandLevel0-v1` | None found | – | – | D, B, H, P, N |
+| `RotateSingleObjectInHandLevel1-v1` | None found | – | – | D, B, H, P, N |
+| `RotateSingleObjectInHandLevel2-v1` | None found | – | – | D, B, H, P, N |
+| `RotateSingleObjectInHandLevel3-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel0-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel1-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel2-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel3-v1` | None found | – | – | D, B, H, P, N |
+| `RotateValveLevel4-v1` | None found | – | – | D, B, H, P, N |
+| `StackGreenCubeOnYellowCubeBakedTexInScene-v1` | Candidate; generalist model | Octo-small | SIMPLER visual matching: 0.042 (Octo-base and RT-1-X 0.000) | S, P, H |
+| `TriFingerRotateCubeLevel0-v1` | None found | – | – | D, B, H, P, N |
+| `TriFingerRotateCubeLevel1-v1` | None found | – | – | D, B, H, P, N |
+| `TriFingerRotateCubeLevel2-v1` | None found | – | – | D, B, H, P, N |
+| `TriFingerRotateCubeLevel3-v1` | None found | – | – | D, B, H, P, N |
+| `TriFingerRotateCubeLevel4-v1` | None found | – | – | D, B, H, P, N |
+| `TurnFaucet-v1` | ManiSkill2 only | TD-MPC2 `maniskill2/turn-faucet-*.pt` (`-v0`) | 1.0/0.9/1.0 success | T, P |
+| `UnitreeG1Stand-v1` | None found | – | – | D, B, H, P, N |
+| `UnitreeGo2-Reach-v1` | Candidate; unverified | Hugging Face `HexPlex0xFF/Maniskill-Unitree-GO2` | None; the model card states no task, controller or score | H |
+| `UnitreeH1Stand-v1` | None found | – | – | D, B, H, P, N |
+
+Summary: six TaskIDs have a task/robot-trained candidate with a published non-zero result, all from
+NEWT. Nine have candidates that do not yet meet the rule: two NEWT Ant actors without a published
+return, two RDT entries evaluated under a different protocol, four Bridge tasks with generalist
+models scored on the original SIMPLER backend, and one undocumented Go2 model. Two TaskIDs have
+ManiSkill2-only checkpoints. The other 25 TaskIDs have none, and they are not validated. Coverage
+gaps in the search: the PPO training report on wandb, the ManiSkill2-Learn model folder and the
+ManiSkill3 paper's per-task Bridge figure could not be read.
+
+## Helpers and templates
+
+| ID | Reason | Source |
+| --- | --- | --- |
+| `Empty-v1` | Dummy environment for showcasing robots (class docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/empty_env.py) |
+| `RoboCasaKitchen-v1` | Base kitchen scene constructor, reward mode none and evaluate() returns no task metric. | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/mobile_manipulation/robocasa/kitchen.py) |
+| `TableTopFreeDraw-v1` | Reference for creating drawing tasks, with no goal or success conditions (class docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/tasks/drawing/draw.py) |
+| `SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/base_env.py) |
+| `ArchitecTHOR_SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/__init__.py) |
+| `ReplicaCAD_SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/__init__.py) |
+| `ReplicaCADPrepareGroceriesTrain_SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/__init__.py) |
+| `ReplicaCADPrepareGroceriesVal_SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/__init__.py) |
+| `ReplicaCADSetTableTrain_SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/__init__.py) |
+| `ReplicaCADSetTableVal_SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/__init__.py) |
+| `ReplicaCADTidyHouseTrain_SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/__init__.py) |
+| `ReplicaCADTidyHouseVal_SceneManipulation-v1` | Exploration/visualization scene without task success/failure metrics or rewards (SceneManipulationEnv docstring). | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/scenes/__init__.py) |
+| `CustomEnv-v1` | Minimal template, not imported into the default registry. | [Definition](https://github.com/mani-skill/ManiSkill/blob/baab60ede2e89167c1b7aaed41a9aa8e690a9d1e/mani_skill/envs/minimal_template.py) |
+
+The scene helper loop explicitly registers environments for benchmarking/exploration without
+designed tasks. `RoboCasaKitchen-v1` is the ManiSkill base scene and is separate from the
+RoboScope RoboCasa GR-1 Tabletop benchmark. These exclusions are based on the pinned source,
+and can be reviewed independently of asset or model availability.
+
+## Reproduce the source inventory
+
+Read the checksum-verified source built by `build-runtime.sh`. Parse each task module with
+`ast.parse`, collect literal string arguments on class `register_env` decorators, and compare
+the resulting 58 unique IDs and decorator horizons against `upstream_inventory` in the manifest.
+Import `mani_skill.envs` in that runtime and compare `mani_skill.utils.registration.REGISTERED_ENVS`
+with those IDs plus the nine documented scene helpers. The source-only `CustomEnv-v1` template
+is intentionally absent from that import. No simulator or evaluation output is inferred from
+the static inventory.

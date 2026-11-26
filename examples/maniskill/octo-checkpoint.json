@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "repository": "rail-berkeley/octo-small",
+  "revision": "03d88976c54a58e10480d2043a8c762b35bc2611",
+  "source_commit": "653c54acde686fde619855f2eac0dd6edad7116b",
+  "dataset_id": "bridge_dataset",
+  "step": 270000,
+  "files": {
+    "270000/commit_success.txt": {
+      "bytes": 101,
+      "sha256": "5b9a7a59a3bcbbb7913fe236df8f23dae37e1aaa9a541dbeb9b150e4b0b2fc18"
+    },
+    "270000/default/checkpoint": {
+      "bytes": 546696551,
+      "sha256": "590df097f8a37bbc1c3aac2a488c0fb08e72bae8abaedfb89f0685677d848962"
+    },
+    "270000/default/commit_success.txt": {
+      "bytes": 109,
+      "sha256": "edc24db549ed80ad84a40ed05f00f3d44629d5c0f9832214acf5f23d0f05dad1"
+    },
+    "config.json": {
+      "bytes": 3628,
+      "sha256": "008d375c74159819d43613f3f22a3181778a8779fa2263e4ec9d14b41165de9c"
+    },
+    "dataset_statistics.json": {
+      "bytes": 30905,
+      "sha256": "d6519070409ee5d13b1401cec0efa96ad71d93e9616502dbfe8e2995792c3863"
+    },
+    "example_batch.msgpack": {
+      "bytes": 738368,
+      "sha256": "0ce74dd8e433ce4a8a1534c4ab9687d9fc3e444b3eece750047dcb22125d73ff"
+    }
+  },
+  "tokenizer": {
+    "repository": "google-t5/t5-base",
+    "revision": "a9723ea7f1b39c1eae772870f3b547bf6ef7e6c1",
+    "cache_alias": "t5-base",
+    "files": {
+      "config.json": {
+        "bytes": 1208,
+        "sha256": "46dd7cb62d29c81fb551e0ef1ea274c24a46ba441eeb948897706252933df033"
+      },
+      "spiece.model": {
+        "bytes": 791656,
+        "sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86"
+      },
+      "tokenizer.json": {
+        "bytes": 1389353,
+        "sha256": "d2acde0d8d71dd30a711834b07781b9c89feaac33fd332f60507699282740066"
+      }
+    }
+  }
+}

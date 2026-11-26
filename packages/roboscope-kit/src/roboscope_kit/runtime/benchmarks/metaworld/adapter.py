@@ -217,6 +217,8 @@ class MetaworldBenchmarkAdapter:
             "--worker-state-dir",
             str(context.state_dir),
         )
+        for feature, (height, width) in sorted(context.execution_contract.image_sizes.items()):
+            command += ("--image-size", f"{feature}={height}x{width}")
         return ProcessSpec(
             command=command,
             env={

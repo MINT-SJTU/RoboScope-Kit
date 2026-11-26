@@ -14,7 +14,7 @@ stateful Policy and multi-benchmark action contracts. The X-VLA entries on publi
 | robotwin (demo_clean/demo_randomized) | `X-VLA-RoboTwin2` | easy **70.0** / hard **39.0** | Directly comparable when the benchmark protocol matches |
 | robocasa (tabletop) | — | No entry | **N/A**: the public X-VLA assets cover only the other benchmarks in this table |
 
-Kit results on LIBERO (2026-11-14, kit 0.8.0b67, one A800, K6/g1, native loop, the suites' 220-520-step
+Kit results on LIBERO (2026-11-14, commit `6125783`, one A800, K6/g1, native loop, the suites' 220-520-step
 horizons, 500 episodes per suite):
 
 | Suite | Kit success | Evaluation wall clock | Upstream (800/900 steps) |
@@ -26,7 +26,7 @@ horizons, 500 episodes per suite):
 
 With `libero_10`'s horizon raised to X-VLA's 900 steps as a diagnostic, the same commit scores 97.0; only 2 of
 its 485 successes needed more than 520 steps. X-VLA's flow-matching noise is not seeded per episode, so repeated
-runs differ: an earlier run of the same LIBERO code scored 94.4, 97.6, 98.2, and 97.8.
+runs differ by up to about 2 points per suite.
 
 The RoboTwin research reference numbers come from the leaderboard settings results table at the pinned
 upstream X-VLA commit

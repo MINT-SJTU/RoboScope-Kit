@@ -9,6 +9,7 @@ import argparse
 import os
 import subprocess
 import sys
+from collections.abc import Callable, Mapping
 from contextlib import ExitStack
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -18,8 +19,10 @@ from roboscope_kit.benchmark_specs import (
     BenchmarkName,
     BenchmarkSpec,
     MetaworldBenchmarkDefinition,
+    benchmark_camera_support,
     get_benchmark_spec,
 )
+from roboscope_kit.policy import DEFAULT_EVAL_MODE, EVAL_MODES
 from roboscope_kit.policy_config import PolicyRuntimeConfig, load_policy_runtime_config
 from roboscope_kit.runtime.benchmarks.metaworld.config import (
     load_evaluation_config,
@@ -69,6 +72,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--cuda-mps",
         action="store_true",
         help="run the Policy replicas under a private NVIDIA CUDA MPS daemon (default: off)",
+    )
+    parser.add_argument(
+        "--eval-mode",
+        choices=EVAL_MODES,
+        default=DEFAULT_EVAL_MODE,
+        help="evaluation consistency mode: strict (default, protocol-faithful) or fast "
+        "(opt-in throughput optimizations that may introduce small numeric or per-episode differences)",
     )
     parser.add_argument(
         "--shard-index",
@@ -290,6 +300,17 @@ def _run_evaluation(
     benchmark_spec = plan.benchmark_spec
     gpu_devices = plan.gpu_devices
     shard_kwargs = plan.shard_kwargs
+    if benchmark is BenchmarkName.MANISKILL and shard_kwargs:
+        from roboscope_kit.runtime.benchmarks.maniskill.shard_identity import shard_input_identity
+
+        with benchmark_phase(phase_timing_callback, "checkpoint_identity_s"):
+            shard_kwargs = {
+                **shard_kwargs,
+                "shard_build": {
+                    **shard_kwargs["shard_build"],
+                    **shard_input_identity(checkpoint, policy),
+                },
+            }
     fixed = args.concurrency is not None
     run_cache = _open_run_cache(args, benchmark, manifest, plan, checkpoint)
     cuda_mps: CudaMpsSession | None = None
@@ -321,7 +342,8 @@ def _run_evaluation(
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
                 profile=args.profile,
-                task_seconds=run_cache.task_seconds or None,
+                task_seconds_for=run_cache.task_seconds_for,
+                eval_mode=args.eval_mode,
             )
         else:
             output, selected = _autotuned_run(
@@ -336,11 +358,14 @@ def _run_evaluation(
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
                 run_cache=run_cache,
+                eval_mode=args.eval_mode,
             )
     finally:
         if cuda_mps is not None:
             cuda_mps.stop()
+    execution_contract = (output.get("inference") or {}).get("execution_contract") or {}
     if not args.quick_test:
+        run_cache.bind(execution_contract)
         recovery = output.get("recovery") or {}
         if recovery.get("oom_events") or recovery.get("worker_failures"):
             # A run that ran out of memory or lost a Worker finished on a scaled-down or retried
@@ -354,6 +379,8 @@ def _run_evaluation(
     output["autotune"] = selected
     output["run_cache"] = run_cache.describe()
     output["cuda_mps"] = cuda_mps.metadata() if cuda_mps is not None else {"enabled": False}
+    output["eval_mode"] = args.eval_mode
+    output["active_fast_optimizations"] = list(execution_contract.get("active_fast_optimizations") or ())
     atomic_json(args.output_dir / "result.json", output)
     return 0
 
@@ -381,6 +408,7 @@ def _open_run_cache(
             "gpu_models": gpu_models(plan.gpu_devices),
             "cpu_cores": cpu_quota(),
             "cuda_mps": bool(args.cuda_mps),
+            "eval_mode": getattr(args, "eval_mode", DEFAULT_EVAL_MODE),
         }
     return RunCache(mode, fields)
 
@@ -430,6 +458,7 @@ def _autotuned_run(
     shard_kwargs: dict[str, Any] | None = None,
     cuda_mps: CudaMpsSession | None = None,
     run_cache: RunCache | None = None,
+    eval_mode: str = DEFAULT_EVAL_MODE,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Load the policy pool once, probe candidates against it, then run for real.
 
@@ -450,7 +479,7 @@ def _autotuned_run(
             defaults["vram_per_gpu_bytes"] = vram_per_gpu_bytes
     bounds = resolve_bounds(gpu_count, defaults)
     limits = resolve_limits(defaults)
-    shared = _build_inference(policy, request, manifest, benchmark_spec)
+    shared = _build_inference(policy, request, manifest, benchmark_spec, eval_mode=eval_mode)
     from .processes import InferencePool
 
     pool = InferencePool(
@@ -463,6 +492,14 @@ def _autotuned_run(
     )
     cached = run_cache.selection if run_cache is not None else None
     try:
+        if run_cache is not None and run_cache.has_sized_entries:
+            # Entries recorded at negotiated camera sizes are told apart by the Policy's execution
+            # contract, which is known once a replica has loaded; every probe and the final pass
+            # reuse that replica. Caches with only canonical entries are read as before.
+            with benchmark_phase(phase_timing_callback, "policy_load_s"):
+                pool.scale(gpu_count)
+            run_cache.bind(shared.execution_contract().to_dict())
+            cached = run_cache.selection
         with autotune_phase(phase_timing_callback):
             if cached is not None:
                 selected = {**cached, "mode": "cached", "searched_mode": cached.get("mode")}
@@ -485,10 +522,13 @@ def _autotuned_run(
                     limits=limits,
                 )
         # Probe episodes ran under other concurrencies; a formal run's times take precedence.
-        task_seconds = {
-            **task_seconds_from_queues(sorted((output_dir / "autotune").glob("candidate-*/queue"))),
-            **(run_cache.task_seconds if run_cache is not None else {}),
-        }
+        task_seconds = task_seconds_from_queues(sorted((output_dir / "autotune").glob("candidate-*/queue")))
+        if run_cache is not None:
+            task_seconds.update(
+                run_cache.task_seconds_for(shared.execution_contract().to_dict())
+                if pool.contexts
+                else run_cache.task_seconds
+            )
         final = _run_with_pool(
             factory=factory,
             request=request,
@@ -508,7 +548,14 @@ def _autotuned_run(
         pool.stop()
 
 
-def _build_inference(policy, request, manifest, benchmark_spec: BenchmarkSpec) -> PolicyProcessAdapter:
+def _build_inference(
+    policy,
+    request,
+    manifest,
+    benchmark_spec: BenchmarkSpec,
+    *,
+    eval_mode: str = DEFAULT_EVAL_MODE,
+) -> PolicyProcessAdapter:
     return PolicyProcessAdapter(
         command=policy.command,
         checkpoint_path=request.checkpoint_path,
@@ -517,6 +564,8 @@ def _build_inference(policy, request, manifest, benchmark_spec: BenchmarkSpec) -
         benchmark_spec=benchmark_spec,
         cwd=policy.cwd,
         load_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
+        eval_mode=eval_mode,
+        camera_support=benchmark_camera_support(benchmark_spec, dict(manifest.defaults)),
     )
 
 
@@ -619,11 +668,13 @@ def run_candidate(
     cuda_mps: CudaMpsSession | None = None,
     profile: bool = False,
     task_seconds: dict[str, float] | None = None,
+    task_seconds_for: Callable[[dict[str, Any]], Mapping[str, float]] | None = None,
+    eval_mode: str = DEFAULT_EVAL_MODE,
 ) -> dict[str, Any]:
     adapter = (
         factory.create_probe(request, manifest, concurrency) if probe else factory.create(request, manifest)
     )
-    inference = _build_inference(policy, request, manifest, benchmark_spec)
+    inference = _build_inference(policy, request, manifest, benchmark_spec, eval_mode=eval_mode)
     return ParallelBenchmarkRuntime(
         config=RuntimeConfig(
             output_dir=output_dir,
@@ -639,6 +690,7 @@ def run_candidate(
         inference=inference,
         benchmark=adapter,
         cuda_mps=cuda_mps,
+        task_seconds_for=task_seconds_for,
     ).run(phase_timing_callback=phase_timing_callback)
 
 

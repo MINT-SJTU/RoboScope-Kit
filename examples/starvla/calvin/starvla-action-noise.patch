@@ -1,0 +1,69 @@
+diff --git a/starVLA/model/framework/VLM4A/QwenGR00T.py b/starVLA/model/framework/VLM4A/QwenGR00T.py
+index b224633..82c90ac 100644
+--- a/starVLA/model/framework/VLM4A/QwenGR00T.py
++++ b/starVLA/model/framework/VLM4A/QwenGR00T.py
+@@ -224,6 +224,7 @@ class Qwen_GR00T(baseframework):
+     def predict_action(
+         self,
+         examples: List[dict],
++        action_noise_seeds: Optional[List[int]] = None,
+         **kwargs: str,
+     ) -> np.ndarray:
+         """
+@@ -271,7 +272,10 @@ class Qwen_GR00T(baseframework):
+         # Step 4: Action Expert Forward
+         with torch.autocast("cuda", dtype=torch.float32):
+             pred_actions = self.action_model.predict_action(
+-                last_hidden, state, encoder_attention_mask=backbone_attention_mask
++                last_hidden,
++                state,
++                encoder_attention_mask=backbone_attention_mask,
++                action_noise_seeds=action_noise_seeds,
+             )  # (B, chunk_len, action_dim)
+
+         normalized_actions = pred_actions.detach().cpu().numpy()
+diff --git a/starVLA/model/modules/action_model/GR00T_ActionHeader.py b/starVLA/model/modules/action_model/GR00T_ActionHeader.py
+index 34879c0..6f1ef3d 100644
+--- a/starVLA/model/modules/action_model/GR00T_ActionHeader.py
++++ b/starVLA/model/modules/action_model/GR00T_ActionHeader.py
+@@ -4,6 +4,8 @@
+ # Action repeat is inspired by CogACT
+
+
++from typing import List, Optional
++
+ from dataclasses import dataclass, field
+
+ import torch
+@@ -368,15 +370,26 @@ class FlowmatchingActionHead(nn.Module):
+         vl_embs: torch.Tensor,
+         state: torch.Tensor = None,
+         encoder_attention_mask=None,
++        action_noise_seeds: Optional[List[int]] = None,
+     ) -> torch.Tensor:
+         # Set initial actions as the sampled noise.
+         batch_size = vl_embs.shape[0]
+         device = vl_embs.device
+-        actions = torch.randn(
+-            size=(batch_size, self.action_horizon, self.action_dim),
+-            dtype=vl_embs.dtype,
+-            device=device,
+-        )
++        action_shape = (self.action_horizon, self.action_dim)
++        if action_noise_seeds is None:
++            actions = torch.randn((batch_size, *action_shape), dtype=vl_embs.dtype, device=device)
++        else:
++            if len(action_noise_seeds) != batch_size:
++                raise ValueError("Expected one action noise seed per observation")
++            actions = torch.stack([
++                torch.randn(
++                    action_shape,
++                    dtype=vl_embs.dtype,
++                    device=device,
++                    generator=torch.Generator(device=device).manual_seed(seed),
++                )
++                for seed in action_noise_seeds
++            ])
+
+         num_steps = self.num_inference_timesteps
+         dt = 1.0 / num_steps

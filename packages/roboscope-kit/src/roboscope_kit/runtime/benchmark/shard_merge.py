@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from roboscope_kit.benchmark_specs import BenchmarkName
+from roboscope_kit.policy import DEFAULT_EVAL_MODE
 
 from .factories import BenchmarkRunRequest
 from .manifest import BenchmarkManifest, load_benchmark_manifest
@@ -135,6 +136,11 @@ def merge_shards(
     total_records = sum(item.expected_results for item in full_items)
     _validate_coverage(shards, full_by_id, total_records)
     validate_terminal_accounting(all_results, total_records)
+    if benchmark is BenchmarkName.MANISKILL:
+        for (directory, _, document), records in zip(shards, results_by_shard, strict=True):
+            partial = adapter.aggregate_partial(records)
+            if document["official_result"] != partial:
+                raise ValueError(f"{directory}: official result disagrees with completed ManiSkill records")
 
     ordered = sorted(
         all_results,
@@ -151,6 +157,8 @@ def merge_shards(
     return {
         "sdk_version": 1,
         "merged": True,
+        "eval_mode": shards[0][2].get("eval_mode", DEFAULT_EVAL_MODE),
+        "active_fast_optimizations": list(shards[0][2].get("active_fast_optimizations") or ()),
         "shard": {
             "count": shards[0][1]["shard"]["count"],
             "indexes": [shard_manifest["shard"]["index"] for _, shard_manifest, _ in shards],
@@ -158,6 +166,11 @@ def merge_shards(
             "build": shards[0][1]["shard"]["build"],
         },
         "benchmark": adapter.metadata(),
+        **(
+            {"policy_io": shards[0][2]["policy_io"]}
+            if shards[0][2].get("policy_io") is not None
+            else {}
+        ),
         "result": standard,
         "official_result": official,
         "shards": shard_summaries,
@@ -207,11 +220,21 @@ def _validate_shard_metadata(
     identity = validate_shard_identity(documents)
     if json.dumps(identity, sort_keys=True) != json.dumps(expected_identity, sort_keys=True):
         raise ValueError("shard benchmark identity disagrees with the merge workload")
-    if meta["build"] != shard_build(benchmark_manifest):
+    expected_build = shard_build(benchmark_manifest)
+    actual_build = meta["build"]
+    if identity["benchmark"] == "maniskill":
+        # Model/Policy digests are checked across shards by validate_shard_set.
+        # The merge does not load the checkpoint or replace it with its placeholder.
+        actual_build = {key: actual_build.get(key) for key in expected_build}
+    if actual_build != expected_build:
         raise ValueError("shard kit build disagrees with the merge's kit version and benchmark manifest")
     for shard_dir, manifest, result in shards:
         if manifest.get("benchmark") != result["benchmark"]:
             raise ValueError(f"{shard_dir}: manifest benchmark identity disagrees with result.json")
+        if json.dumps(manifest.get("policy_io"), sort_keys=True) != json.dumps(
+            result.get("policy_io"), sort_keys=True
+        ):
+            raise ValueError(f"{shard_dir}: manifest policy_io disagrees with result.json")
         validate_shard_accounting(result)
 
 

@@ -7,8 +7,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Any
 
 from roboscope_kit.contracts import ActionSpec, BenchmarkSpec, FeatureKind, FeatureSpec
+from roboscope_kit.image_sizes import CameraSupport, fixed_camera_support
 
 
 class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include Python 3.10
@@ -16,12 +18,14 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     LIBERO_PLUS = "libero_plus"
     LIBERO_PRO = "libero_pro"
     ROBOCASA = "robocasa"
+    ROBOCASA365 = "robocasa365"
     ROBOTWIN = "robotwin"
     CALVIN = "calvin"
     METAWORLD = "metaworld"
     ROBODOJO = "robodojo"
     RLBENCH = "rlbench"
     ROBOMIMIC = "robomimic"
+    MANISKILL = "maniskill"
     SIMPLER_ENV = "simpler_env"
 
 
@@ -126,6 +130,79 @@ class LiberoProBenchmarkDefinition(LiberoBenchmarkDefinition):
     protocol_version = "libero-pro-v1"
 
 
+class ManiSkillBenchmarkDefinition(BenchmarkDefinition):
+    """Task-driven ManiSkill observations and native controller action vectors."""
+
+    name = BenchmarkName.MANISKILL
+    protocol_version = "maniskill-v1"
+    supported_action_representations = ("maniskill.native-controller-v1",)
+    default_action_representation = "maniskill.native-controller-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        return (
+            _feature(
+                "state.proprioception", FeatureKind.STATE,
+                "Upstream state, or nonvisual agent/extra fields for visual observations.",
+                required=False, shape=(None,),
+            ),
+            _feature(
+                "state.root_pose", FeatureKind.STATE,
+                "Optional articulation root pose: scene XYZ followed by quaternion WXYZ.",
+                required=False, shape=(7,),
+            ),
+            _feature(
+                "state.root_linear_velocity", FeatureKind.STATE,
+                "Optional articulation root linear velocity in the scene world frame.",
+                required=False, shape=(3,),
+            ),
+            _feature(
+                "state.root_angular_velocity", FeatureKind.STATE,
+                "Optional articulation root angular velocity in the scene world frame.",
+                required=False, shape=(3,),
+            ),
+            *(_feature(name, FeatureKind.STATE, description, required=False, shape=(dimension,))
+              for name, description, dimension in (
+                  ("state.robot_base_pose", "Optional scene-frame robot base-link XYZ/WXYZ pose.", 7),
+                  ("state.robot_tcp_pose", "Optional scene-frame measured TCP XYZ/WXYZ pose.", 7),
+                  ("state.target_handle_position", "Optional scene-frame cabinet handle position.", 3),
+                  ("state.left_finger_pose", "Optional scene-frame left finger XYZ/WXYZ pose.", 7),
+                  ("state.right_finger_pose", "Optional scene-frame right finger XYZ/WXYZ pose.", 7),
+                  ("state.left_target_contact_force", "Optional left finger/target contact force in N.", 3),
+                  ("state.right_target_contact_force", "Optional right finger/target contact force in N.", 3),
+              )),
+            _feature(
+                "state.depth_head", FeatureKind.STATE, "Optional native head-camera depth in millimeters.",
+                required=False, shape=(None, None, 1),
+            ),
+            _feature(
+                "state.depth_hand", FeatureKind.STATE, "Optional native hand-camera depth in millimeters.",
+                required=False, shape=(None, None, 1),
+            ),
+            _feature(
+                "images.primary", FeatureKind.IMAGE, "Configured primary camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "images.wrist", FeatureKind.IMAGE, "Configured wrist camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "images.auxiliary", FeatureKind.IMAGE, "Configured auxiliary camera RGB image.",
+                required=False, shape=(None, None, 3),
+            ),
+            _feature(
+                "language.instruction", FeatureKind.LANGUAGE, "Task instruction.", required=False,
+            ),
+        )
+
+    def action(self, _suite: str) -> ActionSpec:
+        # Each task validates against its robot/controller action space in the worker.
+        return ActionSpec(
+            "action.robot", "Unmodified action vector for the per-episode ManiSkill controller.",
+            None,
+        )
+
+
 class RoboCasaBenchmarkDefinition(BenchmarkDefinition):
     name = BenchmarkName.ROBOCASA
     protocol_version = "robocasa-v1"
@@ -142,6 +219,38 @@ class RoboCasaBenchmarkDefinition(BenchmarkDefinition):
 
     def action(self, _suite: str) -> ActionSpec:
         return ActionSpec("action.robot", "RoboCasa GR1 arms, hands, and waist action vector.", 29)
+
+
+class RoboCasa365BenchmarkDefinition(BenchmarkDefinition):
+    name = BenchmarkName.ROBOCASA365
+    protocol_version = "robocasa365-multitask-v1"
+    supported_action_representations = ("robocasa365.panda-omron-hybrid-v1",)
+    default_action_representation = "robocasa365.panda-omron-hybrid-v1"
+
+    def features(self, _suite: str) -> tuple[FeatureSpec, ...]:
+        images = tuple(
+            _feature(name, FeatureKind.IMAGE, "Two consecutive physical-step RGB frames.",
+                     shape=(2, 256, 256, 3))
+            for name in ("images.agentview_left", "images.agentview_right", "images.wrist")
+        )
+        states = tuple(
+            _feature(f"state.{name}", FeatureKind.STATE,
+                     "Two consecutive raw PandaOmron state vectors; quaternions use xyzw.",
+                     shape=(2, dimension))
+            for name, dimension in (
+                ("end_effector_position_relative", 3), ("end_effector_rotation_relative", 4),
+                ("gripper_qpos", 2), ("base_position", 3), ("base_rotation", 4),
+            )
+        )
+        return (*images, *states,
+                _feature("language.instruction", FeatureKind.LANGUAGE, "Upstream episode instruction."))
+
+    def action(self, _suite: str) -> ActionSpec:
+        return ActionSpec(
+            "action.robot",
+            "PandaOmron end-effector delta (6), gripper (1), base/torso (4), hybrid mode (1).",
+            12,
+        )
 
 
 class RoboTwinBenchmarkDefinition(BenchmarkDefinition):
@@ -489,7 +598,11 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         LiberoBenchmarkDefinition(),
         LiberoPlusBenchmarkDefinition(),
         LiberoProBenchmarkDefinition(),
+
+
+        ManiSkillBenchmarkDefinition(),
         RoboCasaBenchmarkDefinition(),
+        RoboCasa365BenchmarkDefinition(),
         RoboTwinBenchmarkDefinition(),
         RoboDojoBenchmarkDefinition(),
         CalvinBenchmarkDefinition(),
@@ -499,6 +612,72 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         SimplerEnvBenchmarkDefinition(),
     )
 }
+
+
+# LIBERO and LIBERO-Pro render their cameras natively at any size in these bounds; Kit never
+# resamples. LIBERO-Plus stays at its canonical size because its upstream image corruptions assume
+# square frames of at most 256 pixels.
+LIBERO_CANONICAL_IMAGE_SIZE = (256, 256)
+LIBERO_MIN_IMAGE_SIZE = (64, 64)
+LIBERO_MAX_IMAGE_SIZE = (1024, 1024)
+# robosuite's OSMesa context allocates a fixed 480 x 640 buffer.
+LIBERO_OSMESA_MAX_IMAGE_SIZE = (480, 640)
+# MetaWorld renders each configured camera natively at any size its camera config accepts; the
+# canonical size is the camera's configured output size.
+METAWORLD_MIN_CAMERA_DIMENSION = 64
+METAWORLD_MAX_CAMERA_DIMENSION = 1024
+# RLBench renders each CoppeliaSim vision sensor natively at its configured resolution; its depth and
+# point cloud come from the same render. PerAct's protocol uses 128 x 128. At 768 x 768 an observation
+# of all four cameras (RGB, depth and point cloud) is about 60 MB, inside the 64 MiB Policy message limit.
+RLBENCH_CANONICAL_IMAGE_SIZE = (128, 128)
+RLBENCH_MIN_IMAGE_SIZE = (32, 32)
+RLBENCH_MAX_IMAGE_SIZE = (768, 768)
+
+
+# CALVIN's calvin_env cameras (conf/cameras/cameras/{static,gripper}.yaml) render natively at any
+# size; the canonical sizes are the upstream configs' and the spec leaves the shapes open.
+CALVIN_CANONICAL_IMAGE_SIZES = {"images.static": (200, 200), "images.gripper": (84, 84)}
+CALVIN_MIN_IMAGE_SIZE = (64, 64)
+CALVIN_MAX_IMAGE_SIZE = (1024, 1024)
+
+
+def benchmark_camera_support(
+    benchmark: BenchmarkSpec,
+    defaults: dict[str, Any] | None = None,
+) -> dict[str, CameraSupport]:
+    """The sizes each camera of ``benchmark`` can render under the manifest ``defaults``."""
+
+    table = fixed_camera_support(benchmark)
+    if benchmark.name in {BenchmarkName.LIBERO.value, BenchmarkName.LIBERO_PRO.value}:
+        backend = str((defaults or {}).get("render_backend", "egl"))
+        maximum = LIBERO_OSMESA_MAX_IMAGE_SIZE if backend == "osmesa" else LIBERO_MAX_IMAGE_SIZE
+        for feature in ("images.primary", "images.wrist"):
+            table[feature] = CameraSupport(
+                canonical=LIBERO_CANONICAL_IMAGE_SIZE,
+                min_size=LIBERO_MIN_IMAGE_SIZE,
+                max_size=maximum,
+            )
+    elif benchmark.name == BenchmarkName.METAWORLD.value:
+        for feature, support in table.items():
+            table[feature] = CameraSupport(
+                canonical=support.canonical,
+                min_size=(METAWORLD_MIN_CAMERA_DIMENSION, METAWORLD_MIN_CAMERA_DIMENSION),
+                max_size=(METAWORLD_MAX_CAMERA_DIMENSION, METAWORLD_MAX_CAMERA_DIMENSION),
+            )
+    elif benchmark.name == BenchmarkName.CALVIN.value:
+        for feature, canonical in CALVIN_CANONICAL_IMAGE_SIZES.items():
+            table[feature] = CameraSupport(
+                canonical=canonical, min_size=CALVIN_MIN_IMAGE_SIZE, max_size=CALVIN_MAX_IMAGE_SIZE
+            )
+    elif benchmark.name == BenchmarkName.RLBENCH.value:
+        for camera in RLBENCH_CAMERAS:
+            table[f"images.{camera}"] = CameraSupport(
+                canonical=RLBENCH_CANONICAL_IMAGE_SIZE,
+                min_size=RLBENCH_MIN_IMAGE_SIZE,
+                max_size=RLBENCH_MAX_IMAGE_SIZE,
+                spatial_features=(f"state.{camera}_depth", f"state.{camera}_point_cloud"),
+            )
+    return table
 
 
 def get_benchmark_spec(name: str | BenchmarkName, suite: str) -> BenchmarkSpec:

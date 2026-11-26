@@ -5,7 +5,7 @@ set -Eeuo pipefail
 #
 #   <install-dir>/
 #     benchmark-manifest.json       this directory's manifest; runtime paths are relative to it
-#     env/                          conda prefix, CPython 3.8.20 with runtime-requirements.txt
+#     env/                          uv virtual environment, CPython 3.11.15 with runtime-requirements.txt
 #     calvin/                       mees/calvin with calvin_env and tacto at pinned commits
 #     dataset/minimal_task_D_D/     the evaluation dataset inputs, assembled from the sources
 #     eval_sequences.json           the official 1,000 challenge sequences, pinned by SHA-256
@@ -18,8 +18,7 @@ set -Eeuo pipefail
 #   calvin        mees/calvin at fa03f01, the main tip
 #   calvin_env    mees/calvin_env at 797142c (CALVIN's own submodule pointer is older)
 #   tacto         the calvin_env submodule
-# runtime-requirements.txt is the complete, SHA-256-verified dependency set of
-# the 2026-09-30 build.
+# runtime-requirements.txt pins the simulator evaluation dependencies.
 #
 # No CALVIN dataset download is needed. get_env_state_for_initial_condition
 # hard-codes the initial states and reads no episode data, so the only dataset
@@ -53,6 +52,8 @@ INSTALL_DIR="$(cd -- "$1" && pwd -P)"
 
 MANIFEST="${SCRIPT_DIR}/benchmark-manifest.json"
 REQUIREMENTS="${SCRIPT_DIR}/runtime-requirements.txt"
+BUILD_REQUIREMENTS="${SCRIPT_DIR}/build-requirements.txt"
+TORCH_REQUIREMENTS="${SCRIPT_DIR}/torch-requirements.txt"
 ENV_PREFIX="${INSTALL_DIR}/env"
 ENV_PYTHON="${ENV_PREFIX}/bin/python"
 SOURCE_ROOT="${INSTALL_DIR}/calvin"
@@ -63,46 +64,26 @@ CALVIN_URL="${ROBOSCOPE_CALVIN_URL:-https://github.com/mees/calvin}"
 CALVIN_COMMIT="${ROBOSCOPE_CALVIN_COMMIT:-fa03f01f19c65920e18cf37398a9ce859274af76}"
 CALVIN_ENV_URL="${ROBOSCOPE_CALVIN_ENV_URL:-https://github.com/mees/calvin_env}"
 CALVIN_ENV_COMMIT="${ROBOSCOPE_CALVIN_ENV_COMMIT:-797142c588c21e76717268b7b430958dbd13bf48}"
-PYTHON_VERSION="3.8.20"
+PYTHON_VERSION="3.11.15"
 # The starVLA revision whose eval_sequences.json matches the SHA-256 the kit's
 # CALVIN adapter asserts.
 EVAL_SEQUENCES_URL="${ROBOSCOPE_CALVIN_EVAL_SEQUENCES_URL:-https://raw.githubusercontent.com/starVLA/starVLA/074ce6546f47caf401805ccf39e5776507a94790/examples/calvin/eval_files/eval_sequences.json}"
 EVAL_SEQUENCES_SHA256="c3689911565037d399d779c655e9e943cbd5bfbfbf44045e2b3b1daa8b1a2317"
 
-# Ignore any pip configuration on the build host. GPU hosts commonly ship an
-# /etc/pip.conf that adds an unreachable NVIDIA index, which pip then retries for
-# every package, and a host-level index must not decide what the environment
-# resolves to.
-export PIP_CONFIG_FILE=/dev/null
-# CALVIN's dependencies still fork parallel compilers; one job at a time avoids
-# the OOM killer reporting a bare "Error compiling objects".
-MAX_JOBS="${ROBOSCOPE_BUILD_MAX_JOBS:-1}"
-export MAX_JOBS
-
 if [[ "$(uname -s):$(uname -m)" != "Linux:x86_64" ]]; then
   echo "CALVIN runtime builds require Linux x86_64" >&2
   exit 3
 fi
-[[ -f "${MANIFEST}" && -f "${REQUIREMENTS}" ]] || {
+[[ -f "${MANIFEST}" && -f "${REQUIREMENTS}" && -f "${BUILD_REQUIREMENTS}" && -f "${TORCH_REQUIREMENTS}" ]] || {
   echo "CALVIN build input is missing next to $0" >&2
   exit 3
 }
-# micromamba is a drop-in conda replacement, so accept either.
-CONDA_BIN=""
-for candidate in conda micromamba; do
-  if command -v "${candidate}" >/dev/null 2>&1; then
-    CONDA_BIN="$(command -v "${candidate}")"
-    break
-  fi
-done
-[[ -n "${CONDA_BIN}" ]] || {
-  echo "conda or micromamba is required to build the CALVIN runtime" >&2
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv is required to build the CALVIN runtime" >&2
   exit 3
-}
-
+fi
 if [[ ! -x "${ENV_PYTHON}" ]]; then
-  "${CONDA_BIN}" create --yes --quiet -c conda-forge \
-    --prefix "${ENV_PREFIX}" "python=${PYTHON_VERSION}"
+  uv --no-config venv --managed-python --python "${PYTHON_VERSION}" "${ENV_PREFIX}"
 fi
 ACTUAL_PYTHON_VERSION="$("${ENV_PYTHON}" -I -c 'import sys; print("%d.%d.%d" % sys.version_info[:3])')"
 [[ "${ACTUAL_PYTHON_VERSION}" == "${PYTHON_VERSION}" ]] || {
@@ -139,27 +120,31 @@ ACTUAL_TACTO_COMMIT="$(git -C "${SOURCE_ROOT}/calvin_env/tacto" rev-parse HEAD)"
   exit 5
 }
 
-# Pin the build toolchain to what CALVIN itself pins. calvin_models/requirements.txt
-# asks for setuptools 57.5.0, and pyhash's setup.py still uses use_2to3, which
-# setuptools removed in 58, so a modern setuptools cannot build it at all.
-PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir \
-  "setuptools==57.5.0" "wheel==0.45.1" "cmake==4.4.3"
+# Ignore ambient package indexes and find-links locations as well as uv config files.
+install_packages() {
+  local index="$1"
+  shift
+  env -u UV_INDEX -u UV_INDEX_URL -u UV_EXTRA_INDEX_URL -u UV_DEFAULT_INDEX -u UV_FIND_LINKS \
+    uv --no-config pip install --python "${ENV_PYTHON}" --no-deps --default-index "${index}" "$@"
+}
 
-# CALVIN's own install.sh installs tacto, then calvin_env, then calvin_models.
-PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir --no-deps \
-  --no-build-isolation -e "${SOURCE_ROOT}/calvin_env/tacto"
-PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir --no-deps \
-  --no-build-isolation -e "${SOURCE_ROOT}/calvin_env"
-PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir --no-deps \
-  --no-build-isolation -e "${SOURCE_ROOT}/calvin_models"
+PYPI_INDEX="https://pypi.org/simple"
+# Seed the build backend before installing any source distributions.
+install_packages "${PYPI_INDEX}" --require-hashes --requirement "${BUILD_REQUIREMENTS}"
 
-# The dependency set is complete. Install without resolving substitutes
-# (opencv's current metadata would otherwise upgrade the pinned numpy), and use
-# the CPU torch wheel because this simulator drives a separate Policy process.
-PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir \
-  --no-deps --no-build-isolation \
-  --extra-index-url https://download.pytorch.org/whl/cpu \
+# Install the pinned CPU wheel from the official PyTorch index. EGL rendering
+# uses the GPU independently of PyTorch, and the Policy runs in its own process.
+install_packages https://download.pytorch.org/whl/cpu --require-hashes \
+  --requirement "${TORCH_REQUIREMENTS}"
+install_packages "${PYPI_INDEX}" --require-hashes --no-build-isolation \
   --requirement "${REQUIREMENTS}"
+
+# The upstream editable packages declare historical training dependencies.
+# Evaluation uses the pinned runtime dependencies above.
+install_packages "${PYPI_INDEX}" --no-build-isolation \
+  -e "${SOURCE_ROOT}/calvin_env/tacto" \
+  -e "${SOURCE_ROOT}/calvin_env" \
+  -e "${SOURCE_ROOT}/calvin_models"
 
 # Assemble the minimal evaluation dataset. CALVIN's evaluate_sequence needs the
 # task oracle, the language annotations and a merged environment config; the two
@@ -249,7 +234,7 @@ SEQUENCE_COUNT="$(
 }
 
 SOURCE_ROOT="${SOURCE_ROOT}" DATASET_ROOT="${DATASET_ROOT}" \
-  env -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -I - <<'PY'
+  env -u PYTHONPATH EGL_VISIBLE_DEVICES="${EGL_VISIBLE_DEVICES:-0}" PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -I - <<'PY'
 import os
 from pathlib import Path
 
@@ -270,6 +255,7 @@ from calvin_env.envs.play_table_env import PlayTableSimEnv
 
 from importlib.metadata import version
 
+pyhash.fnv1_32()(b"calvin")
 for distribution in ("torch", "pytorch-lightning", "hydra-core", "omegaconf", "numpy"):
     print(f"  {distribution}=={version(distribution)}")
 

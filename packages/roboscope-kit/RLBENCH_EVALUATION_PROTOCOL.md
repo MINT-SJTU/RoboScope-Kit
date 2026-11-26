@@ -188,6 +188,18 @@ anyway, so rendering and point clouds are unchanged. Every observation carries, 
 | `state.joint_positions`, `state.joint_velocities` | `(7,)`, `float32` | Panda arm joints |
 | `language.instruction` | string | `get_task_descriptions()[0]` (section 5) |
 
+The shapes above are PerAct's 128x128. A Policy can negotiate another native render size per camera with
+`PolicyCapabilities.image_sizes` (32–768 pixels per side, `(height, width)`; at 768 × 768 an observation of
+all four cameras stays inside the 64 MiB Policy message limit). RLBench then sets that
+camera's vision-sensor resolution, so its `images.<camera>`, `state.<camera>_depth` and
+`state.<camera>_point_cloud` have the negotiated height and width and its intrinsics are the ones RLBench
+computes for that resolution. PyRep applies the camera's perspective angle to the longer side, so a
+non-square size crops the square view: 96 × 160 keeps the full width of the 128x128 view and shows only
+its central part vertically. The result records the sizes in `policy_io.image_sizes` and marks
+`policy_io.canonical_observations` `false`; the benchmark metadata's `image_size` stays the protocol's
+128x128. Other sizes need roboscope-kit 0.8.0b83 or later in the Policy environment; a Policy on an older
+roboscope-kit is offered PerAct's 128x128 only.
+
 `<camera>` is each of the four cameras. `step` counts the actions executed so far, from 0. PerAct's
 YARR converts `float64` inputs to `float32` when initializing its observation history, but appends later
 observations without that conversion. The example Policy therefore converts the camera matrices to `float32`

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "patches": [
+    {
+      "id": "owning-egl-context-cleanup",
+      "source": "robosuite",
+      "revision": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "path": "robosuite/utils/binding_utils.py",
+      "patch": "patches/owning-egl-context-cleanup.patch",
+      "patch_sha256": "7bfafbcf549d0f1148245872c04dd638bf670a895f90ac5546cf28feb861908b",
+      "original_sha256": "a3d2526fb2e60875e2c3a87b8828b8e3b512781708c80d0c96ee6024980896c8",
+      "patched_sha256": "f0c5a33d6a11b76fd520fa3bd82584bfd663b4c78e6511b0b01eedab643f27db"
+    },
+    {
+      "id": "preserve-egl-thread-state",
+      "source": "robosuite",
+      "revision": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "path": "robosuite/renderers/context/egl_context.py",
+      "patch": "patches/preserve-egl-thread-state.patch",
+      "patch_sha256": "d08d0772cd13061c7a73f841ae37a7d7a089ff9419cb298ba29ce58e773c6518",
+      "original_sha256": "72ff1e153da85b85a35ebd0350c4693d3b89ffd5e1f13ff49813b7a3ad4c51c6",
+      "patched_sha256": "57c9dbd8cb2b803f3609cfa84da6e4813d5bfe233616016e81df06817faf7af8"
+    },
+    {
+      "id": "paired-stable-counter-regions",
+      "source": "robocasa",
+      "revision": "3443cdf3dd20f9ae8ed41adba442059b506891d0",
+      "path": "robocasa/models/fixtures/counter.py",
+      "patch": "patches/paired-stable-counter-regions.patch",
+      "patch_sha256": "08b6fa23cffc2aaed5eae99e941fc270a4bcf5c507a278c58e571dc9d3b6ba42",
+      "original_sha256": "77f992d01aa1ae5f21ed7f170d0aab9c303c32148f4b427651c04912be8ce68a",
+      "patched_sha256": "df05bcab04ed67795ddd54d88a273404a1c4ca4677379e2699f08e6de94cef0d"
+    },
+    {
+      "id": "paired-stack-base-rng",
+      "source": "robocasa",
+      "revision": "3443cdf3dd20f9ae8ed41adba442059b506891d0",
+      "path": "robocasa/models/fixtures/fixture_stack.py",
+      "patch": "patches/paired-stack-base-rng.patch",
+      "patch_sha256": "d84f1b3120a1bae0d0d9bc577c9c8556efc88434162ac254e9d8a468b090e999",
+      "original_sha256": "0aace4b1869befd8426854908276a06366948cd538d05e5fc11185a0c71a7822",
+      "patched_sha256": "d9fcef46e415fc34cdf1b45543e91af927ba6e0e2042eb23429716c078c87003"
+    }
+  ]
+}

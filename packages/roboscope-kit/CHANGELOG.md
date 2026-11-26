@@ -2,7 +2,30 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b67 - 2026-11-14
+## 0.8.0b83 - 2026-11-26
+
+- Render RLBench cameras at Policy-negotiated sizes. Each of the four cameras renders natively at 32–768
+  pixels per side, so an observation of all four stays inside the 64 MiB Policy message limit. Its depth
+  and point cloud follow the camera's size, and the camera intrinsics are the ones RLBench computes for
+  that resolution. PerAct's 128 × 128 stays the protocol size, and without
+  `image_sizes` the worker builds its observation configuration exactly as before.
+- `CameraSupport.spatial_features` names the observation features rendered by a camera whose first two
+  dimensions follow its negotiated size; the Policy server checks them at that size. Such entries need
+  the `spatial_features` image-size feature, so a Policy server from an older roboscope-kit is offered
+  RLBench's 128 × 128 only.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RLBench images, depth and point clouds with
+  `canonical_observations: false` instead of 128 × 128.
+
+- Let Policies negotiate CALVIN camera sizes. The static (200 × 200) and gripper (84 × 84) cameras render
+  natively at 64–1024 pixels per side; the worker sets the negotiated width, height and aspect ratio in
+  the merged environment config. Without `image_sizes` CALVIN runs exactly as before.
+- Policy servers report the `open_shape_ranges` image-size feature: an image feature whose spec leaves its
+  shape open takes the negotiated `(height, width)`. A Policy whose own environment runs an older
+  roboscope-kit is offered only CALVIN's own 200 × 200 static and 84 × 84 gripper sizes.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 CALVIN frames with
+  `canonical_observations: false` instead of the canonical sizes.
 
 - Add the `libero.absolute-eef-v1` action representation to LIBERO, LIBERO+, and LIBERO-Pro: the seven values
   are the absolute end-effector target position, axis-angle orientation, and gripper command. The adapters pass
@@ -11,9 +34,110 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   LIBERO client does. The default `libero.delta-eef-v1` path is unchanged.
 - Fix `examples/xvla` on LIBERO: the Policy returns absolute targets but declared the default delta
   representation, and no worker patch switched the controller, so the targets were executed as deltas. It now
-  declares `libero.absolute-eef-v1` for LIBERO and LIBERO+; only LIBERO has been run with it. Its README no
-  longer claims a worker patch or recipe horizons that the kit did not have; episodes keep the benchmark's suite
-  horizons, so X-VLA's published LIBERO scores (800- and 900-step episodes) are not directly comparable.
+  declares `libero.absolute-eef-v1` for LIBERO and LIBERO+; only LIBERO has been run with it. Episodes keep the
+  benchmark's suite horizons, so X-VLA's published LIBERO scores (800- and 900-step episodes) are not directly
+  comparable.
+
+## 0.8.0b82 - 2026-11-26
+
+- The Policy server reports which image-size features it understands (`image_size_features` in its
+  `health` reply), and the Kit offers a Policy only the camera sizes its roboscope-kit version can
+  apply, so the Kit and a Policy environment on an older roboscope-kit always agree on observation
+  shapes. A camera whose sizes that version cannot apply is offered only the benchmark's own size; a camera
+  whose sizes it can apply follows the Policy's `image_sizes`. The Kit logs which cameras were limited and
+  which features the Policy's roboscope-kit lacks, and says to upgrade roboscope-kit in the Policy
+  environment; a Policy `load` that then fails on those cameras' sizes carries the same hint.
+
+## 0.8.0b81 - 2026-11-26
+
+- MetaWorld cameras render Policy-negotiated image sizes natively. Every configured camera accepts 64–1024
+  pixels per side through `PolicyCapabilities.image_sizes`; a camera with a negotiated size renders at
+  that size (transposed for a 90 or 270 degree rotation) without cropping or resampling, and keeps its
+  camera name, position and rotation. Without `image_sizes` every camera renders exactly as configured.
+- Pin `msgpack` in the MetaWorld runtime lock, so the MetaWorld worker can import the kit's protocol client.
+
+## 0.8.0b77 - 2026-11-25
+
+- Negotiate camera image sizes between the benchmark and the Policy. `PolicyCapabilities.image_sizes`
+  lists accepted `(height, width)` sizes in order of preference, optionally ending with `ANY_SIZE`; the
+  runtime picks the first size the benchmark renders natively and never resamples. LIBERO and
+  LIBERO-Pro render 64–1024 pixels per side (480 × 640 at most with OSMesa); other benchmarks keep their
+  own size. Without `image_sizes` nothing changes.
+- Record the negotiated sizes and `canonical_observations` in `policy_io`; shard merging requires the
+  same `policy_io` on every shard and keeps it in the merged result.
+- Keep run-cache entries per negotiated image size (cache schema 2). Existing cache entries keep serving
+  runs at the benchmark's own size; the first run at a new size starts from them, and later runs at that
+  size use the selection and task times recorded for it.
+
+## 0.8.0b76 - 2026-11-25
+
+- Build the CALVIN worker runtime with CPython 3.11.15 and hash-pinned dependencies.
+- Allow Policies to opt into coalescing queued actions from distinct episodes in `--eval-mode fast`.
+  The CALVIN StarVLA example seeds action noise by episode and observation step.
+- Document the CALVIN throughput, repeatability, and score equivalence results on a single RTX 4090.
+
+## 0.8.0b75 - 2026-11-25
+
+- Add `--eval-mode {strict,fast}` (default `strict`) as the unified opt-in framework for throughput optimizations that may introduce small numeric or per-episode differences.
+- Pass `eval_mode` through `SessionContext` and `PolicyExecutionContract`, record `eval_mode` and `active_fast_optimizations` in `result.json`, and isolate `strict` and `fast` runs in the run cache and shard merging.
+
+## 0.8.0b72 - 2026-11-22
+
+- Step RoboCasa365's five native simulator slots on five threads of the Worker. MuJoCo releases the
+  GIL while stepping; each slot keeps its EGL context on its own thread, and creation and reset stay
+  in slot order. Threaded Workers set `MALLOC_ARENA_MAX=1`, so they use the memory of serial ones.
+  `defaults.slot_threads: false`, video and `--profile` step the slots serially.
+- Sample the RoboCasa365 Diffusion Policy example's DDPM loop through CUDA graphs, with bit-identical
+  actions and generator state; `ROBOCASA365_CUDA_GRAPHS=0` samples eagerly.
+- On target50 × 5 at the official horizons (K4/G2, CUDA MPS, one RTX 4090, three runs per arm), the
+  median formal evaluation takes 4,850 s instead of 9,810 s (2.02x; best against best 2.09x), and all
+  runs pass the native comparison.
+
+## 0.8.0b71 - 2026-11-20
+
+- Spread Workers that recycle on every group change across groups: an idle recycling Worker claims from the group with the most pending items per Worker already on it instead of following the others into the same next group. A Worker that loses a claim to another Worker chooses its group again, so Workers that start together do not all start the same group. On eleven ManiSkill tasks this cuts evaluation time by 20% with four Workers and 19% with eight (three runs each), reaching 2.33x the single-Worker time with eight; benchmarks without recycling keep the ordinal claim order.
+- Classify PhysX GPU allocator failures, cuBLAS allocation failures and cuSOLVER handle-creation failures as out-of-memory, so a Worker that runs out of GPU memory in PhysX (which then stops with CUDA error 700) scales its GPU's Workers down instead of retrying at the same count; this applies to every benchmark. A Worker that exits for a planned recycle while its GPU scales down is no longer reported as failed.
+
+## 0.8.0b70 - 2026-11-20
+
+- Add the partial, pinned ManiSkill integration with explicit task/robot/observation/controller profiles, GPU-vectorized Workers, reproducible simulator/assets builds and real-model correctness references; incomplete task/model acceptance remains documented.
+- Preserve actual terminal masks and recycle simulator Workers when profile or vector width changes while retaining Policy replicas.
+- Freeze ManiSkill vector width in the evaluation protocol, preserve complete seeded groups in Quick Test and probes, and derive official PPO native configurations independently from pinned upstream sources.
+- Publish trajectory traces only after successful rollout cleanup, retain retry attempts and self-test timeout logs, and share one manifest PhysX binary pin across build and evaluation paths.
+- Keep return-scored episodes out of binary success/failure statistics, including progress, autotune health and both shard merge paths.
+- Merge ManiSkill profile return sums/counts and success counts separately, check complete record-tree coverage, and bind shards to checkpoint and Policy content identities. The Policy identity skips virtual environments and build trees under the Policy directory, and shard success rates use the same float tolerance as the ManiSkill metrics.
+- Add simulator-free tests for ManiSkill profile validation, return-only scoring in results, metrics and autotune, ManiSkill shard merging and validation, Worker recycling on a task or vector-width change, and probe health during a planned recycle.
+- Remove cross-task/robot transfer Policy examples and their evaluation claims while preserving the original 55-task and tabletop observation/controller contracts; list intended-task checkpoint candidates as unvalidated until native acceptance.
+- Raise the ManiSkill autotune Worker cap from 2 to 16 so autotune can choose more simulator Workers per GPU, and stop counting a Worker that is exiting for a planned recycle as a lost Worker in autotune probes; this shared probe fix applies to every benchmark whose Workers recycle.
+## 0.8.0b69 - 2026-11-20
+
+- Add opt-in RoboTwin central rendering (`render_mode: central` in the manifest's `defaults`): evaluators
+  simulate on the CPU without a GPU, recording each episode's visual scene construction, and
+  `render_services_per_gpu` (default 2) render services per GPU replay it into a new render-only scene per
+  episode and return the head and wrist RGB through shared memory. The RoboTwin adapter starts a GPU's services
+  with its first Worker and stops them after each pass; benchmark adapters may now define `close()`, which
+  the runtime calls after a pass's Workers stop. An evaluator that loses its service ends its Worker, so the
+  task is requeued and the restarted Worker starts a new service, instead of recording failed episodes.
+  Central rendering supports `demo_clean` with qpos actions, a seed cache and videos off. On one RTX 4090 it
+  evaluated 50 tasks × 2 episodes at 149.1 steps/s against 102.1 for native K6/G2 (K12/G3, CUDA MPS on both,
+  mean of two arms each), with every episode's Policy images and actions identical; see
+  `benchmarks/robotwin/CENTRAL_RENDER.md`. Native rendering stays the default.
+
+## 0.8.0b68 - 2026-11-19
+
+- RoboCasa365 review follow-ups: a failing task's own error is no longer replaced by an environment
+  close error, the Worker `PYTHONPATH` has no empty entry when none was set, and the README tables
+  drop the "partial integration" label now that the target50 native comparison is accepted.
+
+## 0.8.0b67 - 2026-11-19
+
+- Add the RoboCasa365 multi-task adapter, native five-slot evaluation groups, pinned simulator/assets,
+  and official Diffusion Policy example. Freeze all 50 tasks, horizons, pretrain scenes and scoring.
+- Correct EGL context ownership and cleanup, including partially constructed renderers, and stabilize
+  seeded scene sampling. The runtime builder pins the source, patch and resulting-file hashes.
+- Make self-test reset and render twice and Quick Test execute one native five-slot group.
+- Add public grouped Policy lifecycle profiling and simulator-operation markers, plus simulator-free
+  checks for task accounting, configuration, factory sizing, sharding and profiling.
 
 ## 0.8.0b66 - 2026-11-14
 

@@ -32,6 +32,9 @@ performance work all help, and questions are contributions too. If you are unsur
   them.
 - **Keep the documentation consistent** when user-facing evaluation behavior changes: the top-level
   README, the package README, the protocol documents, and the example READMEs.
+- **Compress README images** so the README loads fast: under 1 MB per README, 200 KB per still image and
+  1 MB per animation, at no more than twice the displayed width. [`AGENTS.md`](AGENTS.md#documentation) lists
+  the formats, tools, and the side-by-side check.
 
 ## Pull request merges
 

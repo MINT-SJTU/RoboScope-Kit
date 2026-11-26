@@ -83,17 +83,21 @@ ProgressCallback = Callable[["dict[str, Any]", Sequence[WorkResult]], None]
 
 def aggregate_standard_results(results: Sequence[WorkResult], total_records: int) -> dict[str, Any]:
     records = [record for result in results for record in result.records]
-    successes = sum(record.success for record in records)
+    scored = [record for record in records if record.metadata.get("success_metric") != "return"]
+    successes = sum(record.success for record in scored)
+    return_count = len(records) - len(scored)
     total_steps = sum(record.steps for record in records)
     return {
         "state": "complete" if len(records) == total_records else "running",
         "episodes": len(records),
         "successes": successes,
-        "failures": len(records) - successes,
+        "failures": len(scored) - successes,
         "total_steps": total_steps,
         "total_episodes": total_records,
-        "success_rate": successes / len(records) if records else 0.0,
+        "success_rate": successes / len(scored) if scored else None if return_count else 0.0,
         "completed_items": len(results),
+        **({"success_evaluated_episodes": len(scored), "return_evaluated_episodes": return_count}
+           if return_count else {}),
     }
 
 
@@ -104,6 +108,8 @@ def terminal_records(results: Sequence[WorkResult]) -> list[EvaluationRecord]:
 class ParallelBenchmarkRuntime:
     """Coordinate inference replicas, evaluator workers, queueing, and result accounting."""
 
+    task_seconds_for: Callable[[dict[str, Any]], Mapping[str, float]] | None = None
+
     def __init__(
         self,
         *,
@@ -112,8 +118,11 @@ class ParallelBenchmarkRuntime:
         benchmark: BenchmarkAdapter,
         server_pool: InferencePool | None = None,
         cuda_mps: CudaMpsSession | None = None,
+        task_seconds_for: Callable[[dict[str, Any]], Mapping[str, float]] | None = None,
     ) -> None:
         self.config = config
+        # Per-task times recorded under one execution contract; looked up once the Policy is loaded.
+        self.task_seconds_for = task_seconds_for
         self.inference = inference
         self.benchmark = benchmark
         self.queue = WorkQueue(config.output_dir / "queue")
@@ -182,15 +191,12 @@ class ParallelBenchmarkRuntime:
             items, shard_metadata = shard
         else:
             shard_metadata = None
-        if self.config.task_seconds and self.config.probe_limits is None:
-            items = longest_first(items, self.config.task_seconds)
         total_records = sum(item.expected_results for item in items)
         benchmark_metadata = self.benchmark.metadata()
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
         self.state_dir.mkdir(parents=True, exist_ok=True)
         events_path = self.config.output_dir / "events.jsonl"
         events_path.write_text("", encoding="utf-8")
-        self.queue.initialize(items)
         self._clear_worker_state()
         append_event(events_path, {"type": "phase", "phase": "server-starting"})
         previous_replicas = set(self.server_pool.contexts)
@@ -250,6 +256,12 @@ class ParallelBenchmarkRuntime:
             },
         )
         policy_io = self.inference.execution_contract().to_dict()
+        task_seconds = self.config.task_seconds
+        if not task_seconds and self.task_seconds_for is not None:
+            task_seconds = self.task_seconds_for(policy_io)
+        if task_seconds and self.config.probe_limits is None:
+            items = longest_first(items, task_seconds)
+        self.queue.initialize(items)
         atomic_json(
             self.config.output_dir / "manifest.json",
             {
@@ -301,6 +313,10 @@ class ParallelBenchmarkRuntime:
             self.queue.request_stop()
             samples = sampler.stop()
             self._stop_workers()
+            # A benchmark may own processes its Workers share (RoboTwin's render services).
+            close_benchmark = getattr(self.benchmark, "close", None)
+            if close_benchmark is not None:
+                close_benchmark()
             inference_metadata = self.inference.metadata()
             self._stop_owned_server_pool()
         elapsed_s = time.monotonic() - started
@@ -335,6 +351,7 @@ class ParallelBenchmarkRuntime:
             },
             "record_success": {
                 record.record_id: record.success for result in results for record in result.records
+                if record.metadata.get("success_metric") != "return"
             },
             "inference": inference_metadata,
             "policy_io": policy_io,
@@ -646,8 +663,11 @@ class ParallelBenchmarkRuntime:
         return {
             "requested_workers": self.config.concurrency,
             "initial_workers": sum(self.initial_workers_per_gpu.values()),
+            # A Worker that exited for a planned recycle after the last exit scan is
+            # restarted by the next scan; it is not a lost Worker.
             "final_workers": sum(
-                managed.process.poll() is None for managed in self.workers.values()
+                managed.process.poll() is None or self._is_planned_recycle(worker_id, managed)
+                for worker_id, managed in self.workers.items()
             ),
             "worker_failures": len(self.failure_events),
             "oom_events": sum(
@@ -697,6 +717,7 @@ class ParallelBenchmarkRuntime:
             for worker_id, managed in self.workers.items()
             if self.worker_contexts[worker_id].gpu_slot == gpu_slot
             and managed.process.poll() is not None
+            and not self._is_planned_recycle(worker_id, managed)
         ]
         for worker_id, managed in late_failures:
             failed_by_id[worker_id] = managed

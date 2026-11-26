@@ -71,5 +71,3 @@ Profiled with the Kit's `--profile`; how to run and read a capture is in the
   spent outside the GPU: the simulator's CPU work and the synchronization and waiting between kernels. To
   raise RoboDojo throughput, work on the simulator side; more GPU work will not help. This matches the
   earlier manual `nsys` measurement of about 11%.
-- **Next steps:** enable CPU sampling in the Kit's `nsys` arguments (currently `--sample=none`) to find where the
-  CPU time goes, and profile again with a real Policy to include its cost.

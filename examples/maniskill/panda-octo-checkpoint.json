@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "repository": "robotics-diffusion-transformer/maniskill-model",
+  "revision": "9622afab2b7ce2312a6cf1febc526928589b77eb",
+  "subdirectory": "octo/experiment_20241208_112612",
+  "source_repository": "thu-ml/RoboticsDiffusionTransformer",
+  "source_commit": "98e6d7b725797b9640d219a8fd385009e13fa824",
+  "octo_source_commit": "5eaa5c6960398925ae6f52ed072d843d2f3ecb0b",
+  "dlimp_source_commit": "5edaa4691567873d495633f2708982b42edf1972",
+  "dlimp_source_archive": {
+    "url": "https://codeload.github.com/kvablack/dlimp/tar.gz/5edaa4691567873d495633f2708982b42edf1972",
+    "bytes": 26025,
+    "sha256": "91e167a99ec0d652ff6b2840b49ebbe2d6b81120744c9ca67ad196e0cbfe704b"
+  },
+  "octo_source_archive": {
+    "url": "https://codeload.github.com/octo-models/octo/tar.gz/5eaa5c6960398925ae6f52ed072d843d2f3ecb0b",
+    "bytes": 4808844,
+    "sha256": "2f5964b398b6371d70cfbeddb7b52c59e3d42c78346a2e44337b68a79b661a85"
+  },
+  "step": 1000000,
+  "files": {
+    "1000000/default/_METADATA": {
+      "bytes": 176401,
+      "sha256": "3274063d9cbf206771f003d8fad1c55c5ddcea1a249e08043d5f07f803f38073"
+    },
+    "1000000/default/_sharding": {
+      "bytes": 81702,
+      "sha256": "e3127f41edd47ae386957dfed6ab3b7a5f50b584ccd3c7a968405fc61b21bcc6"
+    },
+    "1000000/default/checkpoint": {
+      "bytes": 42639,
+      "sha256": "61580351f385d5ff0595f78a58be6b6a3e641ae2f4b41cbcad47e755ded0f49c"
+    },
+    "1000000/default/d/c4b713868366267d5809a008195e8b0d": {
+      "bytes": 79774,
+      "sha256": "a9952e617786895c3e5367b3f689f4cc36bcad2053615bd9fa6ebc428c05923b"
+    },
+    "1000000/default/manifest.ocdbt": {
+      "bytes": 149,
+      "sha256": "71b81dc75bdc211aa82b9b30a8a9464d1b0366d194a43df5ea774f69d01e3332"
+    },
+    "1000000/default/ocdbt.process_0/d/02747fdf6096a3e73810cfa52997beaa": {
+      "bytes": 73709217,
+      "sha256": "f517aa57ddf8a45d97b2d8ce6207261530e3929d9d257bbb81129a654f0660b1"
+    },
+    "1000000/default/ocdbt.process_0/d/1c655944ca868fc1829b11f4ffa4a9e3": {
+      "bytes": 254318811,
+      "sha256": "7441cc3ac02ff2d01ccc4d7cf89049f9e907f2bcb9a593448034daf0f7832fb6"
+    },
+    "1000000/default/ocdbt.process_0/d/2df1f44cdb23a010e1e0ebc35d0eec8c": {
+      "bytes": 9547589,
+      "sha256": "3b684350f96778b7da837dcb8bfe9a575c60f73ea2a3f4a09a78bd083497cd32"
+    },
+    "1000000/default/ocdbt.process_0/d/411ca3a6edca61701c14ca9cd1faf983": {
+      "bytes": 1527,
+      "sha256": "5d2b3fb3cfe0e25c462369fc9bdc126ac7e17a90eb73f64547da97c976bfe4dc"
+    },
+    "1000000/default/ocdbt.process_0/d/5a5b66948f8c8181dfa1e50d7a47d246": {
+      "bytes": 825,
+      "sha256": "9bf17926a15b582597bcd92c64ce9c6002f1cab4fdcb794be3ae41630aadb2d1"
+    },
+    "1000000/default/ocdbt.process_0/d/610b058b8c5387ed1b961aeb55f980da": {
+      "bytes": 32833108,
+      "sha256": "80084f1e96a54975450f53bdad09eaf34dc653a78bee303c725bc598cb8e631d"
+    },
+    "1000000/default/ocdbt.process_0/d/84a63750c1811bb09aefb2d6f841d5ac": {
+      "bytes": 3752583,
+      "sha256": "1ed0361625e4c8a6ae4b556351711c4ab80c6e9a507173333ae4b4d4e530f9fa"
+    },
+    "1000000/default/ocdbt.process_0/d/96f8e39788ea66ff800297e11f2c0b08": {
+      "bytes": 47258131,
+      "sha256": "92d9acdeb3de532460d9ef3717f91237549eca247eabe9385af796c0e40e5a45"
+    },
+    "1000000/default/ocdbt.process_0/d/9fd92fd3311ec8da3a17c32979233d8a": {
+      "bytes": 127171291,
+      "sha256": "7c7793c6ae7ecc8fba730c028036d190f2af55e5d92dd1232f621ecd65c01b57"
+    },
+    "1000000/default/ocdbt.process_0/d/a5f9762993b9c0954265eece41b4409e": {
+      "bytes": 17246,
+      "sha256": "b82bba7a7b500ed6115c0f88f50198e083596170c23ec1ff090c53223e05d9fc"
+    },
+    "1000000/default/ocdbt.process_0/d/ad01159995e0cf739d2713c5b7bc22f9": {
+      "bytes": 474,
+      "sha256": "d65fd82a6e782b375f0883243d3179f04c9b2d600c4c39c9559bc0def8e1e56d"
+    },
+    "1000000/default/ocdbt.process_0/d/d2197e95685be52c82090c7c4711de0b": {
+      "bytes": 1473,
+      "sha256": "62e9d6c3e01d67b4a47c16709f6f4240a7e541df76511986dabc36f451a1d1fa"
+    },
+    "1000000/default/ocdbt.process_0/d/e6fc6c384a161732d0dd21470be9bb5c": {
+      "bytes": 764,
+      "sha256": "793d3b7edfe23ac9356ab052dfb8820265fb6360edbc01b809c2fb8bbedb51e9"
+    },
+    "1000000/default/ocdbt.process_0/manifest.ocdbt": {
+      "bytes": 656,
+      "sha256": "3fb1a99ad13b5f48eabb762bc47d0cd241ece99cc52703bfb4e938bee220a1ee"
+    },
+    "config.json": {
+      "bytes": 15063,
+      "sha256": "cca2ea78a6a24053ada5e0ec91110c37729b538db80536e653f055ac85a22c46"
+    },
+    "dataset_statistics.json": {
+      "bytes": 2159,
+      "sha256": "96d373a4be7eb25e405d6b46572ca914eeafde857dbc35dd5d0fec3935428049"
+    },
+    "example_batch.msgpack": {
+      "bytes": 394179,
+      "sha256": "b913f7441825f968c029b0a68353faedb273b4e7f82c92159e24bead9fc38309"
+    },
+    "finetune_config.json": {
+      "bytes": 2194,
+      "sha256": "3c96df01386e31987b4eb425f2171d94cf395be465029a8cce331b39aaa420a1"
+    }
+  },
+  "tokenizer": {
+    "repository": "google-t5/t5-base",
+    "revision": "a9723ea7f1b39c1eae772870f3b547bf6ef7e6c1",
+    "cache_alias": "t5-base",
+    "files": {
+      "config.json": {
+        "bytes": 1208,
+        "sha256": "46dd7cb62d29c81fb551e0ef1ea274c24a46ba441eeb948897706252933df033"
+      },
+      "spiece.model": {
+        "bytes": 791656,
+        "sha256": "d60acb128cf7b7f2536e8f38a5b18a05535c9e14c7a355904270e15b0945ea86"
+      },
+      "tokenizer.json": {
+        "bytes": 1389353,
+        "sha256": "d2acde0d8d71dd30a711834b07781b9c89feaac33fd332f60507699282740066"
+      }
+    }
+  }
+}

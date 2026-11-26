@@ -13,6 +13,8 @@ from typing import Any
 
 from roboscope_kit.runtime.benchmark import ProcessSpec, WorkerContext, WorkItem, WorkResult
 
+from .render_service import RoboTwinRenderServices
+
 ROBOTWIN_ALL_TASKS = (
     "adjust_bottle", "beat_block_hammer", "blocks_ranking_rgb", "blocks_ranking_size",
     "click_alarmclock", "click_bell", "dump_bin_bigbin", "grab_roller", "handover_block",
@@ -48,6 +50,11 @@ class RoboTwinRuntimeConfig:
     seed: int = 0
     save_videos: bool = False
     cpu_threads: int = 1
+    # "native": every evaluator renders on its GPU. "central": evaluators simulate on the CPU and a few
+    # render services per GPU render for them (render_service_path, render_services_per_gpu).
+    render_mode: str = "native"
+    render_services_per_gpu: int = 2
+    render_service_path: Path | None = None
 
     def __post_init__(self) -> None:
         unknown = sorted(set(self.tasks) - set(ROBOTWIN_ALL_TASKS))
@@ -68,11 +75,26 @@ class RoboTwinRuntimeConfig:
             raise ValueError("RoboTwin instruction_seed_limit must be positive")
         if (self.protocol_id is None) != (self.seed_generation_digest is None):
             raise ValueError("RoboTwin protocol and seed generation identity must be paired")
+        if self.render_mode not in {"native", "central"}:
+            raise ValueError(f"RoboTwin render_mode must be native or central; got {self.render_mode!r}")
+        if self.render_mode == "central":
+            if self.render_service_path is None or self.render_services_per_gpu < 1:
+                raise ValueError(
+                    "RoboTwin central rendering needs runtime.render_service_path and a positive "
+                    "render_services_per_gpu"
+                )
+            if self.suite != "demo_clean" or self.seed_cache_dir is None or self.save_videos:
+                # demo_randomized changes light colors during episodes, which the services do not replay;
+                # without a seed cache the expert path needs cuRobo on the GPU; videos read every camera.
+                raise ValueError(
+                    "RoboTwin central rendering supports demo_clean with a seed cache and no videos"
+                )
 
 
 class RoboTwinBenchmarkAdapter:
     def __init__(self, config: RoboTwinRuntimeConfig) -> None:
         self.config = config
+        self.render_services: RoboTwinRenderServices | None = None
 
     def work_items(self) -> Sequence[WorkItem]:
         items = []
@@ -119,6 +141,21 @@ class RoboTwinBenchmarkAdapter:
             "robotwin.ee-compact-quat-v1": "ee",
         }[context.execution_contract.action_representation]
         threads = str(self.config.cpu_threads)
+        render_service = ()
+        if self.config.render_mode == "central":
+            if action_type != "qpos":
+                raise ValueError("RoboTwin central rendering supports qpos actions only")
+            if self.render_services is None:
+                assert self.config.render_service_path is not None
+                self.render_services = RoboTwinRenderServices(
+                    python=self.config.benchmark_python,
+                    script=self.config.render_service_path,
+                    robotwin_root=self.config.robotwin_root,
+                    services_per_gpu=self.config.render_services_per_gpu,
+                    log_dir=context.output_dir / "render-services",
+                )
+            socket = self.render_services.socket_for(context.gpu_device, context.gpu_slot, context.worker_id)
+            render_service = ("--render-service", str(socket))
         return ProcessSpec(
             command=(
                 str(self.config.sdk_python),
@@ -147,6 +184,7 @@ class RoboTwinBenchmarkAdapter:
                 # the shared CuroboPlanner patch then pays planner construction
                 # once per worker instead of once per task.
                 *(("--eval-session",) if self.config.seed_cache_dir is not None else ()),
+                *render_service,
             ),
             cwd=self.config.robotwin_root,
             env={
@@ -168,6 +206,13 @@ class RoboTwinBenchmarkAdapter:
                 "ROBOTWIN_OBS_STRIDE": str(context.execution_contract.observation_stride),
             },
         )
+
+    def close(self) -> None:
+        """Stop the render services after the pass's Workers have stopped."""
+
+        if self.render_services is not None:
+            services, self.render_services = self.render_services, None
+            services.close()
 
     def aggregate(self, results: Sequence[WorkResult]) -> dict[str, Any]:
         tasks: dict[str, dict[str, Any]] = {}
@@ -195,7 +240,10 @@ class RoboTwinBenchmarkAdapter:
             "episode_shard_size": self.config.episode_shard_size,
             "seed": self.config.seed,
             "video_logging": self.config.save_videos,
+            "render_mode": self.config.render_mode,
         }
+        if self.config.render_mode == "central":
+            metadata["render_services_per_gpu"] = self.config.render_services_per_gpu
         if self.config.protocol_id is not None:
             metadata["benchmark_protocol_id"] = self.config.protocol_id
             metadata["seed_generation_digest"] = self.config.seed_generation_digest

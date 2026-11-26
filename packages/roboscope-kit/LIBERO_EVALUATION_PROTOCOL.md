@@ -142,12 +142,17 @@ Users do not declare evaluator concurrency; the runtime chooses K and g (section
 
 ## 3. Canonical LIBERO observation
 
-The SDK-native LIBERO worker renders both cameras at 256 × 256 and sends the following features:
+The SDK-native LIBERO worker renders both cameras at 256 × 256 by default and sends the following
+features. A Policy can negotiate other native render sizes per camera with
+`PolicyCapabilities.image_sizes` (64–1024 pixels per side, at most 480 × 640 with `osmesa`); the
+images then have the negotiated `(height, width, 3)` shape, and `policy_io.canonical_observations` is
+`false`. LIBERO-Plus keeps 256 × 256 because its image corruptions assume square frames of at most 256
+pixels.
 
 | Feature | Type | Shape | Construction |
 | --- | --- | --- | --- |
-| `images.primary` | `uint8` | `(256, 256, 3)` | `agentview_image`, flipped on both image axes |
-| `images.wrist` | `uint8` | `(256, 256, 3)` | `robot0_eye_in_hand_image`, flipped on both image axes |
+| `images.primary` | `uint8` | `(256, 256, 3)` or negotiated | `agentview_image`, flipped on both image axes |
+| `images.wrist` | `uint8` | `(256, 256, 3)` or negotiated | `robot0_eye_in_hand_image`, flipped on both image axes |
 | `state.proprioception` | `float32` | `(16,)` | EEF position 3 + EEF quaternion 4 + gripper qpos 2 + joint positions 7 |
 | `language.instruction` | `str` | scalar | Official LIBERO task language instruction |
 
