@@ -7,6 +7,8 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from roboscope_kit.policy import DEFAULT_EVAL_MODE, validate_eval_mode
+
 _BUILD_KEYS = ("kit_version", "manifest_sha256")
 
 
@@ -56,6 +58,22 @@ def validate_shard_set(shards: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                         or any(character not in "0123456789abcdef" for character in value)):
                     raise ValueError(f"ManiSkill shard must record a valid {key} content identity")
     _require_one_build(metas)
+    eval_modes = {validate_eval_mode(str(shard.get("eval_mode", DEFAULT_EVAL_MODE))) for shard in shards}
+    if len(eval_modes) != 1:
+        raise ValueError(f"shards disagree on eval_mode: {sorted(eval_modes)}")
+    fast_opt_sets = {
+        tuple(str(item) for item in (shard.get("active_fast_optimizations") or ()))
+        for shard in shards
+    }
+    if len(fast_opt_sets) != 1:
+        raise ValueError(f"shards disagree on active_fast_optimizations: {sorted(fast_opt_sets)}")
+    # The negotiated Policy contract (action representation, camera sizes, ...) must match.
+    for shard in shards:
+        if shard.get("policy_io") is not None and not isinstance(shard["policy_io"], Mapping):
+            raise ValueError("shard policy_io must be an object")
+    policy_ios = {json.dumps(shard.get("policy_io"), sort_keys=True) for shard in shards}
+    if len(policy_ios) != 1:
+        raise ValueError("shards ran different Policy execution contracts (policy_io)")
     return {
         key: metas[0][key]
         for key in ("count", "full_total_records", "episodes_per_shard", "explicit_count", "build")

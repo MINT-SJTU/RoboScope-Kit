@@ -82,8 +82,8 @@ these timers do not establish verified Nsight hardware coverage.
 | RoboDojo | Yes | Yes (2026-11-05, K=1 and K=3) |
 | LIBERO, LIBERO-Plus | Yes | Not yet |
 | MetaWorld | Yes | Not yet |
+| robomimic | Yes | Yes (2026-11-08, real BC-RNN, K=5/G=1 diagnostic) |
 | RLBench | Yes | Not yet |
-| robomimic | Yes | Not yet |
 | ManiSkill | Yes | Worker CPU ranges wired; Nsight GPU capture not yet verified |
 | SimplerEnv | Yes | Not yet |
 | RoboCasa GR-1 Tabletop | Yes | Not yet |
@@ -107,6 +107,9 @@ these timers do not establish verified Nsight hardware coverage.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
+- [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/README.md#profiling):
+  repeated model compilation and Policy waits motivate the compiled-model cache and fixed-K/G comparison (2026-11-08).
+  The [throughput notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/THROUGHPUT.md) record matched repeats, per-step cache agreement and native throughput (2026-11-09).
 - [ManiSkill](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/maniskill/VALIDATION.md#throughput-by-worker-count):
   eleven official PPO tasks on one RTX 4090 48G (Kit 0.8.0b36, now 0.8.0b67, 2026-11-12) keep the GPU 34% busy
   with one Worker and 94% with twelve, which run 2.09x faster; Policy wait is under 5% of Worker

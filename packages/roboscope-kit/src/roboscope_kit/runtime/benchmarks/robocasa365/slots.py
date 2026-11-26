@@ -14,7 +14,7 @@ from typing import Any
 
 import numpy as np
 
-from .protocol import OBSERVATION_STEPS, Task
+from .protocol import IMAGE_SIZE, OBSERVATION_STEPS, Task
 
 
 @dataclass
@@ -28,11 +28,12 @@ class SlotState:
 
 
 class NativeSlot:
-    def __init__(self, task: Task, index: int) -> None:
+    def __init__(self, task: Task, index: int, image_size: tuple[int, int] = IMAGE_SIZE) -> None:
         from .worker import create_environment
 
         self.task = task
-        self.environment = create_environment(task, index)
+        self.image_size = image_size
+        self.environment = create_environment(task, index, image_size)
         try:
             context = self.environment.unwrapped.env.sim._render_context_offscreen
             if getattr(context, "_roboscope_owning_context_cleanup", None) != 2:
@@ -47,7 +48,9 @@ class NativeSlot:
 
         frame, _ = self.environment.reset()
         history = deque((frame, frame), maxlen=OBSERVATION_STEPS)
-        initial = reset_fingerprint(self.environment, build_observation(identifier, 0, history))
+        initial = reset_fingerprint(
+            self.environment, build_observation(identifier, 0, history, self.image_size)
+        )
         self.state = SlotState(history, initial)
         return self.state
 

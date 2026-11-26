@@ -109,6 +109,8 @@ SUITES = {
         for split in ("atomic_seen", "composite_seen", "composite_unseen")
     },
 }
+# Canonical render size of all three cameras, as (height, width).
+IMAGE_SIZE = (256, 256)
 IMAGE_KEYS = {
     "images.agentview_left": "video.robot0_agentview_left",
     "images.agentview_right": "video.robot0_agentview_right",

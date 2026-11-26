@@ -8,7 +8,7 @@ postprocessing.
 The current protocol identifiers are:
 
 - benchmark specification: `libero-v1` (LIBERO+: `libero-plus-v1`; LIBERO-Pro: `libero-pro-v1`);
-- action representation: `libero.delta-eef-v1`;
+- action representations: `libero.delta-eef-v1` (default) and `libero.absolute-eef-v1`;
 - SDK-native evaluator transport: `roboscope-policy-v1`.
 
 `roboscope-kit` requires Python 3.11 or newer for the Policy and for the benchmark CLI. The LIBERO and
@@ -142,12 +142,23 @@ Users do not declare evaluator concurrency; the runtime chooses K and g (section
 
 ## 3. Canonical LIBERO observation
 
-The SDK-native LIBERO worker renders both cameras at 256 × 256 and sends the following features:
+The SDK-native LIBERO worker renders both cameras at 256 × 256 by default and sends the following
+features. A Policy can negotiate other native render sizes per camera with
+`PolicyCapabilities.image_sizes` (64–1024 pixels per side, at most 480 × 640 with `osmesa`); the
+images then have the negotiated `(height, width, 3)` shape, and `policy_io.canonical_observations` is
+`false`. LIBERO-Plus renders the same wrist sizes. Its agent view takes square sizes from 64 × 64 to
+256 × 256 (roboscope-kit 0.8.0b83 or later in the Policy's own environment; a Policy on an older
+roboscope-kit is offered the agent view at 256 × 256 only). Its sensor-noise corruptions apply to the agent
+view only: the zoom blur rescales a square of the frame's height, and the fog adds a fixed 256 × 256 plasma
+map. Four of the five corruptions keep pixel-fixed parameters at every size (motion-blur radius, Gaussian
+sigma, glass-blur shuffle distance, the 256-pixel fog map), so a smaller agent view makes them relatively
+stronger; the zoom blur scales with the frame. This affects the sensor-noise tasks, 15–18% of each suite,
+and such runs are marked `canonical_observations: false`.
 
 | Feature | Type | Shape | Construction |
 | --- | --- | --- | --- |
-| `images.primary` | `uint8` | `(256, 256, 3)` | `agentview_image`, flipped on both image axes |
-| `images.wrist` | `uint8` | `(256, 256, 3)` | `robot0_eye_in_hand_image`, flipped on both image axes |
+| `images.primary` | `uint8` | `(256, 256, 3)` or negotiated | `agentview_image`, flipped on both image axes |
+| `images.wrist` | `uint8` | `(256, 256, 3)` or negotiated | `robot0_eye_in_hand_image`, flipped on both image axes |
 | `state.proprioception` | `float32` | `(16,)` | EEF position 3 + EEF quaternion 4 + gripper qpos 2 + joint positions 7 |
 | `language.instruction` | `str` | scalar | Official LIBERO task language instruction |
 
@@ -168,9 +179,14 @@ The Policy returns `ActionChunk` containing either:
 - a `float32` chunk with shape `(N, 7)`, where `N` is declared in
   `PolicyCapabilities.supported_action_chunk_sizes`.
 
-The seven values are the native LIBERO controller action: six end-effector delta values followed by the
-gripper command. The worker does not decode, clip, or normalize actions; the Policy must return a
-benchmark-valid native action. Actions from a chunk are executed in order, one simulator step at a time.
+The seven values are the native LIBERO controller action: six end-effector values followed by the gripper
+command. Under the default `libero.delta-eef-v1` the six values are LIBERO's position and axis-angle deltas.
+A Policy that declares `libero.absolute-eef-v1` in `PolicyCapabilities.action_representations` returns the
+absolute target instead: the end-effector position in the world frame and the axis-angle orientation of the
+controller's end-effector site (its `ee_ori_mat`). The observation's `robot0_eef_quat` is the body frame, so a
+Policy that sends it back as a target rotates the gripper. After the settle steps of every episode the worker
+sets `use_delta = False` on each robot's OSC controller, as the X-VLA LIBERO client does. The worker
+does not decode, clip, or normalize actions; the Policy must return a benchmark-valid native action. Actions from a chunk are executed in order, one simulator step at a time.
 A new observation is sent to the Policy only after the cached chunk is exhausted.
 
 The SDK validates numeric dtype, action dimension, and declared chunk size before the worker receives the
@@ -191,8 +207,9 @@ For task `t` and episode index `e`:
 
 1. the worker calls `Policy.reset()` with `task_id=str(t)` and the official instruction;
 2. the environment is reset and initialized with `task_suite.get_task_init_states(t)[e]`;
-3. the worker executes the manifest's `settle_steps`, 10, native no-op actions `[0, 0, 0, 0, 0, 0, -1]`;
-   if the episode terminates during them, it ends with zero policy steps;
+3. the worker executes the manifest's `settle_steps`, 10, native no-op actions `[0, 0, 0, 0, 0, 0, -1]`
+   under delta control; if the episode terminates during them, it ends with zero policy steps. With
+   `libero.absolute-eef-v1` the controllers then switch to absolute targets for the rest of the episode;
 4. the Policy/environment loop runs until official success/termination or the suite horizon;
 5. exactly one terminal `EvaluationRecord` is committed.
 
@@ -325,7 +342,8 @@ and aggregation must all match this protocol.
 ## 10. LIBERO+
 
 LIBERO+ (`--benchmark libero_plus`, protocol `libero-plus-v1`) runs the LIBERO worker above against the
-LIBERO-plus task suites, so sections 2–9 apply unchanged, with these differences:
+LIBERO-plus task suites, so sections 2–9 apply unchanged, with these differences (the negotiated camera
+sizes of section 3 have their own LIBERO-Plus range, described there):
 
 | | LIBERO+ |
 | --- | --- |

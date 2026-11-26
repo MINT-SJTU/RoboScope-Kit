@@ -17,12 +17,16 @@ import math
 from pathlib import Path
 from typing import Any
 
-from roboscope_kit.benchmark_specs import METAWORLD_DEFAULT_CAMERA
+from roboscope_kit.benchmark_specs import (
+    METAWORLD_DEFAULT_CAMERA,
+    METAWORLD_MAX_CAMERA_DIMENSION,
+    METAWORLD_MIN_CAMERA_DIMENSION,
+)
 
 CAMERA_FEATURES = ("images.primary", "images.secondary", "images.tertiary", "images.quaternary")
 ROTATION_DEGREES = (0, 90, 180, 270)
-MIN_CAMERA_DIMENSION = 64
-MAX_CAMERA_DIMENSION = 1024
+MIN_CAMERA_DIMENSION = METAWORLD_MIN_CAMERA_DIMENSION
+MAX_CAMERA_DIMENSION = METAWORLD_MAX_CAMERA_DIMENSION
 
 DEFAULT_CAMERA: dict[str, Any] = METAWORLD_DEFAULT_CAMERA
 
@@ -151,12 +155,49 @@ def _validate_position(value: Any, index: int) -> list[float] | None:
     return [float(component) for component in value]
 
 
+def apply_image_sizes(
+    cameras: tuple[dict[str, Any], ...],
+    image_sizes: dict[str, tuple[int, int]],
+) -> tuple[dict[str, Any], ...]:
+    """Return the cameras that render each negotiated ``(height, width)`` natively.
+
+    A camera with a negotiated size renders at that size, uncropped and without resampling; a
+    90 or 270 degree rotation renders the transposed size so the rotated frame has the negotiated
+    shape. Cameras without a negotiated size are returned unchanged.
+    """
+
+    features = {str(camera["feature"]) for camera in cameras}
+    unknown = sorted(set(image_sizes) - features)
+    if unknown:
+        raise ValueError(f"metaworld image sizes name unconfigured cameras: {', '.join(unknown)}")
+    resolved = []
+    for camera in cameras:
+        size = image_sizes.get(str(camera["feature"]))
+        if size is None:
+            resolved.append(camera)
+            continue
+        height, width = size
+        transposed = int(camera["rotation_deg"]) in (90, 270)
+        resolved.append(
+            {
+                **camera,
+                "render_width": height if transposed else width,
+                "render_height": width if transposed else height,
+                "center_crop_ratio": 1.0,
+                "output_width": width,
+                "output_height": height,
+            }
+        )
+    return tuple(_resolve_camera(camera, index) for index, camera in enumerate(resolved))
+
+
 __all__ = [
     "CAMERA_FEATURES",
     "DEFAULT_CAMERA",
     "MAX_CAMERA_DIMENSION",
     "MIN_CAMERA_DIMENSION",
     "ROTATION_DEGREES",
+    "apply_image_sizes",
     "default_evaluation_config",
     "load_evaluation_config",
     "resolve_evaluation_config",

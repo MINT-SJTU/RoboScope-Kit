@@ -95,7 +95,21 @@ forwarded to the native controller. Multi-agent Dict action spaces use the pinne
 `state.proprioception` preserves the upstream flattened state order. A `state_dict` profile uses
 upstream insertion-order flattening. Visual profiles expose the state already present in that
 upstream observation and map declared camera RGB pixels to `images.primary`, `images.wrist` or
-`images.auxiliary`. Native image shape and uint8 pixels are retained. The optional
+`images.auxiliary`. Native image shape and uint8 pixels are retained: each camera renders at its
+task's own size unless a Policy negotiates another size with `PolicyCapabilities.image_sizes` (16–512
+pixels per side). The Worker then sets that camera's `sensor_configs` width and height, so the
+field-of-view camera renders the negotiated size directly; Kit never resamples, and a depth or
+segmentation channel from the same camera has the same size. SAPIEN keeps the camera's `fov` as its
+vertical field of view, so a non-square size widens or narrows the horizontal view rather than
+cropping it. One suite can mix tasks whose own sizes
+differ, so the protocol fixes no camera size: any negotiated size, even one equal to a task's own size,
+marks the run `canonical_observations: false`. A flat `image_sizes` list applies to the cameras the
+suite renders, those its task profiles map to an image feature: `policy_io.image_sizes` records only
+these, so a size for an image feature that the suite renders no camera for leaves the run canonical.
+The Bridge camera keeps 480 × 640: it is defined by a pixel intrinsic for that size and composited over a real photo, so
+another size would show a cropped view. An image feature that any profile of a suite maps to a Bridge
+camera therefore keeps its own size in that suite; in the stock suites that is `images.primary` of
+`bridge_rgb_v1` and `upstream_tasks_v1`. The optional
 `language.instruction` comes from the profile. Model-specific normalization and preprocessing
 belong to the Policy implementation. The optional `include_joint_names` profile setting adds
 actual active/controller joint identities to episode metadata without adding observation features.

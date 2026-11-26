@@ -29,9 +29,18 @@ def index_records(rows, label):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--kit-run", type=Path, required=True)
-    parser.add_argument("--native", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--kit-run", type=Path, required=True,
+        help="Kit run directory: the --output-dir of the Kit evaluation, containing manifest.json",
+    )
+    parser.add_argument(
+        "--native", type=Path, required=True,
+        help="run_native.py output directory, containing run.json and native-episodes.jsonl",
+    )
+    parser.add_argument(
+        "--output", type=Path, required=True,
+        help="path of the comparison JSON report to write; must not exist",
+    )
     args = parser.parse_args()
     manifest = read_json(args.kit_run / "manifest.json")
     benchmark = manifest["benchmark"]

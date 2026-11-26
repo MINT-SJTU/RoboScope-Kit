@@ -12,6 +12,26 @@ from typing import Any
 import numpy as np
 
 from roboscope_kit.contracts import BenchmarkSpec, FeatureKind
+from roboscope_kit.image_sizes import (
+    CameraSupport,
+    ImageSize,
+    SizePreferences,
+    image_sizes_to_dict,
+    negotiate_image_sizes,
+    normalize_image_sizes,
+)
+
+EVAL_MODES: tuple[str, ...] = ("strict", "fast")
+DEFAULT_EVAL_MODE = "strict"
+
+
+def validate_eval_mode(value: str) -> str:
+    """Validate that an evaluation consistency mode is one of EVAL_MODES."""
+
+    if value not in EVAL_MODES:
+        supported = ", ".join(EVAL_MODES)
+        raise ValueError(f"eval_mode must be one of {supported}; got {value!r}")
+    return value
 
 
 @dataclass(frozen=True)
@@ -22,10 +42,12 @@ class SessionContext:
     checkpoint_path: str
     benchmark: BenchmarkSpec
     metadata: dict[str, Any] = field(default_factory=dict)
+    eval_mode: str = DEFAULT_EVAL_MODE
 
     def __post_init__(self) -> None:
         if not self.session_id:
             raise ValueError("session_id cannot be empty")
+        validate_eval_mode(self.eval_mode)
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> SessionContext:
@@ -34,6 +56,7 @@ class SessionContext:
             checkpoint_path=str(value["checkpoint_path"]),
             benchmark=BenchmarkSpec.from_dict(value["benchmark"]),
             metadata=dict(value.get("metadata") or {}),
+            eval_mode=str(value.get("eval_mode", DEFAULT_EVAL_MODE)),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -42,6 +65,7 @@ class SessionContext:
             "checkpoint_path": self.checkpoint_path,
             "benchmark": self.benchmark.to_dict(),
             "metadata": self.metadata,
+            "eval_mode": self.eval_mode,
         }
 
 
@@ -130,8 +154,14 @@ class PolicyCapabilities:
     action_representations: dict[str, str] = field(default_factory=dict)
     observation_strides: dict[str, int] = field(default_factory=dict)
     step_observation_updates: tuple[str, ...] = ()
+    coalesce_action_requests: bool = False
+    # Camera sizes the Policy accepts, most preferred first, as (height, width); ``ANY_SIZE`` last
+    # accepts the benchmark's canonical size. A list applies to every image feature, a dict to the
+    # named features. ``None`` accepts the canonical size everywhere.
+    image_sizes: SizePreferences | dict[str, SizePreferences] | None = None
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "image_sizes", normalize_image_sizes(self.image_sizes))
         if not self.supported_benchmarks:
             raise ValueError("supported_benchmarks cannot be empty")
         if len(self.supported_benchmarks) != len(set(self.supported_benchmarks)):
@@ -144,6 +174,8 @@ class PolicyCapabilities:
             raise ValueError(f"supported_suites contains undeclared benchmarks: {names}")
         if self.max_batch_size < 1:
             raise ValueError("max_batch_size must be positive")
+        if self.coalesce_action_requests and self.max_batch_size < 2:
+            raise ValueError("coalesce_action_requests requires max_batch_size greater than one")
         if not self.supported_action_chunk_sizes:
             raise ValueError("supported_action_chunk_sizes cannot be empty")
         if any(size < 1 for size in self.supported_action_chunk_sizes):
@@ -187,6 +219,8 @@ class PolicyCapabilities:
                 for name, stride in (value.get("observation_strides") or {}).items()
             },
             step_observation_updates=tuple(str(item) for item in value.get("step_observation_updates", ())),
+            image_sizes=value.get("image_sizes"),
+            coalesce_action_requests=value.get("coalesce_action_requests") is True,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -201,6 +235,12 @@ class PolicyCapabilities:
             "action_representations": dict(self.action_representations),
             "observation_strides": dict(self.observation_strides),
             "step_observation_updates": list(self.step_observation_updates),
+            **(
+                {"image_sizes": image_sizes_to_dict(self.image_sizes)}
+                if self.image_sizes is not None
+                else {}
+            ),
+            "coalesce_action_requests": self.coalesce_action_requests,
         }
 
 
@@ -212,6 +252,14 @@ class PolicyExecutionContract:
     observation_stride: int = 1
     observation_stride_source: str = "safe_default"
     step_observation_updates: bool = False
+    eval_mode: str = DEFAULT_EVAL_MODE
+    active_fast_optimizations: tuple[str, ...] = ()
+    # Image features rendered at a size other than the benchmark's canonical one, as (height, width).
+    image_sizes: dict[str, ImageSize] = field(default_factory=dict)
+
+    @property
+    def canonical_observations(self) -> bool:
+        return not self.image_sizes
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -221,13 +269,27 @@ class PolicyExecutionContract:
             "observation_stride": self.observation_stride,
             "observation_stride_source": self.observation_stride_source,
             "step_observation_updates": self.step_observation_updates,
+            "eval_mode": self.eval_mode,
+            "active_fast_optimizations": list(self.active_fast_optimizations),
+            "image_sizes": {feature: list(size) for feature, size in sorted(self.image_sizes.items())},
+            "canonical_observations": self.canonical_observations,
         }
 
 
 def negotiate_policy_action_contract(
     benchmark: BenchmarkSpec,
     capabilities: PolicyCapabilities,
+    *,
+    eval_mode: str = DEFAULT_EVAL_MODE,
+    camera_support: dict[str, CameraSupport] | None = None,
 ) -> PolicyExecutionContract:
+    """Resolve the action representation, observation cadence and image sizes for one run.
+
+    ``camera_support`` lists the sizes each benchmark camera can render; without it every camera
+    renders only the size its spec declares.
+    """
+
+    eval_mode = validate_eval_mode(eval_mode)
     action_source = "policy"
     action_representation = capabilities.action_representations.get(benchmark.name)
     if action_representation is None:
@@ -241,6 +303,9 @@ def negotiate_policy_action_contract(
         )
     if benchmark.name in capabilities.step_observation_updates and benchmark.name != "robodojo":
         raise ValueError(f"step observation updates are not supported by {benchmark.name}")
+    active_fast_optimizations: tuple[str, ...] = ()
+    if eval_mode == "fast" and capabilities.coalesce_action_requests:
+        active_fast_optimizations = ("dynamic-batching",)
     return PolicyExecutionContract(
         benchmark=benchmark.name,
         action_representation=action_representation,
@@ -250,12 +315,17 @@ def negotiate_policy_action_contract(
             "policy" if benchmark.name in capabilities.observation_strides else "safe_default"
         ),
         step_observation_updates=benchmark.name in capabilities.step_observation_updates,
+        eval_mode=eval_mode,
+        active_fast_optimizations=active_fast_optimizations,
+        image_sizes=negotiate_image_sizes(benchmark, capabilities.image_sizes, camera_support),
     )
 
 
 def validate_policy_capabilities(
     benchmark: BenchmarkSpec,
     capabilities: PolicyCapabilities,
+    *,
+    camera_support: dict[str, CameraSupport] | None = None,
 ) -> None:
     if benchmark.name not in capabilities.supported_benchmarks:
         raise ValueError(f"policy does not support benchmark {benchmark.name!r}")
@@ -268,7 +338,7 @@ def validate_policy_capabilities(
     unknown = sorted(set(capabilities.required_features) - available)
     if unknown:
         raise ValueError(f"policy requires features not provided by {benchmark.name}: {', '.join(unknown)}")
-    negotiate_policy_action_contract(benchmark, capabilities)
+    negotiate_policy_action_contract(benchmark, capabilities, camera_support=camera_support)
 
 
 def validate_observation(
@@ -352,7 +422,7 @@ class Policy(ABC):
         """Produce one action or an action chunk for a canonical observation."""
 
     def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
-        """Produce actions for an explicit batch; override to use native model batching."""
+        """Produce actions for a batch; override to use native model batching."""
         return tuple(self.act(observation) for observation in observations)
 
     def end_episode(self, episode_id: str) -> None:

@@ -9,10 +9,24 @@ stateful Policy and multi-benchmark action contracts. The X-VLA entries on publi
 | Benchmark | X-VLA checkpoint used by the demo | Upstream paper/community metric (research reference) | Notes |
 |---|---|---|---|
 | calvin (task_ABC_D) | `X-VLA-Calvin-ABC_D` | avg_len **4.43** | Community metric available for comparison |
-| libero (4 suites) | `X-VLA-Libero` | 98.2/98.6/97.8/97.6, mean **98.1** | Community metric available for comparison |
+| libero (4 suites) | `X-VLA-Libero` | 98.2/98.6/97.8/97.6, mean **98.1** | Not directly comparable: measured with 800-step (900 on `libero_10`) episodes, the kit uses 220-520 |
 | libero_plus (4 suites) | `X-VLA-Libero` | No entry | Reported as is; no community reference |
 | robotwin (demo_clean/demo_randomized) | `X-VLA-RoboTwin2` | easy **70.0** / hard **39.0** | Directly comparable when the benchmark protocol matches |
 | robocasa (tabletop) | — | No entry | **N/A**: the public X-VLA assets cover only the other benchmarks in this table |
+
+Kit results on LIBERO (2026-11-14, commit `6125783`, one A800, K6/g1, native loop, the suites' 220-520-step
+horizons, 500 episodes per suite):
+
+| Suite | Kit success | Evaluation wall clock | Upstream (800/900 steps) |
+|---|--:|--:|--:|
+| `libero_10` | 96.6 | 912 s | 97.6 |
+| `libero_spatial` | 97.8 | 555 s | 98.2 |
+| `libero_object` | 98.0 | 511 s | 98.6 |
+| `libero_goal` | 96.4 | 457 s | 97.8 |
+
+With `libero_10`'s horizon raised to X-VLA's 900 steps as a diagnostic, the same commit scores 97.0; only 2 of
+its 485 successes needed more than 520 steps. X-VLA's flow-matching noise is not seeded per episode, so repeated
+runs differ by up to about 2 points per suite.
 
 The RoboTwin research reference numbers come from the leaderboard settings results table at the pinned
 upstream X-VLA commit
@@ -86,8 +100,11 @@ calvin and libero_plus work the same way (libero_plus uses `checkpoints/libero`)
   `[pos3, axis-angle3, grip±1]`, 30-step chunks, proprio tracking (real state on the first frame → target at chunk end),
   domain_id=3, steps=10. Proprio rotation uses the **site frame** (= the controller's ee_ori_mat; the observation
   `robot0_eef_quat` is the body frame in xyzw, offset by a constant 90° z rotation, `_libero_site_rotmat`).
-  Worker patches (inside the SDK): `use_delta=False` (as stated in the recipe) + MAX_STEPS aligned with
-  the recipe's 800/900-step horizons.
+  The Policy declares `libero.absolute-eef-v1`, so the LIBERO worker switches the OSC controllers to absolute
+  targets (`use_delta=False`) after the settle steps, as the recipe does. Episodes keep the benchmark's suite
+  horizons (220 to 520 policy steps, the convention of OpenVLA's `run_libero_eval.py` that every Policy is
+  scored under), while X-VLA's client runs 800 steps (900 on `libero_10`), so its published LIBERO scores and
+  the kit's are not directly comparable.
 - **calvin**: matches calvin_client.py: absolute `(pos, quat_xyzw, grip)` tuples,
   the first 20 rows of the model chunk, domain_id=2, gripper threshold 0.8. The RoboScope Kit calvin spec is a 7-D
   relative action, so this Policy declares

@@ -132,6 +132,11 @@ class RLBenchBenchmarkAdapter:
             "--xvfb",
             str(self.config.xvfb),
         )
+        image_sizes = context.execution_contract.image_sizes
+        for camera in CAMERAS:
+            if f"images.{camera}" in image_sizes:
+                height, width = image_sizes[f"images.{camera}"]
+                command += ("--camera-size", f"{camera}={height}x{width}")
         return ProcessSpec(
             command=command,
             env={
@@ -286,6 +291,7 @@ class RLBenchBenchmarkAdapter:
             "episodes": list(range(self.config.episodes_per_task)),
             "episode_length": EPISODE_LENGTH,
             "cameras": list(CAMERAS),
+            # The protocol's camera size; negotiated sizes are recorded in policy_io.image_sizes.
             "image_size": list(IMAGE_SIZE),
             "action_representation": ACTION_REPRESENTATION,
             "success_criterion": SUCCESS_CRITERION,

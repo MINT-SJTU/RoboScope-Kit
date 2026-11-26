@@ -122,9 +122,20 @@ def run_episode(
     env,
     task: RobomimicTask,
     seed: int,
+    *,
+    timings: dict[str, float] | None = None,
 ) -> tuple[EvaluationRecord, float]:
+    if timings is None:
+        timings = {}
+    for name in (
+        "reset_s", "policy_reset_s", "observation_prepare_s", "simulator_s", "policy_end_s"
+    ):
+        timings.setdefault(name, 0.0)
     episode_id = episode_id_for(task, seed)
+    reset_started = time.perf_counter()
     observation, state_digest = reset_episode(env, seed)
+    timings["reset_s"] += time.perf_counter() - reset_started
+    reset_started = time.perf_counter()
     client.reset(
         EpisodeContext(
             episode_id=episode_id,
@@ -137,6 +148,7 @@ def run_episode(
             },
         )
     )
+    timings["policy_reset_s"] += time.perf_counter() - reset_started
     started = time.perf_counter()
     inference_wait_s = 0.0
     actions = np.empty((0, task.action_dim), dtype=np.float32)
@@ -145,7 +157,9 @@ def run_episode(
     try:
         for step in range(task.horizon):
             if not actions.size:
+                prepared = time.perf_counter()
                 request = build_observation(task, episode_id, step, observation)
+                timings["observation_prepare_s"] += time.perf_counter() - prepared
                 requested = time.perf_counter()
                 chunk = np.asarray(client.act(request).actions)
                 inference_wait_s += time.perf_counter() - requested
@@ -158,13 +172,17 @@ def run_episode(
                 actions = chunk
             action = actions[0]
             actions = actions[1:]
+            simulated = time.perf_counter()
             observation, _reward, done, _info = env.step(action)
             steps = step + 1
             success = bool(env.is_success()["task"])
+            timings["simulator_s"] += time.perf_counter() - simulated
             if done or success:
                 break
     finally:
+        ended = time.perf_counter()
         client.end_episode(episode_id)
+        timings["policy_end_s"] += time.perf_counter() - ended
     elapsed_s = time.perf_counter() - started
     record = EvaluationRecord(
         record_id=episode_id,
@@ -196,13 +214,17 @@ def main() -> None:
         task = TASKS_BY_NAME[str(item.payload["task"])]
         seeds = [int(seed) for seed in item.payload["seeds"]]
         env = envs.get(task.name)
+        initialize_s = 0.0
         if env is None:
+            initialized = time.perf_counter()
             env = envs[task.name] = create_env(task)
+            initialize_s = time.perf_counter() - initialized
         started = time.perf_counter()
         records = []
         inference_wait_s = 0.0
+        timings: dict[str, float] = {}
         for seed in seeds:
-            record, wait = run_episode(client, env, task, seed)
+            record, wait = run_episode(client, env, task, seed, timings=timings)
             records.append(record)
             inference_wait_s += wait
         return WorkResult(
@@ -215,6 +237,8 @@ def main() -> None:
                 "task": task.name,
                 "elapsed_s": time.perf_counter() - started,
                 "inference_wait_s": inference_wait_s,
+                "initialize_s": initialize_s,
+                **timings,
             },
         )
 

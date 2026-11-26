@@ -20,13 +20,31 @@ SUITES = ("libero_spatial", "libero_object", "libero_goal", "libero_10")
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--openvla-root", type=Path, required=True)
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--suite", choices=SUITES, required=True)
-    parser.add_argument("--episodes-per-task", type=int, default=5)
-    parser.add_argument("--seed", type=int, default=7)
-    parser.add_argument("--env-seed", type=int, default=7)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--openvla-root", type=Path, required=True,
+        help=f"OpenVLA Git checkout at the pinned UPSTREAM_REVISION {UPSTREAM_REVISION}, "
+        "with no modified tracked files",
+    )
+    parser.add_argument(
+        "--checkpoint", type=Path, required=True,
+        help="local OpenVLA LIBERO checkpoint directory; use the same one as the Kit run",
+    )
+    parser.add_argument("--suite", choices=SUITES, required=True, help="LIBERO task suite to evaluate")
+    parser.add_argument(
+        "--episodes-per-task", type=int, default=5,
+        help="episodes per task, run on initial states 0..N-1; accepts 1-50 (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=7, help="seed for the official evaluator's config (default: %(default)s)"
+    )
+    parser.add_argument(
+        "--env-seed", type=int, default=7,
+        help="seed set on every LIBERO environment; upstream otherwise uses 0 (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--output", type=Path, required=True,
+        help="new output directory for run.json, native-episodes.jsonl and logs; must not exist",
+    )
     args = parser.parse_args()
     if not 1 <= args.episodes_per_task <= 50:
         parser.error("--episodes-per-task must be between 1 and 50")

@@ -25,6 +25,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from roboscope_kit.policy import DEFAULT_EVAL_MODE
 from roboscope_kit.runtime.benchmarks.calvin.adapter import merge_sequence_lengths
 from roboscope_kit.runtime.benchmarks.maniskill.metrics import (
     merge_task_results as merge_maniskill_task_results,
@@ -80,6 +81,8 @@ def merge_shard_results(shard_results: Sequence[Mapping[str, Any]]) -> dict[str,
         "sdk_version": 1,
         "merged": True,
         "merge_method": "shard-result-reduce",
+        "eval_mode": ordered[0].get("eval_mode", DEFAULT_EVAL_MODE),
+        "active_fast_optimizations": list(ordered[0].get("active_fast_optimizations") or ()),
         "shard": {
             "count": shard_meta["count"],
             "indexes": [shard_metadata(shard)["index"] for shard in ordered],
@@ -87,6 +90,7 @@ def merge_shard_results(shard_results: Sequence[Mapping[str, Any]]) -> dict[str,
             "build": shard_meta["build"],
         },
         "benchmark": ordered[0]["benchmark"],
+        **({"policy_io": ordered[0]["policy_io"]} if ordered[0].get("policy_io") is not None else {}),
         "result": standard,
         "official_result": official,
         "shards": [_shard_summary(shard) for shard in ordered],

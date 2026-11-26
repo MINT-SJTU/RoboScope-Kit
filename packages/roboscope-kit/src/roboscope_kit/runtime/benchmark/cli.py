@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import argparse
 import os
+import signal
 import subprocess
 import sys
-from contextlib import ExitStack
+import threading
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -18,13 +21,13 @@ from roboscope_kit.benchmark_specs import (
     BenchmarkName,
     BenchmarkSpec,
     MetaworldBenchmarkDefinition,
+    benchmark_camera_support,
+    benchmark_rendered_image_features,
     get_benchmark_spec,
 )
+from roboscope_kit.policy import DEFAULT_EVAL_MODE, EVAL_MODES
 from roboscope_kit.policy_config import PolicyRuntimeConfig, load_policy_runtime_config
-from roboscope_kit.runtime.benchmarks.metaworld.config import (
-    load_evaluation_config,
-    resolve_evaluation_config,
-)
+from roboscope_kit.runtime.benchmarks.metaworld.config import resolve_evaluation_config
 
 from .autotune import (
     ProbeLimits,
@@ -55,20 +58,47 @@ from .timing import BenchmarkTimingRecorder, PhaseTimingCallback, benchmark_phas
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--benchmark", choices=tuple(item.value for item in BenchmarkName), required=True)
-    parser.add_argument("--suite")
+    parser.add_argument(
+        "--benchmark",
+        choices=tuple(item.value for item in BenchmarkName),
+        required=True,
+        help="benchmark to evaluate or self-test",
+    )
+    parser.add_argument(
+        "--suite",
+        help="benchmark suite to evaluate; required for evaluation, not for --self-test",
+    )
     parser.add_argument("--checkpoint-source", type=Path, help="absolute path to a local checkpoint")
     parser.add_argument(
         "--output-dir", type=Path, required=True,
         help="new or empty run directory; directories containing only errors.jsonl can be retried",
     )
-    parser.add_argument("--episodes", type=int)
-    parser.add_argument("--quick-test", action="store_true")
-    parser.add_argument("--self-test", action="store_true")
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        help="positive episode count overriding the manifest default",
+    )
+    parser.add_argument(
+        "--quick-test",
+        action="store_true",
+        help="run a short real evaluation with one Worker and one Server",
+    )
+    parser.add_argument(
+        "--self-test",
+        action="store_true",
+        help="run benchmark runtime checks without loading the Policy",
+    )
     parser.add_argument(
         "--cuda-mps",
         action="store_true",
         help="run the Policy replicas under a private NVIDIA CUDA MPS daemon (default: off)",
+    )
+    parser.add_argument(
+        "--eval-mode",
+        choices=EVAL_MODES,
+        default=DEFAULT_EVAL_MODE,
+        help="evaluation consistency mode: strict (default, protocol-faithful) or fast "
+        "(opt-in throughput optimizations that may introduce small numeric or per-episode differences)",
     )
     parser.add_argument(
         "--shard-index",
@@ -87,9 +117,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_EPISODES_PER_SHARD,
         help="episode budget per shard when --shard-count is omitted",
     )
-    parser.add_argument("--benchmark-manifest", type=Path, required=True)
+    parser.add_argument(
+        "--benchmark-manifest",
+        type=Path,
+        required=True,
+        help="benchmark manifest (benchmark-manifest.json) defining suites, runtime paths, and defaults",
+    )
     parser.add_argument("--policy-config", type=Path, help="Policy process contract (roboscope-policy.json)")
-    parser.add_argument("--evaluation-config", type=Path)
     parser.add_argument(
         "--profile",
         action="store_true",
@@ -149,7 +183,39 @@ def _cli_error(exc: Exception) -> int:
     return 1
 
 
+@contextmanager
+def _exit_on_termination() -> Iterator[None]:
+    """Turn SIGTERM and SIGHUP into ``SystemExit`` so cleanup runs.
+
+    Workers, Policy replicas and the CUDA MPS daemon run in their own sessions, so
+    a signal to the CLI's process group does not reach them. Without this, the
+    default action ends the CLI before its ``finally`` blocks stop them.
+    """
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    # Keep a handler someone else installed, such as nohup ignoring SIGHUP.
+    signals = [name for name in (signal.SIGTERM, signal.SIGHUP) if signal.getsignal(name) == signal.SIG_DFL]
+
+    def stop(signum, frame) -> None:
+        for name in signals:  # A repeated signal must not interrupt the cleanup.
+            signal.signal(name, signal.SIG_IGN)
+        raise SystemExit(128 + signum)
+
+    previous = {name: signal.signal(name, stop) for name in signals}
+    try:
+        yield
+    finally:
+        for name, handler in previous.items():
+            signal.signal(name, handler)
+
+
 def main(argv: list[str] | None = None) -> int:
+    with _exit_on_termination():
+        return _main(argv)
+
+
+def _main(argv: list[str] | None) -> int:
     args = parse_args(argv)
     try:
         benchmark = BenchmarkName(args.benchmark)
@@ -245,7 +311,7 @@ def _preflight_evaluation(
     factory.validate_suite(args.suite)
     _validate_checkpoint(args.checkpoint_source)
     policy = load_policy_runtime_config(args.policy_config)
-    evaluation_config = _resolve_evaluation_config(benchmark, args.evaluation_config, policy)
+    evaluation_config = _resolve_evaluation_config(benchmark, policy)
     benchmark_spec = _build_benchmark_spec(benchmark, args.suite, evaluation_config)
     gpu_devices = detect_gpu_devices()
     if not gpu_devices:
@@ -332,7 +398,8 @@ def _run_evaluation(
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
                 profile=args.profile,
-                task_seconds=run_cache.task_seconds or None,
+                task_seconds_for=run_cache.task_seconds_for,
+                eval_mode=args.eval_mode,
             )
         else:
             output, selected = _autotuned_run(
@@ -347,11 +414,14 @@ def _run_evaluation(
                 shard_kwargs=shard_kwargs,
                 cuda_mps=cuda_mps,
                 run_cache=run_cache,
+                eval_mode=args.eval_mode,
             )
     finally:
         if cuda_mps is not None:
             cuda_mps.stop()
+    execution_contract = (output.get("inference") or {}).get("execution_contract") or {}
     if not args.quick_test:
+        run_cache.bind(execution_contract)
         recovery = output.get("recovery") or {}
         if recovery.get("oom_events") or recovery.get("worker_failures"):
             # A run that ran out of memory or lost a Worker finished on a scaled-down or retried
@@ -365,6 +435,8 @@ def _run_evaluation(
     output["autotune"] = selected
     output["run_cache"] = run_cache.describe()
     output["cuda_mps"] = cuda_mps.metadata() if cuda_mps is not None else {"enabled": False}
+    output["eval_mode"] = args.eval_mode
+    output["active_fast_optimizations"] = list(execution_contract.get("active_fast_optimizations") or ())
     atomic_json(args.output_dir / "result.json", output)
     return 0
 
@@ -393,29 +465,24 @@ def _open_run_cache(
             "cpu_cores": cpu_quota(),
             "host_memory_bytes": host_memory_limit(),
             "cuda_mps": bool(args.cuda_mps),
+            "eval_mode": getattr(args, "eval_mode", DEFAULT_EVAL_MODE),
         }
     return RunCache(mode, fields)
 
 
 def _resolve_evaluation_config(
     benchmark: BenchmarkName,
-    path: Path | None,
     policy: PolicyRuntimeConfig,
 ) -> dict[str, Any] | None:
-    """Resolve the benchmark evaluation config without writing run artifacts.
+    """Resolve the MetaWorld camera configuration without writing run artifacts.
 
-    Priority is an explicit ``--evaluation-config`` file, then the Policy file's
-    ``benchmark_config`` declaration, then the default. Every worker and
-    the Policy ``load`` spec therefore consume the same resolved object.
+    The Policy file's ``benchmark_config.metaworld`` declaration applies when present, otherwise the
+    default camera. Every worker and the Policy ``load`` spec consume the same resolved object.
     """
 
     if benchmark is not BenchmarkName.METAWORLD:
-        if path is not None:
-            raise ValueError("--evaluation-config is only supported for the metaworld benchmark")
         return None
-    declared = policy.benchmark_config.get("metaworld")
-    config = load_evaluation_config(path) if path is not None else resolve_evaluation_config(declared)
-    return config
+    return resolve_evaluation_config(policy.benchmark_config.get("metaworld"))
 
 
 def _build_benchmark_spec(
@@ -442,6 +509,7 @@ def _autotuned_run(
     shard_kwargs: dict[str, Any] | None = None,
     cuda_mps: CudaMpsSession | None = None,
     run_cache: RunCache | None = None,
+    eval_mode: str = DEFAULT_EVAL_MODE,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Load the policy pool once, probe candidates against it, then run for real.
 
@@ -466,7 +534,7 @@ def _autotuned_run(
             defaults["host_memory_bytes"] = host_memory_bytes
     bounds = resolve_bounds(gpu_count, defaults)
     limits = resolve_limits(defaults)
-    shared = _build_inference(policy, request, manifest, benchmark_spec)
+    shared = _build_inference(policy, request, manifest, benchmark_spec, eval_mode=eval_mode)
     from .processes import InferencePool
 
     pool = InferencePool(
@@ -479,6 +547,14 @@ def _autotuned_run(
     )
     cached = run_cache.selection if run_cache is not None else None
     try:
+        if run_cache is not None and run_cache.has_sized_entries:
+            # Entries recorded at negotiated camera sizes are told apart by the Policy's execution
+            # contract, which is known once a replica has loaded; every probe and the final pass
+            # reuse that replica. Caches with only canonical entries are read as before.
+            with benchmark_phase(phase_timing_callback, "policy_load_s"):
+                pool.scale(gpu_count)
+            run_cache.bind(shared.execution_contract().to_dict())
+            cached = run_cache.selection
         with autotune_phase(phase_timing_callback):
             if cached is not None:
                 selected = {**cached, "mode": "cached", "searched_mode": cached.get("mode")}
@@ -501,10 +577,13 @@ def _autotuned_run(
                     limits=limits,
                 )
         # Probe episodes ran under other concurrencies; a formal run's times take precedence.
-        task_seconds = {
-            **task_seconds_from_queues(sorted((output_dir / "autotune").glob("candidate-*/queue"))),
-            **(run_cache.task_seconds if run_cache is not None else {}),
-        }
+        task_seconds = task_seconds_from_queues(sorted((output_dir / "autotune").glob("candidate-*/queue")))
+        if run_cache is not None:
+            task_seconds.update(
+                run_cache.task_seconds_for(shared.execution_contract().to_dict())
+                if pool.contexts
+                else run_cache.task_seconds
+            )
         final = _run_with_pool(
             factory=factory,
             request=request,
@@ -524,7 +603,14 @@ def _autotuned_run(
         pool.stop()
 
 
-def _build_inference(policy, request, manifest, benchmark_spec: BenchmarkSpec) -> PolicyProcessAdapter:
+def _build_inference(
+    policy,
+    request,
+    manifest,
+    benchmark_spec: BenchmarkSpec,
+    *,
+    eval_mode: str = DEFAULT_EVAL_MODE,
+) -> PolicyProcessAdapter:
     return PolicyProcessAdapter(
         command=policy.command,
         checkpoint_path=request.checkpoint_path,
@@ -533,6 +619,15 @@ def _build_inference(policy, request, manifest, benchmark_spec: BenchmarkSpec) -
         benchmark_spec=benchmark_spec,
         cwd=policy.cwd,
         load_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
+        eval_mode=eval_mode,
+        camera_support=benchmark_camera_support(
+            benchmark_spec,
+            dict(manifest.defaults),
+            manifest.benchmark_protocols.get(request.benchmark),
+        ),
+        rendered_image_features=benchmark_rendered_image_features(
+            benchmark_spec, manifest.benchmark_protocols.get(request.benchmark)
+        ),
     )
 
 
@@ -635,11 +730,13 @@ def run_candidate(
     cuda_mps: CudaMpsSession | None = None,
     profile: bool = False,
     task_seconds: dict[str, float] | None = None,
+    task_seconds_for: Callable[[dict[str, Any]], Mapping[str, float]] | None = None,
+    eval_mode: str = DEFAULT_EVAL_MODE,
 ) -> dict[str, Any]:
     adapter = (
         factory.create_probe(request, manifest, concurrency) if probe else factory.create(request, manifest)
     )
-    inference = _build_inference(policy, request, manifest, benchmark_spec)
+    inference = _build_inference(policy, request, manifest, benchmark_spec, eval_mode=eval_mode)
     return ParallelBenchmarkRuntime(
         config=RuntimeConfig(
             output_dir=output_dir,
@@ -655,6 +752,7 @@ def run_candidate(
         inference=inference,
         benchmark=adapter,
         cuda_mps=cuda_mps,
+        task_seconds_for=task_seconds_for,
     ).run(phase_timing_callback=phase_timing_callback)
 
 

@@ -29,6 +29,34 @@ _DEFAULTS: dict[str, Any] = {
 }
 _CAMERA_FEATURES = {"images.primary", "images.wrist", "images.auxiliary"}
 _DEPTH_FEATURES = {"state.depth_head", "state.depth_hand"}
+# Bridge cameras use a fixed pixel intrinsic for 640 x 480 over a real-photo background
+# (mani_skill/envs/tasks/digital_twins/bridge_dataset_eval/base_env.py at the pinned commit), so they
+# render only their own size.
+FIXED_SIZE_CAMERA_TASKS = frozenset({
+    "PutCarrotOnPlateInScene-v1", "PutEggplantInBasketScene-v1",
+    "StackGreenCubeOnYellowCubeBakedTexInScene-v1", "PutSpoonOnTableClothInScene-v1",
+})
+
+
+def fixed_size_cameras(profile: dict[str, Any]) -> dict[str, str]:
+    """The profile's image features whose cameras render only the task's own size."""
+    return dict(profile["cameras"]) if profile["task_id"] in FIXED_SIZE_CAMERA_TASKS else {}
+
+
+def fixed_size_camera_features(protocol: dict[str, Any], suite: str) -> frozenset[str]:
+    """The image features that any profile of ``suite`` maps to a Bridge camera.
+
+    One negotiated size applies to a feature across the suite's tasks, so such a feature keeps its own size.
+    """
+    return frozenset(
+        feature for profile in validate_profiles(protocol, suite) for feature in fixed_size_cameras(profile)
+    )
+
+
+def rendered_camera_features(protocol: dict[str, Any], suite: str) -> frozenset[str]:
+    """The image features that any profile of ``suite`` maps to a camera, so its observations carry them."""
+    profiles = validate_profiles(protocol, suite)
+    return frozenset(feature for profile in profiles for feature in profile["cameras"])
 
 
 def _profiles(protocol: dict[str, Any]) -> dict[str, Any]:
