@@ -24,6 +24,7 @@ class CpuStat:
 
 
 CGROUP = Path("/sys/fs/cgroup")
+PROC_SELF_CGROUP = Path("/proc/self/cgroup")
 
 
 def _meminfo() -> dict[str, int]:
@@ -34,27 +35,58 @@ def _meminfo() -> dict[str, int]:
     return values
 
 
-def host_memory_limit(root: Path = CGROUP) -> int | None:
-    """Host memory this process tree may use: the cgroup's ``memory.max`` or ``memory.high``, else RAM."""
+def _own_cgroup(root: Path, proc_cgroup: Path) -> Path | None:
+    """This process's cgroup v2 directory, or ``None`` without a unified hierarchy.
+
+    Inside a container with its own cgroup namespace the path is ``/``, so this is ``root``.
+    On a host, Slurm jobs and systemd scopes or services are cgroups below ``root``.
+    """
+
+    try:
+        lines = proc_cgroup.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        if line.startswith("0::"):
+            own = root / line[3:].strip().lstrip("/")
+            # A cgroup outside the mounted hierarchy: the mount is this process's own cgroup.
+            return own if own.is_dir() else root
+    return None
+
+
+def host_memory_limit(root: Path = CGROUP, proc_cgroup: Path = PROC_SELF_CGROUP) -> int | None:
+    """Host memory this process tree may use, else RAM.
+
+    The limit is the smallest ``memory.max`` or ``memory.high`` of this process's cgroup and its
+    ancestors, since a parent slice can hold the limit while the leaf reads ``max``.
+    """
 
     limits = []
-    for name in ("memory.max", "memory.high"):
-        path = root / name
-        if path.is_file() and (value := path.read_text(encoding="utf-8").strip()) != "max":
-            limits.append(int(value))
+    cgroup = _own_cgroup(root, proc_cgroup)
+    while cgroup is not None:
+        for name in ("memory.max", "memory.high"):
+            with contextlib.suppress(OSError, ValueError):
+                path = cgroup / name
+                if path.is_file() and (value := path.read_text(encoding="utf-8").strip()) != "max":
+                    limits.append(int(value))
+        cgroup = cgroup.parent if cgroup != root and root in cgroup.parents else None
     with contextlib.suppress(OSError, KeyError):
         limits.append(_meminfo()["MemTotal"])
     return min(limits, default=None)
 
 
-def host_memory_used(root: Path = CGROUP) -> int | None:
-    """Host memory in use without page cache: the cgroup's, else the machine's."""
+def host_memory_used(root: Path = CGROUP, proc_cgroup: Path = PROC_SELF_CGROUP) -> int | None:
+    """Host memory in use without reclaimable page cache: this process's cgroup's, else the machine's."""
 
     try:
-        if (root / "memory.current").is_file():
-            stat_text = (root / "memory.stat").read_text(encoding="utf-8")
+        cgroup = _own_cgroup(root, proc_cgroup)
+        if cgroup is not None and (cgroup / "memory.current").is_file():
+            stat_text = (cgroup / "memory.stat").read_text(encoding="utf-8")
             stat = dict(line.split() for line in stat_text.splitlines())
-            return int((root / "memory.current").read_text(encoding="utf-8")) - int(stat.get("file", 0))
+            # ``file`` includes ``shmem`` (tmpfs, /dev/shm, shared memory segments), which
+            # counts toward the limit and cannot be reclaimed without swap.
+            reclaimable = int(stat.get("file", 0)) - int(stat.get("shmem", 0))
+            return int((cgroup / "memory.current").read_text(encoding="utf-8")) - reclaimable
         meminfo = _meminfo()
         return meminfo["MemTotal"] - meminfo["MemAvailable"]
     except (OSError, KeyError, ValueError):

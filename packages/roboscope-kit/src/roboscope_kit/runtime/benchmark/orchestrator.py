@@ -52,6 +52,8 @@ class RuntimeConfig:
     # Mean episode wall time per task from earlier runs; the formal pass hands out the
     # longest items first so no long task starts last.
     task_seconds: Mapping[str, float] | None = None
+    # Host memory limit from the manifest (``host_memory_bytes``); detected when unset.
+    host_memory_bytes: int | None = None
 
     def __post_init__(self) -> None:
         if not self.gpu_devices or len(self.gpu_devices) != len(set(self.gpu_devices)):
@@ -365,7 +367,7 @@ class ParallelBenchmarkRuntime:
                 "gpu_samples": len(samples),
                 "host": {
                     "peak_memory_bytes": max(sampler.host_memory_samples, default=None),
-                    "limit_bytes": host_memory_limit(),
+                    "limit_bytes": self.config.host_memory_bytes or host_memory_limit(),
                 },
             },
             "recovery": {

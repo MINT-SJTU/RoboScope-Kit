@@ -147,11 +147,13 @@ one on total probe steps over probe wall time, recorded as `"throughput_estimato
 `selection.json` metrics. That rate understates a larger `K`, so a step it keeps is a real gain. Probes it
 measures but does not keep are marked `rejected` in `selection.json`.
 
-`diagonal` also watches host memory. Each probe records its peak host memory without page cache, from the
-cgroup when there is one, and a probe above 85% of the host limit (the cgroup's `memory.max` or `memory.high`,
-else RAM; a manifest can set `host_memory_bytes`) is rejected. As for CPU, the marginal memory of a Worker
-between two probes caps how many Workers the next step may add. Probes are short, so the 15% left free covers
-simulators whose memory grows over a long run.
+`diagonal` also watches host memory. Each probe records the peak memory of the CLI's cgroup v2 without
+reclaimable page cache (tmpfs and shared memory count as used), or of the machine when there is no cgroup v2
+memory controller. A probe above 85% of the host limit is rejected. The limit is the smallest `memory.max` or
+`memory.high` of the CLI's cgroup and its ancestors, so a Slurm job or a systemd scope gets its own limit, and
+RAM when none is set. A manifest can set `host_memory_bytes` instead. As for CPU, the marginal memory of a
+Worker between two probes caps how many Workers the next step may add. The 15% left free is a heuristic margin
+for memory that keeps growing after a short probe.
 
 A manifest can set `autotune_replica_memory_backoff: true` (RoboTwin does): when a replica step's `K` would not
 fit in GPU memory, the step tries the largest smaller `K` that fits, in steps of the GPU count and down to the

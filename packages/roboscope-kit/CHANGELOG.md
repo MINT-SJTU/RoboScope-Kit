@@ -4,11 +4,15 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 ## 0.8.0b89 - 2026-11-26
 
-- Make autotune account for host memory. Probes record their peak host memory without page cache (cgroup v2,
-  else `/proc/meminfo`), and `result.json` reports it under `resources.host`. A probe above 85% of the host
-  limit is rejected by the `diagonal` search, and the marginal memory per Worker caps its next K step as CPU
-  use does. Manifests can set `host_memory_bytes`. Before this, only GPU memory was checked, so a search could
-  pick a K that fills host memory during the full run. The run cache key includes the host memory limit.
+- Make autotune account for host memory. Probes record their peak host memory, and `result.json` reports it
+  with the limit autotune used under `resources.host`. A probe above 85% of the host limit is rejected by the
+  `diagonal` search, and the marginal memory per Worker caps its next K step as CPU use does. Before this, only
+  GPU memory was checked, so a search could pick a K that fills host memory during the full run. The run
+  cache key includes the host memory limit.
+- The limit is the smallest `memory.max` or `memory.high` of the CLI's own cgroup v2 and its ancestors, so
+  Slurm jobs and systemd scopes are bounded by their own limits, else RAM. Manifests can set
+  `host_memory_bytes` instead. Memory in use is the cgroup's `memory.current` without reclaimable page cache;
+  tmpfs and shared memory count as used. Hosts without a cgroup v2 memory controller use `/proc/meminfo`.
 
 ## 0.8.0b88 - 2026-11-26
 

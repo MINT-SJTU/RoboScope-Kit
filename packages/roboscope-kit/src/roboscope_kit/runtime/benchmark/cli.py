@@ -671,6 +671,13 @@ def _shard_kwargs(args: argparse.Namespace, manifest: BenchmarkManifest) -> dict
     }
 
 
+def _manifest_host_memory(manifest: BenchmarkManifest) -> int | None:
+    """The manifest's ``host_memory_bytes``, which autotune uses in place of the detected limit."""
+
+    value = manifest.defaults.get("host_memory_bytes")
+    return int(value) if value else None
+
+
 def _run_with_pool(
     *,
     factory: BenchmarkFactory,
@@ -699,6 +706,7 @@ def _run_with_pool(
             concurrency=concurrency,
             base_port=int(manifest.defaults.get("base_port", 16694)),
             ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
+            host_memory_bytes=_manifest_host_memory(manifest),
             probe_limits=probe_limits,
             task_seconds=task_seconds,
             **(shard_kwargs or {}),
@@ -745,6 +753,7 @@ def run_candidate(
             concurrency=concurrency,
             base_port=int(manifest.defaults.get("base_port", 16694)),
             ready_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
+            host_memory_bytes=_manifest_host_memory(manifest),
             profile=profile,
             task_seconds=task_seconds,
             **(shard_kwargs or {}),
