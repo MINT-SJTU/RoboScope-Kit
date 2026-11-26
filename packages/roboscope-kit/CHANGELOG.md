@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b91 - 2026-11-27
+
+- Preserve zero-dimensional NumPy arrays when sending Policy socket messages with JSON or MessagePack.
+  Strided arrays still travel in C order, and NumPy scalars still decode as Python numbers.
+
 ## 0.8.0b90 - 2026-11-26
 
 - Remove the `inference_metrics` summary from `result.json` and the `queue_wait_p95_ms` signal from autotune
