@@ -57,7 +57,7 @@ a record that fails it. A test checks the file name of synthetic workloads.
 | `replica_vram_bytes` | The replica VRAM footprint `measure` returns. Absent means unknown. |
 | `manifest_defaults` | The bounds and limits inputs, with the names of the manifest's `defaults`. With `host`, they go through the real `resolve_bounds` and `resolve_limits`, never through this machine's CPU quota. |
 | `observed_searches` | Optional: one entry per recorded search, in `--run` order: `autotune`, the autotune code it ran (such as `main 5f79ce2`); `strategy`; `throughput_estimator`; `path`, every K/g it probed, in order; `selected`; `stop_reason`, with each probe message cut to its code; and `elapsed_s`. |
-| `unknown_fields` | Every tracked field that a finished measurement lacks: `cpu_cores`, `gpu_utilization`, `health`, `peak_memory_bytes`, `probe_items`, `queue_wait_p95_ms`, `record_success`, `steady_window` (not required for `no_steady_window`), `steps_per_s`, `throttle_time_ratio`, and `wall_time_s`. A tracked field that is left out must be listed here. |
+| `unknown_fields` | Every tracked field that a finished measurement lacks: `cpu_cores`, `gpu_utilization`, `health`, `peak_memory_bytes`, `probe_items`, `record_success`, `steady_window` (not required for `no_steady_window`), `steps_per_s`, `throttle_time_ratio`, and `wall_time_s`. A tracked field that is left out must be listed here. |
 | `unmeasured` | In words, which K/g nobody measured. |
 | `measurements` | One entry per probe. Several entries at one K/g are repeats. |
 
@@ -70,7 +70,7 @@ A measurement holds:
 | `outcome` | `completed`, `no_steady_window`, or a failure: `worker_oom`, `worker_failure`, `worker_loss`, `worker_shortfall`, `incomplete_probe`, `capacity_reached`, `policy_replica_failure`, `correctness_regression`, `candidate_timeout`. |
 | `steady_steps_per_s` | Required for `completed`, forbidden for `no_steady_window`. An absent steady rate always means "no window", never "not reported", because that is how the controller reads it. |
 | `steps_per_s`, `steady_window` | The elapsed rate and the steady window as in `result.json`. |
-| `cpu_cores`, `throttle_time_ratio`, `gpu_utilization`, `peak_memory_bytes`, `queue_wait_p95_ms` | The resource signals the controller reads. |
+| `cpu_cores`, `throttle_time_ratio`, `gpu_utilization`, `peak_memory_bytes` | The resource signals the controller reads. |
 | `health`, `record_success` | Probe health and per-episode success. |
 | `wall_time_s` | The probe's wall time. |
 | `search` | For a probe: the index in `observed_searches` of the search that ran it. |

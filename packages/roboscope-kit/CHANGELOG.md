@@ -2,6 +2,12 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b90 - 2026-11-26
+
+- Remove the `inference_metrics` summary from `result.json` and the `queue_wait_p95_ms` signal from autotune
+  records and the autotune testbed. No component wrote the `inference-metrics-*.jsonl` files the summary was
+  read from, so it was never present and the signal was always 0. No K or g decision used the signal.
+
 ## 0.8.0b89 - 2026-11-26
 
 - Make autotune account for host memory. Probes record their peak host memory, and `result.json` reports it

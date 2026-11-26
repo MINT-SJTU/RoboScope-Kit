@@ -46,8 +46,7 @@
       "cpu_cores": 2.0,
       "throttle_time_ratio": 0.0,
       "gpu_utilization": 0.1,
-      "peak_memory_bytes": 5905580032,
-      "queue_wait_p95_ms": 1.0
+      "peak_memory_bytes": 5905580032
     },
     {
       "k": 2,
@@ -60,8 +59,7 @@
       "cpu_cores": 4.0,
       "throttle_time_ratio": 0.0,
       "gpu_utilization": 0.2,
-      "peak_memory_bytes": 6012954214,
-      "queue_wait_p95_ms": 1.0
+      "peak_memory_bytes": 6012954214
     },
     {
       "k": 4,
@@ -74,8 +72,7 @@
       "cpu_cores": 8.0,
       "throttle_time_ratio": 0.0,
       "gpu_utilization": 0.45,
-      "peak_memory_bytes": 6227702579,
-      "queue_wait_p95_ms": 2.0
+      "peak_memory_bytes": 6227702579
     },
     {
       "k": 4,
@@ -88,8 +85,7 @@
       "cpu_cores": 8.0,
       "throttle_time_ratio": 0.0,
       "gpu_utilization": 0.45,
-      "peak_memory_bytes": 6227702579,
-      "queue_wait_p95_ms": 2.0
+      "peak_memory_bytes": 6227702579
     },
     {
       "k": 8,
@@ -101,8 +97,7 @@
       "cpu_cores": 16.0,
       "throttle_time_ratio": 0.0,
       "gpu_utilization": 0.5,
-      "peak_memory_bytes": 6656727040,
-      "queue_wait_p95_ms": 4.0
+      "peak_memory_bytes": 6656727040
     },
     {
       "k": 8,
@@ -114,8 +109,7 @@
       "cpu_cores": 16.0,
       "throttle_time_ratio": 0.0,
       "gpu_utilization": 0.6,
-      "peak_memory_bytes": 12025436160,
-      "queue_wait_p95_ms": 3.0
+      "peak_memory_bytes": 12025436160
     },
     {
       "k": 8,
@@ -141,8 +135,7 @@
       "cpu_cores": 8.0,
       "throttle_time_ratio": 0.0,
       "gpu_utilization": 0.7,
-      "peak_memory_bytes": 11811160064,
-      "queue_wait_p95_ms": 2.0
+      "peak_memory_bytes": 11811160064
     }
   ]
 }

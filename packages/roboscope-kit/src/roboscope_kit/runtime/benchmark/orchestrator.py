@@ -15,7 +15,6 @@ from typing import Any, Callable, Iterable, Mapping, Sequence  # noqa: UP035 - t
 from .adapters import BenchmarkAdapter, InferenceAdapter, WorkerContext
 from .autotune import ProbeCapacityReached, ProbeLimits, ProbeTimedOut
 from .cuda_mps import CudaMpsSession
-from .metrics import read_jsonl_since, summarize_events
 from .nsys import profiled_process
 from .processes import InferencePool, ManagedProcess, ProcessFailureKind, start_process
 from .queue import WorkQueue, atomic_json
@@ -283,7 +282,6 @@ class ParallelBenchmarkRuntime:
                 f"concurrency {self.config.concurrency} exceeds policy capacity "
                 f"{self.config.replicas * maximum_workers}"
             )
-        inference_offsets = self._inference_metric_offsets()
         sampler = GpuSampler(gpu_devices=self.config.gpu_devices)
         before_cpu = read_cpu_stat()
         sampler.start()
@@ -380,13 +378,6 @@ class ParallelBenchmarkRuntime:
                 "final_workers_per_gpu": surviving_workers_per_gpu,
             },
         }
-        inference_events = [
-            event
-            for path in sorted(self.server_pool.output_dir.glob("inference-metrics-*.jsonl"))
-            for event in read_jsonl_since(path, inference_offsets.get(path, 0))
-        ]
-        if inference_events:
-            output["inference_metrics"] = summarize_events(inference_events)
         output["runtime"]["output_dir"] = str(self.config.output_dir)
         atomic_json(self.config.output_dir / "result.json", output)
         append_event(events_path, {"type": "complete", **standard})
@@ -434,12 +425,6 @@ class ParallelBenchmarkRuntime:
                 "action": "abort",
             },
         )
-
-    def _inference_metric_offsets(self) -> dict[Path, int]:
-        return {
-            path: path.stat().st_size
-            for path in self.server_pool.output_dir.glob("inference-metrics-*.jsonl")
-        }
 
     def _start_workers(self, worker_count: int) -> None:
         execution_contract = self.inference.execution_contract()
