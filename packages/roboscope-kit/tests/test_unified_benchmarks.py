@@ -1086,6 +1086,56 @@ def test_calvin_worker_receives_negotiated_action_representation(
     index = spec.command.index("--action-representation")
     assert spec.command[index + 1] == representation
     assert "CALVIN_ACTION_TYPE" not in spec.env
+    assert "--static-size" not in spec.command and "--gripper-size" not in spec.command
+
+
+def test_calvin_worker_renders_the_negotiated_camera_sizes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from roboscope_kit.runtime.benchmark.adapters import WorkerContext
+    from roboscope_kit.runtime.benchmarks.calvin import worker as calvin_worker
+
+    contract = _negotiate_image_sizes("calvin", "task_D_D", {"images.static": [(240, 320)]})
+    assert contract.image_sizes == {"images.static": (240, 320)}
+    sequences_path = _write_official_sequences(tmp_path, monkeypatch)
+    adapter = CalvinBenchmarkFactory().create(
+        _request(BenchmarkName.CALVIN, "task_D_D", quick_test=True),
+        _calvin_manifest(sequences_path, episodes=1000),
+    )
+    context = WorkerContext(
+        worker_id=0,
+        gpu_slot=0,
+        gpu_device="0",
+        replica_id=0,
+        replica_port=16694,
+        replica_socket=Path("/tmp/replica.sock"),
+        queue_dir=Path("/tmp/queue"),
+        state_dir=Path("/tmp/state"),
+        output_dir=Path("/tmp/out"),
+        execution_contract=contract,
+    )
+    command = adapter.worker_process(context).command
+    assert command[command.index("--static-size") + 1] == "240x320"
+    assert "--gripper-size" not in command
+
+    class CameraConfig(dict):
+        __getattr__ = dict.__getitem__
+        __setattr__ = dict.__setitem__
+
+    def cameras():
+        return CameraConfig(
+            cameras=CameraConfig(
+                static=CameraConfig(width=200, height=200, aspect=1, fov=10),
+                gripper=CameraConfig(width=84, height=84, aspect=1, fov=75),
+            )
+        )
+
+    env_config = cameras()
+    calvin_worker.apply_camera_sizes(env_config, {"static": (240, 320), "gripper": (128, 128)})
+    assert env_config.cameras.static == {"width": 320, "height": 240, "aspect": 320 / 240, "fov": 10}
+    assert env_config.cameras.gripper == {"width": 128, "height": 128, "aspect": 1.0, "fov": 75}
+    with pytest.raises(RuntimeError, match="no tactile camera"):
+        calvin_worker.apply_camera_sizes(cameras(), {"tactile": (64, 64)})
 
 
 def test_calvin_factory_rejects_wrong_suite(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1266,6 +1316,15 @@ def test_image_sizes_pick_the_first_size_the_benchmark_renders() -> None:
     fallback = _negotiate_image_sizes("libero", "libero_10", [(2000, 2000), roboscope_kit.ANY_SIZE])
     assert fallback.image_sizes == {}
 
+    calvin = _negotiate_image_sizes("calvin", "task_D_D", [(200, 200), (84, 84), roboscope_kit.ANY_SIZE])
+    assert calvin.image_sizes == {"images.gripper": (200, 200)}
+    assert _negotiate_image_sizes("calvin", "task_D_D", None).image_sizes == {}
+    calvin_spec = apply_image_sizes(
+        roboscope_kit.get_benchmark_spec("calvin", "task_D_D"), {"images.static": (96, 128)}
+    )
+    calvin_shapes = {feature.name: feature.shape for feature in calvin_spec.features}
+    assert calvin_shapes["images.static"] == (96, 128, None) and calvin_shapes["images.gripper"] is None
+
 
 @pytest.mark.parametrize(
     ("benchmark", "suite", "image_sizes", "defaults", "message"),
@@ -1273,6 +1332,7 @@ def test_image_sizes_pick_the_first_size_the_benchmark_renders() -> None:
         ("libero_plus", "libero_10", [(128, 128)], None, "renders only 256x256"),
         ("libero", "libero_10", [(600, 600)], {"render_backend": "osmesa"}, "heights 64-480"),
         ("robotwin", "demo_clean", [(128, 128)], None, "unspecified"),
+        ("calvin", "task_D_D", [(2048, 2048)], None, "heights 64-1024"),
         ("libero", "libero_10", {"images.agentview": [(128, 128)]}, None, "not libero images"),
     ],
 )
@@ -1541,5 +1601,22 @@ def test_camera_support_is_limited_to_what_the_policy_server_understands(tmp_pat
 
     server = roboscope_kit.PolicyServer(object(), tmp_path / "policy.sock")
     assert server._dispatch("health", {})["image_size_features"] == list(IMAGE_SIZE_FEATURES)
+    assert "open_shape_ranges" in IMAGE_SIZE_FEATURES
+
+    from roboscope_kit.benchmark_specs import benchmark_camera_support
+
+    calvin = roboscope_kit.get_benchmark_spec("calvin", "task_D_D")
+    calvin_support = benchmark_camera_support(calvin, {})
+    older = camera_support_for_server(calvin, calvin_support, BASELINE_IMAGE_SIZE_FEATURES)
+    assert older == {
+        "images.static": CameraSupport(canonical=(200, 200)),
+        "images.gripper": CameraSupport(canonical=(84, 84)),
+    }
+    preferences = [(240, 320), roboscope_kit.ANY_SIZE]
+    assert roboscope_kit.negotiate_policy_action_contract(
+        calvin, _image_size_capabilities("calvin", preferences), camera_support=older
+    ).image_sizes == {}
+    current = camera_support_for_server(calvin, calvin_support, frozenset(IMAGE_SIZE_FEATURES))
+    assert current == calvin_support
     with_encodings = server._dispatch("health", {"encodings": ["json"]})
     assert with_encodings["image_size_features"] == list(IMAGE_SIZE_FEATURES)

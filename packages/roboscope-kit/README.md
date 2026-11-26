@@ -257,7 +257,9 @@ PolicyCapabilities(..., image_sizes={"images.wrist": [(128, 160), ANY_SIZE]})  #
 Without `image_sizes` every camera keeps the benchmark's size, as before. When no listed size can be
 rendered, the run stops before any Worker starts and names what each side supports. LIBERO and LIBERO-Pro
 render any size from 64 to 1024 pixels per side (up to 480 x 640 with `render_backend: osmesa`), and so
-does every configured MetaWorld camera; the other benchmarks render their own size only. Sizes that differ from the benchmark's own are recorded in
+do every configured MetaWorld camera and CALVIN's static (200 x 200) and gripper (84 x 84) cameras
+(other CALVIN sizes need roboscope-kit 0.8.0b83 or later in the Policy environment); the other benchmarks
+render their own size only. Sizes that differ from the benchmark's own are recorded in
 `policy_io.image_sizes`, and `policy_io.canonical_observations` is then `false`, so such results are not
 mixed with results under the benchmark's protocol. Inside `load()`,
 `context.benchmark` still carries the benchmark's own sizes.

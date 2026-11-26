@@ -22,7 +22,9 @@ ANY_SIZE = "any"
 # reports none (roboscope-kit 0.8.0b77) understands ``fixed_shape_ranges``: size ranges for features
 # whose spec fixes a spatial shape. Add a name here whenever camera support gains a meaning an older
 # server would misread, and teach ``camera_support_requirements`` about it.
-IMAGE_SIZE_FEATURES: tuple[str, ...] = ("fixed_shape_ranges",)
+# ``open_shape_ranges``: size ranges for features whose spec leaves the shape open; the negotiated
+# feature takes the shape ``(height, width, None)`` (CALVIN).
+IMAGE_SIZE_FEATURES: tuple[str, ...] = ("fixed_shape_ranges", "open_shape_ranges")
 BASELINE_IMAGE_SIZE_FEATURES = frozenset({"fixed_shape_ranges"})
 
 ImageSize = tuple[int, int]
@@ -283,8 +285,12 @@ def apply_image_sizes(benchmark: BenchmarkSpec, image_sizes: Mapping[str, ImageS
         if size is None:
             features.append(feature)
             continue
-        if feature.shape is None or len(feature.shape) < 3:
+        if feature.shape is None:
+            # A spec that leaves the image shape open still fixes the negotiated spatial size.
+            shape: tuple[int | None, ...] = (size[0], size[1], None)
+        elif len(feature.shape) < 3:
             raise ValueError(f"{benchmark.name} {feature.name} has no spatial shape to resize")
-        shape = (*feature.shape[:-3], size[0], size[1], feature.shape[-1])
+        else:
+            shape = (*feature.shape[:-3], size[0], size[1], feature.shape[-1])
         features.append(replace(feature, shape=shape))
     return replace(benchmark, features=tuple(features))

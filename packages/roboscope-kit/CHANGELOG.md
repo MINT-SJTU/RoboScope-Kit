@@ -2,6 +2,18 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b83 - 2026-11-26
+
+- Let Policies negotiate CALVIN camera sizes. The static (200 × 200) and gripper (84 × 84) cameras render
+  natively at 64–1024 pixels per side; the worker sets the negotiated width, height and aspect ratio in
+  the merged environment config. Without `image_sizes` CALVIN runs exactly as before.
+- Policy servers report the `open_shape_ranges` image-size feature: an image feature whose spec leaves its
+  shape open takes the negotiated `(height, width)`. A Policy whose own environment runs an older
+  roboscope-kit is offered only CALVIN's own 200 × 200 static and 84 × 84 gripper sizes.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 CALVIN frames with
+  `canonical_observations: false` instead of the canonical sizes.
+
 ## 0.8.0b82 - 2026-11-26
 
 - The Policy server reports which image-size features it understands (`image_size_features` in its

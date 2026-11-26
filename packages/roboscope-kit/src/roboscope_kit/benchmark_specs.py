@@ -623,6 +623,13 @@ METAWORLD_MIN_CAMERA_DIMENSION = 64
 METAWORLD_MAX_CAMERA_DIMENSION = 1024
 
 
+# CALVIN's calvin_env cameras (conf/cameras/cameras/{static,gripper}.yaml) render natively at any
+# size; the canonical sizes are the upstream configs' and the spec leaves the shapes open.
+CALVIN_CANONICAL_IMAGE_SIZES = {"images.static": (200, 200), "images.gripper": (84, 84)}
+CALVIN_MIN_IMAGE_SIZE = (64, 64)
+CALVIN_MAX_IMAGE_SIZE = (1024, 1024)
+
+
 def benchmark_camera_support(
     benchmark: BenchmarkSpec,
     defaults: dict[str, Any] | None = None,
@@ -645,6 +652,11 @@ def benchmark_camera_support(
                 canonical=support.canonical,
                 min_size=(METAWORLD_MIN_CAMERA_DIMENSION, METAWORLD_MIN_CAMERA_DIMENSION),
                 max_size=(METAWORLD_MAX_CAMERA_DIMENSION, METAWORLD_MAX_CAMERA_DIMENSION),
+            )
+    elif benchmark.name == BenchmarkName.CALVIN.value:
+        for feature, canonical in CALVIN_CANONICAL_IMAGE_SIZES.items():
+            table[feature] = CameraSupport(
+                canonical=canonical, min_size=CALVIN_MIN_IMAGE_SIZE, max_size=CALVIN_MAX_IMAGE_SIZE
             )
     return table
 
