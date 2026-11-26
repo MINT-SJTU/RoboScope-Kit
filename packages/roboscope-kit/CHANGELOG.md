@@ -10,10 +10,10 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   at once (the steps in between read no observation, so the actions do not change) and keeps the rollout
   state of each open episode, so one replica serves several workers.
 - A BEHAVIOR run keeps one RTX texture cache per scene under `<output-dir>/texture-cache` instead of one
-  per worker, evaluates one scene after another, and removes a scene's cache once no pending or running
-  item needs it. A warm cache halves a scene load and leaves the rendered images unchanged. With 4
-  workers and 2 replicas on one RTX 4090 the evaluation runs about 1.6 times as many actions per second as
-  with 2 workers and 2 replicas before.
+  per worker, evaluates every instance of one scene's tasks before the next scene, and removes a scene's
+  cache once no pending or running item needs it. A warm cache halves a scene load and leaves the rendered
+  images unchanged. With 4 workers and 2 replicas on one RTX 4090 the evaluation runs about 1.6 times as
+  many actions per second as with 2 workers and 2 replicas before.
 
 ## 0.8.0b91 - 2026-11-27
 

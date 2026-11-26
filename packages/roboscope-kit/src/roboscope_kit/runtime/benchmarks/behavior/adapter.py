@@ -82,8 +82,9 @@ class BehaviorBenchmarkAdapter:
     def work_items(self) -> Sequence[WorkItem]:
         # One item per instance: each worker process loads one scene and evaluates one instance, as
         # the native command with one instance index does. One scene after another, so the run keeps
-        # few scene texture caches (see the worker), the scene with the most steps first and, within a
-        # scene, the longest tasks first, so the tail of a run is not one long episode.
+        # few scene texture caches (see the worker): every instance of a scene's tasks before the next
+        # scene, the scene with the most steps first and, within a scene, the longest tasks first, so the
+        # tail of a run is not one long episode.
         scene_steps: dict[str, int] = {}
         for task in self.config.tasks:
             scene_steps[TASK_SCENES[task]] = scene_steps.get(TASK_SCENES[task], 0) + MAX_STEPS[task]
@@ -97,8 +98,8 @@ class BehaviorBenchmarkAdapter:
             ),
         )
         items: list[WorkItem] = []
-        for index in range(self.config.instances_per_task):
-            for task in tasks:
+        for task in tasks:
+            for index in range(self.config.instances_per_task):
                 items.append(
                     WorkItem(
                         ordinal=len(items),
