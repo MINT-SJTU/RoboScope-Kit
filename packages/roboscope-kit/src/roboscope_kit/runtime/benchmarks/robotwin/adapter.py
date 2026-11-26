@@ -30,6 +30,13 @@ ROBOTWIN_ALL_TASKS = (
     "stack_bowls_three", "stack_bowls_two", "stamp_seal", "turn_switch",
 )
 
+# Observation feature -> worker flag that creates its RoboTwin camera at a negotiated size.
+ROBOTWIN_CAMERA_SIZE_FLAGS = (
+    ("images.head", "--head-size"),
+    ("images.left_wrist", "--left-wrist-size"),
+    ("images.right_wrist", "--right-wrist-size"),
+)
+
 
 @dataclass(frozen=True)
 class RoboTwinRuntimeConfig:
@@ -141,10 +148,19 @@ class RoboTwinBenchmarkAdapter:
             "robotwin.ee-compact-quat-v1": "ee",
         }[context.execution_contract.action_representation]
         threads = str(self.config.cpu_threads)
+        image_sizes = context.execution_contract.image_sizes
+        camera_sizes: tuple[str, ...] = ()
+        for feature, flag in ROBOTWIN_CAMERA_SIZE_FLAGS:
+            if feature in image_sizes:
+                height, width = image_sizes[feature]
+                camera_sizes += (flag, f"{height}x{width}")
         render_service = ()
         if self.config.render_mode == "central":
             if action_type != "qpos":
                 raise ValueError("RoboTwin central rendering supports qpos actions only")
+            if image_sizes:
+                # benchmark_camera_support offers RoboTwin's camera ranges for native rendering only.
+                raise ValueError("RoboTwin central rendering renders the task config's camera sizes only")
             if self.render_services is None:
                 assert self.config.render_service_path is not None
                 self.render_services = RoboTwinRenderServices(
@@ -185,6 +201,7 @@ class RoboTwinBenchmarkAdapter:
                 # once per worker instead of once per task.
                 *(("--eval-session",) if self.config.seed_cache_dir is not None else ()),
                 *render_service,
+                *camera_sizes,
             ),
             cwd=self.config.robotwin_root,
             env={
@@ -250,4 +267,9 @@ class RoboTwinBenchmarkAdapter:
         return metadata
 
 
-__all__ = ["ROBOTWIN_ALL_TASKS", "RoboTwinBenchmarkAdapter", "RoboTwinRuntimeConfig"]
+__all__ = [
+    "ROBOTWIN_ALL_TASKS",
+    "ROBOTWIN_CAMERA_SIZE_FLAGS",
+    "RoboTwinBenchmarkAdapter",
+    "RoboTwinRuntimeConfig",
+]

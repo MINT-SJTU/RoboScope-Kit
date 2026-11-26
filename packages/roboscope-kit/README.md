@@ -254,13 +254,31 @@ PolicyCapabilities(..., image_sizes=[(224, 224), ANY_SIZE])  # prefer 224 x 224
 PolicyCapabilities(..., image_sizes={"images.wrist": [(128, 160), ANY_SIZE]})  # one camera
 ```
 
+Cameras that share one size, such as RoboCasa365's three, take the first size all of them accept, so a
+mapping should name every camera of the group.
+
 Without `image_sizes` every camera keeps the benchmark's size, as before. When no listed size can be
 rendered, the run stops before any Worker starts and names what each side supports. LIBERO and LIBERO-Pro
 render any size from 64 to 1024 pixels per side (up to 480 x 640 with `render_backend: osmesa`), and so
 do every configured MetaWorld camera and CALVIN's static (200 x 200) and gripper (84 x 84) cameras
 (other CALVIN sizes need roboscope-kit 0.8.0b83 or later in the Policy environment);
 RLBench renders each camera at 32 to 768 pixels per side, with its depth and point cloud at the same
-size (other RLBench sizes need roboscope-kit 0.8.0b83 or later in the Policy environment); the other benchmarks render their own size only. Sizes that differ from the benchmark's own are recorded in
+size (other RLBench sizes need roboscope-kit 0.8.0b83 or later in the Policy environment); LIBERO-Plus
+renders the LIBERO wrist sizes and square agent views from 64 x 64 to 256 x 256, the sizes its image
+corruptions support (square agent-view sizes need roboscope-kit 0.8.0b83 or later in the Policy
+environment); the ManiSkill cameras a suite's tasks use render any size from 16 to 512 pixels per side,
+while the Bridge camera keeps 480 x 640 (ManiSkill sizes need roboscope-kit 0.8.0b83 or later in the Policy
+environment); RoboCasa365 renders 64 to 640 pixels per side, one size shared by its three cameras (these
+sizes need roboscope-kit 0.8.0b83 or later in the Policy environment; older ones get 256 x 256 as before);
+RoboDojo's head and wrist cameras render any size from 64 to 2048 pixels per side, keeping each camera's
+horizontal field of view (RoboDojo keeps 480 x 640 on a runtime built before this release until it is rebuilt
+with the new `build-runtime.sh`, and other RoboDojo sizes need roboscope-kit 0.8.0b83 or later in the Policy
+environment); RoboTwin renders its head and wrist cameras at 64 to 1024 pixels per side with the vertical
+field of view of its task config, so the horizontal view follows the aspect ratio (at 224 x 224 the
+horizontal field of view narrows from about 48° to 37°). RoboTwin keeps 240 x 320 with
+`render_mode: central` and on a runtime built before this release until it is rebuilt, and other RoboTwin
+sizes need roboscope-kit 0.8.0b83 or later in the Policy environment; the other benchmarks render their own
+size only. Sizes that differ from the benchmark's own are recorded in
 `policy_io.image_sizes`, and `policy_io.canonical_observations` is then `false`, so such results are not
 mixed with results under the benchmark's protocol. Inside `load()`,
 `context.benchmark` still carries the benchmark's own sizes.

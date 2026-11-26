@@ -22,11 +22,20 @@ ANY_SIZE = "any"
 # reports none (roboscope-kit 0.8.0b77) understands ``fixed_shape_ranges``: size ranges for features
 # whose spec fixes a spatial shape. Add a name here whenever camera support gains a meaning an older
 # server would misread, and teach ``camera_support_requirements`` about it.
-# ``open_shape_ranges``: size ranges for features whose spec leaves the shape open; the negotiated
-# feature takes the shape ``(height, width, None)`` (CALVIN).
+# ``open_shape_ranges``: size ranges for features whose spec leaves the shape open; the feature
+# takes the negotiated ``(height, width)`` (CALVIN, ManiSkill).
 # ``spatial_features``: a camera's other features (depth, point cloud) take its negotiated size
 # (``CameraSupport.spatial_features``, RLBench).
-IMAGE_SIZE_FEATURES: tuple[str, ...] = ("fixed_shape_ranges", "open_shape_ranges", "spatial_features")
+# ``square_sizes``: a size range limited to square sizes (``CameraSupport.square``, LIBERO-Plus).
+# ``shared_sizes``: cameras of one ``CameraSupport.size_group`` render one size, negotiated jointly
+# (RoboCasa365).
+IMAGE_SIZE_FEATURES: tuple[str, ...] = (
+    "fixed_shape_ranges",
+    "open_shape_ranges",
+    "spatial_features",
+    "square_sizes",
+    "shared_sizes",
+)
 BASELINE_IMAGE_SIZE_FEATURES = frozenset({"fixed_shape_ranges"})
 
 ImageSize = tuple[int, int]
@@ -99,13 +108,19 @@ class CameraSupport:
     it. ``min_size``/``max_size`` bound the sizes the simulator renders natively; when they are
     ``None`` the camera renders only its canonical size. ``spatial_features`` names the other
     observation features rendered by this camera, such as depth or a point cloud, whose first two
-    dimensions are the camera's (height, width) and follow its negotiated size.
+    dimensions are the camera's (height, width) and follow its negotiated size. ``square``
+    limits the camera to sizes whose height equals their width. Cameras with the same
+    ``size_group`` render one size, which the negotiation picks for all of them together; they must
+    have equal ``canonical``, ``min_size``, ``max_size`` and ``square``, with the canonical size inside
+    the range, so that a Policy without ``image_sizes`` or with ``[ANY_SIZE]`` always negotiates.
     """
 
     canonical: ImageSize | None
     min_size: ImageSize | None = None
     max_size: ImageSize | None = None
     spatial_features: tuple[str, ...] = ()
+    square: bool = False
+    size_group: str | None = None
 
     def __post_init__(self) -> None:
         if (self.min_size is None) != (self.max_size is None):
@@ -118,10 +133,14 @@ class CameraSupport:
             not isinstance(feature, str) or not feature for feature in self.spatial_features
         ):
             raise ValueError("camera support spatial_features must be a tuple of feature names")
+        if self.size_group is not None and (not isinstance(self.size_group, str) or not self.size_group):
+            raise ValueError("camera support size_group must be a non-empty string")
 
     def renders(self, size: ImageSize) -> bool:
         if self.min_size is None or self.max_size is None:
             return size == self.canonical
+        if self.square and size[0] != size[1]:
+            return False
         return (
             self.min_size[0] <= size[0] <= self.max_size[0]
             and self.min_size[1] <= size[1] <= self.max_size[1]
@@ -132,6 +151,8 @@ class CameraSupport:
             if self.canonical is None:
                 return "only its own (unspecified) size"
             return f"only {self.canonical[0]}x{self.canonical[1]}"
+        if self.square:
+            return f"square sizes {self.min_size[0]}-{self.max_size[0]}"
         return (
             f"heights {self.min_size[0]}-{self.max_size[0]} and widths "
             f"{self.min_size[1]}-{self.max_size[1]}"
@@ -145,6 +166,10 @@ class CameraSupport:
         }
         if self.spatial_features:
             payload["spatial_features"] = list(self.spatial_features)
+        if self.square:
+            payload["square"] = True
+        if self.size_group is not None:
+            payload["size_group"] = self.size_group
         return payload
 
     @classmethod
@@ -161,11 +186,19 @@ class CameraSupport:
             spatial_features, Sequence
         ):
             raise ValueError(f"camera support spatial_features must be a list; got {spatial_features!r}")
+        square = value.get("square", False)
+        if type(square) is not bool:
+            raise ValueError(f"camera support square must be a boolean; got {square!r}")
+        size_group = value.get("size_group")
+        if size_group is not None and (not isinstance(size_group, str) or not size_group):
+            raise ValueError(f"camera support size_group must be a non-empty string; got {size_group!r}")
         return cls(
             canonical=size("canonical"),
             min_size=size("min_size"),
             max_size=size("max_size"),
             spatial_features=tuple(spatial_features),
+            square=square,
+            size_group=size_group,
         )
 
 
@@ -213,6 +246,12 @@ def camera_support_requirements(feature: FeatureSpec, support: CameraSupport) ->
     needed = {"fixed_shape_ranges" if spatial_size(feature) is not None else "open_shape_ranges"}
     if support.spatial_features:
         needed.add("spatial_features")
+    if support.square:
+        # Older servers drop the flag and would accept any shape.
+        needed.add("square_sizes")
+    if support.size_group is not None:
+        # Older servers negotiate each camera alone and could pick sizes the group cannot render.
+        needed.add("shared_sizes")
     return frozenset(needed)
 
 
@@ -266,15 +305,40 @@ def negotiate_image_sizes(
     support_table = fixed_camera_support(benchmark)
     if camera_support is not None:
         support_table.update({name: camera_support[name] for name in names if name in camera_support})
+    def preferences_of(name: str) -> SizePreferences:
+        if requested is None:
+            return (ANY_SIZE,)
+        if isinstance(requested, dict):
+            return requested.get(name, (ANY_SIZE,))
+        return requested
+
+    groups: dict[str, list[str]] = {}
+    for feature in image_features:
+        group = support_table[feature.name].size_group
+        if group is not None:
+            groups.setdefault(group, []).append(feature.name)
+    # A mapping names some cameras; a flat list names every camera.
+    named = set(requested) if isinstance(requested, dict) else names
+    shared = {
+        name: size
+        for group, members in groups.items()
+        for name, size in _negotiate_group(
+            benchmark.name,
+            group,
+            members,
+            {name: preferences_of(name) for name in members},
+            _group_support(benchmark.name, group, members, support_table),
+            named,
+        ).items()
+    }
     resolved: dict[str, ImageSize] = {}
     for feature in image_features:
-        if requested is None:
-            preferences: SizePreferences = (ANY_SIZE,)
-        elif isinstance(requested, dict):
-            preferences = requested.get(feature.name, (ANY_SIZE,))
-        else:
-            preferences = requested
+        preferences = preferences_of(feature.name)
         support = support_table[feature.name]
+        if support.size_group is not None:
+            if shared[feature.name] != support.canonical:
+                resolved[feature.name] = shared[feature.name]
+            continue
         chosen: ImageSize | None = None
         accepted = False
         for preference in preferences:
@@ -295,6 +359,73 @@ def negotiate_image_sizes(
         if chosen is not None and chosen != support.canonical:
             resolved[feature.name] = chosen
     return resolved
+
+
+def _describe_preferences(preferences: SizePreferences) -> str:
+    return ", ".join(ANY_SIZE if item == ANY_SIZE else f"{item[0]}x{item[1]}" for item in preferences)
+
+
+def _group_support(
+    benchmark: str, group: str, members: list[str], support_table: Mapping[str, CameraSupport]
+) -> CameraSupport:
+    """The sizes every camera of ``group`` shares; the group's cameras must declare the same ones."""
+
+    shapes = {
+        (support.canonical, support.min_size, support.max_size, support.square)
+        for support in (support_table[name] for name in members)
+    }
+    if len(shapes) != 1:
+        raise ValueError(
+            f"{benchmark} size group {group!r} cameras {', '.join(members)} must share canonical, "
+            "min_size, max_size and square"
+        )
+    support = support_table[members[0]]
+    if support.canonical is not None and not support.renders(support.canonical):
+        raise ValueError(f"{benchmark} size group {group!r} must render its canonical size")
+    return support
+
+
+def _negotiate_group(
+    benchmark: str,
+    group: str,
+    members: list[str],
+    preferences: Mapping[str, SizePreferences],
+    support: CameraSupport,
+    named: set[str],
+) -> dict[str, ImageSize | None]:
+    """Pick the one size every camera of ``group`` accepts and ``support`` renders.
+
+    Candidates are each member's preferences in feature order, ``ANY_SIZE`` standing for the group's
+    canonical size. A member accepts a size it lists, or the canonical size when its list ends with
+    ``ANY_SIZE``. The first candidate every member accepts and the group renders wins. ``named`` holds
+    the cameras the Policy lists sizes for; the others accept only the canonical size.
+    """
+
+    def accepts(name: str, size: ImageSize | None) -> bool:
+        listed = preferences[name]
+        if size == support.canonical:
+            return size in listed or listed[-1] == ANY_SIZE
+        return size is not None and size in listed and support.renders(size)
+
+    candidates: list[ImageSize | None] = []
+    for name in members:
+        for preference in preferences[name]:
+            size = support.canonical if preference == ANY_SIZE else preference
+            if size not in candidates:
+                candidates.append(size)  # type: ignore[arg-type]
+    for size in candidates:
+        if all(accepts(name, size) for name in members):
+            return dict.fromkeys(members, size)
+    own = "its own size" if support.canonical is None else f"{support.canonical[0]}x{support.canonical[1]}"
+    offered = "; ".join(
+        f"{name} [{_describe_preferences(preferences[name])}]" if name in named
+        else f"{name} not listed ({own} only)"
+        for name in members
+    )
+    raise ValueError(
+        f"{benchmark} cameras {', '.join(members)} (size group {group!r}) render one shared size: "
+        f"{support.describe()}; no size is accepted by every camera: the Policy accepts {offered}"
+    )
 
 
 def apply_image_sizes(

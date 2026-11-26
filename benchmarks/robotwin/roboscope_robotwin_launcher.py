@@ -416,7 +416,38 @@ def instrument_eval_source(path):
                 raise RuntimeError(f"unexpected RoboTwin evaluator source near {original.strip()!r}")
             source = source.replace(original, replacement)
     source = _inject_episode_end(source)
+    source = _inject_camera_sizes(source)
     return _inject_seed_cache(source)
+
+
+def _inject_camera_sizes(source):
+    """Record evaluation videos at the negotiated head-camera size (``ROBOTWIN_CAMERA_SIZES``).
+
+    RoboTwin encodes yuv420p with libx264, which needs even dimensions, so the video of an odd head-camera
+    size is padded by one pixel; the ffmpeg arguments for even sizes stay RoboTwin's own.
+    """
+
+    value = os.environ.get("ROBOTWIN_CAMERA_SIZES")
+    head = json.loads(value).get("head_camera") if value else None
+    if head is None:
+        return source
+    height, width = (int(dimension) for dimension in head)
+    replacements = {
+        '        video_size = str(camera_config["w"]) + "x" + str(camera_config["h"])\n': (
+            f'        video_size = "{width}x{height}"\n'
+        ),
+    }
+    if height % 2 or width % 2:
+        replacements['                    "-pix_fmt",\n'] = (
+            '                    "-vf",\n'
+            '                    "pad=ceil(iw/2)*2:ceil(ih/2)*2",\n'
+            '                    "-pix_fmt",\n'
+        )
+    for original, replacement in replacements.items():
+        if source.count(original) != 1:
+            raise RuntimeError(f"unexpected RoboTwin evaluator source near {original.strip()!r}")
+        source = source.replace(original, replacement)
+    return source
 
 
 def _inject_runtime_contract(source):
@@ -1118,6 +1149,69 @@ def _close_active_models() -> None:
                 raise
 
 
+# Cameras a Policy negotiated away from the task config's size: a JSON object {camera name: [height,
+# width]} set by the Kit's RoboTwin worker for native rendering. The task_config files, which the frozen
+# seed protocol hashes, stay unchanged. The same constant is CAMERA_SIZES_ENV in the Kit's robotwin/worker.py.
+CAMERA_SIZES_ENV = "ROBOTWIN_CAMERA_SIZES"
+SIZED_CAMERAS = ("head_camera", "left_camera", "right_camera")
+
+
+def camera_sizes_from_env():
+    """The negotiated ``{camera name: (height, width)}``; empty when every camera keeps its config size."""
+
+    value = os.environ.get(CAMERA_SIZES_ENV)
+    if not value:
+        return {}
+    sizes = {}
+    for name, size in json.loads(value).items():
+        if name not in SIZED_CAMERAS:
+            raise ValueError(f"{CAMERA_SIZES_ENV} names unknown camera {name!r}")
+        height, width = (int(dimension) for dimension in size)
+        if height < 1 or width < 1:
+            raise ValueError(f"{CAMERA_SIZES_ENV} size of {name} must be positive; got {size!r}")
+        sizes[name] = (height, width)
+    return sizes
+
+
+class SizedCameraScene:
+    """Scene proxy for ``Camera.load_camera`` that creates the named cameras at the given sizes.
+
+    Only width and height change: the field of view, clipping planes, pose and the random draws of the
+    camera setup stay as the task config sets them, so each image is what RoboTwin renders when the
+    camera type in ``_camera_config.yml`` has that width and height.
+    """
+
+    def __init__(self, scene, sizes):
+        self._scene = scene
+        self._sizes = sizes
+
+    def add_camera(self, name, *args, **kwargs):
+        if name in self._sizes:
+            kwargs["height"], kwargs["width"] = self._sizes[name]
+        return self._scene.add_camera(name, *args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._scene, name)
+
+
+def install_camera_sizes():
+    """Create the cameras a Policy negotiated (``ROBOTWIN_CAMERA_SIZES``) at their negotiated size.
+
+    RoboTwin reads each camera's width and height from its camera type in ``_camera_config.yml``. The
+    override replaces only those two values when ``Camera.load_camera`` creates the head and wrist cameras,
+    so the task_config files, the camera setup's random draws and the frozen seed protocol are unchanged.
+    """
+
+    from envs.camera.camera import Camera
+    sizes = camera_sizes_from_env()
+    fresh_load_camera = Camera.load_camera
+
+    def load_camera_sized(self, scene):
+        return fresh_load_camera(self, SizedCameraScene(scene, sizes))
+
+    Camera.load_camera = load_camera_sized
+
+
 def install_skip_unread_static_cameras():
     """Do not render static cameras whose images the policy never reads (``front_camera`` on aloha-agilex).
 
@@ -1316,6 +1410,8 @@ def main():
     if os.environ.get("ROBOTWIN_DISABLE_VIDEO") == "1":
         disable_video_logging()
     render_service = os.environ.get("ROBOTWIN_RENDER_SERVICE")
+    if render_service and os.environ.get(CAMERA_SIZES_ENV):
+        raise RuntimeError("RoboTwin central rendering renders the task config's camera sizes only")
     if render_service:
         # Central rendering: this process simulates on the CPU and its render service on the GPU builds
         # the same scene, with the cameras of the lean-camera and skip-unread patches below.
@@ -1341,6 +1437,9 @@ def main():
         # every camera.
         if os.environ.get("ROBOTWIN_SKIP_UNREAD_CAMERAS", "1") == "1":
             install_skip_unread_static_cameras()
+        # Set by the Kit only when a Policy negotiated a camera size other than the task config's.
+        if os.environ.get("ROBOTWIN_CAMERA_SIZES"):
+            install_camera_sizes()
     # Without the bound-method cycle, finished click_bell/click_alarmclock tasks free their scene as soon as
     # the evaluator returns instead of when the cyclic garbage collector runs.
     install_acyclic_check_arm_function()

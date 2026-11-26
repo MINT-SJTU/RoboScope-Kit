@@ -102,6 +102,11 @@ class RoboDojoBenchmarkAdapter:
                 *(("--control-state-reuse",) if self.config.control_state_reuse else ()),
                 *(("--physics-threads", str(self.config.physics_threads))
                   if self.config.physics_threads is not None else ()),
+                *(
+                    argument
+                    for feature, (height, width) in sorted(context.execution_contract.image_sizes.items())
+                    for argument in ("--camera-size", f"{feature}={height}x{width}")
+                ),
             ),
             cwd=self.config.benchmark_root,
             env={

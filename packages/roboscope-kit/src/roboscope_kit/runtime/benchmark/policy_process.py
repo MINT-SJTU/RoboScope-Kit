@@ -9,6 +9,7 @@ import logging
 import subprocess
 import threading
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -68,6 +69,7 @@ class PolicyProcessAdapter:
         load_timeout_s: float = 30.0,
         eval_mode: str = DEFAULT_EVAL_MODE,
         camera_support: dict[str, CameraSupport] | None = None,
+        rendered_image_features: frozenset[str] | None = None,
     ) -> None:
         if not command:
             raise ValueError("policy command cannot be empty")
@@ -89,6 +91,8 @@ class PolicyProcessAdapter:
         self.load_timeout_s = load_timeout_s
         self.eval_mode = eval_mode
         self.camera_support = camera_support
+        # The image features the suite's observations carry; None means every one.
+        self.rendered_image_features = rendered_image_features
         self.capabilities: dict[int, PolicyCapabilities] = {}
         self.gpu_vram_baselines: dict[str, int] = {}
         self.replica_vram_bytes: dict[int, int] = {}
@@ -154,7 +158,13 @@ class PolicyProcessAdapter:
                     if isinstance(reported, list)
                     else BASELINE_IMAGE_SIZE_FEATURES
                 )
-                withheld = withheld_camera_support(session.benchmark, camera_support, server_features)
+                withheld = {
+                    name: missing
+                    for name, missing in withheld_camera_support(
+                        session.benchmark, camera_support, server_features
+                    ).items()
+                    if self.rendered_image_features is None or name in self.rendered_image_features
+                }
                 camera_support = camera_support_for_server(session.benchmark, camera_support, server_features)
                 if withheld:
                     with self._replica_lock:
@@ -186,6 +196,17 @@ class PolicyProcessAdapter:
             if not _names_any_camera(str(exc), withheld):
                 raise
             raise ValueError(f"{exc}. {_withheld_camera_sizes_message(withheld)}") from exc
+        if self.rendered_image_features is not None:
+            # The Policy server negotiates every image feature alike. A feature the suite renders no camera
+            # for never reaches an observation, so the run records sizes for the rendered features only.
+            contract = replace(
+                contract,
+                image_sizes={
+                    name: size
+                    for name, size in contract.image_sizes.items()
+                    if name in self.rendered_image_features
+                },
+            )
         # Replicas on different GPUs initialize concurrently.
         with self._replica_lock:
             if self._execution_contract is not None and contract != self._execution_contract:

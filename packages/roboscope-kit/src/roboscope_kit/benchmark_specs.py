@@ -615,8 +615,7 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
 
 
 # LIBERO and LIBERO-Pro render their cameras natively at any size in these bounds; Kit never
-# resamples. LIBERO-Plus stays at its canonical size because its upstream image corruptions assume
-# square frames of at most 256 pixels.
+# resamples.
 LIBERO_CANONICAL_IMAGE_SIZE = (256, 256)
 LIBERO_MIN_IMAGE_SIZE = (64, 64)
 LIBERO_MAX_IMAGE_SIZE = (1024, 1024)
@@ -639,13 +638,57 @@ RLBENCH_MAX_IMAGE_SIZE = (768, 768)
 CALVIN_CANONICAL_IMAGE_SIZES = {"images.static": (200, 200), "images.gripper": (84, 84)}
 CALVIN_MIN_IMAGE_SIZE = (64, 64)
 CALVIN_MAX_IMAGE_SIZE = (1024, 1024)
+# LIBERO-Plus applies its sensor-noise corruptions to the agent view only. Its zoom blur crops and
+# rescales a square of the frame's height, and its fog adds a 256 x 256 plasma map, so the agent
+# view renders square sizes of at most 256 pixels. The wrist camera has the LIBERO range.
+LIBERO_PLUS_PRIMARY_MAX_IMAGE_SIZE = (256, 256)
+# ManiSkill's field-of-view cameras render natively at any sensor_configs width and height. Each task
+# fixes its own default size (128 x 128 for the tabletop base camera), and one suite may mix tasks, so
+# the canonical size stays the task's own and is not declared here. At 512 x 512, one 10-environment
+# vector group with all three RGB cameras and both depth channels at that size is a 59.4 MB JSON
+# act_batch message, within the 64 MiB protocol limit. Every image feature takes that range except those a
+# profile of the suite maps to a Bridge camera (see ``fixed_size_camera_features``).
+MANISKILL_MIN_IMAGE_SIZE = (16, 16)
+MANISKILL_MAX_IMAGE_SIZE = (512, 512)
+# RoboCasa365 renders its three cameras with robosuite's EGL context, whose offscreen buffer grows to the
+# requested size. The official Gym wrapper takes one width and one height for all cameras, so the three
+# share a size group. One act_batch request carries five slots x three cameras x two frames; at
+# 640 x 640 it is 47 MiB as JSON, within the 64 MiB Policy message limit.
+ROBOCASA365_CANONICAL_IMAGE_SIZE = (256, 256)
+ROBOCASA365_MIN_IMAGE_SIZE = (64, 64)
+ROBOCASA365_MAX_IMAGE_SIZE = (640, 640)
+ROBOCASA365_IMAGE_FEATURES = ("images.agentview_left", "images.agentview_right", "images.wrist")
+# RoboDojo's Isaac Sim cameras render 480 x 640 in the official protocol and natively at any size
+# in these bounds; the head and both wrist cameras are negotiated independently. Only runtimes built
+# with camera-sizes.patch can render them; their manifest declares `negotiated_camera_sizes: true`.
+ROBODOJO_CANONICAL_IMAGE_SIZE = (480, 640)
+ROBODOJO_MIN_IMAGE_SIZE = (64, 64)
+ROBODOJO_MAX_IMAGE_SIZE = (2048, 2048)
+ROBODOJO_CAMERAS = (
+    ("images.head", "cam_head"),
+    ("images.left_wrist", "cam_left_wrist"),
+    ("images.right_wrist", "cam_right_wrist"),
+)
+# RoboTwin creates each SAPIEN camera at the width and height of its camera type; the task configs
+# name D435 (240 x 320) for the head and wrist cameras. Kit creates the cameras at a negotiated size
+# instead, keeping the vertical field of view and everything else the task config sets, so the
+# horizontal view follows the aspect ratio.
+ROBOTWIN_CANONICAL_IMAGE_SIZE = (240, 320)
+ROBOTWIN_MIN_IMAGE_SIZE = (64, 64)
+ROBOTWIN_MAX_IMAGE_SIZE = (1024, 1024)
+ROBOTWIN_CAMERA_FEATURES = ("images.head", "images.left_wrist", "images.right_wrist")
 
 
 def benchmark_camera_support(
     benchmark: BenchmarkSpec,
     defaults: dict[str, Any] | None = None,
+    protocol: dict[str, Any] | None = None,
 ) -> dict[str, CameraSupport]:
-    """The sizes each camera of ``benchmark`` can render under the manifest ``defaults``."""
+    """The sizes each camera of ``benchmark`` can render under the manifest ``defaults``.
+
+    ``protocol`` is the manifest's protocol for the benchmark; ManiSkill reads its suite's task
+    profiles from it, and without it every ManiSkill camera renders only its task's own size.
+    """
 
     table = fixed_camera_support(benchmark)
     if benchmark.name in {BenchmarkName.LIBERO.value, BenchmarkName.LIBERO_PRO.value}:
@@ -677,7 +720,79 @@ def benchmark_camera_support(
                 max_size=RLBENCH_MAX_IMAGE_SIZE,
                 spatial_features=(f"state.{camera}_depth", f"state.{camera}_point_cloud"),
             )
+    elif benchmark.name == BenchmarkName.LIBERO_PLUS.value:
+        backend = str((defaults or {}).get("render_backend", "egl"))
+        maximum = LIBERO_OSMESA_MAX_IMAGE_SIZE if backend == "osmesa" else LIBERO_MAX_IMAGE_SIZE
+        table["images.primary"] = CameraSupport(
+            canonical=LIBERO_CANONICAL_IMAGE_SIZE,
+            min_size=LIBERO_MIN_IMAGE_SIZE,
+            max_size=LIBERO_PLUS_PRIMARY_MAX_IMAGE_SIZE,
+            square=True,
+        )
+        table["images.wrist"] = CameraSupport(
+            canonical=LIBERO_CANONICAL_IMAGE_SIZE,
+            min_size=LIBERO_MIN_IMAGE_SIZE,
+            max_size=maximum,
+        )
+    elif benchmark.name == BenchmarkName.MANISKILL.value and protocol:
+        # Imported here because the ManiSkill runtime imports this module; the profile module reads
+        # the manifest protocol without the simulator.
+        from roboscope_kit.runtime.benchmarks.maniskill.profile import fixed_size_camera_features
+
+        fixed = fixed_size_camera_features(protocol, benchmark.suite)
+        for feature, support in table.items():
+            if feature not in fixed:
+                table[feature] = CameraSupport(
+                    canonical=support.canonical,
+                    min_size=MANISKILL_MIN_IMAGE_SIZE,
+                    max_size=MANISKILL_MAX_IMAGE_SIZE,
+                )
+    elif benchmark.name == BenchmarkName.ROBOCASA365.value:
+        for feature in ROBOCASA365_IMAGE_FEATURES:
+            table[feature] = CameraSupport(
+                canonical=ROBOCASA365_CANONICAL_IMAGE_SIZE,
+                min_size=ROBOCASA365_MIN_IMAGE_SIZE,
+                max_size=ROBOCASA365_MAX_IMAGE_SIZE,
+                size_group="robocasa365.cameras",
+            )
+    elif (benchmark.name == BenchmarkName.ROBODOJO.value
+          and (defaults or {}).get("negotiated_camera_sizes") is True):
+        for feature, _camera in ROBODOJO_CAMERAS:
+            table[feature] = CameraSupport(
+                canonical=ROBODOJO_CANONICAL_IMAGE_SIZE,
+                min_size=ROBODOJO_MIN_IMAGE_SIZE,
+                max_size=ROBODOJO_MAX_IMAGE_SIZE,
+            )
+    elif (benchmark.name == BenchmarkName.ROBOTWIN.value
+          and (defaults or {}).get("negotiated_camera_sizes") is True
+          and (defaults or {}).get("render_mode", "native") == "native"):
+        # A runtime built before negotiated sizes has an older launcher, which renders the task config's
+        # size whatever the Kit asks; its manifest has no negotiated_camera_sizes flag. Central rendering
+        # renders the task config's size too.
+        for feature in ROBOTWIN_CAMERA_FEATURES:
+            table[feature] = CameraSupport(
+                canonical=ROBOTWIN_CANONICAL_IMAGE_SIZE,
+                min_size=ROBOTWIN_MIN_IMAGE_SIZE,
+                max_size=ROBOTWIN_MAX_IMAGE_SIZE,
+            )
     return table
+
+
+def benchmark_rendered_image_features(
+    benchmark: BenchmarkSpec,
+    protocol: dict[str, Any] | None = None,
+) -> frozenset[str] | None:
+    """The image features the suite's observations carry, or ``None`` when they carry every one.
+
+    ManiSkill observations carry only the features the suite's task profiles map to a camera. The Kit
+    records negotiated sizes for those features only; the others never reach the Policy.
+    """
+
+    if benchmark.name == BenchmarkName.MANISKILL.value and protocol:
+        from roboscope_kit.runtime.benchmarks.maniskill.profile import rendered_camera_features
+
+        return rendered_camera_features(protocol, benchmark.suite)
+    return None
 
 
 def get_benchmark_spec(name: str | BenchmarkName, suite: str) -> BenchmarkSpec:

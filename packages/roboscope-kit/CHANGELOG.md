@@ -4,6 +4,85 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 ## 0.8.0b83 - 2026-11-26
 
+- Add one-line `--help` descriptions for `--benchmark`, `--suite`, `--episodes`, `--quick-test`,
+  `--self-test`, `--benchmark-manifest`, and `--evaluation-config` in `roboscope_kit.runtime.benchmark`,
+  and for `--benchmark`, `--suite`, `--episodes`, `--benchmark-manifest`, and `--output-dir` in
+  `roboscope_kit.runtime.benchmark.shard_merge`.
+- The shard-merge `--help` usage example includes the required `--benchmark-manifest` and keeps its
+  line breaks.
+- RoboTwin cameras render Policy-negotiated image sizes natively. The head and both wrist cameras accept
+  64–1024 pixels per side through `PolicyCapabilities.image_sizes`; a camera with a negotiated size is
+  created at that width and height with the field of view, pose and random draws of its task config, so
+  the `task_config` files and the frozen seed protocol are unchanged. The vertical field of view stays,
+  so the horizontal view follows the aspect ratio: at 224 × 224 the horizontal field of view narrows from
+  about 48° to 37°. Evaluation videos of an odd head-camera size are padded by one pixel, since libx264's
+  yuv420p needs even dimensions. Each evaluator receives only the negotiated sizes, so a
+  `ROBOTWIN_CAMERA_SIZES` exported in the Kit's environment has no effect. Without `image_sizes` the
+  simulator is set up exactly as before.
+- RoboTwin offers these sizes only with native rendering on a runtime whose manifest sets
+  `negotiated_camera_sizes` (built by this release's `build-runtime.sh`). `render_mode: central`, and a
+  runtime built before this release until it is rebuilt, keep 240 × 320.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RoboTwin images with
+  `canonical_observations: false`.
+- RoboTwin's camera specs leave the image shape open, so other RoboTwin sizes need roboscope-kit 0.8.0b83
+  or later in the Policy environment, the first version whose server reports `open_shape_ranges`; a
+  Policy server on an earlier version keeps 240 × 320.
+
+- RoboDojo cameras render Policy-negotiated image sizes natively. The head and both wrist cameras each
+  accept 64–2048 pixels per side through `PolicyCapabilities.image_sizes`; a camera with a negotiated size
+  renders at that size with its own lens and pose, without cropping or resampling. The horizontal field of
+  view stays the camera's own and the vertical one follows the aspect ratio. Without `image_sizes`
+  every camera renders 480 × 640 exactly as before. RoboDojo sizes need roboscope-kit 0.8.0b83 or later in
+  the Policy environment; older Policy servers are offered RoboDojo's own size only.
+- RoboDojo runtimes declare `negotiated_camera_sizes` in their manifest. A runtime built before this
+  release lacks it, and the Kit offers it only the cameras' own size (480 × 640), as before; rebuild it
+  to use other sizes.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RoboDojo images with
+  `canonical_observations: false`.
+
+- RoboCasa365 cameras render Policy-negotiated image sizes natively: 64–640 pixels per side through
+  `PolicyCapabilities.image_sizes`, one size shared by all three cameras because the official Gym wrapper
+  takes a single width and height. The simulator renders directly at that size and Kit never resamples.
+  At 640 × 640 an `act_batch` request (five slots, three cameras, two frames) is 47 MiB as JSON, within
+  the 64 MiB message limit. Without `image_sizes` the environments are created exactly as before, at
+  256 × 256.
+- `CameraSupport.size_group` makes cameras render one size, negotiated jointly: the first size, in
+  feature order and each camera's preference order, that every camera of the group accepts (a listed
+  size, or its canonical size when its list ends with `ANY_SIZE`). When none suits every camera, the run
+  stops before any Worker starts and names the group, each camera's list and the cameras the Policy did
+  not list. Negotiation checks that the cameras of a group declare one canonical size, range and
+  squareness. Policy servers report the `shared_sizes` image-size feature for it; a Policy whose own
+  environment runs an older roboscope-kit gets RoboCasa365's 256 × 256, as before.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RoboCasa365 images with
+  `canonical_observations: false` instead of 256 × 256.
+
+- Render ManiSkill's field-of-view cameras at Policy-negotiated sizes, 16–512 pixels per side; the
+  Worker sets each negotiated camera's `sensor_configs` width and height, so the simulator renders that
+  size directly. The Bridge camera keeps 480 × 640, because it is defined by a pixel intrinsic for that
+  size over a real photo: an image feature that a suite's Bridge profile maps keeps its own size in that
+  suite (`images.primary` of `bridge_rgb_v1` and `upstream_tasks_v1`), whatever the suite is named.
+  `policy_io.image_sizes` records only the cameras the suite renders, those its task profiles map to an
+  image feature. Without `image_sizes` every camera keeps its task's own size and the Worker builds the
+  environment exactly as before.
+- A flat `image_sizes` list applies to the cameras each suite renders, so a Policy that already
+  declares, for example, `[(224, 224)]` or `[(224, 224), ANY_SIZE]` now receives native 224 × 224 images
+  from the cameras of ManiSkill suites without Bridge tasks, with `canonical_observations: false`.
+  ManiSkill's own size varies by task, so any negotiated size counts as non-canonical, even one equal to
+  a task's own size.
+
+- LIBERO-Plus renders its cameras at Policy-negotiated sizes: the wrist camera at 64–1024 pixels per side
+  (480 × 640 at most with OSMesa) and the agent view at square sizes from 64 × 64 to 256 × 256, the sizes
+  its image corruptions support. `CameraSupport.square` limits a camera to square sizes. Without
+  `image_sizes` nothing changes. A Policy server on an older roboscope-kit keeps the agent view at
+  256 × 256, since it does not report the `square_sizes` image-size feature, while the wrist camera
+  still follows its `image_sizes`.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 LIBERO-Plus images with
+  `canonical_observations: false` instead of 256 × 256.
+
 - Render RLBench cameras at Policy-negotiated sizes. Each of the four cameras renders natively at 32–768
   pixels per side, so an observation of all four stays inside the 64 MiB Policy message limit. Its depth
   and point cloud follow the camera's size, and the camera intrinsics are the ones RLBench computes for
