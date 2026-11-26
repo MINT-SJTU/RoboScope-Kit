@@ -33,6 +33,7 @@ from .tasks import (
     SUITES,
     TASK_IDS,
     TASK_NAMES,
+    TASK_SCENES,
     TERMINATIONS,
     episode_id_for,
     instance_id,
@@ -80,9 +81,21 @@ class BehaviorBenchmarkAdapter:
 
     def work_items(self) -> Sequence[WorkItem]:
         # One item per instance: each worker process loads one scene and evaluates one instance, as
-        # the native command with one instance index does. Longest tasks first, so the tail of a
-        # run is not one long episode.
-        tasks = sorted(self.config.tasks, key=lambda task: (-MAX_STEPS[task], TASK_IDS[task]))
+        # the native command with one instance index does. One scene after another, so the run keeps
+        # few scene texture caches (see the worker), the scene with the most steps first and, within a
+        # scene, the longest tasks first, so the tail of a run is not one long episode.
+        scene_steps: dict[str, int] = {}
+        for task in self.config.tasks:
+            scene_steps[TASK_SCENES[task]] = scene_steps.get(TASK_SCENES[task], 0) + MAX_STEPS[task]
+        tasks = sorted(
+            self.config.tasks,
+            key=lambda task: (
+                -scene_steps[TASK_SCENES[task]],
+                TASK_SCENES[task],
+                -MAX_STEPS[task],
+                TASK_IDS[task],
+            ),
+        )
         items: list[WorkItem] = []
         for index in range(self.config.instances_per_task):
             for task in tasks:
@@ -115,6 +128,8 @@ class BehaviorBenchmarkAdapter:
             str(context.state_dir),
             "--output-dir",
             str(context.output_dir / "behavior"),
+            "--texture-cache-dir",
+            str(context.output_dir / "texture-cache"),
         )
         if self.config.write_video:
             command += ("--write-video",)

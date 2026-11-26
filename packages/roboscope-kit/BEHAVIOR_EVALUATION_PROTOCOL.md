@@ -136,9 +136,14 @@ The GR00T example runs on `challenge_2026` the same way (`examples/gr00t/robosco
 The runtime calls `load(SessionContext)` once per replica, then for each episode `reset(EpisodeContext)`,
 one `act(Observation)` per control step, and `end_episode(episode_id)`. `EpisodeContext.task_id` is the
 task name; its metadata carries `task_index` (the challenge task ID), `instance_index`, `instance_id`
-and `max_steps`. A Policy declares `behavior` in `supported_benchmarks` and returns one action per call
-(`supported_action_chunk_sizes = (1,)`): the native evaluator queries its policy once per control step,
-and so does the kit. A Policy that predicts chunks keeps them itself, as both examples do.
+and `max_steps`. A Policy declares `behavior` in `supported_benchmarks` and returns an action chunk of
+one or more actions per call. The worker executes them one per control step and asks again when they
+are used up, as the native client does with `--replay-action-chunk-size`; every step is simulated,
+rendered and scored as usual, and only the observations of the steps in between are not sent. A chunk
+is therefore equivalent to one action per call only when the Policy would not have read those
+observations: the GR00T example returns one action per call, the BEHAVIOR2026VLA example the 13
+actions its model call executes. A Policy that keeps the state of each open episode can serve several
+workers per replica.
 
 ## 4. Observation and action contract
 
@@ -319,10 +324,50 @@ Policy's per-episode timing:
 The model ran 110,114 times, once per 13 actions; an `act` with a model call averages at most 147 ms.
 
 The simulator dominates: one worker steps about 12 actions/s while it is not waiting, and the scene
-load of every instance adds a sixth. Candidates for a later `perf(behavior)` issue are more workers per
-GPU (the GPU is two-thirds idle; CPU and the per-worker texture cache bound K), reusing a loaded scene
-for the instances of a task, and overlapping the transport with simulation. At this rate the formal
-1,000 episodes take about ten days on this machine.
+load of every instance adds a sixth. At this rate the formal 1,000 episodes take about ten days on this
+machine.
+
+### Throughput changes (Kit `0.8.0b83`)
+
+Three changes leave every simulated step, rendered image and score as before and raise the throughput:
+
+- **Chunks.** The BEHAVIOR2026VLA Policy returns the 13 actions of a model call at once instead of one per
+  request (12 of 13 Policy round trips go), and the worker replays them.
+- **Several workers per replica.** The Policy keeps each open episode's rollout state, so 4 workers fit on
+  one 48 GB GPU with 2 replicas (6.3 GB each).
+- **A texture cache per scene.** The run keeps one RTX texture cache per scene under
+  `<output-dir>/texture-cache`, evaluates one scene after another and removes a scene's cache once no
+  pending or running item needs it. A warm cache halves a scene load (`turning_on_radio` 250 s to 127 s).
+
+Checks on the same machine:
+
+- With a fixed, observation-independent action sequence, the head-camera image of a warm-cache run
+  differs from a cold-cache run by no more than two cold-cache runs differ from each other (mean
+  absolute difference 1–4 of 255).
+- 16 tasks of 6 scenes, instance 301, two runs per configuration (the "before" runs are the 100-task run
+  of section 9 and a run of the same code the day after; the "after" runs used a prototype of these
+  changes behind switches, functionally the same code):
+
+| Configuration | Mean Q | Successes | Evaluation | Actions/s |
+| --- | ---: | ---: | ---: | ---: |
+| Before (K=2, G=2, one action per request, a cold cache per worker) | 0.500, 0.413 | 6, 5 | 7,820 s | 14.3–16.5 |
+| After (K=4, G=2, chunks, scene caches) | 0.290, 0.531 | 4, 6 | 4,413–4,881 s | 24.1–24.2 |
+
+The Q values of a configuration differ as much between its two runs as between the configurations: one
+episode per task does not resolve a difference of this size, and no change of the outcome was found.
+The throughput is 1.69 times that of the run made the same day with the configuration before. The CPU
+now limits it: 18.5 of the 20 cores on average (GPU memory peak 46.3 GB).
+
+Render skipping was measured and rejected: rendering only the step whose observation the Policy
+receives, with the 12 steps in between simulated but not rendered, leaves the physics bit for bit the
+same and doubles the step rate, but the RTX renderer accumulates over frames (OmniGibson notes that a
+pose change takes two renders to appear) and the image at a query step differs from the every-step
+image by a mean of 8–27 of 255. BEHAVIOR's evaluator renders every step and has no setting that
+removes the accumulation, so rendered steps cannot be skipped.
+
+Left for later: running the instances of a task in one process (the evaluator's `--num-envs`; four
+environments in one process use 14.3 GB of GPU memory and load each instance 46 % faster) applies
+to the formal 10 instances per task, and batching the model calls of several workers.
 
 ### GR00T N1.7 on `challenge_2026`
 

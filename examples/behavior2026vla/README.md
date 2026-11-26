@@ -39,9 +39,12 @@ solution's rollout state (`B1KPolicyWrapper`) around the loaded JAX policy and s
 environment (the native observation keys with a batch dimension of one: the three RGB images, the 61-dim
 proprioception and `task_id`). All model-specific behaviour is the solution's: 30 predicted actions with 20
 denoising steps, the first 26 executed over 13 control steps, rolling inpainting, stage voting and the
-gripper rule. The Policy holds one episode at a time: run as many replicas as workers. Each replica loads
-the model; JAX takes half of the GPU memory by default (`XLA_PYTHON_CLIENT_MEM_FRACTION`, as
-`serve_b1k.py` sets it), so lower that fraction in the Policy environment for several replicas on one GPU.
+gripper rule. A model call executes 13 actions, and the steps in between read no observation, so
+`act` returns those 13 actions at once and the worker replays them, as the native client does with
+`--replay-action-chunk-size 13`. The Policy keeps the rollout state of each open episode, so one replica
+serves several workers. Each replica loads the model (6.3 GB); JAX may take up to half of the GPU memory
+(`XLA_PYTHON_CLIENT_MEM_FRACTION`, as `serve_b1k.py` sets it), so lower that fraction in the Policy
+environment for several replicas on one GPU.
 
 ## Model environment
 
@@ -73,7 +76,8 @@ starts the simulator, which runs in the BEHAVIOR runtime. The checkpoint (10.7 G
    utilities, which the solution imports, read the challenge task table from it.
 
 3. Evaluate from any Python 3.11+ with `roboscope-kit` (`--quick-test` runs one worker and one replica;
-   a full run passes `--concurrency K --replicas K`, one replica per worker):
+   a full run passes `--concurrency K --replicas G`; on one 48 GB RTX 4090 with 20 CPU cores, K=4 workers
+   and G=2 replicas):
 
    ```bash
    python -m roboscope_kit.runtime.benchmark \
@@ -101,4 +105,6 @@ Instance 301 of all 100 tasks on one RTX 4090 with two workers and two replicas 
 episodes, 23 successes, mean Q 0.410, 16.5 actions/s over 24.1 hours. That is one episode per task, not
 the formal 1,000, and has no paired native run yet; the
 [protocol document](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/BEHAVIOR_EVALUATION_PROTOCOL.md)
-(sections 9 and 10) has the details and the time breakdown.
+(sections 9 and 10) has the details and the time breakdown. With K=4 and G=2, the chunked actions and
+the scene texture caches of Kit `0.8.0b83`, the same machine evaluates 1.69 times as many actions per
+second (section 10).

@@ -19,7 +19,10 @@ model-specific stays in that code: the letter-box resize, the state taken from t
 proprioception, the task and stage embeddings selected by ``task_id``, 30 predicted actions with 20
 denoising steps of which the first 26 are executed over 13 control steps, rolling inpainting,
 stage voting and the gripper rule. The model is queried on every 13th step; the other steps
-replay its chunk.
+replay its chunk, so ``act`` returns the whole chunk of 13 actions at once (the evaluator's
+``--replay-action-chunk-size``): those steps' observations are never read, so the actions are the
+same as one per request. The Policy keeps the rollout state of each open episode, so one replica
+can serve several Workers (``--replicas`` below ``--concurrency``).
 
 The Policy process must start in the solution checkout (``cwd`` in ``roboscope-policy.json``), as
 ``serve_b1k.py`` does, because the training config resolves its asset directory from there.
@@ -67,6 +70,8 @@ NATIVE_KEYS = {
 TRAIN_CONFIG = "configs/train_b1k_2026.yaml"
 # serve_b1k.py's default number of flow-matching denoising steps.
 NUM_STEPS = 20
+# B1KWrapperConfig.execute_in_n_steps: control steps per model call.
+B1K_EXECUTE_STEPS = 13
 CHECKPOINT_FILES = ("params/_METADATA", "params/manifest.ocdbt", "assets/b1k_2026/norm_stats.json")
 
 
@@ -82,10 +87,10 @@ def native_request(observation: Observation) -> dict[str, np.ndarray]:
 class Behavior2026VlaPolicy(Policy):
     def __init__(self) -> None:
         self.policy = None
-        self.rollout = None
-        self.active_episode: str | None = None
-        # Per episode: control steps, model calls, and seconds spent in act (model and replay).
-        self.timing = {"steps": 0, "model_calls": 0, "act_s": 0.0}
+        # Per open episode: its rollout state and its control steps, model calls and seconds in act
+        # (model and replay). A replica can serve several Workers, one request at a time.
+        self.rollouts: dict = {}
+        self.timing: dict[str, dict] = {}
 
     def load(self, context: SessionContext) -> PolicyCapabilities:
         if context.benchmark.name != BENCHMARK or context.benchmark.suite != SUITE:
@@ -119,7 +124,7 @@ class Behavior2026VlaPolicy(Policy):
             supported_suites={BENCHMARK: (SUITE,)},
             required_features=tuple(NATIVE_KEYS),
             max_batch_size=1,
-            supported_action_chunk_sizes=(1,),
+            supported_action_chunk_sizes=(B1K_EXECUTE_STEPS,),
             action_representations={BENCHMARK: ACTION_REPRESENTATION},
         )
 
@@ -143,46 +148,45 @@ class Behavior2026VlaPolicy(Policy):
     def reset(self, context: EpisodeContext) -> None:
         from b1k.shared.eval_b1k_wrapper import B1KPolicyWrapper, B1KWrapperConfig  # noqa: PLC0415
 
-        if self.active_episode is not None and self.active_episode != context.episode_id:
-            # An episode that never ended: its worker died (the runtime restarts it on this replica).
-            # Its rollout state is dropped below.
-            print(
-                f"BEHAVIOR2026VLA replica: episode {self.active_episode} did not end; "
-                f"replaced by {context.episode_id}",
-                file=sys.stderr,
-                flush=True,
-            )
-        self.active_episode = context.episode_id
         # A new evaluator connection to serve_b1k.py: fresh rollout state, reset as on its reset message.
-        self.rollout = [B1KPolicyWrapper(self.policy, config=B1KWrapperConfig())]
-        self.rollout[0].reset()
-        self.timing = dict.fromkeys(self.timing, 0)
+        rollout = B1KPolicyWrapper(self.policy, config=B1KWrapperConfig())
+        rollout.reset()
+        self.rollouts[context.episode_id] = rollout
+        self.timing[context.episode_id] = {"steps": 0, "model_calls": 0, "act_s": 0.0}
 
     def act(self, observation: Observation) -> ActionChunk:
         from b1k.shared.eval_b1k_wrapper import act_batched  # noqa: PLC0415
 
-        if observation.episode_id != self.active_episode:
-            raise RuntimeError(f"got a step of {observation.episode_id}, not {self.active_episode}")
+        rollout = self.rollouts.get(observation.episode_id)
+        if rollout is None:
+            raise RuntimeError(f"got a step of {observation.episode_id}, which has not been reset")
         started = time.perf_counter()
-        calls = self.rollout[0].prediction_count
-        action = act_batched(self.rollout, native_request(observation)).cpu().numpy().astype(np.float32)
+        calls = rollout.prediction_count
+        action = act_batched([rollout], native_request(observation)).cpu().numpy().astype(np.float32)
         if action.shape != (1, ACTION_DIM):
             raise RuntimeError(f"BEHAVIOR2026VLA action shape is {action.shape}, expected (1, {ACTION_DIM})")
-        self.timing["steps"] += 1
-        self.timing["model_calls"] += self.rollout[0].prediction_count - calls
-        self.timing["act_s"] += time.perf_counter() - started
+        if rollout.config.execute_in_n_steps != B1K_EXECUTE_STEPS:
+            steps = rollout.config.execute_in_n_steps
+            raise RuntimeError(f"the solution executes {steps} steps per chunk, not {B1K_EXECUTE_STEPS}")
+        # The rest of the chunk, as act_batched replays it on the following steps (begin_step returns
+        # None, which reads nothing of those steps' observations but their unused proprioception).
+        left = B1K_EXECUTE_STEPS - rollout.action_index
+        rest = [rollout.end_step(None).cpu().numpy() for _ in range(left)]
+        action = np.concatenate([action, np.asarray(rest, dtype=np.float32).reshape(-1, ACTION_DIM)])
+        timing = self.timing[observation.episode_id]
+        timing["steps"] += len(action)
+        timing["model_calls"] += rollout.prediction_count - calls
+        timing["act_s"] += time.perf_counter() - started
         return ActionChunk(actions=action)
 
     def end_episode(self, episode_id: str) -> None:
-        if self.active_episode == episode_id:
-            timing = {"episode_id": episode_id, **self.timing}
+        if self.rollouts.pop(episode_id, None) is not None:
+            timing = {"episode_id": episode_id, **self.timing.pop(episode_id)}
             print(json.dumps({"behavior2026vla_episode_timing": timing}), file=sys.stderr, flush=True)
-            self.active_episode = None
-            self.rollout = None
 
     def unload(self) -> None:
         self.policy = None
-        self.rollout = None
+        self.rollouts.clear()
         # Importing omnigibson (for its evaluation constants) creates a temporary directory.
         omnigibson = sys.modules.get("omnigibson")
         if omnigibson is not None:

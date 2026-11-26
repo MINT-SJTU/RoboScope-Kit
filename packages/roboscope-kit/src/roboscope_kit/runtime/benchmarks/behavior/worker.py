@@ -20,11 +20,13 @@ it for one instance (``--instance-indices i --num-envs 1 --num-rollouts 1``):
 
 Only the policy differs from the native command: instead of ``WebsocketPolicy`` the evaluator calls
 :class:`KitPolicyBridge`, which turns each evaluator observation into an SDK observation, asks the
-Policy replica for one action, and returns it to the evaluator unchanged. The simulator also runs
-with an RTX texture cache directory of its own, removed when it exits (see
-``use_private_texture_cache``). Loading a scene shuts down
-the simulator application when the process ends, so each worker process evaluates one instance and
-then exits for the runtime to start the next one.
+Policy replica for an action chunk and returns its actions to the evaluator unchanged, one per
+control step, asking again when the chunk is used up (the native client's
+``--replay-action-chunk-size``); every step is still simulated and rendered as natively. The
+simulator keeps its RTX texture cache in a directory of the task's scene under the run (see
+``use_texture_cache``). Loading a scene shuts down the simulator application when the process
+ends, so each worker process evaluates one instance and then exits for the runtime to start the
+next one.
 """
 
 from __future__ import annotations
@@ -34,7 +36,6 @@ import json
 import os
 import shutil
 import sys
-import tempfile
 import time
 import traceback
 from pathlib import Path
@@ -61,6 +62,7 @@ from .tasks import (
     SUITE_OBSERVATIONS,
     SUITES,
     TASK_IDS,
+    TASK_SCENES,
     episode_id_for,
     instance_id,
     require_python_hash_seed,
@@ -68,24 +70,43 @@ from .tasks import (
 
 # Actions kept in each record, from the first; enough to locate an early divergence.
 RECORDED_ACTIONS = 30
-# Isaac Sim's RTX texture cache stores every converted scene texture under OmniGibson's appdata and
-# never evicts it: about 1.6 GB per instance, enough to fill a disk over a full run. Deleting entries
-# under a running simulator is not an option: it fails the reads of entries it already indexed and
-# crashes it. Each worker process therefore gets its own cache directory, removed when it exits, so
-# every instance starts from a cold cache.
+# Isaac Sim's RTX texture cache stores every converted scene texture and never evicts it: up to 12 GB
+# for one instance, enough to fill a disk over a full run when it is shared under OmniGibson's
+# appdata. Deleting entries under a running simulator fails the reads of entries it already indexed
+# and crashes it. The run therefore keeps one cache directory per scene (the tasks of a scene share
+# their textures; a warm cache halves the scene load and does not change the rendered images), the
+# runtime evaluates one scene after another, and a worker removes the caches of scenes no pending or
+# running item needs before it starts its simulator and after it ends.
 TEXTURE_CACHE_SETTING = "/rtx-transient/resourcemanager/localTextureCachePath"
-TEXTURE_CACHE_PREFIX = "roboscope-behavior-texturecache-"
 
 
-def use_private_texture_cache() -> Path:
-    """Launch the simulator application with a texture cache directory of this process.
+def evict_texture_caches(root: Path, queue_dir: Path, keep: frozenset[str] = frozenset()) -> None:
+    """Remove the scene texture caches under ``root`` that no pending or running item needs.
 
-    OmniGibson builds the application's command line itself and replaces ``sys.argv`` while it
-    launches, so the setting goes in through ``SimulationApp``'s ``extra_args``. The directory name
-    carries the process id, so a directory left by a crashed worker can be told apart.
+    A worker claims its item (moves it to ``running``) before it calls this, so the scene of every
+    simulator still running stays. When an item moves while it is read, nothing is removed.
     """
 
-    cache = Path(tempfile.mkdtemp(prefix=f"{TEXTURE_CACHE_PREFIX}{os.getpid()}-"))
+    needed = set(keep)
+    for path in (*(queue_dir / "pending").glob("*.json"), *(queue_dir / "running").glob("*.json")):
+        try:
+            needed.add(TASK_SCENES[str(json.loads(path.read_text(encoding="utf-8"))["payload"]["task"])])
+        except (OSError, ValueError, KeyError):
+            return
+    if root.is_dir():
+        for cache in root.iterdir():
+            if cache.is_dir() and cache.name not in needed:
+                shutil.rmtree(cache, ignore_errors=True)
+
+
+def use_texture_cache(cache: Path) -> None:
+    """Launch the simulator application with ``cache`` as its RTX texture cache directory.
+
+    OmniGibson builds the application's command line itself and replaces ``sys.argv`` while it
+    launches, so the setting goes in through ``SimulationApp``'s ``extra_args``.
+    """
+
+    cache.mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
     import isaacsim
 
@@ -98,7 +119,6 @@ def use_private_texture_cache() -> Path:
             super().__init__(config, experience)
 
     isaacsim.SimulationApp = SimulationApp
-    return cache
 
 
 def parse_args() -> argparse.Namespace:
@@ -109,6 +129,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--queue-dir", type=Path, required=True)
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--texture-cache-dir", type=Path, required=True)
     parser.add_argument("--write-video", action="store_true")
     parser.add_argument("--poll-interval", type=float, default=0.05)
     return parser.parse_args()
@@ -178,7 +199,9 @@ class KitPolicyBridge:
     """The evaluator's policy object, backed by an SDK Policy replica.
 
     ``BatchedEvaluator`` calls ``reset()`` once after loading an instance and ``forward(obs=...)``
-    once per control step with a batch of one environment; both forward to the replica.
+    once per control step with a batch of one environment. The bridge asks the replica for an action
+    chunk when it has no action left, and returns the chunk's actions one per step: the steps in
+    between are simulated, rendered and scored as usual, and only their observations go unsent.
     """
 
     def __init__(self, client: PolicyClient, suite: str) -> None:
@@ -186,6 +209,8 @@ class KitPolicyBridge:
         self.suite = suite
         self.context: EpisodeContext | None = None
         self.step = 0
+        self.queries = 0
+        self.pending: list[np.ndarray] = []
         self.inference_wait_s = 0.0
         self.observation_s = 0.0
         self.actions: list[list[float]] = []
@@ -193,6 +218,8 @@ class KitPolicyBridge:
     def start(self, context: EpisodeContext) -> None:
         self.context = context
         self.step = 0
+        self.queries = 0
+        self.pending = []
         self.inference_wait_s = 0.0
         self.observation_s = 0.0
         self.actions = []
@@ -211,15 +238,20 @@ class KitPolicyBridge:
 
         if self.context is None:
             raise RuntimeError("BEHAVIOR evaluator queried the policy outside an episode")
-        built = time.perf_counter()
-        observation = build_observation(obs, self.suite, self.context.episode_id, self.step)
-        self.observation_s += time.perf_counter() - built
-        requested = time.perf_counter()
-        chunk = np.asarray(self.client.act(observation).actions)
-        self.inference_wait_s += time.perf_counter() - requested
-        if chunk.shape not in ((ACTION_DIM,), (1, ACTION_DIM)):
-            raise RuntimeError(f"BEHAVIOR Policy action shape is {chunk.shape}, expected (1, {ACTION_DIM})")
-        action = chunk.reshape(1, ACTION_DIM).astype(np.float32)
+        if not self.pending:
+            built = time.perf_counter()
+            observation = build_observation(obs, self.suite, self.context.episode_id, self.step)
+            self.observation_s += time.perf_counter() - built
+            requested = time.perf_counter()
+            chunk = np.asarray(self.client.act(observation).actions, dtype=np.float32)
+            self.inference_wait_s += time.perf_counter() - requested
+            if chunk.ndim == 1:
+                chunk = chunk[None]
+            if chunk.ndim != 2 or chunk.shape[0] < 1 or chunk.shape[1] != ACTION_DIM:
+                raise RuntimeError(f"BEHAVIOR Policy action shape is {chunk.shape}, not (n, {ACTION_DIM})")
+            self.queries += 1
+            self.pending = list(chunk)
+        action = self.pending.pop(0).reshape(1, ACTION_DIM)
         if len(self.actions) < RECORDED_ACTIONS:
             self.actions.append(action[0].tolist())
         self.step += 1
@@ -347,6 +379,7 @@ def run_instance(
             "scene_load_s": scene_load_s,
             "inference_wait_s": bridge.inference_wait_s,
             "observation_s": bridge.observation_s,
+            "policy_queries": bridge.queries,
             "protocol": PROTOCOL_VERSION,
             "behavior_1k_commit": BEHAVIOR_1K_COMMIT,
             "python_hash_seed": PYTHON_HASH_SEED,
@@ -360,7 +393,7 @@ def main() -> None:
     if args.worker_id < 0 or args.poll_interval <= 0:
         raise ValueError("BEHAVIOR worker numeric arguments must be positive")
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
-    state: dict[str, Any] = {"evaluator": None, "texture_cache": None}
+    state: dict[str, Any] = {"evaluator": None}
 
     def evaluate(item: WorkItem, client: PolicyClient) -> WorkResult:
         if state["evaluator"] is not None:
@@ -368,7 +401,9 @@ def main() -> None:
         task = str(item.payload["task"])
         index = int(item.payload["instance_index"])
         started = time.perf_counter()
-        state["texture_cache"] = use_private_texture_cache()
+        scene = TASK_SCENES[task]
+        evict_texture_caches(args.texture_cache_dir, args.queue_dir, frozenset({scene}))
+        use_texture_cache(args.texture_cache_dir / scene)
         evaluator = create_evaluator(task, args.suite, args.write_video)
         state["evaluator"] = evaluator
         bridge = KitPolicyBridge(client, args.suite)
@@ -389,6 +424,7 @@ def main() -> None:
                 "scene_load_s": scene_load_s,
                 "inference_wait_s": bridge.inference_wait_s,
                 "observation_s": bridge.observation_s,
+                "policy_queries": bridge.queries,
             },
         )
 
@@ -408,9 +444,8 @@ def main() -> None:
     finally:
         sys.stdout.flush()
         sys.stderr.flush()
-        if state["texture_cache"] is not None:
-            # Before the shutdown below, which may end the process; the instance is over.
-            shutil.rmtree(state["texture_cache"], ignore_errors=True)
+        # Before the shutdown below, which may end the process; this worker's item is no longer running.
+        evict_texture_caches(args.texture_cache_dir, args.queue_dir)
         if state["evaluator"] is not None:
             if exit_code == 0:
                 # Closes the environment and the simulator application, as the native runner's
