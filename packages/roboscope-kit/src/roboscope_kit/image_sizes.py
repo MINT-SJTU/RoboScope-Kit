@@ -26,7 +26,13 @@ ANY_SIZE = "any"
 # feature takes the shape ``(height, width, None)`` (CALVIN).
 # ``spatial_features``: a camera's other features (depth, point cloud) take its negotiated size
 # (``CameraSupport.spatial_features``, RLBench).
-IMAGE_SIZE_FEATURES: tuple[str, ...] = ("fixed_shape_ranges", "open_shape_ranges", "spatial_features")
+# ``square_sizes``: a size range limited to square sizes (``CameraSupport.square``, LIBERO-Plus).
+IMAGE_SIZE_FEATURES: tuple[str, ...] = (
+    "fixed_shape_ranges",
+    "open_shape_ranges",
+    "spatial_features",
+    "square_sizes",
+)
 BASELINE_IMAGE_SIZE_FEATURES = frozenset({"fixed_shape_ranges"})
 
 ImageSize = tuple[int, int]
@@ -99,13 +105,15 @@ class CameraSupport:
     it. ``min_size``/``max_size`` bound the sizes the simulator renders natively; when they are
     ``None`` the camera renders only its canonical size. ``spatial_features`` names the other
     observation features rendered by this camera, such as depth or a point cloud, whose first two
-    dimensions are the camera's (height, width) and follow its negotiated size.
+    dimensions are the camera's (height, width) and follow its negotiated size. ``square``
+    limits the camera to sizes whose height equals their width.
     """
 
     canonical: ImageSize | None
     min_size: ImageSize | None = None
     max_size: ImageSize | None = None
     spatial_features: tuple[str, ...] = ()
+    square: bool = False
 
     def __post_init__(self) -> None:
         if (self.min_size is None) != (self.max_size is None):
@@ -122,6 +130,8 @@ class CameraSupport:
     def renders(self, size: ImageSize) -> bool:
         if self.min_size is None or self.max_size is None:
             return size == self.canonical
+        if self.square and size[0] != size[1]:
+            return False
         return (
             self.min_size[0] <= size[0] <= self.max_size[0]
             and self.min_size[1] <= size[1] <= self.max_size[1]
@@ -132,6 +142,8 @@ class CameraSupport:
             if self.canonical is None:
                 return "only its own (unspecified) size"
             return f"only {self.canonical[0]}x{self.canonical[1]}"
+        if self.square:
+            return f"square sizes {self.min_size[0]}-{self.max_size[0]}"
         return (
             f"heights {self.min_size[0]}-{self.max_size[0]} and widths "
             f"{self.min_size[1]}-{self.max_size[1]}"
@@ -145,6 +157,8 @@ class CameraSupport:
         }
         if self.spatial_features:
             payload["spatial_features"] = list(self.spatial_features)
+        if self.square:
+            payload["square"] = True
         return payload
 
     @classmethod
@@ -161,11 +175,15 @@ class CameraSupport:
             spatial_features, Sequence
         ):
             raise ValueError(f"camera support spatial_features must be a list; got {spatial_features!r}")
+        square = value.get("square", False)
+        if type(square) is not bool:
+            raise ValueError(f"camera support square must be a boolean; got {square!r}")
         return cls(
             canonical=size("canonical"),
             min_size=size("min_size"),
             max_size=size("max_size"),
             spatial_features=tuple(spatial_features),
+            square=square,
         )
 
 
@@ -213,6 +231,9 @@ def camera_support_requirements(feature: FeatureSpec, support: CameraSupport) ->
     needed = {"fixed_shape_ranges" if spatial_size(feature) is not None else "open_shape_ranges"}
     if support.spatial_features:
         needed.add("spatial_features")
+    if support.square:
+        # Older servers drop the flag and would accept any shape.
+        needed.add("square_sizes")
     return frozenset(needed)
 
 

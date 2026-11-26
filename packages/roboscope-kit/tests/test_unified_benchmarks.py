@@ -1329,7 +1329,9 @@ def test_image_sizes_pick_the_first_size_the_benchmark_renders() -> None:
 @pytest.mark.parametrize(
     ("benchmark", "suite", "image_sizes", "defaults", "message"),
     [
-        ("libero_plus", "libero_10", [(128, 128)], None, "renders only 256x256"),
+        ("libero_plus", "libero_10", [(128, 160)], None, "primary: the benchmark renders square"),
+        ("libero_plus", "libero_10", {"images.primary": [(320, 320)]}, None, "square sizes 64-256"),
+        ("libero_plus", "libero_10", {"images.wrist": [(600, 600)]}, {"render_backend": "osmesa"}, "64-480"),
         ("libero", "libero_10", [(600, 600)], {"render_backend": "osmesa"}, "heights 64-480"),
         ("robotwin", "demo_clean", [(128, 128)], None, "unspecified"),
         ("calvin", "task_D_D", [(2048, 2048)], None, "heights 64-1024"),
@@ -1351,6 +1353,28 @@ def test_image_size_negotiation_names_both_sides_when_it_fails(
 def test_image_size_preferences_are_validated(image_sizes) -> None:
     with pytest.raises(ValueError):
         _image_size_capabilities("libero", image_sizes)
+
+
+def test_libero_plus_renders_square_agent_views_and_any_wrist_size() -> None:
+    from roboscope_kit.benchmark_specs import benchmark_camera_support, get_benchmark_spec
+    from roboscope_kit.image_sizes import camera_support_from_dict, camera_support_to_dict
+
+    contract = _negotiate_image_sizes(
+        "libero_plus", "libero_spatial", {"images.primary": [(128, 128)], "images.wrist": [(128, 160)]}
+    )
+    assert contract.image_sizes == {"images.primary": (128, 128), "images.wrist": (128, 160)}
+    shared = _negotiate_image_sizes("libero_plus", "libero_goal", [(128, 160), (96, 96)])
+    assert shared.image_sizes == {"images.primary": (96, 96), "images.wrist": (128, 160)}
+    assert _negotiate_image_sizes("libero_plus", "libero_10", None).image_sizes == {}
+    assert _negotiate_image_sizes("libero_plus", "libero_10", [(256, 256)]).image_sizes == {}
+    table = benchmark_camera_support(get_benchmark_spec("libero_plus", "libero_10"), {})
+    payload = camera_support_to_dict(table)
+    assert payload["images.primary"]["square"] is True and "square" not in payload["images.wrist"]
+    assert camera_support_from_dict(json.loads(json.dumps(payload))) == table
+    libero = camera_support_to_dict(benchmark_camera_support(get_benchmark_spec("libero", "libero_10"), {}))
+    assert all(set(support) == {"canonical", "min_size", "max_size"} for support in libero.values())
+    with pytest.raises(ValueError, match="square must be a boolean"):
+        camera_support_from_dict({"images.primary": {**payload["images.primary"], "square": 1}})
 
 
 def test_image_size_preferences_round_trip() -> None:
@@ -1518,13 +1542,15 @@ def test_rlbench_worker_command_carries_only_negotiated_sizes(tmp_path: Path) ->
         camera_sizes([("front", (128, 128)), ("front", (64, 64))])
 
 
-def test_libero_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("benchmark", "factory"),
+    [(BenchmarkName.LIBERO, LiberoBenchmarkFactory), (BenchmarkName.LIBERO_PLUS, LiberoPlusBenchmarkFactory)],
+)
+def test_libero_worker_command_carries_only_negotiated_sizes(tmp_path: Path, benchmark, factory) -> None:
     from roboscope_kit.policy import PolicyExecutionContract
     from roboscope_kit.runtime.benchmark.adapters import WorkerContext
 
-    adapter = LiberoBenchmarkFactory().create(
-        _request(BenchmarkName.LIBERO, "libero_10"), _libero_manifest(episodes=1)
-    )
+    adapter = factory().create(_request(benchmark, "libero_10"), _libero_manifest(episodes=1))
 
     def command(image_sizes):
         return adapter.worker_process(
@@ -1539,7 +1565,7 @@ def test_libero_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> 
                 state_dir=tmp_path / "state",
                 output_dir=tmp_path,
                 execution_contract=PolicyExecutionContract(
-                    benchmark="libero",
+                    benchmark=benchmark.value,
                     action_representation="libero.delta-eef-v1",
                     image_sizes=image_sizes,
                 ),
@@ -1549,6 +1575,9 @@ def test_libero_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> 
     assert "--primary-size" not in command({}) and "--wrist-size" not in command({})
     sized = command({"images.wrist": (128, 160)})
     assert sized[sized.index("--wrist-size") + 1] == "128x160" and "--primary-size" not in sized
+    both = command({"images.primary": (128, 128), "images.wrist": (128, 160)})
+    assert both[both.index("--primary-size") + 1] == "128x128"
+    assert both[both.index("--wrist-size") + 1] == "128x160"
 
 
 def _metaworld_contract(cameras, image_sizes):
@@ -1730,3 +1759,29 @@ def test_camera_support_is_limited_to_what_the_policy_server_understands(tmp_pat
     assert current == calvin_support
     with_encodings = server._dispatch("health", {"encodings": ["json"]})
     assert with_encodings["image_size_features"] == list(IMAGE_SIZE_FEATURES)
+
+
+def test_libero_plus_square_agent_view_needs_a_server_that_knows_square_sizes() -> None:
+    from roboscope_kit.benchmark_specs import benchmark_camera_support
+    from roboscope_kit.image_sizes import (
+        BASELINE_IMAGE_SIZE_FEATURES,
+        IMAGE_SIZE_FEATURES,
+        CameraSupport,
+        camera_support_for_server,
+        camera_support_requirements,
+    )
+
+    spec = roboscope_kit.get_benchmark_spec("libero_plus", "libero_spatial")
+    table = benchmark_camera_support(spec, {})
+    features = {feature.name: feature for feature in spec.features}
+    assert camera_support_requirements(features["images.primary"], table["images.primary"]) == {
+        "fixed_shape_ranges",
+        "square_sizes",
+    }
+    wrist = camera_support_requirements(features["images.wrist"], table["images.wrist"])
+    assert wrist == {"fixed_shape_ranges"}
+    assert "square_sizes" in IMAGE_SIZE_FEATURES
+    old = camera_support_for_server(spec, table, BASELINE_IMAGE_SIZE_FEATURES)
+    assert old["images.primary"] == CameraSupport(canonical=(256, 256))
+    assert old["images.wrist"] == table["images.wrist"]
+    assert camera_support_for_server(spec, table, frozenset(IMAGE_SIZE_FEATURES)) == table

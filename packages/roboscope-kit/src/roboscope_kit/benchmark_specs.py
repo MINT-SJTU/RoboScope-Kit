@@ -610,8 +610,7 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
 
 
 # LIBERO and LIBERO-Pro render their cameras natively at any size in these bounds; Kit never
-# resamples. LIBERO-Plus stays at its canonical size because its upstream image corruptions assume
-# square frames of at most 256 pixels.
+# resamples.
 LIBERO_CANONICAL_IMAGE_SIZE = (256, 256)
 LIBERO_MIN_IMAGE_SIZE = (64, 64)
 LIBERO_MAX_IMAGE_SIZE = (1024, 1024)
@@ -634,6 +633,10 @@ RLBENCH_MAX_IMAGE_SIZE = (768, 768)
 CALVIN_CANONICAL_IMAGE_SIZES = {"images.static": (200, 200), "images.gripper": (84, 84)}
 CALVIN_MIN_IMAGE_SIZE = (64, 64)
 CALVIN_MAX_IMAGE_SIZE = (1024, 1024)
+# LIBERO-Plus applies its sensor-noise corruptions to the agent view only. Its zoom blur crops and
+# rescales a square of the frame's height, and its fog adds a 256 x 256 plasma map, so the agent
+# view renders square sizes of at most 256 pixels. The wrist camera has the LIBERO range.
+LIBERO_PLUS_PRIMARY_MAX_IMAGE_SIZE = (256, 256)
 
 
 def benchmark_camera_support(
@@ -672,6 +675,20 @@ def benchmark_camera_support(
                 max_size=RLBENCH_MAX_IMAGE_SIZE,
                 spatial_features=(f"state.{camera}_depth", f"state.{camera}_point_cloud"),
             )
+    elif benchmark.name == BenchmarkName.LIBERO_PLUS.value:
+        backend = str((defaults or {}).get("render_backend", "egl"))
+        maximum = LIBERO_OSMESA_MAX_IMAGE_SIZE if backend == "osmesa" else LIBERO_MAX_IMAGE_SIZE
+        table["images.primary"] = CameraSupport(
+            canonical=LIBERO_CANONICAL_IMAGE_SIZE,
+            min_size=LIBERO_MIN_IMAGE_SIZE,
+            max_size=LIBERO_PLUS_PRIMARY_MAX_IMAGE_SIZE,
+            square=True,
+        )
+        table["images.wrist"] = CameraSupport(
+            canonical=LIBERO_CANONICAL_IMAGE_SIZE,
+            min_size=LIBERO_MIN_IMAGE_SIZE,
+            max_size=maximum,
+        )
     return table
 
 
