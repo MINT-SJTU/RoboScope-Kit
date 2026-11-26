@@ -645,6 +645,14 @@ LIBERO_PLUS_PRIMARY_MAX_IMAGE_SIZE = (256, 256)
 # profile of the suite maps to a Bridge camera (see ``fixed_size_camera_features``).
 MANISKILL_MIN_IMAGE_SIZE = (16, 16)
 MANISKILL_MAX_IMAGE_SIZE = (512, 512)
+# RoboCasa365 renders its three cameras with robosuite's EGL context, whose offscreen buffer grows to the
+# requested size. The official Gym wrapper takes one width and one height for all cameras, so the three
+# share a size group. One act_batch request carries five slots x three cameras x two frames; at
+# 640 x 640 it is 47 MiB as JSON, within the 64 MiB Policy message limit.
+ROBOCASA365_CANONICAL_IMAGE_SIZE = (256, 256)
+ROBOCASA365_MIN_IMAGE_SIZE = (64, 64)
+ROBOCASA365_MAX_IMAGE_SIZE = (640, 640)
+ROBOCASA365_IMAGE_FEATURES = ("images.agentview_left", "images.agentview_right", "images.wrist")
 
 
 def benchmark_camera_support(
@@ -715,6 +723,14 @@ def benchmark_camera_support(
                     min_size=MANISKILL_MIN_IMAGE_SIZE,
                     max_size=MANISKILL_MAX_IMAGE_SIZE,
                 )
+    elif benchmark.name == BenchmarkName.ROBOCASA365.value:
+        for feature in ROBOCASA365_IMAGE_FEATURES:
+            table[feature] = CameraSupport(
+                canonical=ROBOCASA365_CANONICAL_IMAGE_SIZE,
+                min_size=ROBOCASA365_MIN_IMAGE_SIZE,
+                max_size=ROBOCASA365_MAX_IMAGE_SIZE,
+                size_group="robocasa365.cameras",
+            )
     return table
 
 

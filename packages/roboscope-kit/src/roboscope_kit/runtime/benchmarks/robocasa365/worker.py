@@ -17,6 +17,7 @@ import sys
 import time
 from collections import deque
 from contextlib import ExitStack
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,7 @@ from .protocol import (
     CONSTRUCTOR_SEED,
     EPISODES_PER_TASK,
     IMAGE_KEYS,
+    IMAGE_SIZE,
     NATIVE_ENVS,
     OBSERVATION_STEPS,
     ROLLOUT_LABEL_BASE,
@@ -40,7 +42,7 @@ from .protocol import (
     Task,
     validate_upstream,
 )
-from .slots import LocalSlots, ThreadedSlots
+from .slots import LocalSlots, NativeSlot, ThreadedSlots
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,16 +55,32 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--save-videos", action="store_true")
     parser.add_argument("--slot-threads", action="store_true")
     parser.add_argument("--poll-interval", type=float, default=0.05)
+    parser.add_argument(
+        "--image-size", type=_image_size, default=IMAGE_SIZE,
+        help="render size of all three cameras as HEIGHTxWIDTH",
+    )
     return parser.parse_args()
 
 
-def create_environment(task: Task, slot: int):
+def _image_size(value: str) -> tuple[int, int]:
+    try:
+        height, width = (int(part) for part in value.lower().split("x"))
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"expected HEIGHTxWIDTH, got {value!r}") from exc
+    if height < 1 or width < 1:
+        raise argparse.ArgumentTypeError(f"image size must be positive, got {value!r}")
+    return height, width
+
+
+def create_environment(task: Task, slot: int, image_size: tuple[int, int] = IMAGE_SIZE):
     import gymnasium as gym
     import robocasa.wrappers.gym_wrapper  # noqa: F401 -- registers pinned Gym environments
 
+    # The official wrapper renders every camera at one width and height.
+    height, width = image_size
     return gym.make(
         f"robocasa/{task.name}", split=SCENE_SPLIT, seed=CONSTRUCTOR_SEED + slot,
-        camera_widths=256, camera_heights=256,
+        camera_widths=width, camera_heights=height,
     )
 
 
@@ -74,13 +92,15 @@ def environment_range(name: str):
     return profiling.environment(name.removeprefix("environment."))
 
 
-def build_observation(identifier: str, step: int, history: deque) -> Observation:
+def build_observation(
+    identifier: str, step: int, history: deque, image_size: tuple[int, int] = IMAGE_SIZE,
+) -> Observation:
     if len(history) != OBSERVATION_STEPS:
         raise RuntimeError("RoboCasa365 requires two consecutive observation frames")
     features: dict[str, Any] = {}
     for feature, key in IMAGE_KEYS.items():
         value = np.stack([np.asarray(frame[key]) for frame in history])
-        if value.shape != (2, 256, 256, 3) or value.dtype != np.uint8:
+        if value.shape != (2, *image_size, 3) or value.dtype != np.uint8:
             raise RuntimeError(f"RoboCasa365 image {key}: invalid {value.shape}/{value.dtype}")
         features[feature] = np.ascontiguousarray(value)
     for key, dimension in STATE_DIMENSIONS.items():
@@ -207,7 +227,7 @@ def run_group(
                 reset_ids.append(identifier)
             while not all(state.done for state in states):
                 observations = tuple(
-                    build_observation(identifier, state.steps, state.history)
+                    build_observation(identifier, state.steps, state.history, args.image_size)
                     for identifier, state in zip(identifiers, states, strict=True)
                 )
                 inference_started = time.perf_counter()
@@ -276,7 +296,8 @@ def run_task(args: argparse.Namespace, item: WorkItem) -> WorkResult:
         if getattr(Counter, "_roboscope_reset_region_order", None) != "xml-insertion-v1":
             raise RuntimeError("rebuild RoboCasa365 runtime with the pinned sampling corrections")
         with environment_range("environment.create"):
-            slots = ThreadedSlots(task, count) if threaded else LocalSlots(task, count)
+            slot_factory = partial(NativeSlot, image_size=args.image_size)
+            slots = (ThreadedSlots if threaded else LocalSlots)(task, count, slot_factory)
         timings["environment_create_s"] = time.perf_counter() - started
         with PolicyClient(args.policy_socket, timeout_s=300) as client:
             for group in range(episodes // count):

@@ -1785,3 +1785,37 @@ def test_libero_plus_square_agent_view_needs_a_server_that_knows_square_sizes() 
     assert old["images.primary"] == CameraSupport(canonical=(256, 256))
     assert old["images.wrist"] == table["images.wrist"]
     assert camera_support_for_server(spec, table, frozenset(IMAGE_SIZE_FEATURES)) == table
+
+
+def _camera_support_tables():
+    from roboscope_kit.benchmark_specs import benchmark_camera_support, get_benchmark_spec
+
+    for path in sorted((Path(__file__).parents[3] / "benchmarks").glob("*/benchmark-manifest.json")):
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        for benchmark, suites in manifest["supported_suites"].items():
+            for suite in suites:
+                spec = get_benchmark_spec(benchmark, suite)
+                for backend in ("egl", "osmesa"):
+                    yield spec, benchmark_camera_support(spec, {"render_backend": backend})
+
+
+def test_size_groups_share_one_size_range_and_accept_the_benchmark_size() -> None:
+    tables = list(_camera_support_tables())
+    assert any(support.size_group for _, table in tables for support in table.values())
+    for spec, table in tables:
+        groups: dict[str, list] = {}
+        for support in table.values():
+            if support.size_group is not None:
+                groups.setdefault(support.size_group, []).append(support)
+        for group, members in groups.items():
+            shape = {(s.canonical, s.min_size, s.max_size, s.square) for s in members}
+            assert len(shape) == 1, (spec.name, spec.suite, group, shape)
+            canonical = members[0].canonical
+            assert canonical is not None and members[0].renders(canonical), (spec.name, spec.suite, group)
+        for image_sizes in (None, [roboscope_kit.ANY_SIZE]):
+            capabilities = PolicyCapabilities(
+                supported_benchmarks=(spec.name,), required_features=(), image_sizes=image_sizes
+            )
+            assert roboscope_kit.negotiate_policy_action_contract(
+                spec, capabilities, camera_support=table
+            ).image_sizes == {}
