@@ -59,16 +59,19 @@ def native_process_obs() -> Any:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--checkpoint", type=Path, required=True,
+                        help="download_model.py directory or the model.ckpt file in it")
+    parser.add_argument("--batch", type=Path, required=True,
+                        help="first-batch capture from a Kit run: evidence/worker-*/<task>-first-batch.npz")
+    parser.add_argument("--output", type=Path, required=True,
+                        help="JSON report file; its parent directory is created if needed")
+    args = parser.parse_args()
     import dill
     import hydra
     import torch
     from robomimic.utils.lang_utils import LangEncoder
 
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--batch", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
     with np.load(args.batch, allow_pickle=False) as archive:
         captured = {key: archive[key] for key in archive.files}
     instructions = np.asarray(captured["language.instruction"])
