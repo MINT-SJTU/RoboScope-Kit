@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b88 - 2026-11-26
+
+- Add one-line `--help` descriptions for every option of the OpenVLA example's `run_native.py`
+  and `compare_native.py`. Option names, defaults and validation are unchanged.
+
 ## 0.8.0b87 - 2026-11-26
 
 - Stop Workers, Policy Servers and the CUDA MPS daemon when the benchmark CLI receives SIGTERM or SIGHUP.
