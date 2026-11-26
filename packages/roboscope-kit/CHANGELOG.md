@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b85 - 2026-11-26
+
+- Add one-line `--help` descriptions for every option of the OpenVLA example's `run_native.py`
+  and `compare_native.py`. Option names, defaults and validation are unchanged.
+
 ## 0.8.0b84 - 2026-11-26
 
 - Pin MessagePack in the robomimic runtime. The shared Policy client imports it since 0.8.0b27;
