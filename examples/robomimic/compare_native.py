@@ -100,12 +100,41 @@ def run_native(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--runtime", type=Path, required=True, help="build-runtime.sh install dir")
-    parser.add_argument("--checkpoint-dir", type=Path, required=True)
+    parser.add_argument(
+        "--checkpoint-dir",
+        type=Path,
+        required=True,
+        help="directory download_model_zoo.py filled; use the one the Kit run had as --checkpoint-source",
+    )
     parser.add_argument("--kit-run", type=Path, required=True, help="Kit --output-dir to compare")
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--jobs", type=int, default=4)
-    parser.add_argument("--task", action="append", choices=sorted(CHECKPOINTS_BY_TASK))
-    parser.add_argument("--batch-rollouts", type=int, default=0)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="directory that receives native-episodes.jsonl, comparison.json and one upstream log "
+        "per run under logs/",
+    )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=4,
+        help="number of upstream run_trained_agent.py processes to run at once (default: 4)",
+    )
+    parser.add_argument(
+        "--task",
+        action="append",
+        choices=sorted(CHECKPOINTS_BY_TASK),
+        help="limit the comparison to this task; repeat to select several "
+        "(default: every task in the Kit run)",
+    )
+    parser.add_argument(
+        "--batch-rollouts",
+        type=int,
+        default=0,
+        help="with N > 0, also run upstream's default protocol once per task (--n_rollouts N --seed 0) "
+        "and report its success rate and mean horizon as a statistical reference, not paired with "
+        "the Kit episodes (default: 0, nothing extra)",
+    )
     args = parser.parse_args()
 
     kit = kit_records(args.kit_run)

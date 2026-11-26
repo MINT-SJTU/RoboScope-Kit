@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b95 - 2026-11-26
+
+- Describe the options of the robomimic example's `compare_native.py` and `download_model_zoo.py` in `--help`.
+  Option names, defaults and validation are unchanged.
+
 ## 0.8.0b90 - 2026-11-26
 
 - Remove the `inference_metrics` summary from `result.json` and the `queue_wait_p95_ms` signal from autotune
