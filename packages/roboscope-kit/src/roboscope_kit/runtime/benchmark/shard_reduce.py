@@ -138,6 +138,10 @@ def _merge_official(benchmark: str, partials: Sequence[Mapping[str, Any]]) -> di
     if benchmark in _ADDITIVE_TABLES:
         key, has_runtime_metrics = _ADDITIVE_TABLES[benchmark]
         official = _sum_task_tables(partials, key, has_runtime_metrics)
+        if benchmark == "behavior":
+            from roboscope_kit.runtime.benchmarks.behavior.adapter import complete_merged_result
+
+            complete_merged_result(official, partials)
         if benchmark == "robocasa365":
             from roboscope_kit.runtime.benchmarks.robocasa365.adapter import split_results
 

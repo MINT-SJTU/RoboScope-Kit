@@ -2,7 +2,7 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b91 - 2026-11-26
+## 0.8.0b91 - 2026-11-27
 
 - Add the `behavior` benchmark with the `challenge_2026` suite (protocol `behavior-challenge-2026-v1`): the
   2026 BEHAVIOR Challenge public-test profile of BEHAVIOR-1K `v3.9.3-post1`, 100 activities in 7 scenes with
@@ -38,6 +38,11 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   one instance) and filled the disk over a full run.
 - The BEHAVIOR worker records the time spent building observations, and the GR00T example logs per episode
   its request packing, server round trips and the server's inference time.
+- Merging BEHAVIOR shard results recomputes each task's mean Q from the summed scores (it kept the first
+  shard's value) and adds the overall mean Q, mean success rate, metric and formal flag of an unsharded
+  run; an episode reported by two shards is rejected.
+- The GR00T and BEHAVIOR2026VLA examples replace an episode that never ended (its worker died) when the
+  next episode resets on the same replica, instead of failing the replica.
 
 ## 0.8.0b90 - 2026-11-26
 

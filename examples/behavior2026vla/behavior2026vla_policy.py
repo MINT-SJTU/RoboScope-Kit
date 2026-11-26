@@ -144,7 +144,14 @@ class Behavior2026VlaPolicy(Policy):
         from b1k.shared.eval_b1k_wrapper import B1KPolicyWrapper, B1KWrapperConfig  # noqa: PLC0415
 
         if self.active_episode is not None and self.active_episode != context.episode_id:
-            raise RuntimeError(f"episode {self.active_episode} did not end before {context.episode_id}")
+            # An episode that never ended: its worker died (the runtime restarts it on this replica).
+            # Its rollout state is dropped below.
+            print(
+                f"BEHAVIOR2026VLA replica: episode {self.active_episode} did not end; "
+                f"replaced by {context.episode_id}",
+                file=sys.stderr,
+                flush=True,
+            )
         self.active_episode = context.episode_id
         # A new evaluator connection to serve_b1k.py: fresh rollout state, reset as on its reset message.
         self.rollout = [B1KPolicyWrapper(self.policy, config=B1KWrapperConfig())]

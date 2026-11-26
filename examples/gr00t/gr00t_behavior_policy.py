@@ -194,9 +194,14 @@ class Gr00tBehaviorPolicy(Policy):
 
     def reset(self, context: EpisodeContext) -> None:
         if self.active_episode is not None and self.active_episode != context.episode_id:
-            raise RuntimeError(
-                f"GR00T replica is serving episode {self.active_episode}; it cannot start "
-                f"{context.episode_id} (use one replica per worker)"
+            # An episode that never ended: its worker died (the runtime restarts it on this replica).
+            # The reset message below clears the server's state, so the stale episode is dropped. The
+            # server holds one episode, so run one replica per worker.
+            print(
+                f"GR00T replica: episode {self.active_episode} did not end; "
+                f"replaced by {context.episode_id}",
+                file=sys.stderr,
+                flush=True,
             )
         self.active_episode = context.episode_id
         self.timing = dict.fromkeys(self.timing, 0.0)

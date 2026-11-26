@@ -199,8 +199,10 @@ instances; overall, the mean over the 100 tasks (`score_utils.compute_final_q_sc
 counts as 0). The kit reports `mean_q_score` that way and, separately, `mean_success_rate` (the mean over
 tasks of the fraction of episodes with full success). Partial credit is never counted as success.
 A formal result requires exactly one record for each of the 1,000 episodes; the aggregate rejects missing,
-duplicate, unknown or out-of-contract records. Sharded runs sum per-task episode, success and Q-score
-counts.
+duplicate, unknown or out-of-contract records. Merging sharded runs sums per-task episode, success and
+Q-score counts, recomputes each task's mean Q and the overall mean Q and success rate from the sums, rejects
+an episode reported by two shards, and marks the merged result formal only when it covers all 1,000
+episodes.
 
 ## 8. Validation sequence
 

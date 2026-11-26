@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -286,4 +286,37 @@ class BehaviorBenchmarkAdapter:
         }
 
 
-__all__ = ["BehaviorBenchmarkAdapter", "BehaviorRuntimeConfig"]
+def complete_merged_result(official: dict[str, Any], partials: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Finish the per-task table ``shard_reduce`` summed from BEHAVIOR shard partials.
+
+    Recomputes each task's mean Q from its summed ``score_sum`` and adds what ``aggregate`` reports for
+    an unsharded run (metric, overall mean Q and success rate, formal), after checking that no episode
+    appears in two shards and that the episode identities match the per-task counts.
+    """
+
+    episodes = [episode for partial in partials for episode in partial.get("episodes", [])]
+    identities = [(episode["task"], int(episode["instance_id"])) for episode in episodes]
+    if len(identities) != len(set(identities)):
+        raise ValueError("BEHAVIOR shards report the same episode more than once")
+    rows = official["tasks"]
+    for row in rows:
+        counted = sum(task == row["task"] for task, _ in identities)
+        if counted != row["episodes"]:
+            raise ValueError(
+                f"BEHAVIOR shards list {counted} episodes of {row['task']}, not {row['episodes']}"
+            )
+        row["mean_q_score"] = row["score_sum"] / row["episodes"] if row["episodes"] else 0.0
+    official.update(
+        {
+            "metric": "q_score",
+            "formal": sorted(row["task"] for row in rows) == sorted(TASK_NAMES)
+            and all(row["episodes"] == INSTANCES_PER_TASK for row in rows),
+            "mean_q_score": sum(row["mean_q_score"] for row in rows) / len(rows),
+            "mean_success_rate": sum(row["success_rate"] for row in rows) / len(rows),
+            "episodes": sorted(episodes, key=lambda episode: (episode["task"], int(episode["instance_id"]))),
+        }
+    )
+    return official
+
+
+__all__ = ["BehaviorBenchmarkAdapter", "BehaviorRuntimeConfig", "complete_merged_result"]
