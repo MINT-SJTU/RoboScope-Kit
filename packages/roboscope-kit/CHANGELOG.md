@@ -4,6 +4,20 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 ## 0.8.0b83 - 2026-11-26
 
+- Render ManiSkill's field-of-view cameras at Policy-negotiated sizes, 16–512 pixels per side; the
+  Worker sets each negotiated camera's `sensor_configs` width and height, so the simulator renders that
+  size directly. The Bridge camera keeps 480 × 640, because it is defined by a pixel intrinsic for that
+  size over a real photo: an image feature that a suite's Bridge profile maps keeps its own size in that
+  suite (`images.primary` of `bridge_rgb_v1` and `upstream_tasks_v1`), whatever the suite is named.
+  `policy_io.image_sizes` records only the cameras the suite renders, those its task profiles map to an
+  image feature. Without `image_sizes` every camera keeps its task's own size and the Worker builds the
+  environment exactly as before.
+- A flat `image_sizes` list applies to the cameras each suite renders, so a Policy that already
+  declares, for example, `[(224, 224)]` or `[(224, 224), ANY_SIZE]` now receives native 224 × 224 images
+  from the cameras of ManiSkill suites without Bridge tasks, with `canonical_observations: false`.
+  ManiSkill's own size varies by task, so any negotiated size counts as non-canonical, even one equal to
+  a task's own size.
+
 - LIBERO-Plus renders its cameras at Policy-negotiated sizes: the wrist camera at 64–1024 pixels per side
   (480 × 640 at most with OSMesa) and the agent view at square sizes from 64 × 64 to 256 × 256, the sizes
   its image corruptions support. `CameraSupport.square` limits a camera to square sizes. Without

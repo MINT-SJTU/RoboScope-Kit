@@ -637,13 +637,26 @@ CALVIN_MAX_IMAGE_SIZE = (1024, 1024)
 # rescales a square of the frame's height, and its fog adds a 256 x 256 plasma map, so the agent
 # view renders square sizes of at most 256 pixels. The wrist camera has the LIBERO range.
 LIBERO_PLUS_PRIMARY_MAX_IMAGE_SIZE = (256, 256)
+# ManiSkill's field-of-view cameras render natively at any sensor_configs width and height. Each task
+# fixes its own default size (128 x 128 for the tabletop base camera), and one suite may mix tasks, so
+# the canonical size stays the task's own and is not declared here. At 512 x 512, one 10-environment
+# vector group with all three RGB cameras and both depth channels at that size is a 59.4 MB JSON
+# act_batch message, within the 64 MiB protocol limit. Every image feature takes that range except those a
+# profile of the suite maps to a Bridge camera (see ``fixed_size_camera_features``).
+MANISKILL_MIN_IMAGE_SIZE = (16, 16)
+MANISKILL_MAX_IMAGE_SIZE = (512, 512)
 
 
 def benchmark_camera_support(
     benchmark: BenchmarkSpec,
     defaults: dict[str, Any] | None = None,
+    protocol: dict[str, Any] | None = None,
 ) -> dict[str, CameraSupport]:
-    """The sizes each camera of ``benchmark`` can render under the manifest ``defaults``."""
+    """The sizes each camera of ``benchmark`` can render under the manifest ``defaults``.
+
+    ``protocol`` is the manifest's protocol for the benchmark; ManiSkill reads its suite's task
+    profiles from it, and without it every ManiSkill camera renders only its task's own size.
+    """
 
     table = fixed_camera_support(benchmark)
     if benchmark.name in {BenchmarkName.LIBERO.value, BenchmarkName.LIBERO_PRO.value}:
@@ -689,7 +702,37 @@ def benchmark_camera_support(
             min_size=LIBERO_MIN_IMAGE_SIZE,
             max_size=maximum,
         )
+    elif benchmark.name == BenchmarkName.MANISKILL.value and protocol:
+        # Imported here because the ManiSkill runtime imports this module; the profile module reads
+        # the manifest protocol without the simulator.
+        from roboscope_kit.runtime.benchmarks.maniskill.profile import fixed_size_camera_features
+
+        fixed = fixed_size_camera_features(protocol, benchmark.suite)
+        for feature, support in table.items():
+            if feature not in fixed:
+                table[feature] = CameraSupport(
+                    canonical=support.canonical,
+                    min_size=MANISKILL_MIN_IMAGE_SIZE,
+                    max_size=MANISKILL_MAX_IMAGE_SIZE,
+                )
     return table
+
+
+def benchmark_rendered_image_features(
+    benchmark: BenchmarkSpec,
+    protocol: dict[str, Any] | None = None,
+) -> frozenset[str] | None:
+    """The image features the suite's observations carry, or ``None`` when they carry every one.
+
+    ManiSkill observations carry only the features the suite's task profiles map to a camera. The Kit
+    records negotiated sizes for those features only; the others never reach the Policy.
+    """
+
+    if benchmark.name == BenchmarkName.MANISKILL.value and protocol:
+        from roboscope_kit.runtime.benchmarks.maniskill.profile import rendered_camera_features
+
+        return rendered_camera_features(protocol, benchmark.suite)
+    return None
 
 
 def get_benchmark_spec(name: str | BenchmarkName, suite: str) -> BenchmarkSpec:

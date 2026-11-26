@@ -22,8 +22,8 @@ ANY_SIZE = "any"
 # reports none (roboscope-kit 0.8.0b77) understands ``fixed_shape_ranges``: size ranges for features
 # whose spec fixes a spatial shape. Add a name here whenever camera support gains a meaning an older
 # server would misread, and teach ``camera_support_requirements`` about it.
-# ``open_shape_ranges``: size ranges for features whose spec leaves the shape open; the negotiated
-# feature takes the shape ``(height, width, None)`` (CALVIN).
+# ``open_shape_ranges``: size ranges for features whose spec leaves the shape open; the feature
+# takes the negotiated ``(height, width)`` (CALVIN, ManiSkill).
 # ``spatial_features``: a camera's other features (depth, point cloud) take its negotiated size
 # (``CameraSupport.spatial_features``, RLBench).
 # ``square_sizes``: a size range limited to square sizes (``CameraSupport.square``, LIBERO-Plus).

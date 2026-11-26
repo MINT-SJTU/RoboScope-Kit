@@ -20,6 +20,7 @@ from roboscope_kit.benchmark_specs import (
     BenchmarkSpec,
     MetaworldBenchmarkDefinition,
     benchmark_camera_support,
+    benchmark_rendered_image_features,
     get_benchmark_spec,
 )
 from roboscope_kit.policy import DEFAULT_EVAL_MODE, EVAL_MODES
@@ -565,7 +566,14 @@ def _build_inference(
         cwd=policy.cwd,
         load_timeout_s=float(manifest.defaults.get("ready_timeout_s", 900)),
         eval_mode=eval_mode,
-        camera_support=benchmark_camera_support(benchmark_spec, dict(manifest.defaults)),
+        camera_support=benchmark_camera_support(
+            benchmark_spec,
+            dict(manifest.defaults),
+            manifest.benchmark_protocols.get(request.benchmark),
+        ),
+        rendered_image_features=benchmark_rendered_image_features(
+            benchmark_spec, manifest.benchmark_protocols.get(request.benchmark)
+        ),
     )
 
 
