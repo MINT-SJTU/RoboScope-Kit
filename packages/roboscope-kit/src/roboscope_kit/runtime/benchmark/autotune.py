@@ -1084,8 +1084,6 @@ def _as_trial(
     cpu = resources["cpu"]
     gpu = resources["gpu"]
     host_memory = resources.get("host", {}).get("peak_memory_bytes")
-    inference = output.get("inference_metrics", {})
-    queue_wait = inference.get("queue_wait_ms") or {}
     if (
         health["initial_workers"] != k
         or health["final_workers"] != k
@@ -1126,7 +1124,6 @@ def _as_trial(
         servers=ServerMetrics(
             replicas=g,
             throughput=throughput,
-            queue_wait_p95_ms=float(queue_wait.get("p95") or 0.0),
             gpu_utilization=float(gpu["mean_utilization"]),
             vram_bytes=int(gpu["peak_memory_bytes"]),
         ),
@@ -1158,7 +1155,6 @@ def _trial_dict(trial: KTrial) -> dict[str, Any]:
         "throttle_time_ratio": trial.clients.throttle_time_ratio,
         "gpu_utilization": trial.servers.gpu_utilization,
         "vram_bytes": trial.servers.vram_bytes,
-        "queue_wait_p95_ms": trial.servers.queue_wait_p95_ms,
         "host_memory_bytes": trial.clients.host_memory_bytes,
     }
 

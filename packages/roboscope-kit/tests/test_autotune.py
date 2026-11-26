@@ -37,7 +37,6 @@ def _k_trial(
         servers=ServerMetrics(
             replicas=4,
             throughput=throughput,
-            queue_wait_p95_ms=10,
             gpu_utilization=gpu_utilization,
             vram_bytes=36 * 1024**3,
         ),

@@ -37,7 +37,6 @@
     "health",
     "peak_memory_bytes",
     "probe_items",
-    "queue_wait_p95_ms",
     "record_success",
     "steady_window",
     "steps_per_s",

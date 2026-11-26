@@ -82,7 +82,6 @@ TRACKED_FIELDS = (
     "health",
     "peak_memory_bytes",
     "probe_items",
-    "queue_wait_p95_ms",
     "record_success",
     "steady_window",
     "steps_per_s",
@@ -94,7 +93,6 @@ REPLAY_SIGNALS = (
     "cpu_cores",
     "gpu_utilization",
     "peak_memory_bytes",
-    "queue_wait_p95_ms",
     "record_success",
     "steps_per_s",
     "throttle_time_ratio",
@@ -458,7 +456,6 @@ def _fixed_measurement(output: dict[str, Any]) -> dict[str, Any]:
 def _output_fields(output: dict[str, Any]) -> dict[str, Any]:
     result = output["result"]
     resources = output["resources"]
-    queue_wait = output.get("inference_metrics", {}).get("queue_wait_ms") or {}
     fields = {
         "steps_per_s": result.get("steps_per_s"),
         "steady_steps_per_s": result.get("steady_steps_per_s"),
@@ -467,7 +464,6 @@ def _output_fields(output: dict[str, Any]) -> dict[str, Any]:
         "throttle_time_ratio": resources["cpu"].get("throttle_time_ratio"),
         "gpu_utilization": resources["gpu"].get("mean_utilization"),
         "peak_memory_bytes": resources["gpu"].get("peak_memory_bytes"),
-        "queue_wait_p95_ms": queue_wait.get("p95"),
         "probe_items": len(output.get("item_timeline", {}).get("completion_s", {})) or None,
         "record_success": output.get("record_success") or None,
     }
@@ -590,7 +586,6 @@ class WorkloadReplay:
                 "initial_workers_per_gpu": {"0": k},
                 "final_workers_per_gpu": {"0": k},
             },
-            "inference_metrics": {"queue_wait_ms": {"p95": measurement.get("queue_wait_p95_ms", 0.0)}},
             "record_success": measurement.get("record_success", {}),
         }
 

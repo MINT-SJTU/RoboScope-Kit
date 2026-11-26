@@ -44,7 +44,6 @@ UNKNOWN_ON_REAL = (
     "cpu_cores",
     "gpu_utilization",
     "peak_memory_bytes",
-    "queue_wait_p95_ms",
     "record_success",
     "steps_per_s",
     "throttle_time_ratio",
@@ -125,7 +124,7 @@ EXPECTED = {
         "end_to_end_vs_best": pytest.approx(1.321, abs=0.001),
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms",),
+        "unknown_signals": (),
     },
     (FULL_AUTO, "diagonal", "steady"): {
         "selected": (16, 2),
@@ -137,7 +136,7 @@ EXPECTED = {
         "end_to_end_vs_best": pytest.approx(1.321, abs=0.001),
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms",),
+        "unknown_signals": (),
     },
     # two-phase's next K candidate is 9, which no search probed. The fixed run at K=9/g=1 stands in
     # for that probe, so the search completes, but it ran the full workload and has no probe time.
@@ -149,7 +148,7 @@ EXPECTED = {
         "tuning_s": None,
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "unknown_signals": ("wall_time_s",),
         "stand_ins": ((9, 1),),
     },
     (FULL_AUTO, "two-phase", "steady"): {
@@ -160,7 +159,7 @@ EXPECTED = {
         "tuning_s": None,
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "unknown_signals": ("wall_time_s",),
         "stand_ins": ((9, 1),),
     },
     # Built by the record command from real runs. The search reaches K=16/g=4, tied with K=12/g=4.
@@ -174,7 +173,7 @@ EXPECTED = {
         "end_to_end_vs_best": pytest.approx(1.767, abs=0.001),
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms",),
+        "unknown_signals": (),
     },
     (LIBERO, "diagonal", "steady"): {
         "selected": (16, 4),
@@ -186,7 +185,7 @@ EXPECTED = {
         "end_to_end_vs_best": pytest.approx(1.767, abs=0.001),
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms",),
+        "unknown_signals": (),
     },
     # two-phase asks for points no search probed: fixed runs stand in until it runs off the record.
     (LIBERO, "two-phase", None): {
@@ -197,7 +196,7 @@ EXPECTED = {
         "tuning_s": None,
         "safe": True,
         "gaps": (Gap(9, 2, "configuration"),),
-        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "unknown_signals": ("wall_time_s",),
         "stand_ins": ((9, 1),),
     },
     (LIBERO, "two-phase", "steady"): {
@@ -208,7 +207,7 @@ EXPECTED = {
         "tuning_s": None,
         "safe": True,
         "gaps": (Gap(8, 5, "configuration"),),
-        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "unknown_signals": ("wall_time_s",),
         "stand_ins": ((9, 1), (8, 4)),
     },
     # Built by the record command from real runs. K=16/g=1 runs out of GPU memory, so the search
@@ -223,7 +222,7 @@ EXPECTED = {
         "end_to_end_vs_best": pytest.approx(1.368, abs=0.001),
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms",),
+        "unknown_signals": (),
     },
     (ROBOTWIN, "diagonal", "steady"): {
         "selected": (8, 1),
@@ -235,7 +234,7 @@ EXPECTED = {
         "end_to_end_vs_best": pytest.approx(1.368, abs=0.001),
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms",),
+        "unknown_signals": (),
     },
     (ROBOTWIN, "two-phase", None): {
         "selected": (9, 1),
@@ -245,7 +244,7 @@ EXPECTED = {
         "tuning_s": None,
         "safe": True,
         "gaps": (Gap(9, 2, "configuration"),),
-        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "unknown_signals": ("wall_time_s",),
         "stand_ins": ((9, 1),),
     },
     (ROBOTWIN, "two-phase", "steady"): {
@@ -256,7 +255,7 @@ EXPECTED = {
         "tuning_s": None,
         "safe": True,
         "gaps": (),
-        "unknown_signals": ("queue_wait_p95_ms", "wall_time_s"),
+        "unknown_signals": ("wall_time_s",),
         "stand_ins": ((9, 1), (8, 2)),
     },
     (SYNTHETIC, "diagonal", None): {
@@ -635,7 +634,6 @@ def _probe_output(k: int, g: int, root: Path, *, elapsed: float, steady: float |
             "initial_workers_per_gpu": {"0": k},
             "final_workers_per_gpu": {"0": k},
         },
-        "inference_metrics": {"queue_wait_ms": {"p95": 2.0}},
     }
 
 

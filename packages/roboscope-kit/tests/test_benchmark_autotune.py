@@ -106,7 +106,6 @@ def _output(
             "initial_workers_per_gpu": {"0": k},
             "final_workers_per_gpu": {"0": k},
         },
-        "inference_metrics": {"queue_wait_ms": {"p95": 5.0}},
     }
 
 

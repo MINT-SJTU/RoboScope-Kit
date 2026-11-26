@@ -59,7 +59,6 @@ class ServerMetrics:
 
     replicas: int
     throughput: float
-    queue_wait_p95_ms: float
     gpu_utilization: float
     vram_bytes: int
     error_count: int = 0
