@@ -6,13 +6,14 @@
 Runs in the RLBench runtime environment (``build-runtime.sh`` and ``--self-test`` call it)::
 
     PYTHONHASHSEED=0 python -m roboscope_kit.runtime.benchmarks.rlbench.check \
-        --test-set <root> --xvfb <Xvfb> [--task open_drawer ...]
+        --test-set <root> --xvfb <Xvfb> [--task open_drawer ...] [--camera-size front=HxW ...]
 
 For every requested task it recomputes the test-episode digest and compares it with the
 frozen one, then launches CoppeliaSim on a private Xvfb display, loads every requested task and
 checks its variation count against the frozen one, resets the first requested task to its test
 episode 0 with the worker's own reset path, and checks that every camera
-rendered a non-empty image and a finite point cloud. Prints a JSON report (CoppeliaSim also
+rendered a non-empty image and a finite point cloud at its size (``--camera-size``, otherwise
+PerAct's 128x128). Prints a JSON report (CoppeliaSim also
 writes its own messages to stdout; ``--report`` writes the report alone to a file) and exits
 non-zero on any mismatch.
 """
@@ -35,6 +36,8 @@ from .tasks import (
     PYTHON_HASH_SEED,
     TASK_NAMES,
     TASKS_BY_NAME,
+    camera_size,
+    camera_sizes,
     require_python_hash_seed,
 )
 from .test_set import load_test_episode, task_digest
@@ -46,7 +49,17 @@ def main() -> int:
     parser.add_argument("--xvfb", type=Path, required=True)
     parser.add_argument("--task", action="append", choices=TASK_NAMES)
     parser.add_argument("--report", type=Path, help="also write the JSON report here")
+    parser.add_argument(
+        "--camera-size",
+        dest="camera_sizes",
+        type=camera_size,
+        action="append",
+        default=[],
+        metavar="CAMERA=HEIGHTxWIDTH",
+        help="render CAMERA at this size; repeatable",
+    )
     args = parser.parse_args()
+    sizes = camera_sizes(args.camera_sizes)
     require_python_hash_seed()
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
     tasks = args.task or list(TASK_NAMES)
@@ -66,7 +79,7 @@ def main() -> int:
 
     started = time.perf_counter()
     start_xvfb(args.xvfb)
-    environment = create_environment(args.test_set)
+    environment = create_environment(args.test_set, sizes)
     try:
         launched = time.perf_counter()
         # Each task's variation count must be the frozen one, and cover its test episodes.
@@ -88,11 +101,12 @@ def main() -> int:
             LoadedTask(task_env), load_test_episode(args.test_set, tasks[0], 0)
         )
         for camera in CAMERAS:
+            size = sizes.get(camera, IMAGE_SIZE)
             rgb = np.asarray(getattr(observation, f"{camera}_rgb"))
             point_cloud = np.asarray(getattr(observation, f"{camera}_point_cloud"))
-            if rgb.shape != (*IMAGE_SIZE, 3) or not rgb.any():
+            if rgb.shape != (*size, 3) or not rgb.any():
                 raise RuntimeError(f"camera {camera} rendered an empty {rgb.shape} image")
-            if point_cloud.shape != (*IMAGE_SIZE, 3) or not np.isfinite(point_cloud).all():
+            if point_cloud.shape != (*size, 3) or not np.isfinite(point_cloud).all():
                 raise RuntimeError(f"camera {camera} returned an invalid point cloud")
         report["reset"] = {
             "task": tasks[0],

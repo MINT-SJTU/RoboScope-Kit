@@ -1408,6 +1408,116 @@ def test_policy_server_validates_observations_at_the_negotiated_size(tmp_path: P
         server._dispatch("act", {"observation": observation(256, 256)})
 
 
+def test_rlbench_depth_and_point_cloud_follow_the_negotiated_camera_size() -> None:
+    from roboscope_kit.benchmark_specs import benchmark_camera_support
+    from roboscope_kit.image_sizes import apply_image_sizes, camera_support_from_dict, camera_support_to_dict
+
+    spec = roboscope_kit.get_benchmark_spec("rlbench", "peract_18")
+    assert _negotiate_image_sizes("rlbench", "peract_18", None).image_sizes == {}
+    assert _negotiate_image_sizes("rlbench", "peract_18", [(128, 128)]).image_sizes == {}
+    contract = _negotiate_image_sizes(
+        "rlbench", "peract_18", {"images.front": [(2048, 2048), (96, 160)], "images.wrist": [(256, 256)]}
+    )
+    assert contract.image_sizes == {"images.front": (96, 160), "images.wrist": (256, 256)}
+    support = camera_support_from_dict(
+        json.loads(json.dumps(camera_support_to_dict(benchmark_camera_support(spec, {}))))
+    )
+    assert support == benchmark_camera_support(spec, {})
+    shapes = {
+        feature.name: feature.shape
+        for feature in apply_image_sizes(spec, contract.image_sizes, support).features
+    }
+    assert shapes["images.front"] == (96, 160, 3)
+    assert shapes["state.front_depth"] == (96, 160)
+    assert shapes["state.front_point_cloud"] == (96, 160, 3)
+    assert shapes["state.wrist_point_cloud"] == (256, 256, 3)
+    assert shapes["state.left_shoulder_depth"] == (128, 128)
+    assert shapes["state.front_camera_intrinsics"] == (3, 3)
+    # Benchmarks without dependent features send the camera support they sent before.
+    assert "spatial_features" not in camera_support_to_dict(
+        benchmark_camera_support(roboscope_kit.get_benchmark_spec("libero", "libero_10"), {})
+    )["images.primary"]
+    with pytest.raises(ValueError, match="heights 32-768"):
+        _negotiate_image_sizes("rlbench", "peract_18", [(16, 16)])
+    with pytest.raises(ValueError, match="heights 32-768"):
+        _negotiate_image_sizes("rlbench", "peract_18", [(1024, 1024)])
+
+    from roboscope_kit.image_sizes import (
+        BASELINE_IMAGE_SIZE_FEATURES,
+        IMAGE_SIZE_FEATURES,
+        camera_support_for_server,
+        camera_support_requirements,
+        fixed_camera_support,
+    )
+
+    full = benchmark_camera_support(spec, {})
+    front = next(feature for feature in spec.features if feature.name == "images.front")
+    needed = camera_support_requirements(front, full["images.front"])
+    assert needed == {"fixed_shape_ranges", "spatial_features"}
+    assert "spatial_features" in IMAGE_SIZE_FEATURES
+    assert camera_support_for_server(spec, full, frozenset(IMAGE_SIZE_FEATURES)) == full
+    # A Policy server that cannot resize depth and point clouds (0.8.0b77) is offered PerAct's size only.
+    baseline = camera_support_for_server(spec, full, BASELINE_IMAGE_SIZE_FEATURES)
+    assert baseline == fixed_camera_support(spec)
+    capabilities = _image_size_capabilities("rlbench", [(96, 160), roboscope_kit.ANY_SIZE])
+    contract = roboscope_kit.negotiate_policy_action_contract(spec, capabilities, camera_support=baseline)
+    assert contract.image_sizes == {}
+
+
+def test_rlbench_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> None:
+    from roboscope_kit.policy import PolicyExecutionContract
+    from roboscope_kit.runtime.benchmark.adapters import WorkerContext
+    from roboscope_kit.runtime.benchmarks.rlbench.adapter import (
+        RLBenchBenchmarkAdapter,
+        RLBenchRuntimeConfig,
+    )
+    from roboscope_kit.runtime.benchmarks.rlbench.tasks import camera_size, camera_sizes
+
+    unused = Path("/unused")
+    adapter = RLBenchBenchmarkAdapter(
+        RLBenchRuntimeConfig(
+            python=unused,
+            coppeliasim=unused,
+            test_set=unused,
+            xvfb=unused,
+            suite="peract_18",
+            tasks=("open_drawer",),
+            episodes_per_task=1,
+        )
+    )
+
+    def command(image_sizes):
+        return adapter.worker_process(
+            WorkerContext(
+                worker_id=0,
+                gpu_slot=0,
+                replica_id=0,
+                gpu_device="0",
+                replica_port=0,
+                replica_socket=Path("/tmp/replica.sock"),
+                queue_dir=tmp_path / "queue",
+                state_dir=tmp_path / "state",
+                output_dir=tmp_path,
+                execution_contract=PolicyExecutionContract(
+                    benchmark="rlbench",
+                    action_representation="rlbench.ee-pose-planning-v1",
+                    image_sizes=image_sizes,
+                ),
+            )
+        ).command
+
+    assert "--camera-size" not in command({})
+    sized = command({"images.wrist": (96, 160), "images.front": (256, 256)})
+    values = [sized[index + 1] for index, item in enumerate(sized) if item == "--camera-size"]
+    assert values == ["front=256x256", "wrist=96x160"]
+    assert camera_sizes(camera_size(value) for value in values) == {"front": (256, 256), "wrist": (96, 160)}
+    for bad in ("overhead=128x128", "front=128", "front=0x128"):
+        with pytest.raises(argparse.ArgumentTypeError):
+            camera_size(bad)
+    with pytest.raises(ValueError, match="more than one size"):
+        camera_sizes([("front", (128, 128)), ("front", (64, 64))])
+
+
 def test_libero_worker_command_carries_only_negotiated_sizes(tmp_path: Path) -> None:
     from roboscope_kit.policy import PolicyExecutionContract
     from roboscope_kit.runtime.benchmark.adapters import WorkerContext

@@ -24,7 +24,9 @@ ANY_SIZE = "any"
 # server would misread, and teach ``camera_support_requirements`` about it.
 # ``open_shape_ranges``: size ranges for features whose spec leaves the shape open; the negotiated
 # feature takes the shape ``(height, width, None)`` (CALVIN).
-IMAGE_SIZE_FEATURES: tuple[str, ...] = ("fixed_shape_ranges", "open_shape_ranges")
+# ``spatial_features``: a camera's other features (depth, point cloud) take its negotiated size
+# (``CameraSupport.spatial_features``, RLBench).
+IMAGE_SIZE_FEATURES: tuple[str, ...] = ("fixed_shape_ranges", "open_shape_ranges", "spatial_features")
 BASELINE_IMAGE_SIZE_FEATURES = frozenset({"fixed_shape_ranges"})
 
 ImageSize = tuple[int, int]
@@ -95,12 +97,15 @@ class CameraSupport:
 
     ``canonical`` is the size of the official protocol, or ``None`` when the benchmark does not fix
     it. ``min_size``/``max_size`` bound the sizes the simulator renders natively; when they are
-    ``None`` the camera renders only its canonical size.
+    ``None`` the camera renders only its canonical size. ``spatial_features`` names the other
+    observation features rendered by this camera, such as depth or a point cloud, whose first two
+    dimensions are the camera's (height, width) and follow its negotiated size.
     """
 
     canonical: ImageSize | None
     min_size: ImageSize | None = None
     max_size: ImageSize | None = None
+    spatial_features: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if (self.min_size is None) != (self.max_size is None):
@@ -109,6 +114,10 @@ class CameraSupport:
             self.min_size[0] > self.max_size[0] or self.min_size[1] > self.max_size[1]
         ):
             raise ValueError("camera support min_size must not exceed max_size")
+        if not isinstance(self.spatial_features, tuple) or any(
+            not isinstance(feature, str) or not feature for feature in self.spatial_features
+        ):
+            raise ValueError("camera support spatial_features must be a tuple of feature names")
 
     def renders(self, size: ImageSize) -> bool:
         if self.min_size is None or self.max_size is None:
@@ -129,11 +138,14 @@ class CameraSupport:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "canonical": list(self.canonical) if self.canonical is not None else None,
             "min_size": list(self.min_size) if self.min_size is not None else None,
             "max_size": list(self.max_size) if self.max_size is not None else None,
         }
+        if self.spatial_features:
+            payload["spatial_features"] = list(self.spatial_features)
+        return payload
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> CameraSupport:
@@ -144,7 +156,17 @@ class CameraSupport:
             item = value.get(key)
             return _image_size(item, f"camera support {key}") if item is not None else None
 
-        return cls(canonical=size("canonical"), min_size=size("min_size"), max_size=size("max_size"))
+        spatial_features = value.get("spatial_features", [])
+        if isinstance(spatial_features, (str, bytes, bytearray)) or not isinstance(
+            spatial_features, Sequence
+        ):
+            raise ValueError(f"camera support spatial_features must be a list; got {spatial_features!r}")
+        return cls(
+            canonical=size("canonical"),
+            min_size=size("min_size"),
+            max_size=size("max_size"),
+            spatial_features=tuple(spatial_features),
+        )
 
 
 CameraSupportTable = dict[str, CameraSupport]
@@ -187,10 +209,11 @@ def camera_support_requirements(feature: FeatureSpec, support: CameraSupport) ->
 
     if support.min_size is None or support.max_size is None:
         return frozenset()
-    if spatial_size(feature) is not None:
-        return frozenset({"fixed_shape_ranges"})
-    # A size range for a feature whose spec leaves its shape open.
-    return frozenset({"open_shape_ranges"})
+    # A size range for a feature whose spec fixes its shape, or leaves it open.
+    needed = {"fixed_shape_ranges" if spatial_size(feature) is not None else "open_shape_ranges"}
+    if support.spatial_features:
+        needed.add("spatial_features")
+    return frozenset(needed)
 
 
 def camera_support_for_server(
@@ -274,23 +297,41 @@ def negotiate_image_sizes(
     return resolved
 
 
-def apply_image_sizes(benchmark: BenchmarkSpec, image_sizes: Mapping[str, ImageSize]) -> BenchmarkSpec:
-    """Return the spec whose image features carry the negotiated spatial sizes."""
+def apply_image_sizes(
+    benchmark: BenchmarkSpec,
+    image_sizes: Mapping[str, ImageSize],
+    camera_support: Mapping[str, CameraSupport] | None = None,
+) -> BenchmarkSpec:
+    """Return the spec whose image features carry the negotiated spatial sizes.
+
+    A camera's ``spatial_features`` in ``camera_support`` take its size as their first two
+    dimensions.
+    """
 
     if not image_sizes:
         return benchmark
+    followers: dict[str, ImageSize] = {}
+    for camera, size in image_sizes.items():
+        support = (camera_support or {}).get(camera)
+        for name in support.spatial_features if support is not None else ():
+            followers[name] = size
     features = []
     for feature in benchmark.features:
         size = image_sizes.get(feature.name)
-        if size is None:
-            features.append(feature)
-            continue
-        if feature.shape is None:
-            # A spec that leaves the image shape open still fixes the negotiated spatial size.
-            shape: tuple[int | None, ...] = (size[0], size[1], None)
-        elif len(feature.shape) < 3:
-            raise ValueError(f"{benchmark.name} {feature.name} has no spatial shape to resize")
+        if size is not None:
+            if feature.shape is None:
+                # A spec that leaves the image shape open still fixes the negotiated spatial size.
+                shape: tuple[int | None, ...] = (size[0], size[1], None)
+            elif len(feature.shape) < 3:
+                raise ValueError(f"{benchmark.name} {feature.name} has no spatial shape to resize")
+            else:
+                shape = (*feature.shape[:-3], size[0], size[1], feature.shape[-1])
+            features.append(replace(feature, shape=shape))
+        elif feature.name in followers:
+            if feature.shape is None or len(feature.shape) < 2:
+                raise ValueError(f"{benchmark.name} {feature.name} has no spatial shape to resize")
+            size = followers[feature.name]
+            features.append(replace(feature, shape=(size[0], size[1], *feature.shape[2:])))
         else:
-            shape = (*feature.shape[:-3], size[0], size[1], feature.shape[-1])
-        features.append(replace(feature, shape=shape))
+            features.append(feature)
     return replace(benchmark, features=tuple(features))

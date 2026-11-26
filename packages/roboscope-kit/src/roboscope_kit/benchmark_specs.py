@@ -621,6 +621,12 @@ LIBERO_OSMESA_MAX_IMAGE_SIZE = (480, 640)
 # canonical size is the camera's configured output size.
 METAWORLD_MIN_CAMERA_DIMENSION = 64
 METAWORLD_MAX_CAMERA_DIMENSION = 1024
+# RLBench renders each CoppeliaSim vision sensor natively at its configured resolution; its depth and
+# point cloud come from the same render. PerAct's protocol uses 128 x 128. At 768 x 768 an observation
+# of all four cameras (RGB, depth and point cloud) is about 60 MB, inside the 64 MiB Policy message limit.
+RLBENCH_CANONICAL_IMAGE_SIZE = (128, 128)
+RLBENCH_MIN_IMAGE_SIZE = (32, 32)
+RLBENCH_MAX_IMAGE_SIZE = (768, 768)
 
 
 # CALVIN's calvin_env cameras (conf/cameras/cameras/{static,gripper}.yaml) render natively at any
@@ -657,6 +663,14 @@ def benchmark_camera_support(
         for feature, canonical in CALVIN_CANONICAL_IMAGE_SIZES.items():
             table[feature] = CameraSupport(
                 canonical=canonical, min_size=CALVIN_MIN_IMAGE_SIZE, max_size=CALVIN_MAX_IMAGE_SIZE
+            )
+    elif benchmark.name == BenchmarkName.RLBENCH.value:
+        for camera in RLBENCH_CAMERAS:
+            table[f"images.{camera}"] = CameraSupport(
+                canonical=RLBENCH_CANONICAL_IMAGE_SIZE,
+                min_size=RLBENCH_MIN_IMAGE_SIZE,
+                max_size=RLBENCH_MAX_IMAGE_SIZE,
+                spatial_features=(f"state.{camera}_depth", f"state.{camera}_point_cloud"),
             )
     return table
 

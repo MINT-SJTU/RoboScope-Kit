@@ -4,6 +4,19 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 ## 0.8.0b83 - 2026-11-26
 
+- Render RLBench cameras at Policy-negotiated sizes. Each of the four cameras renders natively at 32–768
+  pixels per side, so an observation of all four stays inside the 64 MiB Policy message limit. Its depth
+  and point cloud follow the camera's size, and the camera intrinsics are the ones RLBench computes for
+  that resolution. PerAct's 128 × 128 stays the protocol size, and without
+  `image_sizes` the worker builds its observation configuration exactly as before.
+- `CameraSupport.spatial_features` names the observation features rendered by a camera whose first two
+  dimensions follow its negotiated size; the Policy server checks them at that size. Such entries need
+  the `spatial_features` image-size feature, so a Policy server from an older roboscope-kit is offered
+  RLBench's 128 × 128 only.
+- A flat `image_sizes` list applies to every camera, so a Policy that already declares, for example,
+  `[(224, 224), ANY_SIZE]` now receives native 224 × 224 RLBench images, depth and point clouds with
+  `canonical_observations: false` instead of 128 × 128.
+
 - Let Policies negotiate CALVIN camera sizes. The static (200 × 200) and gripper (84 × 84) cameras render
   natively at 64–1024 pixels per side; the worker sets the negotiated width, height and aspect ratio in
   the merged environment config. Without `image_sizes` CALVIN runs exactly as before.

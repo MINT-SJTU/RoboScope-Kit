@@ -259,7 +259,10 @@ class PolicyServer:
                 camera_support=camera_support,
             )
             # Observations are checked against the negotiated camera sizes.
-            context = replace(context, benchmark=apply_image_sizes(context.benchmark, contract.image_sizes))
+            context = replace(
+                context,
+                benchmark=apply_image_sizes(context.benchmark, contract.image_sizes, camera_support),
+            )
             if capabilities.step_observation_updates and type(self.policy).observe is Policy.observe:
                 raise TypeError("Policy must implement observe() when it declares step observation updates")
             self.context = context
