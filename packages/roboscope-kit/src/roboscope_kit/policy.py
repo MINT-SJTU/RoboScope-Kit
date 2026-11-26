@@ -385,10 +385,11 @@ def validate_observation(
 
 
 def validate_action_chunk(action: ActionChunk, benchmark: BenchmarkSpec) -> None:
-    if action.actions.dtype.name != benchmark.action.dtype:
+    dtypes = (benchmark.action.dtype, *benchmark.action.additional_dtypes)
+    if action.actions.dtype.name not in dtypes:
         raise TypeError(
             f"policy action dtype {action.actions.dtype.name} does not match "
-            f"{benchmark.name} dtype {benchmark.action.dtype}"
+            f"{benchmark.name} dtype {' or '.join(dtypes)}"
         )
     if not np.all(np.isfinite(action.actions)):
         raise ValueError("policy actions must contain only finite values")

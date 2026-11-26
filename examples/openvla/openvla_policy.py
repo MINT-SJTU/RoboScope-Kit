@@ -53,7 +53,7 @@ def environment_action(model_action: np.ndarray) -> np.ndarray:
     if action.shape != (7,) or not np.isfinite(action).all():
         raise ValueError("OpenVLA must return seven finite action values")
     action[-1] = -np.sign(2 * action[-1] - 1)
-    return action.astype(np.float32)
+    return action.astype(np.float64, copy=False)
 
 
 class OpenVLAPolicy(Policy):

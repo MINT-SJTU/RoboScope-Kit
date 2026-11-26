@@ -49,6 +49,11 @@ The runtime starts this script once per inference replica. It passes the staged 
 benchmark contract to `Policy.load()`, then calls `act()` through a local socket. Your process never starts
 a simulator or chooses how many evaluators run.
 
+LIBERO, LIBERO-Plus and LIBERO-Pro accept `float32` and `float64` actions and preserve their
+precision through the simulator step. Existing `float32` Policies work unchanged. To return
+`float64`, use roboscope-kit 0.8.0b91 or later in both the CLI and Policy environments; see the
+[LIBERO action contract](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/LIBERO_EVALUATION_PROTOCOL.md#4-libero-action-contract).
+
 ## How evaluation works
 
 An evaluation takes two files:
