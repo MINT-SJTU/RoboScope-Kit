@@ -344,19 +344,20 @@ Checks on the same machine:
 - With a fixed, observation-independent action sequence, the head-camera image of a warm-cache run
   differs from a cold-cache run by no more than two cold-cache runs differ from each other (mean
   absolute difference 1–4 of 255).
-- 16 tasks of 6 scenes, instance 301, two runs per configuration (the "before" runs are the 100-task run
-  of section 9 and a run of the same code the day after; the "after" runs used a prototype of these
-  changes behind switches, functionally the same code):
+- 16 tasks of 6 scenes, instance 301. The "before" runs are the 100-task run of section 9 and a run of the
+  same code the day after; of the "after" runs, the first two used a prototype of these changes behind
+  switches and the third this version (`0.8.0b83`):
 
 | Configuration | Mean Q | Successes | Evaluation | Actions/s |
 | --- | ---: | ---: | ---: | ---: |
 | Before (K=2, G=2, one action per request, a cold cache per worker) | 0.500, 0.413 | 6, 5 | 7,820 s | 14.3–16.5 |
-| After (K=4, G=2, chunks, scene caches) | 0.290, 0.531 | 4, 6 | 4,413–4,881 s | 24.1–24.2 |
+| After (K=4, G=2, chunks, scene caches) | 0.290, 0.531, 0.555 | 4, 6, 6 | 4,413–4,881 s | 22.5–24.2 |
 
-The Q values of a configuration differ as much between its two runs as between the configurations: one
+The Q values of a configuration differ as much between its runs as between the configurations: one
 episode per task does not resolve a difference of this size, and no change of the outcome was found.
-The throughput is 1.69 times that of the run made the same day with the configuration before. The CPU
-now limits it: 18.5 of the 20 cores on average (GPU memory peak 46.3 GB).
+The throughput is 1.57–1.69 times that of the run made the same day with the configuration before (1.57
+with this version). The CPU now limits it: 17.7–18.5 of the 20 cores on average (GPU memory peak
+46.5 GB). In the run of this version the scene caches took at most 22 GB and none was left afterwards.
 
 Render skipping was measured and rejected: rendering only the step whose observation the Policy
 receives, with the 12 steps in between simulated but not rendered, leaves the physics bit for bit the
