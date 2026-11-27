@@ -142,7 +142,8 @@ are used up, as the native client does with `--replay-action-chunk-size`; every 
 rendered and scored as usual, and only the observations of the steps in between are not sent. A chunk
 is therefore equivalent to one action per call only when the Policy would not have read those
 observations: the GR00T example returns one action per call, the BEHAVIOR2026VLA example the 13
-actions its model call executes. A Policy that keeps the state of each open episode can serve several
+actions its model call executes (in the solution's `B1KPolicyWrapper` a step without a model call
+reads only the proprioception, which the next model call overwrites before it uses it). A Policy that keeps the state of each open episode can serve several
 workers per replica.
 
 ## 4. Observation and action contract
@@ -327,7 +328,7 @@ The simulator dominates: one worker steps about 12 actions/s while it is not wai
 load of every instance adds a sixth. At this rate the formal 1,000 episodes take about ten days on this
 machine.
 
-### Throughput changes (Kit `0.8.0b86`)
+### Throughput changes (Kit `0.8.0b92`)
 
 Three changes leave every simulated step, rendered image and score as before and raise the throughput:
 
@@ -337,7 +338,13 @@ Three changes leave every simulated step, rendered image and score as before and
   one 48 GB GPU with 2 replicas (6.3 GB each).
 - **A texture cache per scene.** The run keeps one RTX texture cache per scene under
   `<output-dir>/texture-cache`, evaluates one scene after another and removes a scene's cache once no
-  pending or running item needs it. A warm cache halves a scene load (`turning_on_radio` 250 s to 127 s).
+  pending or running item and no running simulator needs it. A warm cache halves a scene load
+  (`turning_on_radio` 250 s to 127 s). Only the first simulator of a scene fills its cache; one that
+  starts while the first still loads waits for it and then loads warm, with no second copy of up to
+  12 GB. A file lock orders these decisions, a worker keeps its cache until its process has exited
+  (including the simulator shutdown), the cache of a killed worker goes at the next eviction and the
+  adapter removes what is left when the workers have stopped. Worker results note `texture_cache`
+  (`warm` or `cold`) and `texture_cache_wait_s`.
 
 Checks on the same machine:
 

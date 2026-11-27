@@ -32,12 +32,15 @@ next one.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import json
 import os
 import shutil
 import sys
 import time
 import traceback
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -75,28 +78,126 @@ RECORDED_ACTIONS = 30
 # appdata. Deleting entries under a running simulator fails the reads of entries it already indexed
 # and crashes it. The run therefore keeps one cache directory per scene (the tasks of a scene share
 # their textures; a warm cache halves the scene load and does not change the rendered images), the
-# runtime evaluates one scene after another, and a worker removes the caches of scenes no pending or
-# running item needs before it starts its simulator and after it ends.
+# runtime evaluates one scene after another, and a worker removes the caches no pending or running
+# item and no live simulator needs before it starts its simulator and after it ends (see
+# ``claim_texture_cache``); the adapter removes the rest when the workers have stopped.
 TEXTURE_CACHE_SETTING = "/rtx-transient/resourcemanager/localTextureCachePath"
+# Under the cache root: the lock that serializes cache decisions, one file per process using a scene's
+# cache, and a ``<scene>.ready`` marker once a scene's cache holds a complete scene load.
+CACHE_LOCK = ".lock"
+CACHE_HOLDERS = ".holders"
+READY_SUFFIX = ".ready"
+CACHE_POLL_S = 2.0
+
+
+def process_start_time(pid: int) -> str | None:
+    """The kernel start time of ``pid`` (``/proc/<pid>/stat`` field 22), or None if it is not running.
+
+    With the pid it identifies a process even when the pid is reused.
+    """
+
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return stat.rsplit(")", 1)[1].split()[19]
+
+
+@contextlib.contextmanager
+def cache_lock(root: Path) -> Iterator[None]:
+    root.mkdir(parents=True, exist_ok=True)
+    with open(root / CACHE_LOCK, "a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+
+
+def live_cache_holders(root: Path) -> list[dict[str, Any]]:
+    """The scene caches of the running processes under ``root``; drops the entries of ended processes.
+
+    Call under ``cache_lock``.
+    """
+
+    holders = []
+    for path in (root / CACHE_HOLDERS).glob("*.json"):
+        try:
+            holder = json.loads(path.read_text(encoding="utf-8"))
+            alive = process_start_time(int(holder["pid"])) == holder["start"]
+        except (OSError, ValueError, KeyError, TypeError):
+            alive = False
+        if alive:
+            holders.append(holder)
+        else:
+            path.unlink(missing_ok=True)
+    return holders
 
 
 def evict_texture_caches(root: Path, queue_dir: Path, keep: frozenset[str] = frozenset()) -> None:
-    """Remove the scene texture caches under ``root`` that no pending or running item needs.
+    """Remove the caches under ``root`` that no pending or running item and no live process needs.
 
-    A worker claims its item (moves it to ``running``) before it calls this, so the scene of every
-    simulator still running stays. When an item moves while it is read, nothing is removed.
+    Call under ``cache_lock``. A worker claims its item (moves it to ``running``) before it calls this,
+    and a worker whose item has ended keeps its cache until its process exits, so a simulator never
+    loses its cache, even while it shuts down. The caches of a killed worker go at the next eviction.
+    When an item moves while it is read, no scene cache is removed.
     """
 
-    needed = set(keep)
+    needed = set(keep) | {str(holder["scene"]) for holder in live_cache_holders(root)}
     for path in (*(queue_dir / "pending").glob("*.json"), *(queue_dir / "running").glob("*.json")):
         try:
             needed.add(TASK_SCENES[str(json.loads(path.read_text(encoding="utf-8"))["payload"]["task"])])
         except (OSError, ValueError, KeyError):
             return
-    if root.is_dir():
-        for cache in root.iterdir():
-            if cache.is_dir() and cache.name not in needed:
-                shutil.rmtree(cache, ignore_errors=True)
+    for cache in root.iterdir():
+        if cache.is_dir() and not cache.name.startswith(".") and cache.name not in needed:
+            (root / f"{cache.name}{READY_SUFFIX}").unlink(missing_ok=True)
+            shutil.rmtree(cache, ignore_errors=True)
+
+
+def claim_texture_cache(root: Path, queue_dir: Path, scene: str) -> tuple[Path, bool, float]:
+    """The scene's texture cache for this process's simulator, whether it is cold, and the wait.
+
+    A cache holds a complete scene load once its first simulator has loaded the scene (see
+    ``mark_texture_cache_ready``); a later simulator then loads warm. While the first one still
+    fills the cache, a later one waits for it rather than write the same cold cache or a cache of
+    its own (a second copy of up to 12 GB). A cold cache that no live simulator fills (its
+    simulator was killed or failed) starts over. The process holds the cache until it exits.
+    """
+
+    started = time.monotonic()
+    while True:
+        with cache_lock(root):
+            evict_texture_caches(root, queue_dir, frozenset({scene}))
+            cache = root / scene
+            ready = (root / f"{scene}{READY_SUFFIX}").exists()
+            if ready or all(holder["scene"] != scene for holder in live_cache_holders(root)):
+                if not ready:
+                    shutil.rmtree(cache, ignore_errors=True)
+                cache.mkdir(exist_ok=True)
+                holders = root / CACHE_HOLDERS
+                holders.mkdir(exist_ok=True)
+                pid = os.getpid()
+                entry = holders / f"{pid}.json"
+                partial = entry.with_suffix(".tmp")
+                partial.write_text(
+                    json.dumps({"pid": pid, "start": process_start_time(pid), "scene": scene}),
+                    encoding="utf-8",
+                )
+                partial.replace(entry)
+                return cache, not ready, time.monotonic() - started
+        time.sleep(CACHE_POLL_S)
+
+
+def mark_texture_cache_ready(root: Path, scene: str) -> None:
+    """Record that the scene's shared cache holds a complete scene load; later simulators share it."""
+
+    with cache_lock(root):
+        (root / f"{scene}{READY_SUFFIX}").touch()
+
+
+def release_texture_caches(root: Path, queue_dir: Path) -> None:
+    """Remove the caches nothing needs any more, after this worker's item has ended."""
+
+    with cache_lock(root):
+        evict_texture_caches(root, queue_dir)
 
 
 def use_texture_cache(cache: Path) -> None:
@@ -402,9 +503,11 @@ def main() -> None:
         index = int(item.payload["instance_index"])
         started = time.perf_counter()
         scene = TASK_SCENES[task]
-        evict_texture_caches(args.texture_cache_dir, args.queue_dir, frozenset({scene}))
-        use_texture_cache(args.texture_cache_dir / scene)
+        cache, cold_cache, cache_wait_s = claim_texture_cache(args.texture_cache_dir, args.queue_dir, scene)
+        use_texture_cache(cache)
         evaluator = create_evaluator(task, args.suite, args.write_video)
+        if cold_cache:
+            mark_texture_cache_ready(args.texture_cache_dir, scene)
         state["evaluator"] = evaluator
         bridge = KitPolicyBridge(client, args.suite)
         evaluator.policy = bridge
@@ -425,6 +528,8 @@ def main() -> None:
                 "inference_wait_s": bridge.inference_wait_s,
                 "observation_s": bridge.observation_s,
                 "policy_queries": bridge.queries,
+                "texture_cache": "cold" if cold_cache else "warm",
+                "texture_cache_wait_s": cache_wait_s,
             },
         )
 
@@ -444,8 +549,9 @@ def main() -> None:
     finally:
         sys.stdout.flush()
         sys.stderr.flush()
-        # Before the shutdown below, which may end the process; this worker's item is no longer running.
-        evict_texture_caches(args.texture_cache_dir, args.queue_dir)
+        # Before the shutdown below, which may end the process; this worker's item is no longer running,
+        # and its own cache stays until the process has exited.
+        release_texture_caches(args.texture_cache_dir, args.queue_dir)
         if state["evaluator"] is not None:
             if exit_code == 0:
                 # Closes the environment and the simulator application, as the native runner's

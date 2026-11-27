@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import os
+import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -78,6 +79,7 @@ class BehaviorBenchmarkAdapter:
 
     def __init__(self, config: BehaviorRuntimeConfig) -> None:
         self.config = config
+        self.texture_cache_dirs: set[Path] = set()
 
     def work_items(self) -> Sequence[WorkItem]:
         # One item per instance: each worker process loads one scene and evaluates one instance, as
@@ -113,6 +115,8 @@ class BehaviorBenchmarkAdapter:
 
     def worker_process(self, context: WorkerContext) -> ProcessSpec:
         threads = str(self.config.cpu_threads)
+        texture_cache_dir = context.output_dir / "texture-cache"
+        self.texture_cache_dirs.add(texture_cache_dir)
         command = (
             str(self.config.python),
             "-m",
@@ -130,7 +134,7 @@ class BehaviorBenchmarkAdapter:
             "--output-dir",
             str(context.output_dir / "behavior"),
             "--texture-cache-dir",
-            str(context.output_dir / "texture-cache"),
+            str(texture_cache_dir),
         )
         if self.config.write_video:
             command += ("--write-video",)
@@ -149,6 +153,12 @@ class BehaviorBenchmarkAdapter:
                 "PYTHONDONTWRITEBYTECODE": "1",
             },
         )
+
+    def close(self) -> None:
+        """Remove the scene texture caches once the pass's workers have stopped (see the worker)."""
+
+        for path in self.texture_cache_dirs:
+            shutil.rmtree(path, ignore_errors=True)
 
     def aggregate(self, results: Sequence[WorkResult]) -> dict[str, Any]:
         per_task = self._collect(results)
