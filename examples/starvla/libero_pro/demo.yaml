@@ -30,6 +30,7 @@ config:
   inference:
     dtype: bfloat16
     unnorm_key: franka
+    max_batch_size: 4
     inputs:
       images: [images.primary, images.wrist]
       language: language.instruction

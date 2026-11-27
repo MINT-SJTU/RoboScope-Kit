@@ -2,13 +2,17 @@
 .pytest_cache/
 .ruff_cache/
 .venv/
+.venv-*/
 __pycache__/
+*.py[cod]
 *.egg-info/
 build/
 dist/
 sdk-dist/
 .verify-sdk/
 .verify-download/
+/.claude/
+/.local/
 
 # X-VLA example sources and weights placed inside the example directory
 examples/xvla/X-VLA/
@@ -18,3 +22,20 @@ examples/xvla/checkpoints/
 examples/openvla/artifacts/
 examples/openvla/checkpoints/
 examples/openvla/runtime/
+
+# Downloaded StarVLA sources and model snapshots placed inside the example directory
+examples/starvla/StarVLA/
+examples/starvla/checkpoints/
+examples/starvla/models/
+
+# Local evaluation outputs and Nsight binary traces
+/runs/
+/outputs/
+/results/
+/artifacts/
+benchmarks/libero_pro/runs/
+benchmarks/libero_pro/outputs/
+benchmarks/libero_pro/results/
+benchmarks/libero_pro/artifacts/
+*.nsys-rep
+*.qdrep

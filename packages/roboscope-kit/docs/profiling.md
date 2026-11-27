@@ -1,6 +1,6 @@
 # RoboScope Kit Profiling
 
-Updated: 2026-11-18
+Updated: 2026-11-27
 
 This document explains how to use `--profile` to see where an evaluation's time goes, and records what
 profiling has found so far. After every profiling run, add its findings to the benchmark's own documentation and link them from
@@ -81,6 +81,7 @@ these timers do not establish verified Nsight hardware coverage.
 |---|---|---|
 | RoboDojo | Yes | Yes (2026-11-05, K=1 and K=3) |
 | LIBERO, LIBERO-Plus | Yes | Not yet |
+| LIBERO-Pro | Yes (`ROBOSCOPE_TIMING_DIR` also covers Policy stages) | Yes (2026-11-16 to 2026-11-18, RTX 4090, StarVLA QwenOFT) |
 | MetaWorld | Yes | Not yet |
 | robomimic | Yes | Yes (2026-11-08, real BC-RNN, K=5/G=1 diagnostic) |
 | RLBench | Yes | Not yet |
@@ -107,6 +108,12 @@ these timers do not establish verified Nsight hardware coverage.
 Each benchmark keeps its profiling findings in its own documentation, newest first, with the date, machine,
 configuration, and Kit version:
 
+- [LIBERO-Pro](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/README.md#profiling):
+  Nsight Systems and PyTorch operator attribution on one dedicated RTX 4090 (2026-11-16 to 2026-11-18, StarVLA
+  `Qwen2.5-VL-OFT-LIBERO-4in1`, `OMP_NUM_THREADS=1`, `batch_cap=1`) identified 160 DtoH readbacks per
+  prediction (reduced to 4 via CPU vision/token metadata), 232 vision SDPA calls per prediction (reduced to 32
+  by batching equal-length vision windows), and OpenGL mipmap/context reset costs. See also the
+  [LIBERO-Pro throughput notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/THROUGHPUT.md).
 - [robomimic](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/README.md#profiling):
   repeated model compilation and Policy waits motivate the compiled-model cache and fixed-K/G comparison (2026-11-08).
   The [throughput notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robomimic/THROUGHPUT.md) record matched repeats, per-step cache agreement and native throughput (2026-11-09).

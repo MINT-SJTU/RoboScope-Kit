@@ -7,10 +7,12 @@ Policy boundary.
 
 from __future__ import annotations
 
-import numpy as np
-from starvla_policy import StarVLAPolicy, _resize_image_with_opencv
+from dataclasses import replace
 
-from roboscope_kit import ActionChunk, PolicyCapabilities, SessionContext, run
+import numpy as np
+from starvla_policy import StarVLAPolicy, _build_example, _resize_image_with_opencv
+
+from roboscope_kit import ActionChunk, Observation, PolicyCapabilities, SessionContext, run
 
 
 def decode_actions(normalized: np.ndarray, statistics: dict) -> np.ndarray:
@@ -26,20 +28,27 @@ class StarVLALiberoPolicy(StarVLAPolicy):
         if context.benchmark.name != "libero":
             raise ValueError("StarVLALiberoPolicy serves LIBERO only")
         capabilities = super().load(context)
-        config = self.config
+        runtime = self._require_runtime()
+        config = runtime.config
         if config.action_dim != 7 or config.action_horizon != 8 or config.unnorm_key != "franka":
             raise ValueError("StarVLALiberoPolicy expects a 7-D, 8-step franka checkpoint")
-        self.image_preprocessor = _resize_image_with_opencv
+        self._runtime = replace(runtime, image_preprocessor=_resize_image_with_opencv)
         return capabilities
 
-    def _action_chunk(self, normalized: np.ndarray) -> ActionChunk:
-        actions = decode_actions(normalized, self.framework.norm_stats["franka"]["action"])
-        actions = np.array(actions, copy=True, order="C")
-        for transform in self.config.transforms:
+    def act(self, observation: Observation) -> ActionChunk:
+        runtime = self._require_runtime()
+        example = _build_example(observation.features, runtime)
+        output = runtime.predict(examples=[example], **runtime.config.kwargs)
+        normalized = np.asarray(output["normalized_actions"])
+        if normalized.shape != (1, 8, 7):
+            raise ValueError(f"StarVLA returned action shape {normalized.shape}; expected (1, 8, 7)")
+        actions = decode_actions(normalized[0], runtime.framework.norm_stats["franka"]["action"])
+        actions = np.array(actions, dtype=np.float32, copy=True, order="C")
+        for transform in runtime.config.transforms:
             transform.apply(actions)
         if not np.isfinite(actions).all():
             raise ValueError("StarVLA returned non-finite actions")
-        return ActionChunk(actions.astype(np.float32))
+        return ActionChunk(actions)
 
 
 if __name__ == "__main__":

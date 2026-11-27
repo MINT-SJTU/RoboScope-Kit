@@ -2,6 +2,28 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b92 - 2026-11-27
+
+- Reduce per-request allocations and connection churn on the Policy socket and observation validation paths:
+  receive frames in place into a preallocated buffer, send frame headers without copying array payloads,
+  cache derived feature lookup tables on `BenchmarkSpec`, reuse one persistent `PolicyClient` socket per
+  LIBERO Worker with automatic reconnect, and serve `PolicyServer` `"health"` probes without acquiring
+  `_request_lock`.
+- Fold opt-in stage wall-clock JSONL diagnostics (`ROBOSCOPE_TIMING_DIR`) into `roboscope_kit.profiling`,
+  keeping zero wrapper or formatting overhead on unprofiled Client, Server, and Worker hot paths.
+- Support manifest-level fixed `concurrency`/`replicas` defaults (bypassing Autotune unless
+  `--autotune-strategy` is requested), `defaults.fast_defaults` overlays for `--eval-mode fast`, and
+  `--cuda-mps` / `--no-cuda-mps` overrides.
+- Configure LIBERO-Pro conservative `strict` defaults (`K=12, g=3`, MPS off, JSON framing, canonical `256x256`
+  cameras, single-request inference) and `--eval-mode fast` defaults (`K=24, g=2`, MPS on, MessagePack
+  framing, negotiated native `224x224` camera rendering, `chunk_camera_rendering` across both intermediate
+  action chunks and unconsumed settle steps verified against `robosuite 1.4.0`, `compiled_model_cache`,
+  `egl_context_reuse`, cross-episode dynamic action batching `max_batch_size=4`, and StarVLA
+  `QwenOFTFastRunner` with GPU `224x224` patchify, prompt/RoPE cache, direct causal SDPA backbone, and
+  shared-pool `CUDAGraph` replay) backed by checksum-pinned simulator patches, reaching `2.034x` formal
+  evaluation throughput (`4,945.12 s` vs `10,060.22 s`, `404.81 steps/s`) across all 16 suites (`8,000`
+  episodes) on one RTX 4090.
+
 ## 0.8.0b91 - 2026-11-27
 
 - Accept `float64` as well as `float32` actions for LIBERO, LIBERO-Plus and LIBERO-Pro,
