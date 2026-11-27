@@ -8,6 +8,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   `download_model.py` now import their inference dependencies after parsing the arguments, so `--help` works
   without the inference environment. `compare_rollouts.py` passes `zip(..., strict=False)` (same behavior) and
   wraps its long lines for Ruff.
+- Describe the options of the PerAct example's `run_native.py`, `compare_native.py` and `download_assets.py` in
+  `--help`. Option names, defaults and validation are unchanged.
 
 ## 0.8.0b91 - 2026-11-27
 
