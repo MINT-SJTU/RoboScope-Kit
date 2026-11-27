@@ -33,6 +33,7 @@ class SuiteSize:
 
 
 SUITE_SIZES: dict[tuple[str, str], SuiteSize] = {
+    ("roboinf", "test"): SuiteSize(tasks=8, episodes_per_task=None, fixed_total_records=861),
     ("libero", "libero_spatial"): SuiteSize(tasks=10, episodes_per_task=50),
     ("libero", "libero_object"): SuiteSize(tasks=10, episodes_per_task=50),
     ("libero", "libero_goal"): SuiteSize(tasks=10, episodes_per_task=50),

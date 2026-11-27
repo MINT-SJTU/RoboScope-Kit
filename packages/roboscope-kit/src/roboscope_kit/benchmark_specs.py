@@ -20,6 +20,7 @@ class BenchmarkName(str, Enum):  # noqa: UP042 -- benchmark environments include
     ROBOCASA = "robocasa"
     ROBOCASA365 = "robocasa365"
     ROBOTWIN = "robotwin"
+    ROBOINF = "roboinf"
     CALVIN = "calvin"
     METAWORLD = "metaworld"
     ROBODOJO = "robodojo"
@@ -274,6 +275,15 @@ class RoboTwinBenchmarkDefinition(BenchmarkDefinition):
 
     def action(self, _suite: str) -> ActionSpec:
         return ActionSpec("action.robot", "Absolute dual-arm joint and gripper target.", 14)
+
+
+class RoboInFBenchmarkDefinition(RoboTwinBenchmarkDefinition):
+    """Fixed native camera views and absolute bimanual joint targets."""
+
+    name = BenchmarkName.ROBOINF
+    protocol_version = "roboinf-clear-v1"
+    supported_action_representations = ("roboinf.joint14_absolute",)
+    default_action_representation = "roboinf.joint14_absolute"
 
 
 class RoboDojoBenchmarkDefinition(BenchmarkDefinition):
@@ -605,6 +615,7 @@ _DEFINITIONS: dict[BenchmarkName, BenchmarkDefinition] = {
         RoboCasaBenchmarkDefinition(),
         RoboCasa365BenchmarkDefinition(),
         RoboTwinBenchmarkDefinition(),
+        RoboInFBenchmarkDefinition(),
         RoboDojoBenchmarkDefinition(),
         CalvinBenchmarkDefinition(),
         MetaworldBenchmarkDefinition(),

@@ -2,6 +2,10 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b92 - 2026-11-27
+
+- Add the RoboInF v1.0.0 clear-test joint-action adapter, prediction exports, and an authorized evaluator interface.
+
 ## 0.8.0b91 - 2026-11-27
 
 - Accept `float64` as well as `float32` actions for LIBERO, LIBERO-Plus and LIBERO-Pro,
