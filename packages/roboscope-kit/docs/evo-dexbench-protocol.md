@@ -108,4 +108,6 @@ native four environments). Each task uses its group's checkpoint (Core, or Gen f
 DP sampling is not seeded upstream, so runs agree statistically, not per episode; every difference
 is within 1.6 standard errors. Both paths used the same pinned packages on CPython 3.11 (upstream's
 own environments use 3.10) with the open-file limit raised to the hard limit. `m02_v1` took 32 min 39 s
-natively and 32 min 2 s through the Kit, `b11_v1` 62 min 8 s and 59 min 45 s.
+natively and 32 min 2 s through the Kit, `b11_v1` 62 min 8 s and 59 min 45 s. The runs of `m04_v1`–`m11_v1`
+and `b07_v1` set `MALLOC_ARENA_MAX=2` (except the Kit run of `m04_v1`), which changes only where memory
+comes from.
