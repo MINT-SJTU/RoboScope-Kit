@@ -11,7 +11,6 @@ from pathlib import Path
 
 import msgpack
 import numpy as np
-
 from roboinf_benchmark.contracts import JOINT, ActionChunk, PolicyDescription
 from roboinf_benchmark.robotwin import environment_factory
 from roboinf_benchmark.runner import run_case
