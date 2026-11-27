@@ -1,0 +1,76 @@
+--- a/robosuite/utils/binding_utils.py
++++ b/robosuite/utils/binding_utils.py
+@@ -4,7 +4,10 @@
+ 
+ import gc
+ import os
++from copy import copy
++from functools import lru_cache
+ from tempfile import TemporaryDirectory
++from threading import RLock
+ 
+ # DIRTY HACK copied from mujoco-py - a global lock on rendering
+ from threading import Lock
+@@ -258,6 +261,16 @@
+                     # pylint: enable=protected-access
+                     dct[attr] = property(fget, fset)
+         return super().__new__(cls, name, bases, dct)
++
++
++# LIBERO-Pro assets are immutable. Cache pristine compiled models, never the
++# mutable model owned by an environment. Keep memory bounded across task switches.
++_XML_MODEL_LOCK = RLock()
++
++
++@lru_cache(maxsize=2)
++def _cached_xml_model(xml, directory):
++    return mujoco.MjModel.from_xml_string(xml)
+ 
+ 
+ class MjModel(metaclass=_MjModelMeta):
+@@ -496,10 +509,24 @@
+     #     return self._userdata_name2id[name]
+ 
+     def get_xml(self):
+-        with TemporaryDirectory() as td:
+-            filename = os.path.join(td, "model.xml")
+-            ret = mujoco.mj_saveLastXML(filename.encode(), self._model)
+-            return open(filename).read()
++        with _XML_MODEL_LOCK:
++            source = getattr(self, "_source_xml", None)
++            if source is not None:
++                # MuJoCo's XML serializer also uses global last-compiled schema.
++                # Recompile the source even if another caller compiled outside
++                # this binding; serialize this instance's actual mutable values.
++                xml, directory = source
++                previous = os.getcwd()
++                try:
++                    os.chdir(directory)
++                    mujoco.MjModel.from_xml_string(xml)
++                finally:
++                    os.chdir(previous)
++            with TemporaryDirectory() as td:
++                filename = os.path.join(td, "model.xml")
++                mujoco.mj_saveLastXML(filename.encode(), self._model)
++                with open(filename) as stream:
++                    return stream.read()
+ 
+     def get_joint_qpos_addr(self, name):
+         """
+@@ -1069,8 +1096,14 @@
+ 
+     @classmethod
+     def from_xml_string(cls, xml):
+-        model = mujoco.MjModel.from_xml_string(xml)
+-        return cls(model)
++        with _XML_MODEL_LOCK:
++            if os.environ.get("ROBOSCOPE_LIBERO_MODEL_CACHE") != "1":
++                return cls(mujoco.MjModel.from_xml_string(xml))
++            key = (xml, os.getcwd())
++            model = copy(_cached_xml_model(*key))
++            sim = cls(model)
++            sim.model._source_xml = key
++            return sim
+ 
+     @classmethod
+     def from_xml_file(cls, xml_file):

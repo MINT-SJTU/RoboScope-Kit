@@ -1,0 +1,24 @@
+{
+  "patches": [
+    {
+      "distribution": "robosuite",
+      "version": "1.4.0",
+      "mujoco_version": "3.2.3",
+      "patch": "patches/robosuite-model-cache.patch",
+      "sha256": "383a13652dadf98a8025b0956eeeb8d59ad865c3744b381634a1d178b42b1a14",
+      "path": "robosuite/utils/binding_utils.py",
+      "original_sha256": "f5c8aada3bc85d3e66b9c4719c62892f0a32e4ea3489f66cc9abcaa170282c04",
+      "patched_sha256": "4123151d2e43d03a830feba9bfc6e4fbf173414039e2101c975c909b1bf7f1dd"
+    },
+    {
+      "distribution": "robosuite",
+      "version": "1.4.0",
+      "mujoco_version": "3.2.3",
+      "patch": "patches/robosuite-egl-context-cache.patch",
+      "sha256": "92b843d60bcc91a4dcf17b2621e3aadf9d95986a2b5116dfada717a56ff4c267",
+      "path": "robosuite/renderers/context/egl_context.py",
+      "original_sha256": "fd5d6d8e4978477d0333f33315224e520245ebbedb5c27e50b0e13543893ffc1",
+      "patched_sha256": "d61f7a397d548878a6b80297b1a2647ac3954ac3829bcc5170833c8305453849"
+    }
+  ]
+}
