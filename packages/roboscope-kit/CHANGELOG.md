@@ -10,6 +10,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   wraps its long lines for Ruff.
 - Describe the options of the PerAct example's `run_native.py`, `compare_native.py` and `download_assets.py` in
   `--help`. Option names, defaults and validation are unchanged.
+- Describe the options of the robomimic example's `compare_native.py` and `download_model_zoo.py` in `--help`.
+  Option names, defaults and validation are unchanged.
 
 ## 0.8.0b91 - 2026-11-27
 
