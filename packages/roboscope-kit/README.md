@@ -523,6 +523,44 @@ ManiSkill keeps return-scored profiles outside the success-rate denominator and 
 profile's return sum and sample count into a weighted mean. Its shards also bind checkpoint
 and Policy content identities; see the [ManiSkill scoring and shard protocol](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/MANISKILL_EVALUATION_PROTOCOL.md#scoring-and-coverage).
 
+### Running the shards on SSH hosts
+
+`roboscope eval ... --hosts a,b,c` runs shard *i* on host *i* over SSH and merges the shards once all have
+succeeded. The machine running it needs only the kit and SSH access to the hosts. Register each host once:
+
+```bash
+roboscope hosts add gpu1 ssh://root@gpu1.example.com:2222
+roboscope hosts add gpu2 gpu2 --roboscope /opt/kit/bin/roboscope --dir /data/roboscope-runs
+roboscope hosts
+```
+
+`hosts add` installs this machine's SSH key on the host if it still asks for a password, so you type the
+password once. It then runs `roboscope hosts probe` there and records the host in
+`$XDG_CONFIG_HOME/roboscope-kit/hosts.json`. `--roboscope` is the host's `roboscope` command (default:
+`roboscope` on its `PATH`) and `--dir` its directory for shard runs (default: `roboscope-runs` under its home).
+`roboscope hosts` lists each host with its kit version, GPUs, CPU quota, built runtimes and free space, and
+`roboscope hosts remove NAME` forgets one. `--hosts` also takes SSH destinations that are not registered.
+
+```bash
+roboscope eval robotwin demo_clean --policy /opt/policy/serve.py --checkpoint-source /models/ckpt \
+    --hosts gpu1,gpu2
+```
+
+Every host needs the same kit version, the benchmark runtime and the checkpoint, and paths in the command name
+files on the hosts. Before starting, the command runs `roboscope eval --dry-run` for each shard on its host. It
+starts nothing when a host is unreachable, runs another kit version, has a different benchmark manifest, has
+checkpoint files of other names or sizes, or has no GPU. Each shard runs detached from the SSH session in
+`<dir>/<run name>/shard-<i>`, so a dropped connection does not stop it, and the command prints each shard's
+progress every 30 s. When all have succeeded, it copies the records the merge reads (`manifest.json`,
+`result.json`, `queue/completed`) from the other hosts to the first through this machine, runs `roboscope
+merge` there, and writes the merged `result.json` to the local `--output-dir`.
+
+The local `--output-dir` (default: a new `./roboscope-runs/<benchmark>-<suite>-hosts-<time>`) keeps
+`hosts.json` with each shard's host, directory and attempts. Running the same command with the same
+`--output-dir` again follows the shards that are still running, starts a new attempt for each shard that
+failed, and then merges. Ctrl-C stops every shard; closing the terminal leaves them running. `--detach` starts
+the shards and returns.
+
 ## Python support
 
 Supported versions follow the [CPython release lifecycle](https://devguide.python.org/versions/): every

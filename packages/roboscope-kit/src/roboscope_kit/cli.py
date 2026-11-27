@@ -1,12 +1,13 @@
 # Copyright 2026 RoboScope Team
 # SPDX-License-Identifier: Apache-2.0
 
-"""The ``roboscope`` command: evaluate a Policy, check or build a benchmark runtime, merge shards.
+"""The ``roboscope`` command: evaluate a Policy, check or build a benchmark runtime, merge shards, hosts.
 
 ``roboscope`` and ``python -m roboscope_kit`` are the same program. It only assembles arguments: ``eval``
 and ``check`` call the unchanged benchmark runtime (:mod:`roboscope_kit.runtime.benchmark.cli`) with the
 argument list the earlier ``python -m roboscope_kit.runtime.benchmark`` command took, and ``merge`` calls
-the unchanged shard merge with its own arguments.
+the unchanged shard merge with its own arguments. ``eval --hosts`` and ``hosts`` (:mod:`roboscope_kit.hosts`)
+run those same commands on registered SSH hosts.
 
 Exit codes: 0 success; 1 the evaluation, check, build or merge ran and failed; 2 the command did not start
 because of its arguments or a failed precondition; 128 + N after signal N.
@@ -26,6 +27,7 @@ import traceback
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -207,6 +209,55 @@ def validate_suite(benchmark: BenchmarkName, suite: str) -> None:
         suites = shipped_suites(benchmark)
         listed = f"; its suites are {', '.join(suites)}" if suites else ""
         raise UsageError(f"{benchmark.value} has no suite {suite!r}{listed}") from exc
+
+
+def kit_version() -> str:
+    try:
+        return version("roboscope-kit")
+    except PackageNotFoundError:
+        return "unknown"
+
+
+def gpu_names() -> list[str]:
+    """The NVIDIA GPUs ``nvidia-smi`` lists, or none when it is missing or fails."""
+
+    if shutil.which("nvidia-smi") is None:
+        return []
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if result.returncode != 0:
+        return []
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def checkpoint_summary(checkpoint: Path) -> dict[str, Any]:
+    """Whether the checkpoint exists, its file count and size, and a digest of its file names and sizes."""
+
+    if not checkpoint.exists():
+        return {"path": str(checkpoint), "exists": False}
+    files = [checkpoint] if checkpoint.is_file() else sorted(p for p in checkpoint.rglob("*") if p.is_file())
+    entries = [[str(p.relative_to(checkpoint)) if p != checkpoint else "", p.stat().st_size] for p in files]
+    encoded = json.dumps(entries, separators=(",", ":")).encode("utf-8")
+    return {
+        "path": str(checkpoint),
+        "exists": True,
+        "files": len(entries),
+        "bytes": sum(size for _, size in entries),
+        "digest": hashlib.sha256(encoded).hexdigest(),
+    }
+
+
+def output_dir_in_use(output_dir: Path) -> bool:
+    """Whether the runtime would refuse ``output_dir``: it holds anything but an error-only retry."""
+
+    if not output_dir.is_dir():
+        return output_dir.exists()
+    return any(entry.name != "errors.jsonl" for entry in output_dir.iterdir())
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -430,8 +481,41 @@ def require_nvidia_driver() -> None:
         raise UsageError("nvidia-smi was not found; evaluation needs an NVIDIA GPU with its driver installed")
 
 
+def dry_run_report(args: argparse.Namespace, invocation: Invocation) -> dict[str, Any]:
+    """What ``eval`` would run here, with what a multi-host run compares across hosts."""
+
+    argv = invocation.argv
+    manifest = Path(argv[argv.index("--benchmark-manifest") + 1])
+    checkpoint = Path(argv[argv.index("--checkpoint-source") + 1])
+    return {
+        "command": "eval",
+        "dry_run": True,
+        "benchmark": args.benchmark,
+        "suite": args.suite,
+        "kit_version": kit_version(),
+        "python": str(_absolute(sys.executable)),
+        "benchmark_manifest": str(manifest),
+        "manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+        "checkpoint": checkpoint_summary(checkpoint),
+        "policy_config": argv[argv.index("--policy-config") + 1],
+        "output_dir": str(invocation.output_dir),
+        "output_dir_in_use": output_dir_in_use(invocation.output_dir),
+        "gpus": gpu_names(),
+        "runtime_argv": argv,
+    }
+
+
 def command_eval(args: argparse.Namespace) -> int:
+    if args.hosts is not None:
+        from roboscope_kit import hosts
+
+        return hosts.run(args)
+    if args.detach:
+        raise UsageError("--detach needs --hosts")
     invocation = plan_eval(args)
+    if args.dry_run:
+        print(json.dumps(dry_run_report(args, invocation), sort_keys=True, indent=None if args.json else 2))
+        return EXIT_OK
     require_nvidia_driver()
     started = time.monotonic()
     exit_code = run_runtime(invocation)
@@ -668,6 +752,18 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument(
         "--shard-episodes", type=int, metavar="EPISODES", help="episode budget per derived shard",
     )
+    evaluate.add_argument(
+        "--hosts", metavar="HOSTS", help="run one shard on each of these comma-separated registered hosts or "
+        "SSH destinations and merge them; paths name files on the hosts (see `roboscope hosts`)",
+    )
+    evaluate.add_argument(
+        "--detach", action="store_true", help="with --hosts: start the shards and return; run the same "
+        "command with the same --output-dir to follow and merge them",
+    )
+    evaluate.add_argument(
+        "--dry-run", action="store_true", help="check the arguments and print what would run, as JSON, "
+        "without running it; with --hosts, check every host",
+    )
     evaluate.add_argument("--json", action="store_true", help="print the final summary as one JSON line")
     evaluate.set_defaults(handler=command_eval)
 
@@ -725,7 +821,52 @@ def build_parser() -> argparse.ArgumentParser:
         "--episodes", type=int, metavar="N", help="episode count the shard runs used, if not the default",
     )
     merge.set_defaults(handler=command_merge)
+
+    hosts = commands.add_parser(
+        "hosts", help="register the SSH hosts `eval --hosts` runs shards on",
+        description="List the registered hosts with their kit version, GPUs, runtimes and free space; add or "
+        "remove one. `roboscope eval ... --hosts a,b` runs one shard on each.",
+    )
+    hosts.add_argument("--json", action="store_true", help="print JSON")
+    host_actions = hosts.add_subparsers(dest="hosts_action", metavar="ACTION")
+    add = host_actions.add_parser(
+        "add", help="set up key login to a host, check it and register it",
+        description="Set up SSH key login to DESTINATION (asking its password once if needed), check the kit "
+        "there and register it as NAME.",
+    )
+    add.add_argument("name", metavar="NAME", help="name to give the host in --hosts")
+    add.add_argument(
+        "destination", metavar="DESTINATION",
+        help="SSH destination: an ~/.ssh/config host, user@host or ssh://user@host:port",
+    )
+    add.add_argument(
+        "--roboscope", default="roboscope", metavar="COMMAND",
+        help="the roboscope command on the host (default: roboscope on its PATH)",
+    )
+    add.add_argument(
+        "--dir", default="roboscope-runs", metavar="DIR",
+        help="directory on the host for shard runs; relative to its home (default: roboscope-runs)",
+    )
+    add.add_argument("--json", action="store_true", help="print JSON")
+    remove = host_actions.add_parser("remove", help="remove a registered host")
+    remove.add_argument("name", metavar="NAME", help="registered host name")
+    probe = host_actions.add_parser(
+        "probe", help="describe this machine as a host, as JSON",
+        description="Print this machine's kit version, Python, GPUs, CPU quota, built runtimes and free "
+        "space; `hosts add` and `hosts` run it on each host.",
+    )
+    probe.add_argument(
+        "--dir", metavar="DIR", help="directory whose free space to report (default: roboscope-runs)",
+    )
+    probe.add_argument("--json", action="store_true", help="print one JSON line")
+    hosts.set_defaults(handler=_command_hosts)
     return parser
+
+
+def _command_hosts(args: argparse.Namespace) -> int:
+    from roboscope_kit import hosts
+
+    return hosts.command_hosts(args)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -738,6 +879,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         exc.parser.print_usage(sys.stderr)
         print(f"{exc.parser.prog}: error: {exc}", file=sys.stderr)
         return _usage_failure(command, str(exc), as_json)
+    args.argv = arguments
     try:
         return args.handler(args)
     except UsageError as exc:
