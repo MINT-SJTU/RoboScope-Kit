@@ -90,8 +90,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--cuda-mps",
-        action="store_true",
-        help="run the Policy replicas under a private NVIDIA CUDA MPS daemon (default: off)",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="run Policy replicas under a private NVIDIA CUDA MPS daemon "
+        "(default: manifest cuda_mps setting, otherwise off)",
     )
     parser.add_argument(
         "--eval-mode",
@@ -222,6 +224,7 @@ def _main(argv: list[str] | None) -> int:
         if args.autotune_strategy not in (None, *autotune_strategies()):
             raise ValueError(f"--autotune-strategy must be one of {autotune_strategies()}")
         manifest = load_benchmark_manifest(args.benchmark_manifest)
+        manifest = _apply_eval_mode_defaults(manifest, args.eval_mode)
         if args.autotune_strategy is not None:
             manifest = replace(
                 manifest,
@@ -295,8 +298,15 @@ def _preflight_evaluation(
             raise ValueError("--quick-test runs at K=1/g=1 and cannot be combined with --concurrency")
         if args.autotune_strategy is not None:
             raise ValueError("--autotune-strategy selects a search and cannot be combined with a fixed K/g")
+    manifest_fixed_defaults = _resolve_manifest_fixed_kg(manifest.defaults)
+    _resolve_cuda_mps(args, manifest)
+    manifest_fixed = (
+        manifest_fixed_defaults
+        if not fixed and not args.quick_test and args.autotune_strategy is None
+        else None
+    )
     if args.profile:
-        if not args.quick_test and not fixed:
+        if not args.quick_test and not fixed and manifest_fixed is None:
             raise ValueError("--profile requires --quick-test or --concurrency and --replicas")
         require_nsys()
     if args.shard_count is not None and args.shard_index is None:
@@ -351,6 +361,7 @@ def _run_evaluation(
         episodes=args.episodes,
         quick_test=args.quick_test,
         evaluation_config_path=evaluation_config_path,
+        eval_mode=args.eval_mode,
     )
     policy = plan.policy
     benchmark_spec = plan.benchmark_spec
@@ -367,20 +378,30 @@ def _run_evaluation(
                     **shard_input_identity(checkpoint, policy),
                 },
             }
-    fixed = args.concurrency is not None
-    run_cache = _open_run_cache(args, benchmark, manifest, plan, checkpoint)
+    fixed_kg = (
+        (args.concurrency, args.replicas)
+        if args.concurrency is not None
+        else (
+            _resolve_manifest_fixed_kg(manifest.defaults)
+            if not args.quick_test and args.autotune_strategy is None
+            else None
+        )
+    )
+    use_cuda_mps = _resolve_cuda_mps(args, manifest)
+    run_cache = _open_run_cache(args, benchmark, manifest, plan, checkpoint, cuda_mps=use_cuda_mps)
     cuda_mps: CudaMpsSession | None = None
     try:
-        if args.cuda_mps:
+        if use_cuda_mps:
             # Autotune probes and the formal pass both run under MPS, so K/g is
             # selected for the configuration that is evaluated.
             cuda_mps = CudaMpsSession(gpu_devices=gpu_devices, log_dir=args.output_dir / "cuda-mps")
             cuda_mps.start()
-        if args.quick_test or fixed:
+        if args.quick_test or fixed_kg is not None:
             if args.quick_test:
                 selected = {"k": 1, "g": 1, "mode": "quick-test"}
             else:
-                selected = {"k": args.concurrency, "g": args.replicas, "mode": "fixed"}
+                assert fixed_kg is not None
+                selected = {"k": fixed_kg[0], "g": fixed_kg[1], "mode": "fixed"}
             with autotune_phase(phase_timing_callback):
                 pass
             output = run_candidate(
@@ -436,9 +457,57 @@ def _run_evaluation(
     output["run_cache"] = run_cache.describe()
     output["cuda_mps"] = cuda_mps.metadata() if cuda_mps is not None else {"enabled": False}
     output["eval_mode"] = args.eval_mode
-    output["active_fast_optimizations"] = list(execution_contract.get("active_fast_optimizations") or ())
+    benchmark_fast = ()
+    if args.eval_mode == "fast":
+        benchmark_meta = output.get("benchmark")
+        if isinstance(benchmark_meta, Mapping):
+            benchmark_fast = tuple(benchmark_meta.get("fast_optimizations") or ())
+    output["active_fast_optimizations"] = list(
+        dict.fromkeys((*(execution_contract.get("active_fast_optimizations") or ()), *benchmark_fast))
+    )
     atomic_json(args.output_dir / "result.json", output)
     return 0
+
+
+def _apply_eval_mode_defaults(manifest: BenchmarkManifest, eval_mode: str) -> BenchmarkManifest:
+    if eval_mode != "fast":
+        return manifest
+    fast_defaults = manifest.defaults.get("fast_defaults")
+    if fast_defaults is None:
+        return manifest
+    if not isinstance(fast_defaults, Mapping):
+        raise ValueError("benchmark manifest defaults.fast_defaults must be an object")
+    merged = {key: value for key, value in manifest.defaults.items() if key != "fast_defaults"}
+    merged.update(fast_defaults)
+    return replace(manifest, defaults=merged)
+
+
+def _resolve_manifest_fixed_kg(defaults: Mapping[str, Any]) -> tuple[int, int] | None:
+    concurrency = defaults.get("concurrency")
+    replicas = defaults.get("replicas")
+    if concurrency is None and replicas is None:
+        return None
+    if concurrency is None or replicas is None:
+        raise ValueError("benchmark manifest defaults.concurrency and defaults.replicas must be set together")
+    if (
+        type(concurrency) is not int
+        or type(replicas) is not int
+        or concurrency < 1
+        or replicas < 1
+    ):
+        raise ValueError(
+            "benchmark manifest defaults.concurrency and defaults.replicas must be positive ints"
+        )
+    return concurrency, replicas
+
+
+def _resolve_cuda_mps(args: argparse.Namespace, manifest: BenchmarkManifest) -> bool:
+    if args.cuda_mps is not None:
+        return bool(args.cuda_mps)
+    default_mps = manifest.defaults.get("cuda_mps", False)
+    if type(default_mps) is not bool:
+        raise ValueError("benchmark manifest defaults.cuda_mps must be a boolean")
+    return default_mps
 
 
 def _open_run_cache(
@@ -447,6 +516,8 @@ def _open_run_cache(
     manifest: BenchmarkManifest,
     plan: EvaluationPlan,
     checkpoint: Path,
+    *,
+    cuda_mps: bool = False,
 ) -> RunCache:
     """The run cache entry of this host, workload, checkpoint and Policy."""
 
@@ -464,7 +535,7 @@ def _open_run_cache(
             "gpu_models": gpu_models(plan.gpu_devices),
             "cpu_cores": cpu_quota(),
             "host_memory_bytes": host_memory_limit(),
-            "cuda_mps": bool(args.cuda_mps),
+            "cuda_mps": cuda_mps,
             "eval_mode": getattr(args, "eval_mode", DEFAULT_EVAL_MODE),
         }
     return RunCache(mode, fields)

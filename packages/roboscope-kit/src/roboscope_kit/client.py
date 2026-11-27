@@ -72,6 +72,9 @@ class PolicyClient:
         if profiling.ENABLED:
             # Only a --profile Worker pays for the NVTX ranges; otherwise requests run unwrapped.
             self._request = self._profiled_request  # type: ignore[method-assign]
+        if profiling.TIMING_ENABLED:
+            # Only diagnostic timing runs format stage names or enter timing spans.
+            self._exchange = self._timed_exchange  # type: ignore[method-assign]
 
     def connect(self) -> None:
         if self._connection is not None:
@@ -208,6 +211,35 @@ class PolicyClient:
             encoding,
         )
         response = receive_message(self._connection)
+        if response is None:
+            raise ProtocolError("policy server closed the connection without a response")
+        validate_version(response)
+        if response.get("request_id") != request_id:
+            raise ProtocolError("response request_id does not match request")
+        if not response.get("ok"):
+            raise PolicyRemoteError(response.get("error") or {})
+        return response.get("result")
+
+    def _timed_exchange(self, operation: str, payload: dict[str, Any], encoding: Encoding) -> Any:
+        if self._connection is None:
+            with profiling.span(f"client.{operation}.connect"):
+                self.connect()
+        if self._connection is None:
+            raise RuntimeError("policy connection is unavailable")
+        request_id = str(uuid.uuid4())
+        with profiling.span(f"client.{operation}.send"):
+            send_message(
+                self._connection,
+                {
+                    "version": PROTOCOL_VERSION,
+                    "request_id": request_id,
+                    "operation": operation,
+                    "payload": payload,
+                },
+                encoding,
+            )
+        with profiling.span(f"client.{operation}.receive"):
+            response = receive_message(self._connection)
         if response is None:
             raise ProtocolError("policy server closed the connection without a response")
         validate_version(response)

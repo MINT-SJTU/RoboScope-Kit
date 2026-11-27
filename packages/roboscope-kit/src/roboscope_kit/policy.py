@@ -155,6 +155,7 @@ class PolicyCapabilities:
     observation_strides: dict[str, int] = field(default_factory=dict)
     step_observation_updates: tuple[str, ...] = ()
     coalesce_action_requests: bool = False
+    fast_optimizations: tuple[str, ...] = ()
     # Camera sizes the Policy accepts, most preferred first, as (height, width); ``ANY_SIZE`` last
     # accepts the benchmark's canonical size. A list applies to every image feature, a dict to the
     # named features. ``None`` accepts the canonical size everywhere.
@@ -221,6 +222,7 @@ class PolicyCapabilities:
             step_observation_updates=tuple(str(item) for item in value.get("step_observation_updates", ())),
             image_sizes=value.get("image_sizes"),
             coalesce_action_requests=value.get("coalesce_action_requests") is True,
+            fast_optimizations=tuple(str(item) for item in value.get("fast_optimizations", ())),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -241,6 +243,7 @@ class PolicyCapabilities:
                 else {}
             ),
             "coalesce_action_requests": self.coalesce_action_requests,
+            "fast_optimizations": list(self.fast_optimizations),
         }
 
 
@@ -303,9 +306,18 @@ def negotiate_policy_action_contract(
         )
     if benchmark.name in capabilities.step_observation_updates and benchmark.name != "robodojo":
         raise ValueError(f"step observation updates are not supported by {benchmark.name}")
+    negotiated_sizes = negotiate_image_sizes(benchmark, capabilities.image_sizes, camera_support)
     active_fast_optimizations: tuple[str, ...] = ()
-    if eval_mode == "fast" and capabilities.coalesce_action_requests:
-        active_fast_optimizations = ("dynamic-batching",)
+    if eval_mode == "fast":
+        opts: list[str] = []
+        if capabilities.coalesce_action_requests:
+            opts.append("dynamic-batching")
+        if negotiated_sizes:
+            opts.append("negotiated-image-sizes")
+        for opt in capabilities.fast_optimizations:
+            if opt not in opts:
+                opts.append(opt)
+        active_fast_optimizations = tuple(opts)
     return PolicyExecutionContract(
         benchmark=benchmark.name,
         action_representation=action_representation,
@@ -317,7 +329,7 @@ def negotiate_policy_action_contract(
         step_observation_updates=benchmark.name in capabilities.step_observation_updates,
         eval_mode=eval_mode,
         active_fast_optimizations=active_fast_optimizations,
-        image_sizes=negotiate_image_sizes(benchmark, capabilities.image_sizes, camera_support),
+        image_sizes=negotiated_sizes,
     )
 
 
@@ -346,23 +358,25 @@ def validate_observation(
     benchmark: BenchmarkSpec,
     capabilities: PolicyCapabilities,
 ) -> None:
-    specs = {feature.name: feature for feature in benchmark.features}
-    unknown = sorted(set(observation.features) - set(specs))
-    if unknown:
-        raise ValueError(f"observation contains undeclared benchmark features: {', '.join(unknown)}")
-    missing_benchmark_features = sorted(
-        feature.name
-        for feature in benchmark.features
-        if feature.required and feature.name not in observation.features
-    )
-    if missing_benchmark_features:
+    specs = benchmark.feature_specs
+    features = observation.features
+    if features.keys() != specs.keys():
+        unknown = [name for name in features if name not in specs]
+        if unknown:
+            raise ValueError(
+                f"observation contains undeclared benchmark features: {', '.join(sorted(unknown))}"
+            )
+        missing_benchmark = [name for name in benchmark.required_feature_names if name not in features]
+        if missing_benchmark:
+            raise ValueError(
+                f"observation is missing required benchmark features: {', '.join(sorted(missing_benchmark))}"
+            )
+    missing_policy = [name for name in capabilities.required_features if name not in features]
+    if missing_policy:
         raise ValueError(
-            f"observation is missing required benchmark features: {', '.join(missing_benchmark_features)}"
+            f"observation is missing required policy features: {', '.join(sorted(missing_policy))}"
         )
-    missing = sorted(set(capabilities.required_features) - set(observation.features))
-    if missing:
-        raise ValueError(f"observation is missing required policy features: {', '.join(missing)}")
-    for name, value in observation.features.items():
+    for name, value in features.items():
         spec = specs[name]
         if spec.kind is FeatureKind.LANGUAGE:
             if not isinstance(value, str):
@@ -391,7 +405,7 @@ def validate_action_chunk(action: ActionChunk, benchmark: BenchmarkSpec) -> None
             f"policy action dtype {action.actions.dtype.name} does not match "
             f"{benchmark.name} dtype {' or '.join(dtypes)}"
         )
-    if not np.all(np.isfinite(action.actions)):
+    if not np.isfinite(action.actions).all():
         raise ValueError("policy actions must contain only finite values")
     expected = benchmark.action.dimension
     if expected is None:

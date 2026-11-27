@@ -18,6 +18,7 @@ from pathlib import Path
 from queue import Empty, Queue
 from typing import Any
 
+from roboscope_kit import profiling
 from roboscope_kit.image_sizes import IMAGE_SIZE_FEATURES, apply_image_sizes, camera_support_from_dict
 from roboscope_kit.policy import (
     ActionChunk,
@@ -67,6 +68,8 @@ class PolicyServer:
         self._batch_queue: Queue[tuple[dict[str, Any], Future] | None] = Queue()
         self._batch_thread: threading.Thread | None = None
         self._batch_stopping = False
+        if profiling.TIMING_ENABLED:
+            self._serve_connection = self._serve_timed_connection  # type: ignore[method-assign]
 
     def serve(self) -> None:
         self.socket_path.parent.mkdir(parents=True, exist_ok=True)
@@ -116,8 +119,11 @@ class PolicyServer:
                 if received is None:
                     return
                 request, encoding = received
-                if (
-                    request.get("operation") == "act"
+                operation = request.get("operation")
+                if operation == "health":
+                    response = self._handle(request)
+                elif (
+                    operation == "act"
                     and self.context is not None
                     and self.context.eval_mode == "fast"
                     and self.capabilities is not None
@@ -131,6 +137,49 @@ class PolicyServer:
                 request_id = str(request.get("request_id") or "") if request is not None else ""
                 response = self._error_response(exc, request_id=request_id)
             send_message(connection, response, encoding)
+
+    def _serve_timed_connection(self, connection: socket.socket) -> None:
+        while self.state is not PolicyState.CLOSED:
+            encoding: Encoding = "json"
+            try:
+                received = receive_frame(connection)
+                if received is None:
+                    return
+                request, encoding = received
+            except Exception as exc:
+                send_message(connection, self._error_response(exc, request_id=""), encoding)
+                continue
+            with profiling.capture(
+                "server",
+                operation=request.get("operation"),
+                request_id=request.get("request_id"),
+            ):
+                try:
+                    operation = request.get("operation")
+                    if operation == "health":
+                        with profiling.span("server.dispatch"):
+                            response = self._handle(request)
+                    elif (
+                        operation == "act"
+                        and self.context is not None
+                        and self.context.eval_mode == "fast"
+                        and self.capabilities is not None
+                        and self.capabilities.coalesce_action_requests
+                    ):
+                        with profiling.span("server.batch_wait"):
+                            response = self._submit_action(request)
+                    else:
+                        with profiling.span("server.lock_wait"):
+                            self._request_lock.acquire()
+                        try:
+                            with profiling.span("server.dispatch"):
+                                response = self._handle(request)
+                        finally:
+                            self._request_lock.release()
+                except Exception as exc:
+                    response = self._error_response(exc, request_id=str(request.get("request_id") or ""))
+                with profiling.span("server.send"):
+                    send_message(connection, response, encoding)
 
     def _submit_action(self, request: dict[str, Any]) -> dict[str, Any]:
         future: Future = Future()
@@ -278,7 +327,8 @@ class PolicyServer:
             context, capabilities = self._loaded_contract()
             observation = Observation.from_dict(payload["observation"])
             validate_observation(observation, context.benchmark, capabilities)
-            action = self.policy.act(observation)
+            with profiling.span("server.policy_act"):
+                action = self.policy.act(observation)
             if not isinstance(action, ActionChunk):
                 raise TypeError("Policy.act() must return ActionChunk")
             validate_action_chunk(action, context.benchmark)
@@ -323,7 +373,11 @@ class PolicyServer:
 
     def _predict_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
         context, capabilities = self._loaded_contract()
-        actions = self.policy.act_batch(observations)
+        with (
+            profiling.capture("batch", size=len(observations)),
+            profiling.span("server.policy_batch"),
+        ):
+            actions = self.policy.act_batch(observations)
         if len(actions) != len(observations):
             raise ValueError("Policy.act_batch() must return one ActionChunk per observation")
         for action in actions:

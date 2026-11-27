@@ -1,23 +1,33 @@
 # Copyright 2026 RoboScope Team
 # SPDX-License-Identifier: Apache-2.0
 
-"""NVTX ranges read by Nsight Systems during ``--profile`` runs.
+"""Opt-in Nsight Systems NVTX ranges and stage wall-clock diagnostics.
 
-Nothing here does any work unless the process runs under ``nsys``, which sets
-``NVTX_INJECTION64_PATH`` to its own injection library. The ranges are written
-through that library with ``ctypes``, the way NVTX's header-only C API does, so
-profiling needs no package in the simulator environment.
+Nothing here does any work unless either:
+- the process runs under ``nsys`` with ``ROBOSCOPE_PROFILE`` set (which populates
+  ``NVTX_INJECTION64_PATH`` so NVTX ranges are emitted via ``ctypes`` without extra
+  simulator packages), or
+- ``ROBOSCOPE_TIMING_DIR`` is set to an absolute directory for JSONL stage wall-clock
+  records across Worker and Policy Server processes.
+
+Records contain nested, inclusive durations: do not add parents to children or sum
+parallel process durations as wall time. No observation or model payload is recorded.
 """
 
 from __future__ import annotations
 
 import ctypes
+import json
 import os
+import threading
+import time
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager, nullcontext
+from pathlib import Path
 from typing import Any
 
 PROFILE_ENV = "ROBOSCOPE_PROFILE"
+TIMING_ENV = "ROBOSCOPE_TIMING_DIR"
 DOMAIN = "roboscope"
 EPISODE_RANGE = "episode"
 
@@ -141,7 +151,12 @@ def _load() -> _Nvtx | None:
 _nvtx = _load()
 # True only in a --profile Worker under nsys; callers on the hot path check it first.
 ENABLED = _nvtx is not None
+TIMING_DIR = os.environ.get(TIMING_ENV, "")
+TIMING_ENABLED = bool(TIMING_DIR)
+_DISABLED = nullcontext()
 _episode: int | None = None
+_local = threading.local()
+_write_lock = threading.Lock()
 
 
 @contextmanager
@@ -157,14 +172,14 @@ def _range(name: str) -> Iterator[None]:
 def request(operation: str) -> AbstractContextManager[Any]:
     """Mark one Policy round trip."""
     if _nvtx is None:
-        return nullcontext()
+        return _DISABLED
     return _range(f"policy.{operation}")
 
 
 def environment(operation: str) -> AbstractContextManager[Any]:
     """Mark a simulator operation in a profiled Worker."""
     if _nvtx is None:
-        return nullcontext()
+        return _DISABLED
     return _range(f"environment.{operation}")
 
 
@@ -182,3 +197,58 @@ def episode_end() -> None:
     if _nvtx is not None and _episode is not None:
         _nvtx.end(_episode)
         _episode = None
+
+
+def capture(kind: str, **metadata: object) -> AbstractContextManager[None]:
+    """Capture nested stage spans for one Worker item, Server request, or Policy batch."""
+    if not TIMING_ENABLED:
+        return _DISABLED
+    return _capture(kind, metadata)
+
+
+@contextmanager
+def _capture(kind: str, metadata: dict[str, object]) -> Iterator[None]:
+    directory = Path(TIMING_DIR)
+    if not directory.is_absolute():
+        raise ValueError(f"{TIMING_ENV} must be an absolute path")
+    previous = getattr(_local, "record", None)
+    record: dict[str, Any] = {"kind": kind, "pid": os.getpid(), **metadata, "spans": {}, "ok": False}
+    _local.record = record
+    started = time.perf_counter()
+    try:
+        yield
+        record["ok"] = True
+    finally:
+        record["wall_s"] = time.perf_counter() - started
+        _local.record = previous
+        directory.mkdir(parents=True, exist_ok=True)
+        with _write_lock, (directory / f"{kind}-{os.getpid()}.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(record) + "\n")
+
+
+def add_span(name: str, seconds: float) -> None:
+    """Add a pre-measured duration (such as an asynchronous CUDA interval) to the active capture."""
+    record = getattr(_local, "record", None)
+    if record is not None:
+        entry = record["spans"].setdefault(name, {"seconds": 0.0, "count": 0})
+        entry["seconds"] += seconds
+        entry["count"] += 1
+
+
+def span(name: str) -> AbstractContextManager[None]:
+    """Measure one named stage when ``ROBOSCOPE_TIMING_DIR`` is enabled."""
+    if not TIMING_ENABLED:
+        return _DISABLED
+    return _span(name)
+
+
+@contextmanager
+def _span(name: str) -> Iterator[None]:
+    range_id = _nvtx.start(name) if _nvtx is not None else None
+    started = time.perf_counter()
+    try:
+        yield
+    finally:
+        add_span(name, time.perf_counter() - started)
+        if _nvtx is not None and range_id is not None:
+            _nvtx.end(range_id)
