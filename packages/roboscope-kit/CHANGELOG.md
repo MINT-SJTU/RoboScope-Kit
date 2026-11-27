@@ -2,6 +2,48 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b91 - 2026-11-27
+
+- Add the `behavior` benchmark with the `challenge_2026` suite (protocol `behavior-challenge-2026-v1`): the
+  2026 BEHAVIOR Challenge public-test profile of BEHAVIOR-1K `v3.9.3-post1`, 100 activities in 7 scenes with
+  the R1Pro robot, not all of BEHAVIOR-1K. A formal run evaluates public test instances 301-310 of every
+  task once (1,000 episodes); `--quick-test` runs instance 301 of `turning_on_radio`. Each worker process
+  runs the pinned challenge evaluator (`BatchedEvaluator`, official `RGBDFullResWrapper`, `seed_everything(0)`)
+  for one instance and queries the Policy once per 30 Hz control step through a bridge policy: three RGB-D
+  cameras (head 720x720, wrists 480x480), the 61-dim proprioception, camera poses and the task ID, and 23
+  `float32` whole-body joint actions (`behavior.r1pro-joint-v1`). Episodes end on BDDL success, task
+  termination or 1.5x the mean human demonstration length, frozen per task. Records keep the evaluator's
+  own result; the aggregate reports the challenge's mean Q score and, separately, the success rate.
+- `benchmarks/behavior/build-runtime.sh --accept-licenses` builds the runtime on CPython 3.11 from an exact
+  lock of `setup.sh --omnigibson --bddl --joylo --eval` (Isaac Sim 5.1, torch 2.7.0+cu128), installs the
+  pinned BEHAVIOR assets, robot assets and 2026 task instances with their SHA-256, and checks a rendered
+  instance load. Passing `--accept-licenses` accepts the Isaac Sim EULA and the BEHAVIOR Data Bundle licence.
+- Add `examples/gr00t/`: a Policy for the GR00T N1.7 BEHAVIOR multi-task checkpoint that forwards to its
+  native Python 3.10 server, the model environment build, a native runner and an episode comparison.
+- Add the `behavior` suite `challenge_2026_rgb224`: the same 2026 challenge profile observed through the
+  evaluator's default `DefaultWrapper`, three 224x224 RGB cameras without depth, which challenge
+  submissions may choose instead of `RGBDFullResWrapper`. The suite selects the wrapper, the SDK features
+  and their shapes; the worker rejects a camera image of another size, records carry their suite and
+  wrapper, and `--self-test` loads the quick-test instance once per suite.
+- Add `examples/behavior2026vla/`: a Policy for `IliaLarchenko/BEHAVIOR2026VLA`, the Robot Learning
+  Collective's π0.5 checkpoint for all 100 tasks, on `challenge_2026_rgb224`. It runs the solution's own
+  evaluation code in its Python 3.11 environment, in process; with the model environment build and a native
+  runner against the solution's server. The build holds LeRobot at the commit the solution's lock records
+  (OmniGibson asks for a branch that has moved on to Python 3.12) and checks every checkpoint file against
+  its Hugging Face digest. `examples/gr00t/compare_native.py` requires both runs to use the same wrapper.
+  The Policy compiles both of its model calls in `load`, so no episode starts with a compilation that can
+  outlast the worker's 30 s request timeout when several replicas compile at once.
+- Each BEHAVIOR worker gives Isaac Sim an RTX texture cache directory of its own and removes it when it exits;
+  the shared cache under OmniGibson's appdata kept the converted textures of every instance (up to 12 GB for
+  one instance) and filled the disk over a full run.
+- The BEHAVIOR worker records the time spent building observations, and the GR00T example logs per episode
+  its request packing, server round trips and the server's inference time.
+- Merging BEHAVIOR shard results recomputes each task's mean Q from the summed scores (it kept the first
+  shard's value) and adds the overall mean Q, mean success rate, metric and formal flag of an unsharded
+  run; an episode reported by two shards is rejected.
+- The GR00T and BEHAVIOR2026VLA examples replace an episode that never ended (its worker died) when the
+  next episode resets on the same replica, instead of failing the replica.
+
 ## 0.8.0b90 - 2026-11-26
 
 - Remove the `inference_metrics` summary from `result.json` and the `queue_wait_p95_ms` signal from autotune

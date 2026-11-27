@@ -1,0 +1,13 @@
+{
+  "schema_version": 2,
+  "command": [
+    "/usr/bin/env",
+    "PYTHONPATH=/path/to/RoboScope-Kit/packages/roboscope-kit/src",
+    "GR00T_ROOT=/models/gr00t/Isaac-GR00T",
+    "GR00T_PYTHON=/models/gr00t/Isaac-GR00T/.venv/bin/python",
+    "HF_HOME=/models/gr00t/hf-home",
+    "/sim/behavior/env/bin/python",
+    "/path/to/RoboScope-Kit/examples/gr00t/gr00t_behavior_policy.py"
+  ],
+  "cwd": "/path/to/RoboScope-Kit/examples/gr00t"
+}

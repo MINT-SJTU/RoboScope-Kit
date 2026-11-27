@@ -342,6 +342,7 @@ dependencies of the PyPI package; the benchmark manifest points the runtime at t
 | RLBench | SDK-native adapter and persistent CoppeliaSim worker on a private Xvfb display, with a fixed Python hash seed for paired evaluation | CoppeliaSim 4.1, pinned PyRep and the PerAct RLBench fork, and PerAct's released test split |
 | robomimic | SDK-native adapter and persistent robomimic rollout worker | Pinned robomimic/robosuite/MuJoCo environment and the frozen per-task initial-state digests |
 | SimplerEnv | SDK-native adapter and persistent SAPIEN/ManiSkill2_real2sim worker, one fresh environment per episode as upstream | Pinned SimplerEnv and ManiSkill2_real2sim (with their scene and overlay assets), SAPIEN 2.2.2, and the frozen matrix of the official RT-1 scripts |
+| BEHAVIOR (candidate) | SDK-native adapter and a worker that runs the pinned BEHAVIOR Challenge evaluator for one instance per process | Isaac Sim 5.1, BEHAVIOR-1K v3.9.3-post1 (OmniGibson, BDDL), and the pinned 2026 challenge assets and task instances |
 
 Each adapter converts the simulator's native observations to the canonical feature names and sends the
 Policy's actions back to the simulator in the benchmark's native action format. The suites and runtime paths
@@ -372,6 +373,11 @@ The exact contracts are in the protocol documents:
   the Google Robot visual-matching and variant-aggregation suites and the WidowX visual-matching suite, kept
   separate; the frozen pose sweeps, episode loop, termination, aggregation, the native comparison, and the
   baseline.
+- [BEHAVIOR](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/BEHAVIOR_EVALUATION_PROTOCOL.md):
+  the 2026 BEHAVIOR Challenge public-test profile (100 tasks, not all of BEHAVIOR-1K) with the full-resolution
+  RGB-D `challenge_2026` and the 224x224 RGB `challenge_2026_rgb224` suites: licence gates, pinned stack,
+  instances, observation and whole-body action contract, Q score and success aggregation, and the native
+  comparison. Integration candidate: not yet accepted.
 - [RoboDojo](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robodojo/README.md):
   environment build, suites, observation and action layouts, step observation updates, and experimental
   runtime switches.

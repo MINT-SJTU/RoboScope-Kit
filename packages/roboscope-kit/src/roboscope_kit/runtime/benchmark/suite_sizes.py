@@ -87,6 +87,8 @@ SUITE_SIZES: dict[tuple[str, str], SuiteSize] = {
     ("simpler_env", "widowx_visual_matching"): SuiteSize(
         tasks=4, episodes_per_task=None, fixed_total_records=96
     ),
+    ("behavior", "challenge_2026"): SuiteSize(tasks=100, episodes_per_task=10),
+    ("behavior", "challenge_2026_rgb224"): SuiteSize(tasks=100, episodes_per_task=10),
     ("robodojo", "arx_x5"): SuiteSize(tasks=42, episodes_per_task=None, fixed_total_records=1800),
     ("robodojo", "arx_x5_randomized"): SuiteSize(tasks=12, episodes_per_task=None, fixed_total_records=300),
 }
