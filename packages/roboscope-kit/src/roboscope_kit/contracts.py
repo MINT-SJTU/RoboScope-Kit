@@ -67,12 +67,18 @@ class ActionSpec:
     description: str
     dimension: int | None = None
     dtype: str = "float32"
+    additional_dtypes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.name:
             raise ValueError("action name cannot be empty")
         if not self.dtype:
             raise ValueError("action dtype cannot be empty")
+        if any(not dtype for dtype in self.additional_dtypes):
+            raise ValueError("additional action dtypes cannot be empty")
+        dtypes = (self.dtype, *self.additional_dtypes)
+        if len(dtypes) != len(set(dtypes)):
+            raise ValueError("action dtypes must be unique")
         if self.dimension is not None and self.dimension < 1:
             raise ValueError("action dimension must be positive")
 
@@ -84,15 +90,19 @@ class ActionSpec:
             description=str(value["description"]),
             dimension=int(dimension) if dimension is not None else None,
             dtype=str(value.get("dtype", "float32")),
+            additional_dtypes=tuple(str(dtype) for dtype in (value.get("additional_dtypes") or ())),
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "name": self.name,
             "description": self.description,
             "dimension": self.dimension,
             "dtype": self.dtype,
         }
+        if self.additional_dtypes:
+            value["additional_dtypes"] = list(self.additional_dtypes)
+        return value
 
 
 @dataclass(frozen=True)

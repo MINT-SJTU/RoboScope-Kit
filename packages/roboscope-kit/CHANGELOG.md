@@ -2,12 +2,19 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b92 - 2026-11-26
+## 0.8.0b93 - 2026-11-27
 
 - Describe the options of the RoboCasa365 Diffusion Policy example scripts in `--help`. `compare_native.py` and
   `download_model.py` now import their inference dependencies after parsing the arguments, so `--help` works
   without the inference environment. `compare_rollouts.py` passes `zip(..., strict=False)` (same behavior) and
   wraps its long lines for Ruff.
+
+## 0.8.0b91 - 2026-11-27
+
+- Accept `float64` as well as `float32` actions for LIBERO, LIBERO-Plus and LIBERO-Pro,
+  preserving their dtype and values through `env.step`. Other action contracts are unchanged.
+- The OpenVLA example returns `float64` actions, matching upstream execution precision
+  instead of rounding to `float32`.
 
 ## 0.8.0b90 - 2026-11-26
 

@@ -175,9 +175,17 @@ shapes before calling user inference code.
 
 The Policy returns `ActionChunk` containing either:
 
-- one `float32` action with shape `(7,)`; or
-- a `float32` chunk with shape `(N, 7)`, where `N` is declared in
+- one `float32` or `float64` action with shape `(7,)`; or
+- a `float32` or `float64` chunk with shape `(N, 7)`, where `N` is declared in
   `PolicyCapabilities.supported_action_chunk_sizes`.
+
+This applies to LIBERO, LIBERO-Plus and LIBERO-Pro. `ActionSpec.dtype` remains `float32`,
+with `float64` declared in `ActionSpec.additional_dtypes`. Validation accepts either dtype;
+transport and the Worker preserve the dtype and values through `env.step`, without casting.
+Existing `float32` Policies keep their original action values and execution precision.
+Other benchmark action contracts are unchanged. Both the CLI and the Policy environment
+need roboscope-kit 0.8.0b91 or later to use the expanded contract; older Policy servers
+continue to support `float32` only.
 
 The seven values are the native LIBERO controller action: six end-effector values followed by the gripper
 command. Under the default `libero.delta-eef-v1` the six values are LIBERO's position and axis-angle deltas.
