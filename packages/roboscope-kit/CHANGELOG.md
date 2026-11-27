@@ -12,6 +12,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   `--help`. Option names, defaults and validation are unchanged.
 - Describe the options of the robomimic example's `compare_native.py` and `download_model_zoo.py` in `--help`.
   Option names, defaults and validation are unchanged.
+- Describe the options of the RT-1-X example's `run_native.py` and `compare_native.py` in `--help`.
 
 ## 0.8.0b91 - 2026-11-27
 
