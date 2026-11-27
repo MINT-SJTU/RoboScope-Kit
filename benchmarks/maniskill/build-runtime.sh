@@ -210,7 +210,6 @@ for relative in (
 print(json.dumps(versions))
 PY
 SELF_TEST_OUTPUT="$INSTALL_DIR/self-test-$(date -u +%Y%m%dT%H%M%SZ)-$$"
-HOME="$RUNTIME_HOME" "$ENV_PYTHON" -I -m roboscope_kit.runtime.benchmark --benchmark maniskill --self-test \
-  --benchmark-manifest "$INSTALL_DIR/benchmark-manifest.json" --output-dir "$SELF_TEST_OUTPUT"
+HOME="$RUNTIME_HOME" "$ENV_PYTHON" -I -m roboscope_kit check maniskill "$INSTALL_DIR" --output-dir "$SELF_TEST_OUTPUT"
 echo "Built ManiSkill $SOURCE_COMMIT in $INSTALL_DIR"
 echo "Self-test evidence: $SELF_TEST_OUTPUT"

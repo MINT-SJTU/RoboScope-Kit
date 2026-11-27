@@ -11,8 +11,7 @@ set -Eeuo pipefail
 #     eval_sequences.json           the official 1,000 challenge sequences, pinned by SHA-256
 #
 # Usage: build-runtime.sh <install-dir>
-# Then:  python -m roboscope_kit.runtime.benchmark --benchmark calvin \
-#          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
+# Then:  roboscope eval calvin <suite> --benchmark-manifest <install-dir> ...
 #
 # Sources. Every file matches upstream byte for byte:
 #   calvin        mees/calvin at fa03f01, the main tip
@@ -313,8 +312,7 @@ if [[ -n "${KIT_PYTHON:-}" ]] || python3 -c 'import roboscope_kit' >/dev/null 2>
     exit 6
   }
   rm -rf -- "${INSTALL_DIR}/self-test"
-  "${KIT_PYTHON}" -m roboscope_kit.runtime.benchmark --benchmark calvin --self-test \
-    --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+  "${KIT_PYTHON}" -m roboscope_kit check calvin "${INSTALL_DIR}" \
     --output-dir "${INSTALL_DIR}/self-test"
 else
   echo "Skipped the kit self-test: python3 cannot import roboscope_kit; set KIT_PYTHON to run it" >&2

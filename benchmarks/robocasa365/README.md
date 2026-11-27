@@ -61,13 +61,10 @@ scenario metadata digests: with a random hash seed, ArrangeTea's metadata
 serializes in a different order although its simulator state is the same.
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-  --benchmark robocasa365 \
-  --benchmark-manifest /sim/robocasa365/benchmark-manifest.json \
-  --self-test --output-dir /results/robocasa365-self-test
+roboscope check robocasa365 /sim/robocasa365/benchmark-manifest.json \
+  --output-dir /results/robocasa365-self-test
 
-python -m roboscope_kit.runtime.benchmark \
-  --benchmark robocasa365 --suite target50 \
+roboscope eval robocasa365 target50 \
   --benchmark-manifest /sim/robocasa365/benchmark-manifest.json \
   --policy-config /workspace/robocasa365-policy.json \
   --checkpoint-source /models/robocasa365-diffusion \

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roboscope-kit"
-version = "0.8.0b93"
+version = "0.9.0b1"
 description = "RoboScope Kit: Policy inference integration for RoboScope simulation benchmarks"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -36,6 +36,12 @@ Homepage = "https://github.com/MINT-SJTU/RoboScope-Kit"
 Documentation = "https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/README.md"
 Repository = "https://github.com/MINT-SJTU/RoboScope-Kit"
 
+[project.scripts]
+roboscope = "roboscope_kit.cli:main"
+
+# hatch_build.py adds the repository's benchmarks/ (build scripts, manifests, pins) to the sdist and wheel.
+[tool.hatch.build.hooks.custom]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/roboscope_kit"]
 
@@ -44,6 +50,7 @@ include = [
     "/src",
     "/tests",
     "/pyproject.toml",
+    "/hatch_build.py",
     "/uv.lock",
     "/README.md",
     "/AUTHORS.md",

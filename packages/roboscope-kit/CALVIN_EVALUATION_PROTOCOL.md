@@ -58,14 +58,14 @@ Use a fresh install directory when migrating a Python 3.8 runtime.
 Run an evaluation with the kit installed in any supported Python:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark calvin --suite task_ABC_D --checkpoint-source /models/my-checkpoint \
+roboscope eval calvin task_ABC_D \
+    --checkpoint-source /models/my-checkpoint \
     --benchmark-manifest <install-dir>/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json \
     --output-dir /runs/calvin-task_ABC_D
 ```
 
-`--self-test` with the same manifest checks that every runtime path exists. Results, progress, and logs
+`roboscope check` with the same manifest checks that every runtime path exists. Results, progress, and logs
 are written under `--output-dir`.
 
 Use a new or empty output directory for each evaluation or self-test. A directory containing only
@@ -88,8 +88,8 @@ For the StarVLA demo, set `inference.action_noise_seed: 0` and `inference.max_ba
 snapshot's `config.yaml`. Use the same seed for both modes when making a comparison.
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark calvin --suite task_D_D --checkpoint-source /models/starvla-calvin \
+roboscope eval calvin task_D_D \
+    --checkpoint-source /models/starvla-calvin \
     --benchmark-manifest <install-dir>/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json \
     --eval-mode fast --concurrency 16 --replicas 1 --output-dir /runs/calvin-task_D_D-fast

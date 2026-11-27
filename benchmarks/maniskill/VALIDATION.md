@@ -221,8 +221,8 @@ To reproduce a row, evaluate with a fixed Worker count and compare with the nati
 the [example README](../../examples/maniskill/README.md):
 
 ```bash
-<install-dir>/env/bin/python -m roboscope_kit.runtime.benchmark --benchmark maniskill \
-  --suite official_ppo_state_v1 --benchmark-manifest <install-dir>/benchmark-manifest.json \
+<install-dir>/env/bin/python -m roboscope_kit eval maniskill official_ppo_state_v1 \
+  --benchmark-manifest <install-dir>/benchmark-manifest.json \
   --checkpoint-source <official-checkpoints> --policy-config <roboscope-policy.json> \
   --output-dir <out> --concurrency 8 --replicas 1
 ```

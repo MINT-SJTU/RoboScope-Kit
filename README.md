@@ -179,9 +179,17 @@ if __name__ == "__main__":
     run(UserPolicy())
 ```
 
-### 3. Tell the runtime how to start it
+### 3. Build the simulator and evaluate
 
-Save this as `roboscope-policy.json`:
+```bash
+roboscope build libero /sim/libero
+
+roboscope eval libero libero_10 --policy user_policy.py --checkpoint-source /models/my-checkpoint
+```
+
+`--policy` runs `user_policy.py` with the Python that runs `roboscope`. When the Policy needs another
+environment, environment variables or arguments, describe it in a `roboscope-policy.json` and pass
+`--policy-config` instead:
 
 ```json
 {
@@ -191,23 +199,9 @@ Save this as `roboscope-policy.json`:
 }
 ```
 
-### 4. Build the simulator and evaluate
-
-From a checkout of this repository:
-
-```bash
-benchmarks/libero/build-runtime.sh /sim/libero
-
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark libero --suite libero_10 --checkpoint-source /models/my-checkpoint \
-    --benchmark-manifest /sim/libero/benchmark-manifest.json \
-    --policy-config /path/to/roboscope-policy.json \
-    --output-dir /runs/libero_10
-```
-
 Add `--quick-test` for a short real evaluation with one Worker and one Server. Results, progress, and logs are
-written under `--output-dir`.
-Use a new or empty output directory for each run, including `--self-test`. Only a directory containing
+written under `--output-dir`, by default a new `./roboscope-runs/<benchmark>-<suite>-<time>`.
+Use a new or empty output directory for each run, including `roboscope check`. Only a directory containing
 `errors.jsonl` alone can be retried in place; existing run artifacts are never resumed or overwritten.
 Keep shell and scheduler logs outside the output directory.
 

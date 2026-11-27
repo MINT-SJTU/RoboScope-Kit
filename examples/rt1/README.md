@@ -65,8 +65,8 @@ too, but reuses the SavedModel and encoder the first instance loaded. The return
 4. Evaluate with the benchmark CLI from any Python 3.11+ that has `roboscope-kit` installed:
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python -m roboscope_kit.runtime.benchmark \
-       --benchmark simpler_env --suite google_robot_visual_matching --quick-test \
+   CUDA_VISIBLE_DEVICES=0 roboscope eval simpler_env google_robot_visual_matching \
+       --quick-test \
        --checkpoint-source /models/rt1 \
        --benchmark-manifest /sim/simpler-env/benchmark-manifest.json \
        --policy-config /path/to/roboscope-policy.json \

@@ -369,6 +369,3 @@ def _shard_summary(
         summary["resources"] = shard_result["resources"]
     return summary
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())

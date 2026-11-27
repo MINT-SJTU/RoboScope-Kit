@@ -58,8 +58,8 @@ below are placeholders.
    snapshot is the checkpoint source:
 
    ```bash
-   python -m roboscope_kit.runtime.benchmark \
-       --benchmark libero --suite libero_10 --checkpoint-source /models/starvla-libero \
+   roboscope eval libero libero_10 \
+       --checkpoint-source /models/starvla-libero \
        --benchmark-manifest /path/to/libero-install/benchmark-manifest.json \
        --policy-config /path/to/RoboScope-Kit/examples/starvla/libero/roboscope-policy.json \
        --output-dir /runs/starvla/libero_10

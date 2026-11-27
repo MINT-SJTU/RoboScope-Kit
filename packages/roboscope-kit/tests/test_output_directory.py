@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from roboscope_kit.runtime.benchmark import cli, shard_merge
+from roboscope_kit.runtime.benchmark import cli, merge
 from roboscope_kit.runtime.benchmark.output import reserve_output_directory
 
 
@@ -191,12 +191,12 @@ def test_shard_merge_preserves_result_and_releases_lock(tmp_path, monkeypatch, c
             "--shard-dir", "unused", "--output-dir", str(output)]
     merged = {"result": {"state": "completed", "episodes": 1, "successes": 1,
                          "total_episodes": 1, "success_rate": 1.0}, "shard": {"count": 1}}
-    monkeypatch.setattr(shard_merge, "merge_shards", lambda **kwargs: merged)
-    assert shard_merge.main(args) == 0
+    monkeypatch.setattr(merge, "merge_shards", lambda **kwargs: merged)
+    assert merge.main(args) == 0
     assert not (output / "errors.jsonl").exists()
     assert not (output / ".run.lock").exists()
     before = _snapshot(output)
-    assert shard_merge.main(args) == 1
+    assert merge.main(args) == 1
     assert _snapshot(output) == before
     assert "Traceback" not in capsys.readouterr().err
 
@@ -205,10 +205,10 @@ def test_shard_merge_failure_can_be_retried(tmp_path, monkeypatch):
     def fail(**kwargs):
         raise ValueError("invalid shards")
 
-    monkeypatch.setattr(shard_merge, "merge_shards", fail)
+    monkeypatch.setattr(merge, "merge_shards", fail)
     args = ["--benchmark", "libero", "--suite", "libero_10", "--benchmark-manifest", "unused",
             "--shard-dir", "unused", "--output-dir", str(tmp_path)]
-    assert shard_merge.main(args) == 1
+    assert merge.main(args) == 1
     assert list(tmp_path.iterdir()) == []
 
 

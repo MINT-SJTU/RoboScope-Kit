@@ -24,7 +24,7 @@ The order of work is in the [`benchmark-integration` skill](../../.agents/skills
 ## 2. Reproduce the environment
 
 - Build in a fresh directory with the committed `benchmarks/<benchmark>/build-runtime.sh` and its pin
-  files. Run the Kit `--self-test` and a real-policy `--quick-test`; record the commands, hardware,
+  files. Run `roboscope check` and a real-policy `--quick-test`; record the commands, hardware,
   runtime versions and results. Do not repair the installed environment by hand.
 - Run the repository's required checks and obtain passing CI for the exact PR head. Pending,
   action-required or missing checks are not passing checks. Identify any skipped check and why.

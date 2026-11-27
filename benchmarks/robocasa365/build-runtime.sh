@@ -5,7 +5,7 @@ set -Eeuo pipefail
 # Usage: build-runtime.sh <install-dir> [--environment-only]
 # The optional mode prepares imports while assets are being downloaded; it does
 # not install a benchmark manifest or claim that a usable runtime was built.
-# Normal builds require all committed asset checksums and finish with --self-test.
+# Normal builds require all committed asset checksums and finish with `roboscope check`.
 # KIT_PYTHON selects a Python containing this Kit checkout (default: python3).
 # ROBOSCOPE_ROBOCASA365_ASSETS_DIR selects the persistent ZIP download cache.
 # ROBOSCOPE_ROBOCASA365_SOURCE_CACHE selects the verified source archive cache.
@@ -160,8 +160,7 @@ fi
 install -m 0644 "${SCRIPT_DIR}/benchmark-manifest.json" "${INSTALL_DIR}/benchmark-manifest.json"
 install -m 0644 "${SCRIPT_DIR}/asset-inputs.json" "${INSTALL_DIR}/asset-inputs.json"
 SELF_TEST_OUTPUT="$(mktemp -d "${INSTALL_DIR}/self-test.XXXXXX")"
-"${KIT_PYTHON}" -I -m roboscope_kit.runtime.benchmark --benchmark robocasa365 --self-test \
-  --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+"${KIT_PYTHON}" -I -m roboscope_kit check robocasa365 "${INSTALL_DIR}" \
   --output-dir "${SELF_TEST_OUTPUT}"
 echo "Built RoboCasa365 runtime and passed Kit self-test: ${INSTALL_DIR}"
 echo "Self-test evidence: ${SELF_TEST_OUTPUT}"

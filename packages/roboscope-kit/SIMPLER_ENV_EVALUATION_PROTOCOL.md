@@ -54,7 +54,7 @@ A formal run evaluates every episode of one suite. `--quick-test` runs the first
 variant; `--episodes N` takes at most `N` episodes from every variant, and any run short of the full matrix is
 reported with `formal: false`. `official_result.formal` is true only when the result holds a record for every
 episode of the full matrix: one `--shard-index` shard of a full run reports `formal: false` and `partial: true`,
-and only the merge of the complete shard set (`shard_merge`) is formal. `benchmark.formal_selection` records
+and only the merge of the complete shard set (`roboscope merge`) is formal. `benchmark.formal_selection` records
 whether the requested workload is the full matrix; it is the same on every shard.
 
 ### What is not supported, and why
@@ -101,7 +101,7 @@ The TensorFlow stack is in the runtime because SimplerEnv's native entry point i
 never import it, and the example Policy uses it from this environment so that the Kit and native runs share one
 TensorFlow. The build checks both commits and that the checkouts are unmodified, the versions, that
 `simpler_env` and the assets resolve to the checkout, and then builds, resets, renders, and steps one episode of
-every suite plus one ray-traced drawer variant through the kit worker's own code. `--self-test` repeats that
+every suite plus one ray-traced drawer variant through the kit worker's own code. `roboscope check` repeats that
 check. Set `ROBOSCOPE_PYPI_INDEX_URL` to install the locked packages from a PyPI mirror.
 
 SAPIEN renders through Vulkan, and SAPIEN 2.2 breaks when the Vulkan loader loads any ICD (installable client
@@ -110,14 +110,13 @@ renderer teardown segfaults inside `libnvidia-vksc-core.so`; upstream's own eval
 environment per episode, crashes the same way. With Mesa's ICDs installed next to the NVIDIA one, creating the
 renderer can fail with `ErrorExtensionNotPresent`. Export `VK_ICD_FILENAMES=<dir>/nvidia_icd.json` (`<dir>` is
 `/usr/share/vulkan/icd.d` or `/etc/vulkan/icd.d`) for the build and every run. While another ICD is installed
-and the variable is unset, the build, `--self-test`, and every run stop before they render anything. Merging
+and the variable is unset, the build, `roboscope check`, and every run stop before they render anything. Merging
 shard results renders nothing and needs no ICD setting.
 
 ```bash
 export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json   # or /etc/vulkan/icd.d/; see above
 benchmarks/simpler_env/build-runtime.sh /sim/simpler-env
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark simpler_env --suite google_robot_visual_matching \
+roboscope eval simpler_env google_robot_visual_matching \
     --checkpoint-source /models/my-checkpoint \
     --benchmark-manifest /sim/simpler-env/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json \
@@ -215,7 +214,7 @@ whole matrix.
 
 ## 7. Validation sequence
 
-1. Build into a fresh directory with the committed script; the build's own check and `--self-test` must pass.
+1. Build into a fresh directory with the committed script; the build's own check and `roboscope check` must pass.
 2. Run `--quick-test` with the real Policy.
 3. Run the full suite and check that `official_result.formal` is true and every frozen episode has exactly one
    record.
@@ -234,7 +233,7 @@ built with the committed script. Commit hashes are those of
 ### Build, self-test, and Quick Test
 
 A clean build of commit `932d85d` into a new directory finished in 60 s (warm uv cache, PyPI through a
-mirror). The build's checks and `--self-test` passed.
+mirror). The build's checks and `roboscope check` passed.
 
 `--quick-test` on `google_robot_visual_matching` runs the episode `pick_coke_can/horizontal/urdf_none/000`. It
 succeeded in 47 steps on `932d85d`, and again on commit `8769edc` on 2026-11-10 with the same runtime: Policy
@@ -283,7 +282,7 @@ Variant-aggregation success by task (mean of variant rates) in the runs above:
 ### WidowX comparison at `0af5b90` on an RTX 3080
 
 Measured on 2026-11-14 on one RTX 3080 (10 GB) host, commit `0af5b90`, with a runtime built from scratch with
-the committed script (10 min 48 s, cold uv cache); `--self-test` passed. `--quick-test` on
+the committed script (10 min 48 s, cold uv cache); `roboscope check` passed. `--quick-test` on
 `widowx_visual_matching` ran `put_spoon_on_tablecloth/base/000` to the end (60 steps, not a success): Policy load
 36.87 s, evaluation 22.86 s. The full suite then ran on both sides, one after the other on the same idle GPU,
 and `compare_native.py --strict` exited 0.

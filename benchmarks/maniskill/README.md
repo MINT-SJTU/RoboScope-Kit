@@ -49,7 +49,7 @@ author archive. Asset availability and terms are recorded separately from task
 validation. Keep weights, assets, caches and raw results outside Git.
 
 Set the Python and repository paths in the [Policy configuration](../../examples/maniskill/roboscope-policy.json),
-then follow the [official PPO example](../../examples/maniskill/README.md) for `--self-test`,
+then follow the [official PPO example](../../examples/maniskill/README.md) for `roboscope check`,
 real-model `--quick-test`, full evaluation and native GPU-vectorized comparison commands.
 The separate [Octo-small example](../../examples/maniskill/OCTO.md) serves `bridge_rgb_v1`.
 Additional examples document [eight task-trained NEWT candidates](../../examples/maniskill/NEWT.md)

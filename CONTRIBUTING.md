@@ -92,8 +92,8 @@ To build a benchmark's simulator environment and check it against the kit:
 ```bash
 benchmarks/libero/build-runtime.sh /sim/libero
 SELF_TEST_OUTPUT=$(mktemp -d "${TMPDIR:-/tmp}/libero-self-test.XXXXXX")
-python -m roboscope_kit.runtime.benchmark --benchmark libero --self-test \
-    --benchmark-manifest /sim/libero/benchmark-manifest.json --output-dir "$SELF_TEST_OUTPUT"
+roboscope check libero /sim/libero/benchmark-manifest.json \
+    --output-dir "$SELF_TEST_OUTPUT"
 ```
 
 To reproduce the CI compatibility check on the built wheel and sdist, run these with the interpreter you

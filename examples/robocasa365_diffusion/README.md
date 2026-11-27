@@ -155,13 +155,12 @@ HF_HOME=/models/huggingface HF_HUB_OFFLINE=1 PYTHONHASHSEED=42 \
   --output /results/native-a/CloseBlenderLid
 ```
 
-Run the Kit CLI with the same tracing (all arguments pass to
-`python -m roboscope_kit.runtime.benchmark`):
+Run the Kit CLI with the same tracing (all arguments pass to `roboscope` unchanged):
 
 ```bash
 PYTHONHASHSEED=42 ROBOCASA365_TRACE_DIR=/results/kit/trace \
 python examples/robocasa365_diffusion/run_kit.py \
-  --benchmark robocasa365 --suite target50 --episodes 5 \
+  eval robocasa365 target50 --episodes 5 \
   --benchmark-manifest /sim/robocasa365/benchmark-manifest.json \
   --policy-config /workspace/robocasa365-policy.json \
   --checkpoint-source /models/robocasa365-diffusion \

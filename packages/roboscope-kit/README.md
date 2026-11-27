@@ -68,6 +68,14 @@ An evaluation takes two files:
   }
   ```
 
+  For a Policy script that needs no environment variables, extra arguments or `benchmark_config`,
+  `--policy user_policy.py` writes this contract for you and passes it as `--policy-config`: it runs the
+  script with the Python that runs `roboscope` (or `--policy-python`) in the script's directory (or
+  `--policy-cwd`). The file is `$XDG_CACHE_HOME/roboscope-kit/policy-configs/<sha256>.json`, named by its
+  content. When that Python cannot import `roboscope_kit`, the command puts this installation's copy on its
+  `PYTHONPATH`.
+  MetaWorld reads its cameras from `benchmark_config`, so it needs `--policy-config`.
+
 - the **benchmark manifest** (`--benchmark-manifest`, a `benchmark-manifest.json`), which lists the
   benchmark's suites and protocol, points `runtime` at the benchmark's Python environment, simulator source,
   and assets, and sets the evaluation defaults. Relative runtime paths resolve against the manifest's
@@ -75,28 +83,40 @@ An evaluation takes two files:
 
 The simulators are not dependencies of this package. Each benchmark directory under
 [`benchmarks/`](https://github.com/MINT-SJTU/RoboScope-Kit/tree/main/benchmarks) has a `build-runtime.sh` that builds the pinned simulator
-environment into a directory you choose and copies the benchmark manifest there:
+environment into a directory you choose and copies the benchmark manifest there. The package ships these
+scripts, and `roboscope build` runs them:
 
 ```bash
-benchmarks/libero/build-runtime.sh /sim/libero
+roboscope build libero /sim/libero
 ```
 
-Run the evaluation with the benchmark CLI:
+The install directory is required, or set `ROBOSCOPE_HOME` to build into `$ROBOSCOPE_HOME/<benchmark>`.
+Runtimes take several GB to tens of GB and cannot be moved once built, so choose a disk with room; the
+command refuses a first build when the disk has less free space than the benchmark needs. After the build
+it records the install directory in `$XDG_CONFIG_HOME/roboscope-kit/runtimes.json`, where `roboscope eval`
+and `roboscope check` find it. `roboscope build` covers CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, RoboCasa
+GR-1 Tabletop and RoboTwin; the other benchmarks build from a clone of this repository with
+`bash benchmarks/<benchmark>/build-runtime.sh <install-dir>`, which the command prints for them.
+
+Run the evaluation with `roboscope eval BENCHMARK SUITE`:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark libero --suite libero_10 --checkpoint-source /models/my-checkpoint \
-    --benchmark-manifest /sim/libero/benchmark-manifest.json \
-    --policy-config /path/to/roboscope-policy.json \
-    --output-dir /runs/libero_10
+roboscope eval libero libero_10 \
+    --checkpoint-source /models/my-checkpoint \
+    --policy-config /path/to/roboscope-policy.json
 ```
 
-`--checkpoint-source` is an absolute local path, passed to `Policy.load()` unchanged. Prepare the checkpoint
+`--checkpoint-source` is a local path, made absolute and passed to `Policy.load()`. Prepare the checkpoint
 before starting the evaluation. The runtime validates the Policy process contract before every run.
+`--benchmark-manifest` takes a manifest or the runtime directory holding it; without it, the runtime
+`roboscope build` registered is used, then `$ROBOSCOPE_HOME/<benchmark>`.
 `--quick-test` runs a short real evaluation with one Worker and one Server; without it, the run is a full
-scored evaluation. `--self-test` runs benchmark-specific runtime checks without loading your Policy;
-some checks create GPU simulator environments. Results, progress,
-and logs are written under `--output-dir`. Use a new or empty directory for each evaluation or self-test.
+scored evaluation. `roboscope check BENCHMARK [RUNTIME]` runs benchmark-specific runtime checks without
+loading your Policy; some checks create GPU simulator environments. Results, progress, and logs are written
+under `--output-dir`, by default a new `./roboscope-runs/<benchmark>-<suite>-<time>`. The command ends with
+one summary line (successes, evaluation time, output directory), or one JSON line with `--json`; it exits
+0 on success, 1 when the run fails, 2 when it cannot start, and 128 plus the signal number after SIGTERM or
+SIGHUP. Use a new or empty directory for each evaluation or check.
 A directory containing only `errors.jsonl` can be retried; new errors are appended to preserve earlier
 failures. Pure preflight checks run before any evaluation artifacts are written. Once a run has produced
 other artifacts, choose a new directory: restarting the CLI does not resume it.
@@ -446,8 +466,8 @@ Every instance builds the same full list of Work Items and keeps the items whose
 single-instance run. Run one instance per shard:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark robotwin --suite demo_clean --checkpoint-source ... \
+roboscope eval robotwin demo_clean \
+    --checkpoint-source ... \
     --benchmark-manifest ... --policy-config ... \
     --shard-index I --shard-count N --output-dir /runs/shard-I
 ```
@@ -466,7 +486,7 @@ When all shards finish, merge them. The merge checks that items are disjoint and
 record IDs are unique, and that each item has the right number of records:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark.shard_merge \
+roboscope merge \
     --benchmark robotwin --suite demo_clean --benchmark-manifest ... \
     --shard-dir /runs/shard-0 ... --shard-dir /runs/shard-N-1 \
     --output-dir /runs/merged

@@ -129,8 +129,7 @@ Quick Test runs the first complete ten-lane vector group of the first selected p
 It uses the same initial-state grouping as the corresponding full run:
 
 ```bash
-/path/to/runtime/env/bin/python -m roboscope_kit.runtime.benchmark \
-  --benchmark maniskill --suite baseline_state_v1 \
+/path/to/runtime/env/bin/python -m roboscope_kit eval maniskill baseline_state_v1 \
   --benchmark-manifest /path/to/runtime/benchmark-manifest.json \
   --checkpoint-source /path/to/maniskill-models \
   --policy-config /path/to/roboscope-policy.json \
@@ -140,8 +139,7 @@ It uses the same initial-state grouping as the corresponding full run:
 For a representative multi-task run, fix K/G and request ten episodes per task:
 
 ```bash
-/path/to/runtime/env/bin/python -m roboscope_kit.runtime.benchmark \
-  --benchmark maniskill --suite baseline_state_v1 \
+/path/to/runtime/env/bin/python -m roboscope_kit eval maniskill baseline_state_v1 \
   --benchmark-manifest /path/to/runtime/benchmark-manifest.json \
   --checkpoint-source /path/to/maniskill-models \
   --policy-config /path/to/roboscope-policy.json \

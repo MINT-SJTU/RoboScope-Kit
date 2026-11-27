@@ -135,5 +135,5 @@ python -m ruff check src tests ../../benchmarks/robotwin
 ```
 
 For a build script change, run `bash -n` and `shellcheck` on it. Real builds, simulator episodes, and model
-loading need Linux x86_64, a GPU, and network access; after a build, check it with the kit's
-`--self-test --benchmark-manifest <install-dir>/benchmark-manifest.json`.
+loading need Linux x86_64, a GPU, and network access; after a build, check it with
+`roboscope check <benchmark> <install-dir>`.

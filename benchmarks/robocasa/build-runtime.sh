@@ -11,8 +11,7 @@ set -Eeuo pipefail
 #     starVLA/                  pinned StarVLA tree, runtime.benchmark_root
 #
 # Usage: build-runtime.sh <install-dir>
-# Then:  python -m roboscope_kit.runtime.benchmark --benchmark robocasa \
-#          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
+# Then:  roboscope eval robocasa <suite> --benchmark-manifest <install-dir> ...
 #
 # Environment:
 #   KIT_PYTHON                     Python with roboscope-kit installed (default python3); runs the
@@ -305,6 +304,5 @@ install -m 0644 "${MANIFEST}" "${INSTALL_DIR}/benchmark-manifest.json"
 echo "Built RoboCasa runtime in ${INSTALL_DIR} from StarVLA ${STARVLA_COMMIT}"
 
 rm -rf -- "${INSTALL_DIR}/self-test"
-"${KIT_PYTHON}" -m roboscope_kit.runtime.benchmark --benchmark robocasa --self-test \
-  --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+"${KIT_PYTHON}" -m roboscope_kit check robocasa "${INSTALL_DIR}" \
   --output-dir "${INSTALL_DIR}/self-test"

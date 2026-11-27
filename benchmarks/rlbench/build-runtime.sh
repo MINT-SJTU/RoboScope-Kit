@@ -15,8 +15,7 @@ set -Eeuo pipefail
 #     initial-scenes.json       every test episode's single-reset scene against its recorded one
 #
 # Usage: build-runtime.sh --accept-licenses <install-dir>
-# Then:  python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 \
-#          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
+# Then:  roboscope eval rlbench peract_18 --benchmark-manifest <install-dir> ...
 #
 # Licences. CoppeliaSim Edu is free only for educational entities (hobbyists, students,
 # teachers, schools and universities) and non-commercial use; RLBench is licensed by Imperial
@@ -358,8 +357,7 @@ if [[ -n "${KIT_PYTHON:-}" ]] || python3 -c 'import roboscope_kit' >/dev/null 2>
     exit 6
   }
   rm -rf -- "${INSTALL_DIR}/self-test"
-  "${KIT_PYTHON}" -m roboscope_kit.runtime.benchmark --benchmark rlbench --self-test \
-    --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+  "${KIT_PYTHON}" -m roboscope_kit check rlbench "${INSTALL_DIR}" \
     --output-dir "${INSTALL_DIR}/self-test"
 else
   echo "Skipped the kit self-test: python3 cannot import roboscope_kit; set KIT_PYTHON to run it" >&2

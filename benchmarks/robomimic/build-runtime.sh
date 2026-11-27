@@ -10,8 +10,7 @@ set -Eeuo pipefail
 #     pip-freeze.txt            what env/ actually contains
 #
 # Usage: build-runtime.sh <install-dir>
-# Then:  python -m roboscope_kit.runtime.benchmark --benchmark robomimic --suite ph_low_dim \
-#          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
+# Then:  roboscope eval robomimic ph_low_dim --benchmark-manifest <install-dir> ...
 #
 # The environment pairs robomimic v0.4.0 with the robosuite v1.4.1 branch on the DeepMind
 # MuJoCo 2.3.7 bindings. The robomimic v0.1 model zoo was trained on the mujoco-py based
@@ -197,8 +196,7 @@ if [[ -n "${KIT_PYTHON:-}" ]] || python3 -c 'import roboscope_kit' >/dev/null 2>
     exit 6
   }
   rm -rf -- "${INSTALL_DIR}/self-test"
-  "${KIT_PYTHON}" -m roboscope_kit.runtime.benchmark --benchmark robomimic --self-test \
-    --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+  "${KIT_PYTHON}" -m roboscope_kit check robomimic "${INSTALL_DIR}" \
     --output-dir "${INSTALL_DIR}/self-test"
 else
   echo "Skipped the kit self-test: python3 cannot import roboscope_kit; set KIT_PYTHON to run it" >&2

@@ -40,14 +40,14 @@ its source tree through `PYTHONPATH`, so `roboscope-kit` is not installed into t
 Run an evaluation with the kit installed in any supported Python:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark metaworld --suite mt50 --checkpoint-source /models/my-checkpoint \
+roboscope eval metaworld mt50 \
+    --checkpoint-source /models/my-checkpoint \
     --benchmark-manifest <install-dir>/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json \
     --output-dir /runs/metaworld-mt50
 ```
 
-`--self-test` with the same manifest checks that the environment imports `metaworld.evaluation`. Results,
+`roboscope check` with the same manifest checks that the environment imports `metaworld.evaluation`. Results,
 progress, and logs are written under `--output-dir`.
 
 Use a new or empty output directory for each evaluation or self-test. A directory containing only

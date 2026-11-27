@@ -2,6 +2,44 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.9.0b1 - 2026-11-27
+
+- Add the `roboscope` command (also `python -m roboscope_kit`) with `eval`, `check`, `build` and `merge`. It
+  only assembles arguments and calls the unchanged benchmark runtime and shard merge. It
+  replaces `python -m roboscope_kit.runtime.benchmark` and `python -m roboscope_kit.runtime.benchmark.shard_merge`,
+  which are removed; no alias is provided. Every option keeps its name; `--benchmark` and `--suite` become the
+  positional `BENCHMARK SUITE`, and `--self-test` becomes `roboscope check`:
+
+  | Before | Now |
+  | --- | --- |
+  | `python -m roboscope_kit.runtime.benchmark --benchmark B --suite S ...` | `roboscope eval B S ...` |
+  | `python -m roboscope_kit.runtime.benchmark --benchmark B --self-test --benchmark-manifest M --output-dir D` | `roboscope check B M --output-dir D` |
+  | `python -m roboscope_kit.runtime.benchmark.shard_merge ...` | `roboscope merge ...` |
+  | `bash benchmarks/B/build-runtime.sh DIR` (from a clone) | `roboscope build B DIR` (CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, RoboCasa GR-1 Tabletop, RoboTwin) |
+  | `roboscope_kit.runtime.benchmark.cli.main(argv)` | `roboscope_kit.cli.main(["eval", ...])` |
+
+- `roboscope eval` defaults `--output-dir` to a new `./roboscope-runs/<benchmark>-<suite>-<time>` and
+  `--benchmark-manifest` to the runtime `roboscope build` registered, then `$ROBOSCOPE_HOME/<benchmark>`;
+  `--benchmark-manifest` also accepts the runtime directory. `--checkpoint-source` may be relative. The run
+  ends with one summary line, or one JSON line with `--json`, and exits 0 on success, 1 when the run fails,
+  2 when it cannot start, and 128 plus the signal number after SIGTERM or SIGHUP.
+- `roboscope eval --policy FILE [--policy-python PY] [--policy-cwd DIR]` starts a Policy script without a
+  `roboscope-policy.json`. It writes the contract to `$XDG_CACHE_HOME/roboscope-kit/policy-configs/<sha256>.json`
+  in canonical form, so equal inputs reuse one file and one run-cache key, and passes it as `--policy-config`.
+  When the Policy's Python cannot import `roboscope_kit`, this installation's copy is put on its `PYTHONPATH`.
+  MetaWorld reads its cameras from `benchmark_config`, so it requires `--policy-config`.
+- The wheel and sdist ship `benchmarks/` (build scripts, manifests and pin files) under
+  `roboscope_kit/_benchmarks`. `roboscope build` runs the shipped script with `KIT_PYTHON` set to its own
+  Python, requires the install directory or `ROBOSCOPE_HOME`, refuses a first build on a disk with too little
+  free space, and records the install directory in `$XDG_CONFIG_HOME/roboscope-kit/runtimes.json`. The other
+  seven build scripts still read files from a repository checkout; for them it prints the clone-and-run
+  command.
+- `roboscope_kit.runtime.benchmark.shard_merge` moves to `roboscope_kit.runtime.benchmark.merge` without its
+  `__main__` block, so the old `python -m` path fails instead of importing the module and exiting 0.
+- The 13 build scripts end with `"${KIT_PYTHON}" -m roboscope_kit check <benchmark> <install-dir>`.
+- `roboscope eval` reports a missing `nvidia-smi` before starting the runtime when `CUDA_VISIBLE_DEVICES` is
+  unset.
+
 ## 0.8.0b93 - 2026-11-27
 
 - Describe the options of the RoboCasa365 Diffusion Policy example scripts in `--help`. `compare_native.py` and
