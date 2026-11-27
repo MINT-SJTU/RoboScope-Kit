@@ -2,13 +2,14 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b92 - 2026-11-26
+## 0.8.0b92 - 2026-11-27
 
 - BEHAVIOR workers execute an action chunk from the Policy one action per control step and ask again
   when it is used up, as the native client's `--replay-action-chunk-size` does; every step is still
   simulated, rendered and scored. The BEHAVIOR2026VLA Policy returns the 13 actions of each model call
   at once (the steps in between read no observation, so the actions do not change) and keeps the rollout
-  state of each open episode, so one replica serves several workers.
+  state of each open episode, so one replica serves several workers. Its per-episode timing reports
+  `actions_returned` (with the unexecuted rest of the last chunk) instead of `steps`.
 - A BEHAVIOR run keeps one RTX texture cache per scene under `<output-dir>/texture-cache` instead of one
   per worker, evaluates every instance of one scene's tasks before the next scene, and removes a scene's
   cache once no pending or running item and no running simulator needs it: a worker keeps its cache until

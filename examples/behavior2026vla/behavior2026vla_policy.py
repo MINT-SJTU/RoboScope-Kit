@@ -152,7 +152,9 @@ class Behavior2026VlaPolicy(Policy):
         rollout = B1KPolicyWrapper(self.policy, config=B1KWrapperConfig())
         rollout.reset()
         self.rollouts[context.episode_id] = rollout
-        self.timing[context.episode_id] = {"steps": 0, "model_calls": 0, "act_s": 0.0}
+        # Actions returned, with the unexecuted rest of the chunk an episode ends in; the worker records the
+        # executed steps.
+        self.timing[context.episode_id] = {"actions_returned": 0, "model_calls": 0, "act_s": 0.0}
 
     def act(self, observation: Observation) -> ActionChunk:
         from b1k.shared.eval_b1k_wrapper import act_batched  # noqa: PLC0415
@@ -174,7 +176,7 @@ class Behavior2026VlaPolicy(Policy):
         rest = [rollout.end_step(None).cpu().numpy() for _ in range(left)]
         action = np.concatenate([action, np.asarray(rest, dtype=np.float32).reshape(-1, ACTION_DIM)])
         timing = self.timing[observation.episode_id]
-        timing["steps"] += len(action)
+        timing["actions_returned"] += len(action)
         timing["model_calls"] += rollout.prediction_count - calls
         timing["act_s"] += time.perf_counter() - started
         return ActionChunk(actions=action)
