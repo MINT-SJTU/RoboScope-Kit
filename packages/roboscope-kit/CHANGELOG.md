@@ -42,6 +42,16 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 - The 13 build scripts end with `"${KIT_PYTHON}" -m roboscope_kit check <benchmark> <install-dir>`.
 - `roboscope eval` reports a missing `nvidia-smi` before starting the runtime when `CUDA_VISIBLE_DEVICES` is
   unset.
+- `roboscope eval ... --hosts a,b` runs shard *i* of `len(hosts)` on host *i* over SSH and merges the shards on
+  the first host; `roboscope hosts add NAME DESTINATION` sets up key login, checks the kit there and registers
+  the host, `roboscope hosts` lists the hosts and `roboscope hosts remove NAME` forgets one. Before starting,
+  every shard runs `roboscope eval --dry-run` on its host, and the run starts only when every host is
+  reachable, runs this kit version, has the same benchmark manifest and checkpoint file names and sizes, and has
+  a GPU. Each shard runs detached from SSH. Running the same command with the same `--output-dir` follows the
+  shards, starts a new attempt for each failed shard and merges; `--detach` starts the shards and returns.
+- `roboscope eval --dry-run` checks the arguments and prints what would run as JSON, including the kit
+  version, the benchmark manifest's SHA-256, the checkpoint's file count, size and digest of names and sizes,
+  whether the output directory is free, and the GPUs.
 
 ## 0.8.0b93 - 2026-11-27
 
