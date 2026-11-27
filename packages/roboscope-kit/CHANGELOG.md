@@ -2,6 +2,13 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b91 - 2026-11-27
+
+- Accept `float64` as well as `float32` actions for LIBERO, LIBERO-Plus and LIBERO-Pro,
+  preserving their dtype and values through `env.step`. Other action contracts are unchanged.
+- The OpenVLA example returns `float64` actions, matching upstream execution precision
+  instead of rounding to `float32`.
+
 ## 0.8.0b90 - 2026-11-26
 
 - Remove the `inference_metrics` summary from `result.json` and the `queue_wait_p95_ms` signal from autotune

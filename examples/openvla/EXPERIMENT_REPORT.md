@@ -1,9 +1,21 @@
 # OpenVLA experiment report
 
-Updated: 2026-11-14.
+Updated: 2026-11-26.
 
-Current implementation: **Kit `0.8.0b65`, code commit `14d2f50`**.
-The completed Native validation and README update are recorded in documentation
+The current OpenVLA Policy returns **float64** actions with Kit **`0.8.0b91`** or later,
+matching Native's executed action precision. Sections 1–6 describe earlier experiments
+that used float32 Kit actions; their results and precision differences remain historical
+evidence and must not be relabeled as measurements of the float64 Policy.
+
+The completed November 26 float64 comparison covers all four suites at K/g=1/1:
+Kit **145/200**, Native **146/200**, with **19 outcome disagreements**. The Goal
+float32 compatibility control reproduces all 50 outcomes and step counts exactly.
+See [section 7](#7-float64-action-preservation-issue-188) for the current results,
+the distinction between fresh and reused Native references, and the limits of
+the comparison.
+
+The earlier review implementation was **Kit `0.8.0b65`, code commit `14d2f50`**.
+Its completed Native validation and README update are recorded in documentation
 commit `84fcc95`. The performance campaign used `0.8.0b58` / `da280f0`; those
 measured versions remain identified separately below.
 
@@ -250,7 +262,7 @@ saved model image. The earlier seven-case subset separately contains 440
 identical-input steps, also with identical generated actions. No observed instance
 establishes that inference randomness produces different actions for equal inputs.
 
-Kit converts actions to float32 after generation. Wherever raw generated actions
+In these historical runs, Kit converted actions to float32 after generation. Wherever raw generated actions
 match, converting Native's executed action to float32 exactly matches Kit's action.
 These observations do not establish precision loss as a cause of different model
 outputs. They also do not exclude an indirect effect through subsequent simulation,
@@ -311,7 +323,7 @@ is complete; further causal attribution may remain inconclusive. Overall, the
 updated Kit reruns improve consistency, while the performance conclusions remain
 aligned with the previous experiments.
 
-### Known implementation differences identified during review
+### Historical implementation differences identified during review
 
 Kit Worker assignment can give the same task/state identity a different reset
 history. LIBERO samples fixture placement from the global NumPy RNG at reset;
@@ -319,8 +331,9 @@ history. LIBERO samples fixture placement from the global NumPy RNG at reset;
 initial-scene differences in Goal 9/2 and 9/3. The recorded action replay also
 shows that float32 versus upstream float64 execution changes trajectories.
 Native's robosuite 1.4.1 additionally includes a Panda `link7` collision geom and
-resets the gripper's previous action, unlike Kit's 1.4.0 runtime. These known
-differences are separate follow-up work; their contributions to every final
+resets the gripper's previous action, unlike Kit's 1.4.0 runtime. The float64 Policy
+removes the action-rounding difference; reset history and simulator versions remain
+separate follow-up work. Their contributions to every final
 success/failure disagreement have not been fully isolated.
 
 ## 6. Corrected Native entry-point validation
@@ -374,3 +387,182 @@ This validates the corrected Native entry point through the complete requested
 workload and supports retaining the existing Native reference. It is an additional
 Native validation, not a new same-final-head Kit/Native performance campaign;
 Kit was not rerun for this follow-up.
+
+## 7. Float64 action preservation (issue #188)
+
+The SDK change accepts both `float32` and `float64` for LIBERO, LIBERO-Plus and
+LIBERO-Pro. It preserves the Policy's dtype and values through `env.step`; it
+does not widen existing float32 actions. The OpenVLA Policy now returns float64,
+matching Native's executed precision. The reference SDK is `0.8.0b83` at
+`05d335f7e3f4b02d71f49035438be7c48fbca2e9`; the patched experiment snapshot
+was locally labeled `0.8.0b84`. This is an unreleased experimental build, not
+the subsequently published upstream `0.8.0b84` release. The PR now targets
+`0.8.0b91` on upstream `7410f04`; measured results retain their original source
+and wheel hashes. They have not been relabeled as a GPU rerun of the PR head.
+The four modified Python implementation files are identical between the
+experiment snapshot and the PR branch. Upstream's later changes to the two
+OpenVLA comparison entry points add CLI help text only.
+
+### Completed simulator-state check
+
+On November 26, 2026, an RTX 4090 ran fixed action sequences in the existing
+standard LIBERO runtime (Python 3.10.20, robosuite 1.4.0, MuJoCo 3.2.3).
+The check covered Goal tasks 0 and 9, initial states 0 and 4, ten settling steps
+and 32 policy steps per case. Separate processes used seed 7 and the same reset
+order for direct execution and the SDK path.
+
+The SDK path used a real `PolicyServer`, `PolicyClient`, `PolicyActionQueue` and
+the Worker's `run_episode`. It covered float64 single actions over JSON,
+float64 four-action chunks over MessagePack, and float32 four-action chunks
+over MessagePack: **384 Worker policy steps** in total. Each executed action
+retained its original bytes and dtype. Every saved simulator state, including
+the initial and settling states, matched direct `env.step` execution exactly
+for the corresponding dtype. The direct float32 and float64 controls differed
+after the first policy action in all four cases, confirming that the check
+detects trajectory changes caused by rounding.
+
+The experimental snapshot passed all 479 existing SDK tests and Ruff. The PR
+branch on the updated upstream passed all 484 existing tests and Ruff. An additional 24
+transport cases checked both dtypes, single actions and chunks, both encodings,
+and all three LIBERO contracts. Invalid dtypes, nonfinite values and wrong
+dimensions remain rejected; other benchmark dtype contracts remain unchanged.
+
+### Completed Goal outcome comparison
+
+Completed November 26 at approximately 20:30 +08:00. Each of the four arms
+covered all ten Goal tasks and states 0–4 (50 episodes); Kit used K/g=1/1,
+seed 7 and ten settling steps, with no Autotune, run cache, video or MPS.
+The original float32 Policy was unchanged between the reference and patched SDK
+runs. The Native environment remained unchanged. All three `compare_native.py`
+comparisons passed their coverage and configuration checks.
+
+| Implementation | Successes | Policy steps | Kit-only successes | Native-only successes |
+| --- | ---: | ---: | ---: | ---: |
+| Reference SDK + original float32 Policy | 36/50 | 7,963 | 4 | 1 |
+| Patched SDK + original float32 Policy | 36/50 | 7,963 | 4 | 1 |
+| Patched SDK + float64 Policy | 37/50 | 7,910 | 4 | 0 |
+| Fresh Native reference | 33/50 | 8,516 | — | — |
+
+The float32 compatibility control reproduced **every episode's outcome and step
+count exactly** after the SDK change. The fresh Native run also reproduced every
+outcome and step count from the November 14 reference.
+
+Changing the patched Policy from float32 to float64 changed seven outcomes
+(four gains and three losses) and 26 episode step counts. The net gain of one
+success must not be interpreted as only one trajectory changing. Kit/Native
+outcome disagreements decreased from five to four. The remaining four are
+Kit-only successes: task/state 0/0, 0/3, 0/4 and 5/4 (zero-based). This removes
+the forced rounding at the SDK boundary; it does not establish trajectory
+equivalence or isolate the causes of the remaining disagreements. Reset history
+and robosuite 1.4.0 versus 1.4.1 remain relevant differences.
+
+The controlled comparison above uses K/g=1/1 and the current SDK baseline. It
+must not be conflated with the historical K/g=2/2 comparison in sections 1–6.
+
+### Completed four-suite float64 results
+
+The additional Spatial, Object and Long evaluations finished on November 26 at
+22:36:23 +08:00. Every suite covers all ten tasks and initial states 0–4 at
+K/g=1/1: 50 episodes per suite, **200 float64 Kit episodes** in total. This is
+partial initial-state coverage (50 of the standard 500 episodes per suite),
+not a full 50-state evaluation. Seed 7, ten settling steps, the pinned suite
+checkpoints, CPU image preprocessing and GPU BF16/FlashAttention2 inference
+remain fixed. The machine reports an NVIDIA GeForce RTX 4090.
+
+Goal uses the fresh November 26 Native run. Spatial, Object and Long reuse the
+complete November 14 Native references; `run_native.py` and `compare_native.py`
+are byte-identical to those in the experiment snapshot, and checkpoint paths, seeds and exact
+case coverage were verified. All four comparisons passed. The campaign executed
+**350 new formal episodes**: 200 float64 Kit, 100 float32 Goal control episodes,
+and 50 fresh Native Goal episodes. Another 150 Native reference episodes were
+reused. The fixed-sequence simulator probes are separate from these totals.
+
+| Suite | Float64 Kit successes | Native successes | Kit-only successes | Native-only successes | Outcome disagreements |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Spatial | 38/50 | 43/50 | 0 | 5 | 5 |
+| Object | 43/50 | 42/50 | 1 | 0 | 1 |
+| Goal | 37/50 | 33/50 | 4 | 0 | 4 |
+| Long | 27/50 | 28/50 | 4 | 5 | 9 |
+| **Total** | **145/200 (72.5%)** | **146/200 (73.0%)** | **9** | **10** | **19** |
+
+The two arms agree on success/failure for **181/200 cases (90.5%)**: 136 shared
+successes and 45 shared failures. Matching total scores do not imply equivalent
+episodes or trajectories. Executed step counts differ on 105/200 cases
+(Spatial 26, Object 32, Goal 21, Long 26); the totals are 42,171 Kit steps and
+42,708 Native steps, excluding settling.
+
+Remaining outcome disagreements, with zero-based task/state identifiers:
+
+| Suite | Kit-only successes | Native-only successes |
+| --- | --- | --- |
+| Spatial | None | 6/3, 7/4, 8/1, 9/1, 9/4 |
+| Object | 6/4 | None |
+| Goal | 0/0, 0/3, 0/4, 5/4 | None |
+| Long | 1/2, 7/1, 8/4, 9/0 | 1/0, 5/2, 6/1, 7/2, 8/1 |
+
+Only Goal has a same-baseline, same-K/g float32/float64 control in this campaign.
+Its five-to-four reduction in outcome disagreements is directly measured.
+Spatial, Object and Long establish the new float64 Policy's results against
+their Native references, but do not isolate an effect of action precision.
+In particular, comparing this 145/200 total with the historical 151/200 at
+K/g=2/2 would confound precision, SDK revisions and Worker/reset ordering.
+This is a correctness campaign, not a new K/g tuning or performance-speedup study.
+
+The action-precision mismatch is removed and float32 compatibility is verified
+on Goal. The remaining discrepancies are not explained by this experiment:
+the two simulator versions and reset/scene history still differ. The report
+does not claim full Kit/Native equivalence or extend real-simulator validation
+to LIBERO-Plus or LIBERO-Pro; those contracts have dtype/transport checks only.
+
+### Historical float32 comparison at K/g=1/1
+
+The appropriate historical concurrency match is the **1/1** arm completed on
+November 14, not the 2/2 performance baseline. Both campaigns cover ten tasks
+and states 0–4 in each of the four suites, with seed 7 and the separate Policy
+and standard simulator environments described in section 1. The historical
+float32 arm used Kit `0.8.0b58` / `da280f0`; the new float64 arm used the
+experimental `0.8.0b84` patch based on `05d335f`.
+
+| Suite | Historical float32 Kit, K/g=1/1 | New float64 Kit, K/g=1/1 | Success-count change | Success-rate change |
+| --- | ---: | ---: | ---: | ---: |
+| Spatial | 41/50 (82%) | 38/50 (76%) | -3 | -6 percentage points |
+| Object | 43/50 (86%) | 43/50 (86%) | 0 | 0 percentage points |
+| Goal | 36/50 (72%) | 37/50 (74%) | +1 | +2 percentage points |
+| Long | 30/50 (60%) | 27/50 (54%) | -3 | -6 percentage points |
+| **Total** | **150/200 (75.0%)** | **145/200 (72.5%)** | **-5** | **-2.5 percentage points** |
+
+Aggregate success rates are close in this tested workload, with a measured
+2.5-percentage-point difference. The result supports that quantitative description;
+it does **not** establish equivalence, a statistically insignificant effect, or
+that action precision has no effect. Spatial and Long each differ by six
+percentage points, and unchanged totals can still hide different successful cases.
+
+| Suite | Historical float32 policy steps | New float64 policy steps | Change |
+| --- | ---: | ---: | ---: |
+| Spatial | 6,386 | 6,631 | +245 |
+| Object | 8,249 | 8,267 | +18 |
+| Goal | 7,963 | 7,910 | -53 |
+| Long | 19,508 | 19,363 | -145 |
+| **Total** | **42,106** | **42,171** | **+65 (+0.15%)** |
+
+Formal Kit wall time is 152.57 minutes in the historical record and 150.40
+minutes in the new runs, excluding loading. The SDK revisions, instrumentation
+and run conditions differ, so these elapsed times are descriptive records,
+not a precision-only speed comparison. Similar total step counts likewise
+do not establish equal action sequences or trajectories.
+
+The historical SDK differs from the current baseline, even at the same K/g.
+Only the new Goal control holds the patched SDK and Policy implementation
+constant apart from the final action dtype: float32 36/50 versus float64 37/50,
+with seven outcome flips and 26 changed step counts. That control demonstrates
+similar aggregate success counts **and** sensitivity of individual trajectories.
+The earlier fixed-sequence probe independently detects state divergence after
+the first action when the same sequence is rounded to float32.
+
+Historical numbers above come from the saved November 14 1/1 tables in section 1;
+new numbers come from the locally retained, independently audited
+`final-summary.json`. Historical per-episode records were not re-audited for
+this aggregate comparison. No four-suite
+float32/float64 pairwise disagreement count or significance test is inferred
+from aggregate scores. A precision-only comparison on Spatial, Object and Long
+would require float32 controls on the same patched SDK and frozen conditions.
