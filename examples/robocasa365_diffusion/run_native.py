@@ -35,14 +35,21 @@ RUNNER_MODULE = "diffusion_policy.env_runner.robomimic_image_runner"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--task", required=True)
-    parser.add_argument("--episodes", type=int, default=5)
-    parser.add_argument("--simulator", type=Path, required=True)
-    parser.add_argument("--gym-source", type=Path, required=True)
+    parser.add_argument("--task", required=True,
+                        help="one RoboCasa365 task name, e.g. CloseBlenderLid (not checked by the parser)")
+    parser.add_argument("--episodes", type=int, default=5,
+                        help="number of episodes for the task, run by the upstream eval_task (default 5); "
+                             "compare_rollouts.py --episodes must use the same number")
+    parser.add_argument("--simulator", type=Path, required=True,
+                        help="benchmarks/robocasa365/build-runtime.sh install directory")
+    parser.add_argument("--gym-source", type=Path, required=True,
+                        help="unpacked gym==0.21.0 source tree")
     parser.add_argument("--diffusion-policy", type=Path, required=True,
                         help="pinned Diffusion Policy source root (contains eval_robocasa.py)")
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--checkpoint", type=Path, required=True,
+                        help="model.ckpt file written by download_model.py")
+    parser.add_argument("--output", type=Path, required=True,
+                        help="directory for this task; receives trace/, result/ and native-inputs.json")
     return parser.parse_args()
 
 

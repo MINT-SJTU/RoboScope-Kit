@@ -21,11 +21,13 @@ def file_sha256(path: Path) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("destination", type=Path,
+                        help="directory that receives model.ckpt, clip/ and a copy of model-inputs.json; "
+                             "pass it to the Policy as --checkpoint-source")
+    args = parser.parse_args()
     from huggingface_hub import hf_hub_download
 
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("destination", type=Path)
-    args = parser.parse_args()
     inputs = json.loads(
         Path(__file__).resolve().with_name("model-inputs.json").read_text()
     )
