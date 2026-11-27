@@ -359,21 +359,35 @@ def test_every_buildable_benchmark_has_a_script():
         assert cli.build_script(benchmark).is_file()
 
 
-def test_merge_forwards_its_arguments(monkeypatch):
+def test_merge_finds_the_runtime_and_defaults_the_output(home):
+    runtime = _runtime(home / "sim" / "robotwin", "robotwin", ("demo_clean",))
+    cli.register_runtime(BenchmarkName.ROBOTWIN, runtime)
+    invocation = cli.plan_merge(_parse("merge", "robotwin", "demo_clean", "--shard-dir", "s0",
+                                       "--shard-dir", "s1"), NOW)
+    assert _flag(invocation.argv, "--benchmark-manifest") == str(runtime / "benchmark-manifest.json")
+    expected = Path.cwd() / "roboscope-runs" / "robotwin-demo_clean-merged-20261127-093005"
+    assert invocation.output_dir == expected
+    assert invocation.argv.count("--shard-dir") == 2
+
+
+def test_merge_refuses_an_unknown_suite(home, capsys):
+    assert cli.main(["merge", "robotwin", "demo_nope", "--shard-dir", "s0"]) == cli.EXIT_USAGE
+    assert "robotwin has no suite 'demo_nope'" in capsys.readouterr().err
+
+
+def test_merge_calls_the_shard_merge(home, monkeypatch, capsys):
     from roboscope_kit.runtime.benchmark import merge
 
+    _runtime(home / "sim", "robotwin", ("demo_clean",))
     seen = []
-    monkeypatch.setattr(merge, "main", lambda argv: seen.append((argv, sys.argv[0])) or 0)
-    program = sys.argv[0]
-    assert cli.main(["merge", "--benchmark", "robotwin", "--shard-dir", "a"]) == 0
-    assert seen == [(["--benchmark", "robotwin", "--shard-dir", "a"], "roboscope merge")]
-    assert sys.argv[0] == program
-
-
-def test_merge_help_names_roboscope_merge(capsys):
-    with pytest.raises(SystemExit):
-        cli.main(["merge", "--help"])
-    assert capsys.readouterr().out.startswith("usage: roboscope merge ")
+    monkeypatch.setattr(merge, "main", lambda argv: seen.append(argv) or 0)
+    code = cli.main(["merge", "robotwin", "demo_clean", "--shard-dir", "s0",
+                     "--benchmark-manifest", str(home / "sim"), "--output-dir", "m"])
+    assert code == cli.EXIT_OK and len(seen) == 1
+    assert "merged into" in capsys.readouterr().out
+    monkeypatch.setattr(merge, "main", lambda argv: 1)
+    assert cli.main(["merge", "robotwin", "demo_clean", "--shard-dir", "s0",
+                     "--benchmark-manifest", str(home / "sim"), "--output-dir", "m2"]) == cli.EXIT_FAILED
 
 
 def test_eval_explains_a_missing_driver(home, monkeypatch, capsys):
@@ -424,13 +438,16 @@ def test_check_parses_like_the_earlier_self_test(home, benchmark):
         _same(runtime_cli.parse_args(new), runtime_cli.parse_args(old))
 
 
-def test_merge_parses_like_the_earlier_command(monkeypatch):
+def test_merge_parses_like_the_earlier_command(home):
     from roboscope_kit.runtime.benchmark import merge
 
-    argv = ["--benchmark", "robotwin", "--suite", "demo_clean", "--episodes", "10",
-            "--benchmark-manifest", "/sim/robotwin/benchmark-manifest.json",
-            "--shard-dir", "/runs/shard-0", "--shard-dir", "/runs/shard-1", "--output-dir", "/runs/merged"]
-    seen = []
-    monkeypatch.setattr(merge, "main", lambda forwarded: seen.append(forwarded) or 0)
-    assert cli.main(["merge", *argv]) == 0
-    _same(merge.parse_args(seen[0]), merge.parse_args(argv))
+    runtime = _runtime(home / "sim" / "robotwin", "robotwin", ("demo_clean",))
+    manifest = runtime / "benchmark-manifest.json"
+    for extra in ([], ["--episodes", "10"]):
+        old = ["--benchmark", "robotwin", "--suite", "demo_clean", *extra,
+               "--benchmark-manifest", str(manifest),
+               "--shard-dir", "/runs/shard-0", "--shard-dir", "/runs/shard-1", "--output-dir", "/runs/merged"]
+        new = cli.plan_merge(_parse("merge", "robotwin", "demo_clean", "--shard-dir", "/runs/shard-0",
+                                    "--shard-dir", "/runs/shard-1", "--benchmark-manifest", str(runtime),
+                                    "--output-dir", "/runs/merged", *extra), NOW).argv
+        _same(merge.parse_args(new), merge.parse_args(old))

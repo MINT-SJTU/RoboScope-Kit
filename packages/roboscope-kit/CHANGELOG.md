@@ -14,7 +14,7 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   | --- | --- |
   | `python -m roboscope_kit.runtime.benchmark --benchmark B --suite S ...` | `roboscope eval B S ...` |
   | `python -m roboscope_kit.runtime.benchmark --benchmark B --self-test --benchmark-manifest M --output-dir D` | `roboscope check B M --output-dir D` |
-  | `python -m roboscope_kit.runtime.benchmark.shard_merge ...` | `roboscope merge ...` |
+  | `python -m roboscope_kit.runtime.benchmark.shard_merge --benchmark B --suite S ...` | `roboscope merge B S ...` |
   | `bash benchmarks/B/build-runtime.sh DIR` (from a clone) | `roboscope build B DIR` (CALVIN, LIBERO, LIBERO-Plus, LIBERO-Pro, RoboCasa GR-1 Tabletop, RoboTwin) |
   | `roboscope_kit.runtime.benchmark.cli.main(argv)` | `roboscope_kit.cli.main(["eval", ...])` |
 
@@ -23,6 +23,9 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   `--benchmark-manifest` also accepts the runtime directory. `--checkpoint-source` may be relative. The run
   ends with one summary line, or one JSON line with `--json`, and exits 0 on success, 1 when the run fails,
   2 when it cannot start, and 128 plus the signal number after SIGTERM or SIGHUP.
+- `roboscope merge BENCHMARK SUITE --shard-dir DIR ...` takes the same positionals, suite check and runtime
+  lookup as `eval`, defaults `--output-dir` to `./roboscope-runs/<benchmark>-<suite>-merged-<time>`, and
+  exits 0 or 1.
 - `roboscope eval --policy FILE [--policy-python PY] [--policy-cwd DIR]` starts a Policy script without a
   `roboscope-policy.json`. It writes the contract to `$XDG_CACHE_HOME/roboscope-kit/policy-configs/<sha256>.json`
   in canonical form, so equal inputs reuse one file and one run-cache key, and passes it as `--policy-config`.

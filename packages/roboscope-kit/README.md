@@ -486,13 +486,13 @@ When all shards finish, merge them. The merge checks that items are disjoint and
 record IDs are unique, and that each item has the right number of records:
 
 ```bash
-roboscope merge \
-    --benchmark robotwin --suite demo_clean --benchmark-manifest ... \
+roboscope merge robotwin demo_clean \
     --shard-dir /runs/shard-0 ... --shard-dir /runs/shard-N-1 \
     --output-dir /runs/merged
 ```
 
-The merge also reserves its output directory and refuses existing artifacts, including `result.json`.
+`--benchmark-manifest` is found as for `roboscope eval`, and `--output-dir` defaults to a new
+`./roboscope-runs/<benchmark>-<suite>-merged-<time>`. The merge also reserves its output directory and refuses existing artifacts, including `result.json`.
 Use a new directory for each completed merge.
 
 This merge rebuilds the workload from the benchmark manifest, so it needs the same manifest and benchmark

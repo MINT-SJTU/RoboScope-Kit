@@ -446,6 +446,43 @@ def command_eval(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------------------------------------
+# merge
+
+
+def plan_merge(args: argparse.Namespace, now: datetime | None = None) -> Invocation:
+    """The shard merge's argument list for ``roboscope merge``."""
+
+    benchmark = BenchmarkName(args.benchmark)
+    validate_suite(benchmark, args.suite)
+    manifest = resolve_manifest(benchmark, args.benchmark_manifest)
+    output_dir = (
+        _absolute(args.output_dir) if args.output_dir is not None
+        else default_output_dir(
+            benchmark, f"{args.suite}-merged", now or datetime.now(), Path.cwd() / "roboscope-runs",
+        )
+    )
+    argv = ["--benchmark", benchmark.value, "--suite", args.suite]
+    if args.episodes is not None:
+        argv += ["--episodes", str(args.episodes)]
+    argv += ["--benchmark-manifest", str(manifest)]
+    for shard_dir in args.shard_dir:
+        argv += ["--shard-dir", str(_absolute(shard_dir))]
+    argv += ["--output-dir", str(output_dir)]
+    return Invocation(argv, output_dir)
+
+
+def command_merge(args: argparse.Namespace) -> int:
+    from roboscope_kit.runtime.benchmark import merge
+
+    invocation = plan_merge(args)
+    exit_code = EXIT_OK if merge.main(invocation.argv) == 0 else EXIT_FAILED
+    if exit_code == EXIT_OK:
+        result = invocation.output_dir / "result.json"
+        print(f"{PROG} merge {args.benchmark}/{args.suite}: merged into {result}")
+    return exit_code
+
+
+# ---------------------------------------------------------------------------------------------------------
 # check
 
 
@@ -663,25 +700,36 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build.set_defaults(handler=command_build)
 
-    commands.add_parser(
-        "merge", help="merge the shards of a cross-instance evaluation", add_help=False,
-        description="Merge shard runs; see `roboscope merge --help`.",
+    merge = commands.add_parser(
+        "merge", help="merge the shards of a cross-instance evaluation",
+        description="Check that the shard runs of one evaluation cover its workload exactly once and merge "
+        "their records into one result.json.",
     )
+    _benchmark_argument(merge, "benchmark the shards evaluated")
+    merge.add_argument("suite", metavar="SUITE", help="suite the shards evaluated")
+    merge.add_argument(
+        "--shard-dir", type=Path, action="append", required=True, metavar="DIR",
+        help="output directory of one shard run; repeat for every shard",
+    )
+    merge.add_argument(
+        "--benchmark-manifest", type=Path, metavar="PATH",
+        help="benchmark-manifest.json the shards used, or its runtime directory (default: the runtime "
+        "`roboscope build` registered, then $ROBOSCOPE_HOME/<benchmark>)",
+    )
+    merge.add_argument(
+        "--output-dir", type=Path, metavar="DIR",
+        help="new or empty directory for the merged result.json "
+        "(default: ./roboscope-runs/<benchmark>-<suite>-merged-<time>)",
+    )
+    merge.add_argument(
+        "--episodes", type=int, metavar="N", help="episode count the shard runs used, if not the default",
+    )
+    merge.set_defaults(handler=command_merge)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
-    if arguments[:1] == ["merge"]:
-        from roboscope_kit.runtime.benchmark import merge
-
-        # The shard merge names itself after sys.argv[0] in its usage and errors.
-        program = sys.argv[0] if sys.argv else ""
-        sys.argv[0:1] = [f"{PROG} merge"]
-        try:
-            return merge.main(arguments[1:])
-        finally:
-            sys.argv[0:1] = [program]
     as_json = "--json" in arguments
     command = next((item for item in arguments if not item.startswith("-")), None)
     try:
