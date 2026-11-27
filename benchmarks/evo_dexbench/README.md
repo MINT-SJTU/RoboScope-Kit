@@ -46,7 +46,8 @@ python -m roboscope_kit.runtime.benchmark --benchmark evo_dexbench --suite singl
 ```
 
 The self-test checks all 30 schedules against `evaluation_v1` and resets and renders one environment.
-The Quick Test runs the first wave (four episodes) of the suite's first task. For a full suite remove
+The Quick Test runs one wave of the suite's first task: upstream's four-episode schedule, one episode in
+each of four of the five conditions. For a full suite remove
 `--quick-test` and set `--concurrency K --replicas G`; each Worker runs one wave of four simulator
 environments at a time. The [DP-C / DP-T example](../../examples/evo_dexbench_dp/README.md) serves
 the upstream Diffusion Policy checkpoints and describes the native comparison.

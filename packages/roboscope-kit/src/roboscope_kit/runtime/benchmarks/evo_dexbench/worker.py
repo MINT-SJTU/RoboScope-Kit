@@ -31,6 +31,7 @@ from .protocol import (
     ACTION_BOUNDS_POLICY,
     CAMERAS,
     CONTROL_FREQ_HZ,
+    CONTROL_MODE,
     EPISODES_PER_TASK,
     EVO_DEXBENCH_REVISION,
     JOINTS_PER_ROLE,
@@ -99,9 +100,9 @@ def task_schedule(task: Task, episodes: int):
 
 
 def base_env_kwargs() -> dict[str, Any]:
-    # The same arguments `dexbench evaluate --obs-mode rgb` passes without video.
+    # What `dexbench evaluate --obs-mode rgb --control-mode CONTROL_MODE` passes without video.
     return {
-        "obs_mode": OBS_MODE, "render_mode": None,
+        "obs_mode": OBS_MODE, "render_mode": None, "control_mode": CONTROL_MODE,
         "sim_config": {"sim_freq": SIM_FREQ_HZ, "control_freq": CONTROL_FREQ_HZ},
     }
 
@@ -306,7 +307,8 @@ def run_wave(
     env, create_s = environments.get(task, rows[0].env_kwargs(base))
     session = KitWaveSession(client, task)
     controller = CentralizedBatchPolicyController.from_session(session, num_envs=NATIVE_ENVS)
-    log_path = args.output_dir / "native-logs" / f"worker-{args.worker_id:03d}" / f"{item.item_id}.jsonl"
+    # One directory for all Workers, so a retry on any Worker finds the failed attempt's log.
+    log_path = args.output_dir / "native-logs" / f"{item.item_id}.jsonl"
     if log_path.exists():
         # A retried wave: the upstream log refuses to overwrite, so keep the failed attempt aside.
         attempt = 1

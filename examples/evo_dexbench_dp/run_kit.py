@@ -8,7 +8,7 @@ All arguments go to ``python -m roboscope_kit.runtime.benchmark`` unchanged. Set
 (for example ``m02_v1``); each keeps its full evaluation_v1 schedule, so the
 result pairs with ``dexbench evaluate --task-id`` on the same task. The run is
 recorded as a subset unless it lists the whole suite in order. ``--quick-test``
-runs the first wave of the first listed task.
+runs one wave of the first listed task: upstream's four-episode schedule.
 """
 
 from __future__ import annotations

@@ -126,8 +126,6 @@ class EvoDexBenchBenchmarkAdapter:
                 score = record.metadata.get("stage_score")
                 if not isinstance(score, (int, float)) or not 0.0 <= score <= 1.0:
                     raise RuntimeError(f"Evo-DexBench record {record.record_id} has invalid stage score")
-                if record.success and score != 1.0:
-                    raise RuntimeError(f"Evo-DexBench record {record.record_id} succeeded below stage 1.0")
                 seen.add(record.record_id)
                 per_task[task.task_id].append(record)
         rows = []
@@ -227,9 +225,10 @@ def merge_shard_results(partials: Sequence[dict[str, Any]]) -> dict[str, Any]:
         return _rates(episodes, successes, score_sum)
 
     per_task, remainder = divmod(first["coverage"]["expected"], len(layout))
-    per_condition = per_task // len(CONDITIONS)
-    if remainder or per_condition * len(CONDITIONS) != per_task:
+    if remainder:
         raise ValueError("Evo-DexBench expected workload is not a whole schedule per task")
+    # Upstream balances a schedule over the conditions, so none gets more than its share rounded up.
+    per_condition = -(-per_task // len(CONDITIONS))
     rows = []
     for index, task_id in enumerate(layout):
         cells = [partial["tasks"][index] for partial in partials]

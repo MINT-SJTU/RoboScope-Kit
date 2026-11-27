@@ -21,8 +21,9 @@ checks the installed upstream protocol fields and source revision before it runs
 
 Each task's 100 episodes are upstream's schedule: 20 per condition (`nominal`, `spatial`, `camera`,
 `lighting`, `physical`), 34/33/33 over the task's three layouts, generalization seeds 1001–1005, in
-upstream's execution order. `--episodes` accepts multiples of four; `--quick-test` runs the first
-four episodes of the suite's first task. Runs with fewer tasks or episodes are labeled
+upstream's execution order. `--episodes N` accepts multiples of four and runs upstream's own N-episode
+schedule, balanced over the conditions; `--quick-test` runs one wave of the suite's first task, one
+episode in each of four of the five conditions. Runs with fewer tasks or episodes are labeled
 `full_suite: false` or `standard_protocol: false`.
 
 ## Execution
@@ -33,7 +34,8 @@ settings (`obs_mode=rgb`, `action_bounds_policy=clip`, observation elision allow
 session is replaced: it is upstream's `BatchedPolicySession` contract with a Kit Policy behind it. A
 finished environment freezes until its wave ends, so every outcome depends only on its own
 environment and the Policy, as in the native evaluator. Upstream's native log for each wave is kept
-under `native-logs/`.
+under `native-logs/<task>-wave-<NN>.jsonl`; a retried wave keeps the failed attempt's log as
+`.failed-N.jsonl`.
 
 ## Host memory
 
@@ -77,22 +79,33 @@ request needs them.
 
 ## Validation
 
-Status: code candidate, partial. Two of the 30 tasks have been compared with the native
-evaluator so far; the full matrix of every task, its native comparison and native repeatability are
-still to run, and the integration is not accepted until they pass.
+Status: code candidate, partial. Ten of the 30 tasks have been compared with the native
+evaluator so far; the other tasks, and native repeatability, are still to run, and the integration
+is not accepted until they pass. The tolerance is a per-task SR and StageScore difference within two
+standard errors.
 
-On 2026-11-24 upstream DP-T checkpoints ran the standard 100 episodes of one single-hand and one
-bimanual task on one RTX 4090 host, once through the native evaluator (`dexbench evaluate` with the
-upstream `dp_policy.server`) and once through the Kit (one Worker, the native four environments).
+From 2026-11-24 to 2026-11-26, at the previous pin
+[`3013f21`](https://github.com/MINT-SJTU/Evo-DexBench/tree/3013f21f3c483e0fa748b55fc56e00a671f4068c)
+(the current pin changes only how scenes are built, not any result), upstream DP-T checkpoints ran the
+standard 100 episodes of each task on one RTX 4090 host, once through the native evaluator
+(`dexbench evaluate` with the upstream `dp_policy.server`) and once through the Kit (one Worker, the
+native four environments). Each task uses its group's checkpoint (Core, or Gen for `m10_v1`);
 `b11_v1` uses Double3's `interaction` camera.
 
-| Task (checkpoint) | Path | SR | StageScore | Wall time |
-|---|---|---:|---:|---:|
-| `m02_v1` (Single1 Core) | Native | 0.37 | 0.586 | 32 min 39 s |
-| | Kit | 0.34 | 0.553 | 32 min 2 s |
-| `b11_v1` (Double3 Core) | Native | 0.54 | 0.627 | 62 min 8 s |
-| | Kit | 0.56 | 0.617 | 59 min 45 s |
+| Task | Native SR | Kit SR | Native StageScore | Kit StageScore |
+|---|---:|---:|---:|---:|
+| `m01_v1` | 0.25 | 0.18 | 0.313 | 0.222 |
+| `m02_v1` | 0.37 | 0.34 | 0.586 | 0.553 |
+| `m04_v1` | 0.48 | 0.50 | 0.792 | 0.800 |
+| `m06_v1` | 0.16 | 0.21 | 0.235 | 0.270 |
+| `m08_v1` | 0.14 | 0.11 | 0.525 | 0.515 |
+| `m09_v1` | 0.14 | 0.12 | 0.483 | 0.478 |
+| `m10_v1` | 0.32 | 0.26 | 0.491 | 0.461 |
+| `m11_v1` | 0.00 | 0.00 | 0.115 | 0.125 |
+| `b07_v1` | 0.01 | 0.00 | 0.158 | 0.152 |
+| `b11_v1` | 0.54 | 0.56 | 0.627 | 0.617 |
 
-DP sampling is unseeded upstream, so runs agree statistically, not per episode; the SR differences
-are 0.4 and 0.3 standard errors. Both used the same pinned packages on CPython 3.11 (upstream's own environments
-use 3.10) with the open-file limit raised to the hard limit.
+DP sampling is not seeded upstream, so runs agree statistically, not per episode; every difference
+is within 1.6 standard errors. Both paths used the same pinned packages on CPython 3.11 (upstream's
+own environments use 3.10) with the open-file limit raised to the hard limit. `m02_v1` took 32 min 39 s
+natively and 32 min 2 s through the Kit, `b11_v1` 62 min 8 s and 59 min 45 s.
