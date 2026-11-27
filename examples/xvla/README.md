@@ -1,4 +1,4 @@
-# X-VLA policy example
+# X-VLA Policy example
 
 A `roboscope-kit` `Policy` that runs the public X-VLA-0.9B checkpoints ([2toINF/X-VLA](https://github.com/2toINF/X-VLA),
 arXiv:2510.10274) on four benchmarks: calvin, libero, libero_plus, and robotwin. It shows how to write a
