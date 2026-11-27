@@ -10,8 +10,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
   Workers raise their open-file limit to the hard limit, since PartNet-heavy scenes exceed the common
   1,024. The runtime builder pins the source, packages and asset bundle and takes PartNet-Mobility from
   the user's own download or token. Shard results merge per task and per condition. A retried wave
-  keeps the failed attempt's native log as `.failed-N.jsonl`. The protocol notes document per-scene
-  host memory and the `MALLOC_ARENA_MAX` cap.
+  keeps the failed attempt's native log as `.failed-N.jsonl`. The protocol notes document the host
+  memory a Worker needs while its scenes load and afterwards.
 - Add the DP-C / DP-T example, which loads one upstream checkpoint per task group through the upstream
   loader, and `run_kit.py` for per-task native comparisons. With DP-T checkpoints, 100 episodes of
   `m02_v1` reach SR 0.34 / StageScore 0.553 through the Kit and 0.37 / 0.586 natively (32 and 33 min),

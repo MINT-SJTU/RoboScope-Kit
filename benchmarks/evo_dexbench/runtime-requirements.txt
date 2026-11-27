@@ -1,4 +1,4 @@
-# Evo-DexBench 3013f21 simulator runtime on CPython 3.11: the `maniskill` and `assets` extras plus
+# Evo-DexBench 818ac28 simulator runtime on CPython 3.11: the `maniskill` and `assets` extras plus
 # msgpack, resolved with uv 0.11.14 on 2026-11-23. torch==2.5.1 is installed first from TORCH_INDEX_URL.
 absl-py==2.5.1
 anyio==4.16.0

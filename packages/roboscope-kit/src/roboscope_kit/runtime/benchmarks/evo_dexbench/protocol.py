@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass
 
 PROTOCOL_VERSION = "evo-dexbench-evaluation-v1"
-EVO_DEXBENCH_REVISION = "3013f21f3c483e0fa748b55fc56e00a671f4068c"
+EVO_DEXBENCH_REVISION = "818ac28e42e9199f0cbccce8617cb686519d8abf"
 UPSTREAM_PROTOCOL = "evaluation_v1"
 CONDITIONS = ("nominal", "spatial", "camera", "lighting", "physical")
 EPISODES_PER_CONDITION = 20

@@ -8,7 +8,7 @@ stepped on the CPU at 120 Hz and controlled at 30 Hz. It is tracked in
 ## Frozen workload
 
 Evo-DexBench is pinned to
-[`3013f21f3c483e0fa748b55fc56e00a671f4068c`](https://github.com/MINT-SJTU/Evo-DexBench/tree/3013f21f3c483e0fa748b55fc56e00a671f4068c)
+[`818ac28e42e9199f0cbccce8617cb686519d8abf`](https://github.com/MINT-SJTU/Evo-DexBench/tree/818ac28e42e9199f0cbccce8617cb686519d8abf)
 and its public asset bundle to revision `09868871eafe6fffdbd8e37b053b6b1f7e9ea6ec`. The 30 tasks,
 their horizons (1,000 to 5,000 control steps) and splits are frozen in
 [`protocol.py`](../src/roboscope_kit/runtime/benchmarks/evo_dexbench/protocol.py); every Worker
@@ -37,47 +37,27 @@ under `native-logs/`.
 
 ## Host memory
 
-Each simulator subprocess holds a whole scene, and the size is set by the task's `scene_class`, not
-by the task. Measured on 2026-11-25 with the upstream evaluator and the Kit (same environment code,
-same numbers), one RTX 4090 host, glibc 2.35, 128 visible cores:
+A simulator subprocess needs much more memory while its scene loads than afterwards. While the
+render resources load, SAPIEN's native layer runs about 1,100 (`kitchen` scenes) to 2,700
+(`studio` scenes) threads per environment, independent of CPU affinity, and their working memory
+peaks at 8–22 GiB per environment; once reset, a `studio` environment needs about 1.3 GiB. Until
+[Evo-DexBench #2](https://github.com/MINT-SJTU/Evo-DexBench/pull/2), the four environments of a
+wave loaded at once and glibc kept most of the freed peak, so a Worker held 27–36 GiB (`kitchen`)
+or 79–89 GiB (`studio`) for its whole run.
 
-| Scene | Tasks | Per environment after reset | Four environments (one wave) |
-|---|---|---:|---:|
-| `studio` | m01 m03 m05 m07 m13–m15, b02 b04 b06 b09 b11–b15 | 20–22 GiB | 79–89 GiB |
-| `kitchen` | the other 14 | 7–9 GiB | 27–36 GiB |
+The pinned revision includes that fix: the environments load one at a time and return freed heap
+memory to the system after every build. Measured with four environments on 2026-11-25, one RTX 4090
+host, glibc 2.35:
 
-Memory grows about 35% further during a rollout (a `kitchen` environment reaches about 12 GiB). A
-host needs this much per Worker; a Worker that exceeds its container's memory limit loses
-environment subprocesses (`BrokenPipeError`/`EOFError`), usually with no OOM kill reported.
+| Scene | Tasks | Peak while loading | After loading | First load |
+|---|---|---:|---:|---:|
+| `studio` (m01) | m01 m03 m05 m07 m13–m15, b02 b04 b06 b09 b11–b15 | 26.7 GiB | 6.1 GiB | 177 s |
+| `kitchen` (m04) | the other 14 | 13.3 GiB | 5.7 GiB | 92 s |
 
-Almost none of this is scene data. A `studio` environment needs about 1.3 GiB once reset (0.8 GiB
-with `obs_mode=state_dict`); the files its scene opens total about 90 MiB. The rest comes from the
-first RGB render setup and the allocator:
-
-- While the scene's render resources load, SAPIEN's native layer runs about 1,100 (`kitchen`) to
-  2,700 (`studio`) threads per environment, independent of CPU affinity. Their working memory
-  peaks at 8–22 GiB per environment.
-- glibc keeps most of that peak after it is freed. By default it gives concurrently allocating
-  threads their own malloc arenas, up to eight per visible core, and a `kitchen` environment keeps
-  about 480 arenas of 64 MiB. Freed large blocks also raise glibc's dynamic mmap threshold, so later
-  large blocks come from the heap and stay there.
-
-Measured per environment after reset, one environment per run:
-
-| Setting | `kitchen` (m04) | `studio` (m01) | `studio` create + reset |
-|---|---:|---:|---:|
-| Default | 9.5 GiB | 22.6 GiB | 56 s |
-| `MALLOC_ARENA_MAX=2` | 3.3–5.3 GiB | 4.2–17.4 GiB | 55–72 s |
-| `MALLOC_ARENA_MAX=2 MALLOC_MMAP_THRESHOLD_=131072` | | 1.3 GiB | 102 s |
-
-Set in the environment of the evaluating process, these are inherited by its simulator
-subprocesses; they change only where memory comes from, not any computation. The arena cap alone
-leaves a residue that varies from run to run; the fixed mmap threshold returns nearly everything
-but slows environment creation, which upstream repeats for most waves. Neither removes the load
-peak, and all four environments of a wave load at once, so size a host for the peak. The
-acceptance matrix runs with `MALLOC_ARENA_MAX=2` on both paths for all but its first jobs and
-records the setting per job; its effect on results is checked there. Hosts with fewer visible cores
-get fewer arenas by default and keep less.
+Memory grows about 35% during a rollout. Size a host for the load peak per Worker that may load at
+the same time; a Worker that exceeds its container's memory limit loses environment subprocesses
+(`BrokenPipeError`/`EOFError`), usually with no OOM kill reported. Loading one at a time changes no
+result: the upstream pull request compared observations, rewards and episode records bit for bit.
 
 ## Policy interface
 

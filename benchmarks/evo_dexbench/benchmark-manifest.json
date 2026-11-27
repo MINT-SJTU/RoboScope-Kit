@@ -26,7 +26,7 @@
   },
   "benchmark_protocols": {
     "evo_dexbench": {
-      "evo_dexbench_revision": "3013f21f3c483e0fa748b55fc56e00a671f4068c",
+      "evo_dexbench_revision": "818ac28e42e9199f0cbccce8617cb686519d8abf",
       "native_envs": 4,
       "sim_freq_hz": 120,
       "control_freq_hz": 30,
