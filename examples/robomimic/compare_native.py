@@ -19,11 +19,12 @@ is compared episode by episode: success and executed steps (upstream ``Horizon``
 
 ``--batch-rollouts N`` additionally runs the upstream default protocol once per task
 (``--n_rollouts N --seed 0``: one RNG stream across N consecutive episodes). Those
-episodes are not pairable with the Kit's per-seed episodes; only their success rate is
-reported, as a second, statistical reference.
+episodes are not pairable with the Kit's per-seed episodes; only their success rate and
+mean horizon are reported, as a second, statistical reference.
 
 Writes ``<output>/native-episodes.jsonl``, ``<output>/comparison.json`` and one upstream
-log per episode under ``<output>/logs/``.
+log per ``run_trained_agent.py`` call under ``<output>/logs/`` (a batch run writes one
+log for its N episodes).
 """
 
 from __future__ import annotations
