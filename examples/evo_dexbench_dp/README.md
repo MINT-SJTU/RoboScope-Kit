@@ -5,7 +5,8 @@ the RoboScope Kit lifecycle for the [`evo_dexbench`](../../benchmarks/evo_dexben
 benchmark. Checkpoints load through the upstream example's own loader (`dp_policy.server`), and
 inputs follow its session: two consecutive frames, RGB as CHW float in [0, 1], state as end-effector
 pose plus hand joints per role, and the first `execute_steps` (8) actions of each predicted chunk.
-Sampling is unseeded, as upstream. The example performs no model optimization.
+Sampling is unseeded, as upstream; on a CUDA device the denoising loop replays as a CUDA graph
+(see [CUDA-graph sampling](#cuda-graph-sampling)).
 
 ## Checkpoints
 
@@ -35,6 +36,16 @@ importing the loader and that workspace.
 
 Write a policy config with this environment's interpreter, as in
 [`roboscope-policy.json`](roboscope-policy.json), and run the commands in the benchmark README.
+
+## CUDA-graph sampling
+
+On a CUDA device, `graph_sampler.py` replaces each checkpoint's `conditional_sample` with a replay of
+the same 100-step DDPM loop, captured once per batch shape as a CUDA graph. It launches the same
+kernels on the same inputs and draws its noise from the default CUDA generator at the same offsets,
+so actions and the generator state after each call are bit-identical to eager sampling: 40 calls of
+mixed batch sizes matched exactly for the Single1 and Double3 Core checkpoints. A batch of four takes
+71 ms instead of 435 ms on an RTX 4090. Observation encoding stays eager. Set
+`EVO_DEXBENCH_CUDA_GRAPHS=0` in the Policy environment to sample eagerly.
 
 ## Native comparison
 

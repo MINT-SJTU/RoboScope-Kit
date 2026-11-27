@@ -10,11 +10,14 @@ inputs follow its session and server: two consecutive frames, RGB as CHW float i
 group, listed in ``roboscope-checkpoints.json`` inside the ``--checkpoint-source``
 directory with paths relative to it (see ``roboscope-checkpoints.example.json``).
 Sampling noise comes from torch's global generator, unseeded, as in the upstream server.
+On a CUDA device the denoising loop replays as a CUDA graph (``graph_sampler.py``),
+bit-identical to eager sampling; set ``EVO_DEXBENCH_CUDA_GRAPHS=0`` to sample eagerly.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -95,6 +98,10 @@ class EvoDexBenchDiffusionPolicy(Policy):
                 raise ValueError(f"{key} is a {metadata['variant']} checkpoint, not {self.variant}")
             if not 1 <= self.execute_steps <= int(metadata["available_action_steps"]):
                 raise ValueError(f"execute_steps exceeds the {key} prediction horizon")
+            if self.device.type == "cuda" and os.environ.get("EVO_DEXBENCH_CUDA_GRAPHS", "1") != "0":
+                import graph_sampler
+
+                graph_sampler.install(policy)
             self.models[key] = (policy, metadata)
         return self.models[key]
 
