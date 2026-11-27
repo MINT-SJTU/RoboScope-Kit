@@ -38,7 +38,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--task", required=True,
                         help="one RoboCasa365 task name, e.g. CloseBlenderLid (not checked by the parser)")
     parser.add_argument("--episodes", type=int, default=5,
-                        help="number of episodes for the task, run by the upstream eval_task (default 5)")
+                        help="number of episodes for the task, run by the upstream eval_task (default 5); "
+                             "compare_rollouts.py --episodes must use the same number")
     parser.add_argument("--simulator", type=Path, required=True,
                         help="benchmarks/robocasa365/build-runtime.sh install directory")
     parser.add_argument("--gym-source", type=Path, required=True,

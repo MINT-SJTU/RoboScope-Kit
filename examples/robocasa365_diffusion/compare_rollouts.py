@@ -173,7 +173,8 @@ def main() -> None:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--native", type=Path, nargs=2, required=True, metavar=("A", "B"),
-                        help="two native passes; each holds one run_native.py --output directory per task")
+                        help="two native passes; each holds one run_native.py --output directory per "
+                             "target50 task")
     parser.add_argument("--kit", action="append", default=[], metavar="NAME=DIR",
                         help="label and run_kit.py run directory (trace/ and result/); repeatable, "
                              "without it only the two native passes are compared")
