@@ -63,6 +63,10 @@ def benchmark_factory(name: BenchmarkName) -> BenchmarkFactory:
         from roboscope_kit.runtime.benchmarks.simpler_env import SimplerEnvBenchmarkFactory
 
         return SimplerEnvBenchmarkFactory()
+    if name is BenchmarkName.BEHAVIOR:
+        from roboscope_kit.runtime.benchmarks.behavior import BehaviorBenchmarkFactory
+
+        return BehaviorBenchmarkFactory()
     raise ValueError(f"unsupported benchmark: {name.value}")
 
 

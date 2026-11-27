@@ -1,0 +1,573 @@
+# Copyright 2026 RoboScope Team
+# SPDX-License-Identifier: Apache-2.0
+
+"""BEHAVIOR Challenge 2026 worker: one public test instance per process, using an SDK Policy replica.
+
+The worker runs the pinned evaluator itself (BEHAVIOR-1K ``v3.9.3-post1``,
+``omnigibson.eval.evaluator.BatchedEvaluator``) the way ``python -m omnigibson.eval.eval`` runs
+it for one instance (``--instance-indices i --num-envs 1 --num-rollouts 1``):
+
+1. headless OmniGibson without the unused viewer camera, ``seed_everything(0)``, the default R1Pro
+   robot config, the suite's official observation wrapper (``RGBDFullResWrapper`` or
+   ``DefaultWrapper``, see ``tasks.py``) and ``max_steps`` of 1.5x the task's mean human
+   demonstration length;
+2. ``BatchedEvaluator.run([instance])``: the evaluator resets the robot, loads the instance's stored
+   object states and robot pose, settles physics, resets the environment, and then queries the
+   policy once per control step (30 Hz) until the task succeeds, OmniGibson's task termination
+   fires, or the timeout ends it (after ``max_steps + 1`` actions, see ``tasks.py``);
+3. the evaluator's own metrics (``TaskMetric`` Q score, ``AgentMetric`` distance and time) and its
+   per-rollout JSON are the record.
+
+Only the policy differs from the native command: instead of ``WebsocketPolicy`` the evaluator calls
+:class:`KitPolicyBridge`, which turns each evaluator observation into an SDK observation, asks the
+Policy replica for an action chunk and returns its actions to the evaluator unchanged, one per
+control step, asking again when the chunk is used up (the native client's
+``--replay-action-chunk-size``); every step is still simulated and rendered as natively. The
+simulator keeps its RTX texture cache in a directory of the task's scene under the run (see
+``use_texture_cache``). Loading a scene shuts down the simulator application when the process
+ends, so each worker process evaluates one instance and then exits for the runtime to start the
+next one.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import fcntl
+import json
+import os
+import shutil
+import sys
+import time
+import traceback
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from roboscope_kit import EpisodeContext, Observation
+from roboscope_kit.client import PolicyClient
+from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
+
+from .tasks import (
+    ACTION_DIM,
+    BEHAVIOR_1K_COMMIT,
+    CAMERA_POSES_DIM,
+    CAMERAS,
+    EVAL_SEED,
+    MAX_STEPS,
+    PROPRIOCEPTION_DIM,
+    PROTOCOL_VERSION,
+    PYTHON_HASH_SEED,
+    ROBOT_NAME,
+    ROLLOUT_ID,
+    SUITE_OBSERVATIONS,
+    SUITES,
+    TASK_IDS,
+    TASK_SCENES,
+    episode_id_for,
+    instance_id,
+    require_python_hash_seed,
+)
+
+# Actions kept in each record, from the first; enough to locate an early divergence.
+RECORDED_ACTIONS = 30
+# Isaac Sim's RTX texture cache stores every converted scene texture and never evicts it: up to 12 GB
+# for one instance, enough to fill a disk over a full run when it is shared under OmniGibson's
+# appdata. Deleting entries under a running simulator fails the reads of entries it already indexed
+# and crashes it. The run therefore keeps one cache directory per scene (the tasks of a scene share
+# their textures; a warm cache halves the scene load and does not change the rendered images), the
+# runtime evaluates one scene after another, and a worker removes the caches no pending or running
+# item and no live simulator needs before it starts its simulator and after it ends (see
+# ``claim_texture_cache``); the adapter removes the rest when the workers have stopped.
+TEXTURE_CACHE_SETTING = "/rtx-transient/resourcemanager/localTextureCachePath"
+# Under the cache root: the lock that serializes cache decisions, one file per process using a scene's
+# cache, and a ``<scene>.ready`` marker once a scene's cache holds a complete scene load.
+CACHE_LOCK = ".lock"
+CACHE_HOLDERS = ".holders"
+READY_SUFFIX = ".ready"
+CACHE_POLL_S = 2.0
+
+
+def process_start_time(pid: int) -> str | None:
+    """The kernel start time of ``pid`` (``/proc/<pid>/stat`` field 22), or None if it is not running.
+
+    With the pid it identifies a process even when the pid is reused.
+    """
+
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return stat.rsplit(")", 1)[1].split()[19]
+
+
+@contextlib.contextmanager
+def cache_lock(root: Path) -> Iterator[None]:
+    root.mkdir(parents=True, exist_ok=True)
+    with open(root / CACHE_LOCK, "a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+
+
+def live_cache_holders(root: Path) -> list[dict[str, Any]]:
+    """The scene caches of the running processes under ``root``; drops the entries of ended processes.
+
+    Call under ``cache_lock``.
+    """
+
+    holders = []
+    for path in (root / CACHE_HOLDERS).glob("*.json"):
+        try:
+            holder = json.loads(path.read_text(encoding="utf-8"))
+            alive = process_start_time(int(holder["pid"])) == holder["start"]
+        except (OSError, ValueError, KeyError, TypeError):
+            alive = False
+        if alive:
+            holders.append(holder)
+        else:
+            path.unlink(missing_ok=True)
+    return holders
+
+
+def evict_texture_caches(root: Path, queue_dir: Path, keep: frozenset[str] = frozenset()) -> None:
+    """Remove the caches under ``root`` that no pending or running item and no live process needs.
+
+    Call under ``cache_lock``. A worker claims its item (moves it to ``running``) before it calls this,
+    and a worker whose item has ended keeps its cache until its process exits, so a simulator never
+    loses its cache, even while it shuts down. The caches of a killed worker go at the next eviction.
+    When an item moves while it is read, no scene cache is removed.
+    """
+
+    needed = set(keep) | {str(holder["scene"]) for holder in live_cache_holders(root)}
+    for path in (*(queue_dir / "pending").glob("*.json"), *(queue_dir / "running").glob("*.json")):
+        try:
+            needed.add(TASK_SCENES[str(json.loads(path.read_text(encoding="utf-8"))["payload"]["task"])])
+        except (OSError, ValueError, KeyError):
+            return
+    for cache in root.iterdir():
+        if cache.is_dir() and not cache.name.startswith(".") and cache.name not in needed:
+            (root / f"{cache.name}{READY_SUFFIX}").unlink(missing_ok=True)
+            shutil.rmtree(cache, ignore_errors=True)
+
+
+def claim_texture_cache(root: Path, queue_dir: Path, scene: str) -> tuple[Path, bool, float]:
+    """The scene's texture cache for this process's simulator, whether it is cold, and the wait.
+
+    A cache holds a complete scene load once its first simulator has loaded the scene (see
+    ``mark_texture_cache_ready``); a later simulator then loads warm. While the first one still
+    fills the cache, a later one waits for it rather than write the same cold cache or a cache of
+    its own (a second copy of up to 12 GB). A cold cache that no live simulator fills (its
+    simulator was killed or failed) starts over. The process holds the cache until it exits.
+    """
+
+    started = time.monotonic()
+    while True:
+        with cache_lock(root):
+            evict_texture_caches(root, queue_dir, frozenset({scene}))
+            cache = root / scene
+            ready = (root / f"{scene}{READY_SUFFIX}").exists()
+            if ready or all(holder["scene"] != scene for holder in live_cache_holders(root)):
+                if not ready:
+                    shutil.rmtree(cache, ignore_errors=True)
+                cache.mkdir(exist_ok=True)
+                holders = root / CACHE_HOLDERS
+                holders.mkdir(exist_ok=True)
+                pid = os.getpid()
+                entry = holders / f"{pid}.json"
+                partial = entry.with_suffix(".tmp")
+                partial.write_text(
+                    json.dumps({"pid": pid, "start": process_start_time(pid), "scene": scene}),
+                    encoding="utf-8",
+                )
+                partial.replace(entry)
+                return cache, not ready, time.monotonic() - started
+        time.sleep(CACHE_POLL_S)
+
+
+def mark_texture_cache_ready(root: Path, scene: str) -> None:
+    """Record that the scene's shared cache holds a complete scene load; later simulators share it."""
+
+    with cache_lock(root):
+        (root / f"{scene}{READY_SUFFIX}").touch()
+
+
+def release_texture_caches(root: Path, queue_dir: Path) -> None:
+    """Remove the caches nothing needs any more, after this worker's item has ended."""
+
+    with cache_lock(root):
+        evict_texture_caches(root, queue_dir)
+
+
+def use_texture_cache(cache: Path) -> None:
+    """Launch the simulator application with ``cache`` as its RTX texture cache directory.
+
+    OmniGibson builds the application's command line itself and replaces ``sys.argv`` while it
+    launches, so the setting goes in through ``SimulationApp``'s ``extra_args``.
+    """
+
+    cache.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("OMNI_KIT_ACCEPT_EULA", "YES")
+    import isaacsim
+
+    launch = isaacsim.SimulationApp
+
+    class SimulationApp(launch):
+        def __init__(self, launch_config: dict | None = None, experience: str = "") -> None:
+            config = dict(launch_config or {})
+            config["extra_args"] = [*config.get("extra_args", []), f"--{TEXTURE_CACHE_SETTING}={cache}"]
+            super().__init__(config, experience)
+
+    isaacsim.SimulationApp = SimulationApp
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--worker-id", type=int, required=True)
+    parser.add_argument("--policy-socket", type=Path, required=True)
+    parser.add_argument("--suite", choices=SUITES, required=True)
+    parser.add_argument("--queue-dir", type=Path, required=True)
+    parser.add_argument("--worker-state-dir", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--texture-cache-dir", type=Path, required=True)
+    parser.add_argument("--write-video", action="store_true")
+    parser.add_argument("--poll-interval", type=float, default=0.05)
+    return parser.parse_args()
+
+
+def _numpy(value: Any) -> np.ndarray:
+    if hasattr(value, "detach"):
+        value = value.detach().cpu().numpy()
+    return np.asarray(value)
+
+
+def observation_keys(suite: str) -> dict[str, str]:
+    """Flattened evaluator observation key behind each SDK feature of ``suite``."""
+
+    keys = {}
+    for role, sensor in CAMERAS:
+        keys[f"images.{role}"] = f"{ROBOT_NAME}::{sensor}::rgb"
+        if SUITE_OBSERVATIONS[suite].depth:
+            keys[f"state.{role}_depth"] = f"{ROBOT_NAME}::{sensor}::depth_linear"
+    keys["state.proprioception"] = f"{ROBOT_NAME}::proprio"
+    keys["state.camera_poses"] = f"{ROBOT_NAME}::cam_rel_poses"
+    keys["state.task_id"] = "task_id"
+    return keys
+
+
+def build_observation(batched: dict[str, Any], suite: str, episode_id: str, step: int) -> Observation:
+    """SDK observation of the single environment in an evaluator batch (leading dimension 1).
+
+    RGB drops the renderer's alpha channel; every other value is the evaluator's, cast to the
+    feature dtype without rescaling. Images and depth must have the suite's resolution.
+    """
+
+    resolution = SUITE_OBSERVATIONS[suite].resolution
+    features: dict[str, Any] = {}
+    for feature, key in observation_keys(suite).items():
+        if key not in batched:
+            raise RuntimeError(f"BEHAVIOR evaluator observation lacks {key}")
+        value = _numpy(batched[key])
+        if value.shape[0] != 1:
+            raise RuntimeError(
+                f"BEHAVIOR evaluator batch of {key} has {value.shape[0]} environments, expected 1"
+            )
+        value = value[0]
+        if feature.startswith("images."):
+            if value.ndim != 3 or value.shape[-1] not in (3, 4) or value.dtype != np.uint8:
+                raise RuntimeError(f"BEHAVIOR {key} is {value.dtype} {value.shape}, expected uint8 RGB(A)")
+            value = np.ascontiguousarray(value[..., :3])
+        elif feature == "state.task_id":
+            value = value.astype(np.int64).reshape(1)
+        else:
+            value = np.ascontiguousarray(value, dtype=np.float32)
+        features[feature] = value
+    for role, _ in CAMERAS:
+        shapes = {features[f"images.{role}"].shape[:2]}
+        if f"state.{role}_depth" in features:
+            shapes.add(features[f"state.{role}_depth"].shape)
+        if shapes != {resolution[role]}:
+            raise RuntimeError(f"BEHAVIOR {role} camera rendered {shapes}, expected {resolution[role]}")
+    if features["state.proprioception"].shape != (PROPRIOCEPTION_DIM,):
+        raise RuntimeError(f"BEHAVIOR proprioception has shape {features['state.proprioception'].shape}")
+    if features["state.camera_poses"].shape != (CAMERA_POSES_DIM,):
+        raise RuntimeError(f"BEHAVIOR camera poses have shape {features['state.camera_poses'].shape}")
+    return Observation(episode_id=episode_id, step=step, timestamp_s=time.time(), features=features)
+
+
+class KitPolicyBridge:
+    """The evaluator's policy object, backed by an SDK Policy replica.
+
+    ``BatchedEvaluator`` calls ``reset()`` once after loading an instance and ``forward(obs=...)``
+    once per control step with a batch of one environment. The bridge asks the replica for an action
+    chunk when it has no action left, and returns the chunk's actions one per step: the steps in
+    between are simulated, rendered and scored as usual, and only their observations go unsent.
+    """
+
+    def __init__(self, client: PolicyClient, suite: str) -> None:
+        self.client = client
+        self.suite = suite
+        self.context: EpisodeContext | None = None
+        self.step = 0
+        self.queries = 0
+        self.pending: list[np.ndarray] = []
+        self.inference_wait_s = 0.0
+        self.observation_s = 0.0
+        self.actions: list[list[float]] = []
+
+    def start(self, context: EpisodeContext) -> None:
+        self.context = context
+        self.step = 0
+        self.queries = 0
+        self.pending = []
+        self.inference_wait_s = 0.0
+        self.observation_s = 0.0
+        self.actions = []
+
+    def set_action_dim(self, action_dim: int) -> None:
+        if action_dim != ACTION_DIM:
+            raise RuntimeError(f"BEHAVIOR robot action dimension is {action_dim}, expected {ACTION_DIM}")
+
+    def reset(self) -> None:
+        if self.context is None:
+            raise RuntimeError("BEHAVIOR evaluator reset the policy before an episode started")
+        self.client.reset(self.context)
+
+    def forward(self, obs: dict[str, Any], *args: Any, **kwargs: Any):
+        import torch as th
+
+        if self.context is None:
+            raise RuntimeError("BEHAVIOR evaluator queried the policy outside an episode")
+        if not self.pending:
+            built = time.perf_counter()
+            observation = build_observation(obs, self.suite, self.context.episode_id, self.step)
+            self.observation_s += time.perf_counter() - built
+            requested = time.perf_counter()
+            chunk = np.asarray(self.client.act(observation).actions, dtype=np.float32)
+            self.inference_wait_s += time.perf_counter() - requested
+            if chunk.ndim == 1:
+                chunk = chunk[None]
+            if chunk.ndim != 2 or chunk.shape[0] < 1 or chunk.shape[1] != ACTION_DIM:
+                raise RuntimeError(f"BEHAVIOR Policy action shape is {chunk.shape}, not (n, {ACTION_DIM})")
+            self.queries += 1
+            self.pending = list(chunk)
+        action = self.pending.pop(0).reshape(1, ACTION_DIM)
+        if len(self.actions) < RECORDED_ACTIONS:
+            self.actions.append(action[0].tolist())
+        self.step += 1
+        return th.from_numpy(action)
+
+
+def create_evaluator(task: str, suite: str, write_video: bool):
+    """``omnigibson.eval.eval.main`` up to the evaluator, for one task and one environment."""
+
+    from omegaconf import OmegaConf
+    from omnigibson.macros import gm
+
+    gm.HEADLESS = True
+    gm.RENDER_VIEWER_CAMERA = False
+
+    from omnigibson.eval.evaluator import BatchedEvaluator
+    from omnigibson.eval.utils.eval_utils import DEFAULT_EVAL_SEED, TASK_NAMES_TO_INDICES, seed_everything
+
+    if DEFAULT_EVAL_SEED != EVAL_SEED or TASK_NAMES_TO_INDICES.get(task) != TASK_IDS[task]:
+        raise RuntimeError("the installed BEHAVIOR evaluator does not match the frozen task table")
+    seed = seed_everything(DEFAULT_EVAL_SEED)
+    cfg = OmegaConf.create(
+        {
+            "env_wrapper": {"_target_": SUITE_OBSERVATIONS[suite].env_wrapper},
+            "policy_name": "roboscope",
+            # Replaced by the bridge below; LocalPolicy holds no connection.
+            "model": {"_target_": "omnigibson.eval.policies.LocalPolicy", "action_dim": None},
+            "headless": True,
+            "partial_scene_load": True,
+            "max_steps": None,
+            "write_video": write_video,
+            "mode": "public_test",
+            "seed": seed,
+            "num_envs": 1,
+            "task": {"name": task},
+            "robot": None,
+        }
+    )
+    evaluator = BatchedEvaluator(cfg)
+    limit = episode_step_limit(evaluator)
+    if limit != MAX_STEPS[task]:
+        raise RuntimeError(f"BEHAVIOR {task} max_steps is {limit}, expected frozen {MAX_STEPS[task]}")
+    return evaluator
+
+
+def episode_step_limit(evaluator) -> int:
+    """The task's ``Timeout`` termination: the evaluator's ``max_steps`` (1.5x human length)."""
+
+    return int(evaluator.env.task._termination_conditions["timeout"]._max_steps)
+
+
+def run_instance(
+    evaluator,
+    bridge: KitPolicyBridge,
+    suite: str,
+    task: str,
+    index: int,
+    output_dir: Path,
+    write_video: bool,
+    scene_load_s: float,
+) -> EvaluationRecord:
+    instance = instance_id(index)
+    episode_id = episode_id_for(task, index)
+    json_dir = output_dir / "json"
+    video_dir = output_dir / "videos"
+    json_dir.mkdir(parents=True, exist_ok=True)
+    if write_video:
+        video_dir.mkdir(parents=True, exist_ok=True)
+    bridge.start(
+        EpisodeContext(
+            episode_id=episode_id,
+            task_id=task,
+            metadata={
+                "protocol": PROTOCOL_VERSION,
+                "task_index": TASK_IDS[task],
+                "instance_index": index,
+                "instance_id": instance,
+                "max_steps": MAX_STEPS[task],
+            },
+        )
+    )
+    started = time.perf_counter()
+    try:
+        results = evaluator.run(
+            [instance],
+            write_video=write_video,
+            video_path=str(video_dir),
+            metrics_dir=str(json_dir),
+            rollout_id=ROLLOUT_ID,
+        )
+    finally:
+        bridge.client.end_episode(episode_id)
+    elapsed_s = time.perf_counter() - started
+    native = json.loads(json.dumps(results[instance], default=float))
+    steps = int(native["steps"])
+    if steps != bridge.step:
+        raise RuntimeError(
+            f"BEHAVIOR evaluator reports {steps} steps; the Policy was queried {bridge.step} times"
+        )
+    success = bool(native["success"])
+    if success:
+        termination = "success"
+    elif steps > MAX_STEPS[task]:
+        termination = "max_steps"
+    else:
+        termination = "task_termination"
+    return EvaluationRecord(
+        record_id=episode_id,
+        success=success,
+        steps=steps,
+        elapsed_s=elapsed_s,
+        metadata={
+            "task": task,
+            "task_index": TASK_IDS[task],
+            "instance_index": index,
+            "instance_id": instance,
+            "rollout_id": ROLLOUT_ID,
+            "max_steps": MAX_STEPS[task],
+            "suite": suite,
+            "env_wrapper": SUITE_OBSERVATIONS[suite].env_wrapper,
+            "termination": termination,
+            "q_score": float(native["q_score"]["final"]),
+            "native_result": native,
+            "first_actions": bridge.actions,
+            "scene_load_s": scene_load_s,
+            "inference_wait_s": bridge.inference_wait_s,
+            "observation_s": bridge.observation_s,
+            "policy_queries": bridge.queries,
+            "protocol": PROTOCOL_VERSION,
+            "behavior_1k_commit": BEHAVIOR_1K_COMMIT,
+            "python_hash_seed": PYTHON_HASH_SEED,
+        },
+    )
+
+
+def main() -> None:
+    args = parse_args()
+    require_python_hash_seed()
+    if args.worker_id < 0 or args.poll_interval <= 0:
+        raise ValueError("BEHAVIOR worker numeric arguments must be positive")
+    os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+    state: dict[str, Any] = {"evaluator": None}
+
+    def evaluate(item: WorkItem, client: PolicyClient) -> WorkResult:
+        if state["evaluator"] is not None:
+            raise RuntimeError("a BEHAVIOR worker process evaluates one instance")
+        task = str(item.payload["task"])
+        index = int(item.payload["instance_index"])
+        started = time.perf_counter()
+        scene = TASK_SCENES[task]
+        cache, cold_cache, cache_wait_s = claim_texture_cache(args.texture_cache_dir, args.queue_dir, scene)
+        use_texture_cache(cache)
+        evaluator = create_evaluator(task, args.suite, args.write_video)
+        if cold_cache:
+            mark_texture_cache_ready(args.texture_cache_dir, scene)
+        state["evaluator"] = evaluator
+        bridge = KitPolicyBridge(client, args.suite)
+        evaluator.policy = bridge
+        scene_load_s = time.perf_counter() - started
+        record = run_instance(
+            evaluator, bridge, args.suite, task, index, args.output_dir, args.write_video, scene_load_s
+        )
+        return WorkResult(
+            item_id=item.item_id,
+            group_id=item.group_id,
+            worker_id=args.worker_id,
+            records=(record,),
+            metadata={
+                "suite": args.suite,
+                "task": task,
+                "elapsed_s": time.perf_counter() - started,
+                "scene_load_s": scene_load_s,
+                "inference_wait_s": bridge.inference_wait_s,
+                "observation_s": bridge.observation_s,
+                "policy_queries": bridge.queries,
+                "texture_cache": "cold" if cold_cache else "warm",
+                "texture_cache_wait_s": cache_wait_s,
+            },
+        )
+
+    exit_code = 0
+    try:
+        with PolicyClient(args.policy_socket) as client:
+            WorkerLoop(
+                worker_id=args.worker_id,
+                queue_dir=args.queue_dir,
+                state_dir=args.worker_state_dir,
+                poll_interval_s=args.poll_interval,
+                recycle_after_records=1,
+            ).run(lambda item: evaluate(item, client))
+    except BaseException:
+        traceback.print_exc()
+        exit_code = 1
+    finally:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        # Before the shutdown below, which may end the process; this worker's item is no longer running,
+        # and its own cache stays until the process has exited.
+        release_texture_caches(args.texture_cache_dir, args.queue_dir)
+        if state["evaluator"] is not None:
+            if exit_code == 0:
+                # Closes the environment and the simulator application, as the native runner's
+                # ``with BatchedEvaluator(...)`` does; the application may end the process here.
+                try:
+                    state["evaluator"].__exit__(None, None, None)
+                except BaseException:
+                    traceback.print_exc()
+            else:
+                # Keep the failing status: only remove OmniGibson's temporary directory, which holds
+                # decrypted assets.
+                import omnigibson
+
+                shutil.rmtree(omnigibson.tempdir, ignore_errors=True)
+        os._exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()

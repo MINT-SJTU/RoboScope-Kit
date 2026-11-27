@@ -21,6 +21,8 @@ A change is complete when it is committed, carries the required version bump, an
 | `examples/robomimic/` | A robomimic model-zoo `Policy` example: per-episode RNN and RNG state, with a native comparison script |
 | `examples/maniskill/` | ManiSkill PPO and visual Policy examples, pinned checkpoint catalogs, native comparisons and task-specific model limitations |
 | `examples/rt1/` | An RT-1-X `Policy` example for SimplerEnv, with a runner for SimplerEnv's official scripts and an episode-by-episode comparison |
+| `examples/gr00t/` | A GR00T N1.7 `Policy` example for BEHAVIOR: forwards to the checkpoint's native Python 3.10 server, with a native runner and an episode-by-episode comparison |
+| `examples/behavior2026vla/` | A BEHAVIOR2026VLA (π0.5) `Policy` example for BEHAVIOR's `challenge_2026_rgb224` suite: runs the solution's Python 3.11 evaluation code in process, with a native runner |
 | `ci/` and `.github/workflows/` | Build, compatibility, and PyPI release automation |
 
 When a path moves, update the source and every caller directly. Do not add compatibility wrappers or
