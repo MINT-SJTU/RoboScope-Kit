@@ -111,7 +111,7 @@ def load_arm(root: Path, kind: str, tasks: list[str], episodes: int) -> dict[tup
 
 def first_divergence(a: dict, b: dict) -> dict | None:
     rows = [("reset", a["reset"], b["reset"])]
-    rows += [("chunk", x, y) for x, y in zip(a["chunks"], b["chunks"])]
+    rows += [("chunk", x, y) for x, y in zip(a["chunks"], b["chunks"], strict=False)]
     rows.append(("episode_end", a["episode_end"], b["episode_end"]))
     for event, x, y in rows:
         if x["step"] != y["step"]:
@@ -140,7 +140,9 @@ def pair(a: dict, b: dict) -> dict:
         rows.append({
             "task": key[0], "episode_index": key[1],
             "success": [x["success"], y["success"]], "steps": [x["steps"], y["steps"]],
-            "scenario_equal": x["reset"]["scenario_metadata_sha256"] == y["reset"]["scenario_metadata_sha256"],
+            "scenario_equal": (
+                x["reset"]["scenario_metadata_sha256"] == y["reset"]["scenario_metadata_sha256"]
+            ),
             "initial_state_equal": x["reset"]["initial_state_sha256"] == y["reset"]["initial_state_sha256"],
             "first_divergence": first_divergence(x, y),
         })
@@ -167,11 +169,18 @@ def per_task(arm: dict) -> dict[str, int]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--native", type=Path, nargs=2, required=True, metavar=("A", "B"))
-    parser.add_argument("--kit", action="append", default=[], metavar="NAME=DIR")
-    parser.add_argument("--episodes", type=int, default=5)
-    parser.add_argument("--output", type=Path, required=True)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--native", type=Path, nargs=2, required=True, metavar=("A", "B"),
+                        help="two native passes; each holds one run_native.py --output directory per "
+                             "target50 task")
+    parser.add_argument("--kit", action="append", default=[], metavar="NAME=DIR",
+                        help="label and run_kit.py run directory (trace/ and result/); repeatable, "
+                             "without it only the two native passes are compared")
+    parser.add_argument("--episodes", type=int, default=5,
+                        help="episodes per task in every arm (default 5)")
+    parser.add_argument("--output", type=Path, required=True, help="JSON report file")
     args = parser.parse_args()
     from roboscope_kit.runtime.benchmarks.robocasa365.protocol import (
         SUITES,
@@ -201,7 +210,9 @@ def main() -> None:
                 "within_native_repeat": result["repeat_test_p"] >= 0.05,
                 "no_direction": result["direction_test_p"] >= 0.05,
             }
-        for left, right in ((name, other) for other in arms if not other.startswith("native_") and other > name):
+        for left, right in (
+            (name, other) for other in arms if not other.startswith("native_") and other > name
+        ):
             comparisons[f"{left}/{right}"] = pair(arms[left], arms[right])
     table = []
     for task in tasks:
@@ -211,7 +222,8 @@ def main() -> None:
                          "steps": sum(arm[task, i]["steps"] for i in range(args.episodes))}
         row["exceeds_native_spread"] = [
             name for name in arms if not name.startswith("native_")
-            and min(abs(counts[name][task] - counts[n][task]) for n in ("native_a", "native_b")) > native_spread
+            and min(abs(counts[name][task] - counts[n][task]) for n in ("native_a", "native_b"))
+            > native_spread
         ]
         table.append(row)
     splits = {
