@@ -404,6 +404,29 @@ LIBERO-Pro registry and checks it has 10 tasks, a BDDL file per task, and 50 ini
 manifest layout matches section 1 with `benchmark_root` set to `LIBERO-PRO`. `--self-test` additionally
 checks that each suite has its 10 BDDL and 10 initial-state files.
 
+### Runtime options
+
+The LIBERO-Pro manifest defines fixed `(K, g)` defaults so evaluations run without an Autotune search unless
+`--autotune-strategy` is passed (`--concurrency K --replicas G` overrides). In default `--eval-mode strict`,
+LIBERO-Pro runs conservative settings (`K=12, g=3`, CUDA MPS off, `policy_encoding: "json"`, canonical
+`256 × 256` camera rendering, single-request inference). In `--eval-mode fast`, `defaults.fast_defaults`
+selects `K=24, g=2`, CUDA MPS on (`--no-cuda-mps` overrides), `policy_encoding: "msgpack"` (with JSON
+fallback and persistent per-Worker `PolicyClient` connections), `chunk_camera_rendering`,
+`compiled_model_cache`, and `egl_context_reuse`, backed by checksum-pinned patches in
+[`benchmarks/libero_pro/runtime-patches.json`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/runtime-patches.json);
+the StarVLA Policy additionally negotiates native `224 × 224` camera rendering
+(`canonical_observations: false`), cross-episode action coalescing (`max_batch_size=4`,
+`coalesce_action_requests=true`), and `QwenOFTFastRunner` (GPU `224 × 224` patchify, prompt/RoPE caching,
+direct causal SDPA `language_model` execution, and shared-pool `CUDAGraph` replay). `chunk_camera_rendering`
+verifies `robosuite==1.4.0` and the standard two-camera configuration without corruptors, filters, or delays,
+skipping unconsumed RGB sensor calls during the first `settle_steps - 1` settle steps and intermediate steps
+inside an action chunk while keeping native `Observable` sampling substeps, and disables itself when
+`save_videos` is enabled. Each completed work item records the negotiated `policy_encoding`, camera
+render/skip counts, and simulator cache hit/miss deltas, and `result.json` lists active fast optimizations in
+`active_fast_optimizations`.
+See [`benchmarks/libero_pro/README.md`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/README.md)
+and [`benchmarks/libero_pro/THROUGHPUT.md`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/THROUGHPUT.md).
+
 Evaluate one suite per run, for example with the StarVLA demo snapshot:
 
 ```bash

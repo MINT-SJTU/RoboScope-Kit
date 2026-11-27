@@ -79,6 +79,10 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
 | --- | --- |
 | `starvla_policy.py` | The `Policy`: loads one StarVLA run snapshot, preprocesses observations, returns action chunks |
 | `starvla_libero_policy.py` | The LIBERO `Policy` of the technical report: follows the StarVLA `eaa51c4` LIBERO client |
+| `starvla_qwen_oft_fast.py` | Accelerated `--eval-mode fast` LIBERO-Pro QwenOFT runner: GPU `224x224` patchify, prompt/RoPE cache, direct causal SDPA backbone, and shared-pool `CUDAGraph` (`B=1..4`) |
+| `starvla_vision_metadata.py` | Opt-in CPU/GPU vision grid metadata and grouped window attention for LIBERO-Pro Qwen2.5-VL OFT |
+| `starvla_token_metadata.py` | Opt-in CPU action-token gather and 3D RoPE indexing for LIBERO-Pro Qwen2.5-VL OFT |
+| `starvla_timing.py` | Opt-in QwenOFT stage timing hooks activated when `ROBOSCOPE_TIMING_DIR` is set |
 | `starvla_full_checkpoint.py` | Builds the StarVLA framework from `config.yaml` and strictly loads one full checkpoint |
 | `starvla_base_assets.py` | Fetches the Qwen base-model metadata the framework needs to build, from Hugging Face |
 | `prepare_snapshot.py` | Builds a demo's run snapshot from its `demo.yaml` |
@@ -106,6 +110,24 @@ fetch it with `python starvla_base_assets.py <run-snapshot>`.
   depend on how many Workers share the replica and have requests queued.
   [CALVIN batching setup and evidence](../../packages/roboscope-kit/CALVIN_EVALUATION_PROTOCOL.md)
 - Neither Policy keeps per-episode state, so `reset` does nothing.
+- On `libero_pro` with `Qwenvl_OFT`, default `--eval-mode strict` runs conservative single-request upstream
+  inference (`max_batch_size=1`, canonical `256x256` cameras resized via PIL bilinear,
+  `canonical_observations=true`). Passing `--eval-mode fast` automatically enables:
+  1. Negotiated native `224x224` camera rendering (`image_sizes=[(224, 224), ANY_SIZE]`, also active on
+     `libero`), skipping PIL/OpenCV CPU resizing, cutting rendered/transferred pixels by 23.4%, and marking
+     `canonical_observations=false` (`ROBOSCOPE_STARVLA_NEGOTIATE_IMAGE_SIZES=0` disables);
+  2. Cross-episode queue coalescing (`max_batch_size=4`, `coalesce_action_requests=true`; override via
+     `ROBOSCOPE_STARVLA_MAX_BATCH_SIZE` or `inference.max_batch_size`), which groups queued requests from
+     distinct episodes in `PolicyServer` without artificial collection delay while keeping `strict` runs
+     strictly single-request;
+  3. `QwenOFTFastRunner` (`ROBOSCOPE_STARVLA_FAST_RUNNER=0` disables; `ROBOSCOPE_STARVLA_CUDA_GRAPH=0`
+     disables CUDA Graphs), combining pinned-memory GPU `224x224` patchify, per-prompt token/3D-RoPE/gather
+     LRU caching, direct causal SDPA `language_model` execution (skipping `lm_head` and `DynamicCache`
+     allocations), static GPU-resident vision `_GridPlan` caching with grouped equal-length SDPA windows, and
+     shared-pool zero-sync `CUDAGraph` replay across `B=1..4` against the checksum-verified Transformers
+     4.57.0 / StarVLA sources.
+  See [`benchmarks/libero_pro/README.md`](../../benchmarks/libero_pro/README.md) and
+  [`benchmarks/libero_pro/THROUGHPUT.md`](../../benchmarks/libero_pro/THROUGHPUT.md).
 
 ## Run snapshot
 

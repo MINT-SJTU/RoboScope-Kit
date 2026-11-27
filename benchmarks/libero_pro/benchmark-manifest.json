@@ -35,7 +35,23 @@
     "settle_steps": 10,
     "render_backend": "egl",
     "client_cpu_threads": 1,
-    "ready_timeout_s": 300
+    "concurrency": 12,
+    "replicas": 3,
+    "cuda_mps": false,
+    "policy_encoding": "json",
+    "chunk_camera_rendering": false,
+    "compiled_model_cache": false,
+    "egl_context_reuse": false,
+    "ready_timeout_s": 300,
+    "fast_defaults": {
+      "concurrency": 24,
+      "replicas": 2,
+      "cuda_mps": true,
+      "policy_encoding": "msgpack",
+      "chunk_camera_rendering": true,
+      "compiled_model_cache": true,
+      "egl_context_reuse": true
+    }
   },
   "benchmark_protocols": {}
 }

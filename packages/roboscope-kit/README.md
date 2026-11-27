@@ -210,6 +210,8 @@ in `with client.episode_group():` to capture the complete group as one episode.
 
 How to read the reports, which benchmarks are covered, and the findings so far are in the
 [profiling notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/docs/profiling.md).
+Setting `ROBOSCOPE_TIMING_DIR` to an absolute directory additionally writes nested Worker and Policy
+Server stage durations as JSONL through `roboscope_kit.profiling`, with zero overhead when unset.
 
 ### Progress and errors
 
@@ -435,6 +437,23 @@ evaluator holding its own renderer on the GPU. The saved GPU memory fits more Wo
 RTX 4090 with CUDA MPS, 500 `demo_clean` episodes ran 1.44× faster by evaluation time than native rendering
 with every outcome and terminal step unchanged. It supports `demo_clean` with qpos actions and videos off. See
 [RoboTwin central rendering](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/robotwin/CENTRAL_RENDER.md).
+
+## LIBERO-Pro runtime options (`strict` vs `--eval-mode fast`)
+
+The LIBERO-Pro benchmark manifest ships fixed `(K, g)` defaults without an Autotune probe phase for both
+modes (pass `--concurrency K --replicas G` to override, or `--autotune-strategy diagonal` to search). The
+default `--eval-mode strict` runs conservative `main` settings (`K=12, g=3`, CUDA MPS off, JSON framing,
+canonical `256 × 256` RGB rendering, single-request inference). Passing `--eval-mode fast` overlays
+`defaults.fast_defaults` (`K=24, g=2`, CUDA MPS on, negotiated MessagePack framing with persistent Worker
+sockets, `chunk_camera_rendering` across intermediate action-chunk and settle steps verified against
+`robosuite 1.4.0`, `compiled_model_cache`, and `egl_context_reuse`), negotiates native `224 × 224` camera
+rendering (`canonical_observations: false`), coalesces cross-episode requests (`max_batch_size=4`), and runs
+`QwenOFTFastRunner` (GPU `224 × 224` patchify, prompt/RoPE cache, direct causal SDPA backbone, and shared-pool
+`CUDAGraph` replay), reaching `2.03×` formal evaluation throughput (`4,945.12 s` vs `10,060.22 s`,
+`404.81 steps/s`) across all 16 suites (`8,000` episodes) on one RTX 4090; `result.json` records every active
+optimization in `active_fast_optimizations`. See the
+[LIBERO-Pro runtime guide](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/README.md)
+and [throughput notes](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero_pro/THROUGHPUT.md).
 
 ## Cross-instance sharding (Beta)
 

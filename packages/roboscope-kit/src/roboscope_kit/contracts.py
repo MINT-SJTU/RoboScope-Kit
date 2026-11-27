@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from functools import cached_property
 from typing import Any
 
 
@@ -165,6 +166,15 @@ class BenchmarkSpec:
             "supported_action_representations": list(self.supported_action_representations),
             "default_action_representation": self.default_action_representation,
         }
+
+    # Derived lookups are cached per immutable spec: Observation validation runs on every request.
+    @cached_property
+    def feature_specs(self) -> dict[str, FeatureSpec]:
+        return {feature.name: feature for feature in self.features}
+
+    @cached_property
+    def required_feature_names(self) -> tuple[str, ...]:
+        return tuple(feature.name for feature in self.features if feature.required)
 
 
 def _legacy_action_representation(benchmark: str) -> str:

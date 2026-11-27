@@ -1,0 +1,70 @@
+--- a/robosuite/renderers/context/egl_context.py
++++ b/robosuite/renderers/context/egl_context.py
+@@ -17,6 +17,7 @@
+ import atexit
+ import ctypes
+ import os
++import threading
+ 
+ PYOPENGL_PLATFORM = os.environ.get("PYOPENGL_PLATFORM")
+ 
+@@ -105,12 +106,40 @@
+ )
+ 
+ 
++# One idle context per process, never shared by live renderers. MuJoCo scene,
++# texture, framebuffer and model resources are still freed/rebuilt normally.
++_IDLE_CONTEXT = None
++_IDLE_KEY = None
++_POOL_CLEANUP_REGISTERED = False
++_CONTEXT_REUSE_HITS = 0
++
++
++def _release_idle_context():
++    global _IDLE_CONTEXT, _IDLE_KEY
++    if _IDLE_CONTEXT is not None and _IDLE_KEY[0] == os.getpid():
++        current = EGL.eglGetCurrentContext()
++        if current and current.address == _IDLE_CONTEXT.address:
++            EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
++        EGL.eglDestroyContext(EGL_DISPLAY, _IDLE_CONTEXT)
++    _IDLE_CONTEXT = _IDLE_KEY = None
++
++
+ class EGLGLContext:
+     """An EGL context for headless accelerated OpenGL rendering on GPU devices."""
+ 
+     def __init__(self, max_width, max_height, device_id=0):
+ 
+         del max_width, max_height  # unused
++        global _IDLE_CONTEXT, _IDLE_KEY, _CONTEXT_REUSE_HITS
++        self._context = None
++        self._reuse_key = None
++        if os.environ.get("ROBOSCOPE_LIBERO_EGL_CONTEXT_REUSE") == "1":
++            self._reuse_key = (os.getpid(), threading.get_ident(), device_id)
++            if _IDLE_CONTEXT is not None and _IDLE_KEY == self._reuse_key:
++                self._context = _IDLE_CONTEXT
++                _IDLE_CONTEXT = _IDLE_KEY = None
++                _CONTEXT_REUSE_HITS += 1
++                return
+         num_configs = ctypes.c_long()
+         config_size = 1
+         config = EGL.EGLConfig()
+@@ -143,6 +172,18 @@
+ 
+     def free(self):
+         """Frees resources associated with this context."""
++        global _IDLE_CONTEXT, _IDLE_KEY, _POOL_CLEANUP_REGISTERED
++        key = getattr(self, "_reuse_key", None)
++        if (self._context and key is not None and key[:2] == (os.getpid(), threading.get_ident())
++                and _IDLE_CONTEXT is None):
++            # Register after the display's eglTerminate handler, so LIFO exit
++            # cleanup releases the parked context before terminating EGL.
++            if not _POOL_CLEANUP_REGISTERED:
++                atexit.register(_release_idle_context)
++                _POOL_CLEANUP_REGISTERED = True
++            _IDLE_CONTEXT, _IDLE_KEY = self._context, key
++            self._context = None
++            return
+         if self._context:
+             current_context = EGL.eglGetCurrentContext()
+             if current_context and self._context.address == current_context.address:

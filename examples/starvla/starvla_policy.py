@@ -10,19 +10,16 @@ import math
 import os
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import cv2 as cv
 import numpy as np
 from PIL import Image
-from starvla_base_assets import ensure_starvla_base_model
-from starvla_full_checkpoint import (
-    CHECKPOINT_SUFFIXES,
-    LoadedStarVLA,
-    load_full_checkpoint,
-)
 
+from roboscope_kit import profiling
+from roboscope_kit.image_sizes import ANY_SIZE, SizePreferences
 from roboscope_kit.policy import (
     ActionChunk,
     EpisodeContext,
@@ -33,10 +30,19 @@ from roboscope_kit.policy import (
 )
 from roboscope_kit.server import run
 
+if TYPE_CHECKING:
+    from deployment.model_server.policy_norm_processor import PolicyNormProcessor
+    from starvla_full_checkpoint import LoadedStarVLA
+
+CHECKPOINT_SUFFIXES = frozenset({".pt", ".safetensors"})
 DTYPES = frozenset({"bfloat16", "float16", "float32"})
 OFFLINE_ENVIRONMENT = ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE")
 # Pinned StarVLA training and native evaluation clients both use 224x224 inputs.
 STARVLA_IMAGE_SIZE = (224, 224)
+# Benchmarks whose canonical cameras are 1:1 squares (256x256), where native 224x224
+# rendering in --eval-mode fast preserves exact camera aspect ratio and field of view.
+SQUARE_CAMERA_BENCHMARKS = frozenset({"libero", "libero_pro"})
+LIBERO_PRO_FAST_MAX_BATCH_SIZE = 4
 ImagePreprocessor = Callable[[np.ndarray], np.ndarray]
 
 
@@ -63,10 +69,10 @@ class ActionTransform:
     def apply(self, actions: np.ndarray) -> None:
         if self.operation == "threshold":
             threshold, below, above = self.parameters
-            actions[:, self.index] = np.where(actions[:, self.index] > threshold, above, below)
+            actions[..., self.index] = np.where(actions[..., self.index] > threshold, above, below)
             return
         scale, offset = self.parameters
-        actions[:, self.index] = actions[:, self.index] * scale + offset
+        actions[..., self.index] = actions[..., self.index] * scale + offset
 
 
 @dataclass(frozen=True)
@@ -82,25 +88,162 @@ class InferenceConfig:
     action_noise_seed: int | None = None
 
 
+@dataclass(frozen=True)
+class _StateLayout:
+    """Order and raw-state slices of the processor's state keys, resolved once at load."""
+
+    slices: tuple[tuple[str, slice], ...]
+    dimension: int
+
+
+@dataclass(frozen=True)
+class _PolicyRuntime:
+    framework: Any
+    norm_processor: PolicyNormProcessor
+    config: InferenceConfig
+    image_preprocessor: ImagePreprocessor
+    predict: Callable[..., Mapping[str, Any]]
+    max_batch_size: int
+    state_layout: _StateLayout | None
+    closers: tuple[Callable[[], None], ...] = ()
+
+
+def _env_flag(name: str, *, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    if raw == "1":
+        return True
+    if raw == "0":
+        return False
+    raise ValueError(f"{name} must be '0' or '1'; got {raw!r}")
+
+
+def _install_qwen_oft_hooks(
+    benchmark_name: str,
+    eval_mode: str,
+    framework: Any,
+) -> tuple[list[Callable[[], None]], tuple[str, ...]]:
+    """Install LIBERO-Pro QwenOFT fast-mode optimizations and return LIFO teardown + active names."""
+    is_libero_pro_oft = benchmark_name == "libero_pro" and type(framework).__name__ == "Qwenvl_OFT"
+    fast_default = is_libero_pro_oft and eval_mode == "fast"
+    group_windows = _env_flag("ROBOSCOPE_STARVLA_GROUP_VISION_WINDOWS", default=fast_default)
+    use_vision_meta = group_windows or _env_flag(
+        "ROBOSCOPE_STARVLA_CPU_VISION_METADATA",
+        default=fast_default,
+    )
+    use_token_meta = _env_flag("ROBOSCOPE_STARVLA_CPU_TOKEN_METADATA", default=fast_default)
+
+    if (use_vision_meta or use_token_meta) and not is_libero_pro_oft:
+        raise ValueError("QwenOFT CPU metadata optimizations require LIBERO-Pro QwenOFT")
+    if not is_libero_pro_oft:
+        return [], ()
+
+    closers: list[Callable[[], None]] = []
+    active: list[str] = []
+    interface = framework.qwen_vl_interface
+    if (
+        (fast_default or use_vision_meta or use_token_meta)
+        and type(interface.model).__name__ == "Qwen2_5_VLForConditionalGeneration"
+        and "logits_to_keep" in inspect.signature(interface.model.forward).parameters
+    ):
+        # QwenOFT consumes hidden states, not vocabulary logits. Limit the unused
+        # output projection to one token while retaining the full hidden-state path.
+        original_forward = interface.forward
+        interface.forward = partial(original_forward, logits_to_keep=1)
+        closers.append(lambda: setattr(interface, "forward", original_forward))
+        active.append("qwen-oft-logits-to-keep")
+
+    try:
+        if use_vision_meta:
+            from starvla_vision_metadata import VisionMetadata
+
+            closers.append(VisionMetadata(interface, group_windows=group_windows).close)
+            active.append("qwen-oft-vision-metadata")
+            if group_windows:
+                active.append("qwen-oft-grouped-vision-windows")
+        if use_token_meta:
+            from starvla_token_metadata import TokenMetadata
+
+            closers.append(TokenMetadata(framework).close)
+            active.append("qwen-oft-token-metadata")
+    except Exception:
+        for close in reversed(closers):
+            close()
+        raise
+    return closers, tuple(active)
+
+
+def _resolve_max_batch_size(
+    policy: StarVLAPolicy,
+    benchmark_name: str,
+    eval_mode: str,
+    framework: Any,
+    config: InferenceConfig,
+) -> tuple[int, bool]:
+    is_libero_pro_oft = (
+        type(policy) is StarVLAPolicy
+        and benchmark_name == "libero_pro"
+        and type(framework).__name__ == "Qwenvl_OFT"
+    )
+    can_coalesce = is_libero_pro_oft or config.action_noise_seed is not None
+    override = os.environ.get("ROBOSCOPE_STARVLA_MAX_BATCH_SIZE")
+    if override is not None:
+        if not override.isdecimal() or int(override) < 1:
+            raise ValueError("ROBOSCOPE_STARVLA_MAX_BATCH_SIZE must be a positive integer")
+        max_batch_size = int(override)
+        if max_batch_size > 1 and not can_coalesce:
+            raise ValueError(
+                "ROBOSCOPE_STARVLA_MAX_BATCH_SIZE > 1 requires LIBERO-Pro QwenOFT or action_noise_seed"
+            )
+    elif is_libero_pro_oft and eval_mode == "fast" and config.max_batch_size == 1:
+        max_batch_size = LIBERO_PRO_FAST_MAX_BATCH_SIZE
+    else:
+        max_batch_size = config.max_batch_size
+    return max_batch_size, max_batch_size > 1 and can_coalesce
+
+
+def _resolve_image_sizes(benchmark_name: str, eval_mode: str) -> SizePreferences | None:
+    fast_default = eval_mode == "fast" and benchmark_name in SQUARE_CAMERA_BENCHMARKS
+    if _env_flag("ROBOSCOPE_STARVLA_NEGOTIATE_IMAGE_SIZES", default=fast_default):
+        return (STARVLA_IMAGE_SIZE, ANY_SIZE)
+    return None
+
+
 class StarVLAPolicy(Policy):
     def __init__(self) -> None:
-        self.framework = None
-        self.norm_processor = None
-        self.config: InferenceConfig | None = None
-        self.image_preprocessor: ImagePreprocessor | None = None
+        self._runtime: _PolicyRuntime | None = None
         self.original_cwd: Path | None = None
         self.original_environment: dict[str, str | None] = {}
 
     def load(self, context: SessionContext) -> PolicyCapabilities:
+        from starvla_base_assets import ensure_starvla_base_model
+        from starvla_full_checkpoint import load_full_checkpoint
+
         image_preprocessor = _image_preprocessor(context.benchmark.name)
+        image_sizes = _resolve_image_sizes(context.benchmark.name, context.eval_mode)
         checkpoint, run_dir = resolve_starvla_run_snapshot(context.checkpoint_path)
         ensure_starvla_base_model(run_dir)
         self._enter_offline_run(run_dir)
         try:
             loaded = load_full_checkpoint(checkpoint)
             config = parse_inference_config(loaded.config)
-            self._initialize_runtime(checkpoint, loaded, config)
-            self.image_preprocessor = image_preprocessor
+            max_batch_size, coalesce = _resolve_max_batch_size(
+                self,
+                context.benchmark.name,
+                context.eval_mode,
+                loaded.framework,
+                config,
+            )
+            self._runtime, fast_optimizations = self._initialize_runtime(
+                checkpoint,
+                loaded,
+                config,
+                image_preprocessor,
+                max_batch_size,
+                benchmark_name=context.benchmark.name,
+                eval_mode=context.eval_mode,
+            )
         except Exception:
             self.unload()
             raise
@@ -108,8 +251,10 @@ class StarVLAPolicy(Policy):
             supported_benchmarks=(context.benchmark.name,),
             supported_suites={context.benchmark.name: (context.benchmark.suite,)},
             required_features=config.inputs.required_features,
-            max_batch_size=config.max_batch_size,
-            coalesce_action_requests=config.max_batch_size > 1 and config.action_noise_seed is not None,
+            max_batch_size=max_batch_size,
+            coalesce_action_requests=coalesce,
+            fast_optimizations=fast_optimizations,
+            image_sizes=image_sizes,
             supported_action_chunk_sizes=(config.action_horizon,),
             action_representations={
                 context.benchmark.name: context.benchmark.default_action_representation
@@ -118,6 +263,11 @@ class StarVLAPolicy(Policy):
             # observations in between are never sent to the Policy.
             observation_strides={context.benchmark.name: config.action_horizon},
         )
+
+    def _require_runtime(self) -> _PolicyRuntime:
+        if self._runtime is None:
+            raise RuntimeError("StarVLA Policy is not loaded")
+        return self._runtime
 
     def _enter_offline_run(self, run_dir: Path) -> None:
         if self.original_cwd is not None:
@@ -133,7 +283,12 @@ class StarVLAPolicy(Policy):
         checkpoint: Path,
         loaded: LoadedStarVLA,
         config: InferenceConfig,
-    ) -> None:
+        image_preprocessor: ImagePreprocessor,
+        max_batch_size: int,
+        *,
+        benchmark_name: str,
+        eval_mode: str,
+    ) -> tuple[_PolicyRuntime, tuple[str, ...]]:
         import torch
         from deployment.model_server.policy_norm_processor import PolicyNormProcessor
 
@@ -145,9 +300,85 @@ class StarVLAPolicy(Policy):
                 "StarVLA inference.action_noise_seed requires a framework with action_noise_seeds support. "
                 "For the pinned CALVIN QwenGR00T demo, apply calvin/starvla-action-noise.patch."
             )
-        self.framework = loaded.framework.to(dtype=getattr(torch, config.dtype), device="cuda").eval()
-        self.norm_processor = PolicyNormProcessor(str(checkpoint), unnorm_key=config.unnorm_key)
-        self.config = config
+        framework = loaded.framework.to(dtype=getattr(torch, config.dtype), device="cuda").eval()
+        norm_processor = PolicyNormProcessor(str(checkpoint), unnorm_key=config.unnorm_key)
+
+        is_libero_pro_oft = (
+            type(self) is StarVLAPolicy
+            and benchmark_name == "libero_pro"
+            and type(framework).__name__ == "Qwenvl_OFT"
+        )
+        use_fast_runner = (
+            is_libero_pro_oft
+            and config.inputs.state is None
+            and len(config.inputs.images) == 2
+            and not profiling.TIMING_ENABLED
+            and _env_flag("ROBOSCOPE_STARVLA_FAST_RUNNER", default=(eval_mode == "fast"))
+        )
+
+        closers: list[Callable[[], None]] = []
+        active_opts: tuple[str, ...] = ()
+        try:
+            if use_fast_runner:
+                from starvla_qwen_oft_fast import QwenOFTFastRunner
+                from starvla_vision_metadata import VisionMetadata
+
+                group_windows = _env_flag("ROBOSCOPE_STARVLA_GROUP_VISION_WINDOWS", default=True)
+                use_cuda_graph = _env_flag("ROBOSCOPE_STARVLA_CUDA_GRAPH", default=True)
+                vmeta = VisionMetadata(framework.qwen_vl_interface, group_windows=group_windows)
+                closers.append(vmeta.close)
+                runner = QwenOFTFastRunner(
+                    framework,
+                    vmeta,
+                    max_batch_size=max_batch_size,
+                    enable_cuda_graph=use_cuda_graph,
+                )
+                closers.append(runner.close)
+                predict: Callable[..., Mapping[str, Any]] = runner.predict
+                opts = [
+                    "qwen-oft-direct-backbone",
+                    "qwen-oft-gpu-patchify",
+                    "qwen-oft-prompt-cache",
+                    "qwen-oft-vision-metadata",
+                ]
+                if group_windows:
+                    opts.append("qwen-oft-grouped-vision-windows")
+                if use_cuda_graph:
+                    opts.append("qwen-oft-cuda-graph")
+                active_opts = tuple(opts)
+            else:
+                hook_closers, active_opts = _install_qwen_oft_hooks(
+                    benchmark_name,
+                    eval_mode,
+                    framework,
+                )
+                closers.extend(hook_closers)
+                predict = torch.inference_mode()(framework.predict_action)
+                if profiling.TIMING_ENABLED:
+                    from starvla_timing import ModelTiming
+
+                    model_timing = ModelTiming(framework)
+                    predict = model_timing.wrap_prediction(predict)
+                    closers.append(model_timing.close)
+            state_layout = _state_layout(norm_processor) if config.inputs.state is not None else None
+        except Exception:
+            for close in reversed(closers):
+                close()
+            raise
+
+        return (
+            _PolicyRuntime(
+                framework=framework,
+                norm_processor=norm_processor,
+                config=config,
+                image_preprocessor=image_preprocessor,
+                predict=predict,
+                max_batch_size=max_batch_size,
+                state_layout=state_layout,
+                closers=tuple(closers),
+            ),
+            active_opts,
+        )
 
     def reset(self, _context: EpisodeContext) -> None:
         return None
@@ -156,66 +387,40 @@ class StarVLAPolicy(Policy):
         return self.act_batch((observation,))[0]
 
     def act_batch(self, observations: tuple[Observation, ...]) -> tuple[ActionChunk, ...]:
-        if (
-            self.framework is None
-            or self.norm_processor is None
-            or self.config is None
-            or self.image_preprocessor is None
-        ):
-            raise RuntimeError("StarVLA Policy is not loaded")
-        if not observations or len(observations) > self.config.max_batch_size:
-            raise ValueError("StarVLA observation batch is empty or exceeds inference.max_batch_size")
-        import torch
-
-        examples = [
-            _build_example(
-                observation.features,
-                self.config.inputs,
-                self.norm_processor,
-                self.image_preprocessor,
+        runtime = self._require_runtime()
+        batch_size = len(observations)
+        if not 1 <= batch_size <= runtime.max_batch_size:
+            raise ValueError(
+                f"StarVLA batch size {batch_size} must be between 1 and {runtime.max_batch_size}"
             )
-            for observation in observations
-        ]
-        kwargs = self.config.kwargs.copy()
-        seed = self.config.action_noise_seed
+        kwargs = runtime.config.kwargs
+        seed = runtime.config.action_noise_seed
         if seed is not None:
-            action_noise_seeds = []
-            for observation in observations:
-                key = json.dumps([seed, observation.episode_id, observation.step]).encode()
-                action_noise_seeds.append(int.from_bytes(hashlib.sha256(key).digest()[:8], "big"))
-            kwargs["action_noise_seeds"] = action_noise_seeds
-        with torch.inference_mode():
-            output = self.framework.predict_action(examples=examples, **kwargs)
-        if not isinstance(output, Mapping) or "normalized_actions" not in output:
-            raise TypeError("StarVLA predict_action() must return normalized_actions")
-        normalized = np.asarray(output["normalized_actions"])
-        expected = (len(observations), self.config.action_horizon, self.config.action_dim)
-        if normalized.shape != expected:
-            raise ValueError(
-                f"StarVLA returned normalized action shape {normalized.shape}; expected {expected}"
-            )
-        return tuple(self._action_chunk(row) for row in normalized)
-
-    def _action_chunk(self, normalized: np.ndarray) -> ActionChunk:
-        """Unnormalize and transform one observation's (action_horizon, action_dim) prediction."""
-        expected = (self.config.action_horizon, self.config.action_dim)
-        actions = np.asarray(self.norm_processor.unapply_actions(normalized), dtype=np.float32)
-        if actions.shape != expected:
-            raise ValueError(
-                f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected}"
-            )
-        actions = np.array(actions, dtype=np.float32, copy=True, order="C")
-        for transform in self.config.transforms:
-            transform.apply(actions)
-        if not np.isfinite(actions).all():
-            raise ValueError("StarVLA returned non-finite actions")
-        return ActionChunk(actions)
+            action_noise_seeds = [
+                int.from_bytes(
+                    hashlib.sha256(json.dumps([seed, item.episode_id, item.step]).encode()).digest()[:8],
+                    "big",
+                )
+                for item in observations
+            ]
+            kwargs = {**kwargs, "action_noise_seeds": action_noise_seeds}
+        if profiling.TIMING_ENABLED:
+            with profiling.span("policy.example_build"):
+                examples = [_build_example(item.features, runtime) for item in observations]
+            with profiling.span("policy.predict_total"):
+                output = runtime.predict(examples=examples, **kwargs)
+            with profiling.span("policy.postprocess"):
+                return _postprocess_batch(output, batch_size, runtime)
+        examples = [_build_example(item.features, runtime) for item in observations]
+        output = runtime.predict(examples=examples, **kwargs)
+        return _postprocess_batch(output, batch_size, runtime)
 
     def unload(self) -> None:
-        self.framework = None
-        self.norm_processor = None
-        self.config = None
-        self.image_preprocessor = None
+        runtime, self._runtime = self._runtime, None
+        if runtime is not None:
+            for close in reversed(runtime.closers):
+                close()
+        del runtime
         if self.original_cwd is not None:
             os.chdir(self.original_cwd)
         self.original_cwd = None
@@ -226,10 +431,39 @@ class StarVLAPolicy(Policy):
                 os.environ[name] = value
         self.original_environment = {}
         gc.collect()
-        import torch
-
+        try:
+            import torch
+        except ImportError:
+            return
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+
+def _postprocess_batch(
+    output: Mapping[str, Any],
+    batch_size: int,
+    runtime: _PolicyRuntime,
+) -> tuple[ActionChunk, ...]:
+    if not isinstance(output, Mapping) or "normalized_actions" not in output:
+        raise TypeError("StarVLA predict_action() must return normalized_actions")
+    normalized = np.asarray(output["normalized_actions"])
+    expected = (batch_size, runtime.config.action_horizon, runtime.config.action_dim)
+    if normalized.shape != expected:
+        raise ValueError(f"StarVLA returned normalized action shape {normalized.shape}; expected {expected}")
+    # The pinned processor accepts only (T, D); keep its per-chunk semantics, then
+    # perform float32 conversion, transforms, and finiteness check once across the batch.
+    actions = np.array(
+        [runtime.norm_processor.unapply_actions(row) for row in normalized],
+        dtype=np.float32,
+        order="C",
+    )
+    if actions.shape != expected:
+        raise ValueError(f"StarVLA returned unnormalized action shape {actions.shape}; expected {expected}")
+    for transform in runtime.config.transforms:
+        transform.apply(actions)
+    if not np.isfinite(actions).all():
+        raise ValueError("StarVLA returned non-finite actions")
+    return tuple(ActionChunk(row) for row in actions)
 
 
 def resolve_starvla_run_snapshot(source_path: str | Path) -> tuple[Path, Path]:
@@ -358,20 +592,18 @@ def _parse_action_transform(value: Any, action_dim: int) -> ActionTransform:
     return ActionTransform(operation=operation, index=index, parameters=parameters)
 
 
-def _build_example(
-    features: Mapping[str, Any],
-    config: InputConfig,
-    norm_processor: Any,
-    image_preprocessor: ImagePreprocessor,
-) -> dict[str, Any]:
+def _build_example(features: Mapping[str, Any], runtime: _PolicyRuntime) -> dict[str, Any]:
+    config = runtime.config.inputs
+    preprocess = runtime.image_preprocessor
     example: dict[str, Any] = {
-        "image": [image_preprocessor(_array_feature(features, name)) for name in config.images],
+        "image": [preprocess(_array_feature(features, name)) for name in config.images],
         "lang": _string_feature(features, config.language),
     }
-    if config.state is not None:
+    if runtime.state_layout is not None and config.state is not None:
         example["state"] = _prepare_state(
             _array_feature(features, config.state),
-            norm_processor,
+            runtime.norm_processor,
+            runtime.state_layout,
         )
     return example
 
@@ -393,6 +625,8 @@ def _image_preprocessor(benchmark_name: str) -> ImagePreprocessor:
 
 
 def _resize_image_with_opencv(image: np.ndarray) -> np.ndarray:
+    if image.shape[:2] == STARVLA_IMAGE_SIZE:
+        return image
     height, width = STARVLA_IMAGE_SIZE
     return np.ascontiguousarray(cv.resize(image, (width, height), interpolation=cv.INTER_AREA))
 
@@ -412,39 +646,38 @@ def _resize_calvin_image(image: np.ndarray) -> np.ndarray:
     return np.ascontiguousarray(image_tools.convert_to_uint8(resized))
 
 
-def _prepare_state(state: np.ndarray, norm_processor: Any) -> np.ndarray:
-    state = np.asarray(state)
-    if state.ndim == 1:
-        state = state[None, :]
-    if state.ndim != 2 or state.shape[0] != 1:
-        raise ValueError(f"StarVLA state input must have shape (D,) or (1, D); received {state.shape}")
-
+def _state_layout(norm_processor: Any) -> _StateLayout:
     state_keys = tuple(norm_processor.state_keys)
     state_key_dims = getattr(norm_processor, "_state_key_dims", None)
     if not state_keys or not isinstance(state_key_dims, Mapping):
         raise RuntimeError("StarVLA normalization processor does not expose state feature dimensions")
-
-    ordered_dims = tuple(_state_key_dimension(state_key_dims, key) for key in state_keys)
-    expected_dim = sum(ordered_dims)
-    if state.shape[1] != expected_dim:
-        raise ValueError(
-            f"StarVLA raw state dimension is {state.shape[1]}; expected {expected_dim} "
-            f"for configured state keys {state_keys}"
-        )
-
-    values: dict[str, np.ndarray] = {}
+    slices: list[tuple[str, slice]] = []
     cursor = 0
-    for key, dimension in zip(state_keys, ordered_dims, strict=True):
-        values[key] = np.ascontiguousarray(state[:, cursor : cursor + dimension])
+    for key in state_keys:
+        dimension = _state_key_dimension(state_key_dims, key)
+        slices.append((key, slice(cursor, cursor + dimension)))
         cursor += dimension
-    transformed = norm_processor.transform.apply(values)
+    return _StateLayout(tuple(slices), cursor)
+
+
+def _prepare_state(state: np.ndarray, norm_processor: Any, layout: _StateLayout) -> np.ndarray:
+    if state.ndim == 1:
+        state = state[None, :]
+    if state.shape != (1, layout.dimension):
+        keys = tuple(key for key, _ in layout.slices)
+        raise ValueError(
+            f"StarVLA raw state must have shape ({layout.dimension},) or (1, {layout.dimension}) "
+            f"for configured state keys {keys}; received {state.shape}"
+        )
+    # Column slices of one C-ordered row are already contiguous views.
+    transformed = norm_processor.transform.apply({key: state[:, part] for key, part in layout.slices})
     if "state" in transformed:
         prepared = _numpy_value(transformed["state"])
     else:
-        missing = [key for key in state_keys if key not in transformed]
+        missing = [key for key, _ in layout.slices if key not in transformed]
         if missing:
             raise RuntimeError(f"StarVLA state transform removed configured keys: {missing}")
-        prepared = np.concatenate([_numpy_value(transformed[key]) for key in state_keys], axis=-1)
+        prepared = np.concatenate([_numpy_value(transformed[key]) for key, _ in layout.slices], axis=-1)
     if prepared.ndim != 2 or prepared.shape[0] != 1:
         raise ValueError(f"StarVLA transformed state must have shape (1, D); received {prepared.shape}")
     return np.ascontiguousarray(prepared)
@@ -547,7 +780,7 @@ def _array_feature(features: Mapping[str, Any], name: str) -> np.ndarray:
     value = features.get(name)
     if not isinstance(value, np.ndarray):
         raise TypeError(f"StarVLA input feature {name!r} must be a numpy array")
-    return np.ascontiguousarray(value)
+    return value if value.flags.c_contiguous else np.ascontiguousarray(value)
 
 
 def _string_feature(features: Mapping[str, Any], name: str) -> str:

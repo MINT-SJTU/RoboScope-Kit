@@ -66,7 +66,8 @@ fail() {
 }
 
 [[ "$(uname -s):$(uname -m)" == "Linux:x86_64" ]] || fail "LIBERO-Pro runtime builds require Linux x86_64"
-for required in "${MANIFEST}" "${CONDA_SPECS}" "${LOCK}" "${TASK_FILES}"; do
+for required in "${MANIFEST}" "${CONDA_SPECS}" "${LOCK}" "${TASK_FILES}" \
+  "${SCRIPT_DIR}/runtime-patches.json" "${SCRIPT_DIR}/apply-runtime-patches.py"; do
   [[ -f "${required}" ]] || fail "LIBERO-Pro build input is missing: ${required}"
 done
 grep -q '^python-3\.11\.18-' "${CONDA_SPECS}" || fail "LIBERO-Pro conda specs must pin CPython 3.11.18"
@@ -146,6 +147,11 @@ PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir --no-deps "${SO
 # initial states, only exists on the PyTorch CPU index.
 PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -m pip install --no-cache-dir --no-deps \
   --extra-index-url "${TORCH_INDEX_URL}" --requirement "${LOCK}"
+
+# Simulator source changes are reproducible only through this pinned builder.
+env -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -I \
+  "${SCRIPT_DIR}/apply-runtime-patches.py" "${SCRIPT_DIR}/runtime-patches.json" \
+  "${INSTALL_DIR}/runtime-patches.json"
 
 env -u PYTHONPATH PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 "${ENV_PYTHON}" -I - <<'PY'
 import sys

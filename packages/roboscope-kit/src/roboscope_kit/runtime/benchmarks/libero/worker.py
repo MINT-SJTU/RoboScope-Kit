@@ -9,13 +9,17 @@ import argparse
 import os
 import time
 from dataclasses import dataclass
+from importlib.metadata import version
 from pathlib import Path
+from typing import Any
 
 import imageio
 import numpy as np
 
-from roboscope_kit import EpisodeContext, Observation, PolicyClient
+from roboscope_kit import EpisodeContext, Observation, PolicyClient, profiling
 from roboscope_kit.runtime.benchmark import EvaluationRecord, WorkerLoop, WorkItem, WorkResult
+
+from .camera import ChunkCameraGate
 
 LIBERO_DUMMY_ACTION = np.asarray([0.0] * 6 + [-1.0], dtype=np.float32)
 LIBERO_DELTA_ACTION = "libero.delta-eef-v1"
@@ -40,28 +44,113 @@ class TaskRuntime:
     env: object
 
 
+@dataclass(frozen=True)
+class _CacheSnapshot:
+    model_hits: int = 0
+    model_misses: int = 0
+    egl_hits: int = 0
+
+
+class _SimulatorCaches:
+    """Optional pinned-runtime MuJoCo model and EGL context caches."""
+
+    def __init__(self, *, compiled_model_cache: bool, egl_context_reuse: bool) -> None:
+        self._model_cache: Any = None
+        self._egl_cache: Any = None
+        if egl_context_reuse:
+            from robosuite.renderers.context import egl_context
+
+            if not hasattr(egl_context, "_CONTEXT_REUSE_HITS"):
+                raise RuntimeError("rebuild the LIBERO-Pro runtime before enabling egl_context_reuse")
+            self._egl_cache = egl_context
+        if compiled_model_cache:
+            from robosuite.utils import binding_utils
+
+            if version("robosuite") != "1.4.0" or version("mujoco") != "3.2.3":
+                raise RuntimeError("compiled model caching requires the pinned LIBERO-Pro runtime")
+            model_cache = getattr(binding_utils, "_cached_xml_model", None)
+            if model_cache is None or os.environ.get("ROBOSCOPE_LIBERO_MODEL_CACHE") != "1":
+                raise RuntimeError("rebuild the LIBERO-Pro runtime before enabling compiled_model_cache")
+            self._model_cache = model_cache
+
+    def snapshot(self) -> _CacheSnapshot:
+        info = self._model_cache.cache_info() if self._model_cache is not None else None
+        return _CacheSnapshot(
+            model_hits=info.hits if info is not None else 0,
+            model_misses=info.misses if info is not None else 0,
+            egl_hits=self._egl_cache._CONTEXT_REUSE_HITS if self._egl_cache is not None else 0,
+        )
+
+    def metadata(self, before: _CacheSnapshot) -> dict[str, Any]:
+        meta: dict[str, Any] = {
+            "egl_context_reuse": self._egl_cache is not None,
+            "egl_context_reuse_hits": (
+                self._egl_cache._CONTEXT_REUSE_HITS - before.egl_hits
+                if self._egl_cache is not None
+                else 0
+            ),
+        }
+        if self._model_cache is not None:
+            after = self._model_cache.cache_info()
+            meta.update(
+                compiled_model_cache_hits=after.hits - before.model_hits,
+                compiled_model_cache_misses=after.misses - before.model_misses,
+                compiled_model_cache_entries=after.currsize,
+            )
+        return meta
+
+    def close(self) -> None:
+        if self._egl_cache is not None:
+            self._egl_cache._release_idle_context()
+
+
 class PolicyActionQueue:
     def __init__(self, socket_path: Path) -> None:
         self.socket_path = socket_path
+        self.encoding: str | None = None
         self.episode_id = ""
         self.actions = np.empty((0, 7), dtype=np.float32)
         self.inference_wait_s = 0.0
+        self._client: PolicyClient | None = None
+
+    def _open_client(self) -> PolicyClient:
+        client = PolicyClient(self.socket_path)
+        if hasattr(client, "connect"):
+            client.connect()
+        else:
+            client = client.__enter__()
+        self._client = client
+        return client
+
+    def _call(self, fn_name: str, *args: Any) -> Any:
+        client = self._client if self._client is not None else self._open_client()
+        try:
+            result = getattr(client, fn_name)(*args)
+        except OSError:
+            self.close()
+            client = self._open_client()
+            result = getattr(client, fn_name)(*args)
+        self.encoding = getattr(client, "encoding", None)
+        return result
 
     def reset(self, context: EpisodeContext) -> None:
         self.episode_id = context.episode_id
         self.actions = np.empty((0, 7), dtype=np.float32)
-        with PolicyClient(self.socket_path) as client:
-            client.reset(context)
+        self._call("reset", context)
 
     def step(self, observation: dict, task_description: str, step: int) -> np.ndarray:
         if not self.actions.size:
-            request = build_observation(self.episode_id, step, observation, task_description)
+            if profiling.TIMING_ENABLED:
+                with profiling.span("worker.build_observation"):
+                    request = build_observation(self.episode_id, step, observation, task_description)
+            else:
+                request = build_observation(self.episode_id, step, observation, task_description)
             started = time.perf_counter()
-            with PolicyClient(self.socket_path) as client:
-                chunk = client.act(request).actions
+            chunk = self._call("act", request).actions
             self.inference_wait_s += time.perf_counter() - started
             self.actions = chunk.reshape(1, -1) if chunk.ndim == 1 else chunk
-        action = self.actions[0].copy()
+        # The chunk is owned exclusively by this queue and discarded as rows are consumed.
+        action = self.actions[0]
         self.actions = self.actions[1:]
         return action
 
@@ -71,8 +160,15 @@ class PolicyActionQueue:
         episode_id = self.episode_id
         self.episode_id = ""
         self.actions = np.empty((0, 7), dtype=np.float32)
-        with PolicyClient(self.socket_path) as client:
-            client.end_episode(episode_id)
+        self._call("end_episode", episode_id)
+
+    def close(self) -> None:
+        client, self._client = self._client, None
+        if client is not None:
+            if hasattr(client, "close"):
+                client.close()
+            else:
+                client.__exit__(None, None, None)
 
 
 def parse_args() -> argparse.Namespace:
@@ -80,6 +176,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--worker-id", type=int, required=True)
     parser.add_argument("--policy-socket", type=Path, required=True)
     parser.add_argument("--suite", required=True)
+    parser.add_argument(
+        "--compiled-model-cache",
+        action="store_true",
+        help="use the LIBERO-Pro builder's bounded pristine MuJoCo model cache",
+    )
     parser.add_argument(
         "--max-steps",
         type=int,
@@ -102,6 +203,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--queue-dir", type=Path, required=True)
     parser.add_argument("--worker-state-dir", type=Path, required=True)
     parser.add_argument("--video-dir", type=Path)
+    parser.add_argument(
+        "--chunk-camera-rendering",
+        action="store_true",
+        help="skip unused RGB renders inside action chunks (disabled when saving video)",
+    )
     parser.add_argument("--poll-interval", type=float, default=0.05)
     parser.add_argument(
         "--primary-size",
@@ -146,14 +252,11 @@ def build_observation(
         observation["robot0_eye_in_hand_image"][::-1, ::-1],
         dtype=np.uint8,
     )
-    state = np.concatenate(
-        (
-            _state_vector(observation, "robot0_eef_pos", 3),
-            _state_vector(observation, "robot0_eef_quat", 4),
-            _state_vector(observation, "robot0_gripper_qpos", 2),
-            _state_vector(observation, "robot0_joint_pos", 7),
-        )
-    ).astype(np.float32, copy=False)
+    state = np.empty(16, dtype=np.float32)
+    state[0:3] = _state_vector(observation, "robot0_eef_pos", 3)
+    state[3:7] = _state_vector(observation, "robot0_eef_quat", 4)
+    state[7:9] = _state_vector(observation, "robot0_gripper_qpos", 2)
+    state[9:16] = _state_vector(observation, "robot0_joint_pos", 7)
     return Observation(
         episode_id=episode_id,
         step=step,
@@ -170,7 +273,7 @@ def build_observation(
 def _state_vector(observation: dict, name: str, expected: int) -> np.ndarray:
     if name not in observation:
         raise KeyError(f"LIBERO observation is missing {name!r}")
-    value = np.asarray(observation[name], dtype=np.float32).reshape(-1)
+    value = np.ravel(observation[name])
     if value.size != expected:
         raise ValueError(f"LIBERO observation {name!r} has {value.size} values; expected {expected}")
     return value
@@ -232,8 +335,11 @@ def run_episode(
     settle_steps: int,
     save_frames: bool,
     absolute_actions: bool = False,
+    chunk_camera_rendering: bool = False,
+    camera_counters: dict[str, int] | None = None,
 ) -> tuple[bool, int, float, list[np.ndarray]]:
     episode_id = f"task-{runtime.task_id:04d}-episode-{episode_index:04d}"
+    timed = profiling.TIMING_ENABLED
     policy.reset(
         EpisodeContext(
             episode_id=episode_id,
@@ -242,8 +348,14 @@ def run_episode(
         )
     )
     try:
-        runtime.env.reset()
-        observation = runtime.env.set_init_state(runtime.initial_states[episode_index])
+        if timed:
+            with profiling.span("worker.reset"):
+                runtime.env.reset()
+            with profiling.span("worker.set_init_state"):
+                observation = runtime.env.set_init_state(runtime.initial_states[episode_index])
+        else:
+            runtime.env.reset()
+            observation = runtime.env.set_init_state(runtime.initial_states[episode_index])
         frames: list[np.ndarray] = []
         started = time.perf_counter()
 
@@ -252,22 +364,45 @@ def run_episode(
         # control, as the X-VLA recipe does.
         if absolute_actions:
             set_delta_control(runtime.env, True)
-        for _ in range(settle_steps):
-            observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
-            if task_done or runtime.env.env.done:
-                return bool(task_done), 0, time.perf_counter() - started, frames
-        if absolute_actions:
-            set_delta_control(runtime.env, False)
 
-        for action_step in range(max_steps):
-            if save_frames:
-                frames.append(
-                    np.ascontiguousarray(observation["agentview_image"][::-1, ::-1], dtype=np.uint8)
-                )
-            action = policy.step(observation, runtime.task_description, action_step)
-            observation, _reward, task_done, _info = runtime.env.step(action)
-            if task_done or runtime.env.env.done:
-                return bool(task_done), action_step + 1, time.perf_counter() - started, frames
+        gate_enabled = chunk_camera_rendering and not save_frames
+        cameras = ChunkCameraGate()
+        try:
+            with cameras.install(runtime.env, observation, enabled=gate_enabled):
+                for settle_idx in range(settle_steps):
+                    if gate_enabled:
+                        cameras.required = settle_idx == settle_steps - 1
+                    if timed:
+                        with profiling.span("worker.settle_step"):
+                            observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
+                    else:
+                        observation, _reward, task_done, _info = runtime.env.step(LIBERO_DUMMY_ACTION)
+                    if task_done or runtime.env.env.done:
+                        return bool(task_done), 0, time.perf_counter() - started, frames
+                if absolute_actions:
+                    set_delta_control(runtime.env, False)
+
+                for action_step in range(max_steps):
+                    if save_frames:
+                        frames.append(
+                            np.ascontiguousarray(observation["agentview_image"][::-1, ::-1], dtype=np.uint8)
+                        )
+                    action = policy.step(observation, runtime.task_description, action_step)
+                    # step() popped one action. When that exhausts the returned chunk, the next
+                    # policy request needs this step's native camera samples.
+                    if gate_enabled:
+                        cameras.required = not getattr(policy, "actions", ()).__len__()
+                    if timed:
+                        with profiling.span("worker.action_step"):
+                            observation, _reward, task_done, _info = runtime.env.step(action)
+                    else:
+                        observation, _reward, task_done, _info = runtime.env.step(action)
+                    if task_done or runtime.env.env.done:
+                        return bool(task_done), action_step + 1, time.perf_counter() - started, frames
+        finally:
+            if camera_counters is not None:
+                camera_counters["camera_renders"] += cameras.renders
+                camera_counters["camera_renders_skipped"] += cameras.skipped
 
         return False, max_steps, time.perf_counter() - started, frames
     finally:
@@ -298,6 +433,7 @@ def run_chunk(
     records: list[EvaluationRecord] = []
     started = time.perf_counter()
     inference_wait_before = policy.inference_wait_s
+    camera_counters = {"camera_renders": 0, "camera_renders_skipped": 0}
     start_episode = int(item.payload["start_episode"])
     num_trials = int(item.payload["num_trials"])
     for episode_index in range(start_episode, start_episode + num_trials):
@@ -309,6 +445,8 @@ def run_chunk(
             settle_steps=args.settle_steps,
             save_frames=args.video_dir is not None,
             absolute_actions=args.action_representation == LIBERO_ABSOLUTE_ACTION,
+            chunk_camera_rendering=args.chunk_camera_rendering,
+            camera_counters=camera_counters,
         )
         save_video(args.video_dir, runtime.task_id, episode_index, success, frames)
         records.append(
@@ -331,6 +469,9 @@ def run_chunk(
             "task_description": runtime.task_description,
             "elapsed_s": time.perf_counter() - started,
             "inference_wait_s": policy.inference_wait_s - inference_wait_before,
+            "policy_encoding": policy.encoding,
+            "chunk_camera_rendering": args.chunk_camera_rendering and args.video_dir is None,
+            **camera_counters,
         },
     )
 
@@ -342,24 +483,40 @@ def main() -> None:
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     from libero.libero import benchmark
 
+    caches = _SimulatorCaches(
+        compiled_model_cache=args.compiled_model_cache,
+        egl_context_reuse=os.environ.get("ROBOSCOPE_LIBERO_EGL_CONTEXT_REUSE") == "1",
+    )
     task_suite = benchmark.get_benchmark_dict()[args.suite]()
     policy = PolicyActionQueue(args.policy_socket)
     runtime: TaskRuntime | None = None
 
     def evaluate(item: WorkItem) -> WorkResult:
         nonlocal runtime
-        task_id = int(item.payload["task_id"])
-        if runtime is None or runtime.task_id != task_id:
-            if runtime is not None:
-                runtime.env.close()
-            runtime = create_task_runtime(
-                task_suite,
-                task_id,
-                args.seed,
-                args.instruction_source,
-                image_sizes=(args.primary_size, args.wrist_size),
+        with profiling.capture("worker", item_id=item.item_id, worker_id=args.worker_id):
+            task_id = int(item.payload["task_id"])
+            created = runtime is None or runtime.task_id != task_id
+            before = caches.snapshot()
+            create_s = 0.0
+            if created:
+                started = time.perf_counter()
+                if runtime is not None:
+                    runtime.env.close()
+                runtime = create_task_runtime(
+                    task_suite,
+                    task_id,
+                    args.seed,
+                    args.instruction_source,
+                    image_sizes=(args.primary_size, args.wrist_size),
+                )
+                create_s = time.perf_counter() - started
+            result = run_chunk(args, item, runtime, policy)
+            result.metadata.update(
+                task_runtime_created=created,
+                task_runtime_create_s=create_s,
+                **caches.metadata(before),
             )
-        return run_chunk(args, item, runtime, policy)
+            return result
 
     try:
         WorkerLoop(
@@ -369,8 +526,10 @@ def main() -> None:
             poll_interval_s=args.poll_interval,
         ).run(evaluate)
     finally:
+        policy.close()
         if runtime is not None:
             runtime.env.close()
+        caches.close()
 
 
 if __name__ == "__main__":

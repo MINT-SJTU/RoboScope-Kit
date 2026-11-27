@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Protocol
 
 from roboscope_kit.benchmark_specs import BenchmarkName
+from roboscope_kit.policy import DEFAULT_EVAL_MODE
 
 from .adapters import BenchmarkAdapter
 from .manifest import BenchmarkManifest
@@ -24,6 +25,7 @@ class BenchmarkRunRequest:
     episodes: int | None
     quick_test: bool
     evaluation_config_path: Path | None = None
+    eval_mode: str = DEFAULT_EVAL_MODE
 
 
 class BenchmarkFactory(Protocol):
