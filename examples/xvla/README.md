@@ -1,10 +1,10 @@
-# X-VLA Policy Example
+# X-VLA Policy example
 
 A `roboscope-kit` `Policy` that runs the public X-VLA-0.9B checkpoints ([2toINF/X-VLA](https://github.com/2toINF/X-VLA),
 arXiv:2510.10274) on four benchmarks: calvin, libero, libero_plus, and robotwin. It shows how to write a
 stateful Policy and multi-benchmark action contracts. The X-VLA entries on public leaderboards are results recorded by the upstream paper and the community.
 
-## Validation Scope and Research Reference (2026-08-15)
+## Validation scope and research reference (2026-08-15)
 
 | Benchmark | X-VLA checkpoint used by the demo | Upstream paper/community metric (research reference) | Notes |
 |---|---|---|---|
@@ -42,7 +42,7 @@ The example directory and each environment can live anywhere. The Policy reads t
 - `$XVLA_ROOT/X-VLA`: a checkout of the upstream open-source repository [2toINF/X-VLA](https://github.com/2toINF/X-VLA)
 - `$XVLA_ROOT/checkpoints/{calvin,libero,robotwin}`: the `X-VLA-Calvin-ABC_D`,
   `X-VLA-Libero`, and `X-VLA-RoboTwin2` weights downloaded from Hugging Face
-- A Python environment (called `xvla` below): python 3.10 + torch 2.1.2 cu121 + transformers 4.51.3 + X-VLA
+- A Python environment (called `xvla` below): python 3.11 + torch 2.1.2 cu121 + transformers 4.51.3 + X-VLA
   requirements + `sapien==3.0.0b1` + `mplib==0.2.1`, with `roboscope-kit` installed
 
 The Policy loads weights only from `$XVLA_ROOT/checkpoints/<benchmark>` and ignores `SessionContext.checkpoint_path`;
@@ -53,14 +53,14 @@ Build each benchmark's simulation environment with `benchmarks/<benchmark>/build
 so before running, set `ROBOTWIN_RUNTIME_ROOT` to the RoboTwin checkout in that install (the directory that
 `runtime.benchmark_root` points to in its `benchmark-manifest.json`).
 
-## Policy Process Contract
+## Policy process contract
 
 [`roboscope-policy.json`](roboscope-policy.json) (schema_version 2) tells the runtime how to start the Policy.
 Before use, replace its `/path/to/...` placeholder paths with local paths: `command[0]` is the absolute path to the `xvla` environment's Python,
 `command[1]` is the absolute path to `xvla_demo_policy.py`, and `cwd` is an existing absolute directory (the X-VLA checkout here).
 The runtime checks these paths before every evaluation.
 
-## Running Evaluations
+## Running evaluations
 
 Use a new or empty `--output-dir` for each quick test, self-test, or evaluation. Only directories
 containing `errors.jsonl` alone can be retried in place. Existing run artifacts are preserved, not resumed.
@@ -94,7 +94,7 @@ calvin and libero_plus work the same way (libero_plus uses `checkpoints/libero`)
 `--concurrency K --replicas G` pins K/g, otherwise Autotune selects them. Results are written to `--output-dir` (`result.json`,
 `progress.json`, `events.jsonl`, `errors.jsonl`, `autotune/selection.json`, and so on).
 
-## Adaptation Notes (2026-08-15, strict port of the community recipe, no tuning)
+## Adaptation notes (2026-08-15, strict port of the community recipe, no tuning)
 
 - **libero / libero_plus**: matches libero_client.py verbatim: absolute EE actions
   `[pos3, axis-angle3, grip±1]`, 30-step chunks, proprio tracking (real state on the first frame → target at chunk end),
@@ -122,7 +122,7 @@ calvin and libero_plus work the same way (libero_plus uses `checkpoints/libero`)
   `CuroboPlanner`. StarVLA explicitly declares the qpos contract.
 - robocasa declares no capability (X-VLA has no RoboCasa GR-1 Tabletop weights; see the scope table).
 
-## Real-Run Validation
+## Real-run validation
 
 - `--quick-test` and other preflights are for bounded smoke runs; full suites provide evidence for comparison with research metrics.
 - A full evaluation runs the complete suite defined by the benchmark manifest. `--episodes 1` only reduces the number of episodes per task

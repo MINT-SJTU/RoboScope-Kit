@@ -177,8 +177,11 @@ def install_source(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("install_dir", type=Path)
-    parser.add_argument("--archives-dir", type=Path)
+    parser.add_argument("install_dir", type=Path,
+                        help="directory that receives the verified diffusion_policy and robomimic sources")
+    parser.add_argument("--archives-dir", type=Path,
+                        help="where the source archives are downloaded and reused "
+                             "(default <install_dir>/source-archives)")
     args = parser.parse_args()
     sources = pinned_sources()
     install = args.install_dir.resolve()

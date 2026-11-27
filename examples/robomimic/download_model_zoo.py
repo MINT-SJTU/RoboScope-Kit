@@ -43,7 +43,12 @@ def fetch(url: str, target: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("checkpoint_dir", type=Path)
+    parser.add_argument(
+        "checkpoint_dir",
+        type=Path,
+        help="directory for the checkpoints; created if missing, files already there with the pinned "
+        "SHA-256 are kept, the others are downloaded one at a time",
+    )
     args = parser.parse_args()
     args.checkpoint_dir.mkdir(parents=True, exist_ok=True)
     for checkpoint in CHECKPOINTS:
