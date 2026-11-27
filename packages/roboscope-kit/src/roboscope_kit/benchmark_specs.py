@@ -117,6 +117,7 @@ class LiberoBenchmarkDefinition(BenchmarkDefinition):
             "LIBERO 6-DoF end-effector delta (libero.delta-eef-v1) or absolute target position and "
             "axis-angle (libero.absolute-eef-v1), and gripper command.",
             7,
+            additional_dtypes=("float64",),
         )
 
 

@@ -27,8 +27,9 @@ revision `c8f03f48af692657d3060c19588038c7220e9af9`:
 - The prompt uses the lowercase task instruction. Actions use suite-specific
   unnormalization, falling back to `<suite>_no_noops` when the suite key is absent,
   and the upstream gripper binarization/sign conversion.
-- Each call produces one 7-dimensional action. The Policy returns it as float32
-  in Kit's `libero.delta-eef-v1` representation; Native retains float64-valued actions.
+- Each call produces one 7-dimensional action. The Policy returns it as float64
+  in Kit's `libero.delta-eef-v1` representation, matching Native's executed action precision.
+  Both the CLI and Policy environments need roboscope-kit 0.8.0b91 or later.
 - The model keeps no recurrent state between requests or episodes. Episode IDs
   track lifecycle bookkeeping when a replica serves multiple Workers.
 
@@ -152,22 +153,46 @@ Outputs stay in the selected run directories and are not repository fixtures.
 
 ## Evaluation
 
-Current implementation: `roboscope-kit 0.8.0b65`, code commit `14d2f50`.
-The experiment report, including the completed Native validation, is recorded
-in documentation commit `84fcc95`.
+### Float64 action-precision validation (K/g=1/1)
 
-Completed measurements below used Kit `da280f0` on an RTX 4090 at K/g=2/2 and
-the earlier serial Native reference with upstream OpenVLA `c8f03f4`; each suite
-covers ten tasks × states 0–4. Times exclude loading and tuning.
+The current Policy returns `float64` actions with `roboscope-kit 0.8.0b91` or later,
+matching Native's executed precision. The November 26, 2026 comparison used an
+RTX 4090, K/g=1/1, seed 7, and all ten tasks × states 0–4 per suite (50 episodes,
+partial initial-state coverage).
 
-The corrected Native entry point and comparison script at `14d2f50` have been
-validated on all 200 episodes: every Native outcome and step count matches the
-previous reference, and all four comparisons pass. The run used a pre-commit
-snapshot whose script hashes match `14d2f50` exactly; see
-[Native validation](EXPERIMENT_REPORT.md#6-corrected-native-entry-point-validation).
-The performance table retains its original provenance: Kit was not rerun because
-all four checkpoints contain the original suite key, so the new `_no_noops`
-fallback does not change the inference key for these models.
+| Suite | Float64 Kit success | Native success | Kit-only / Native-only success |
+| --- | ---: | ---: | ---: |
+| Spatial | 38/50 | 43/50 | 0 / 5 |
+| Object | 43/50 | 42/50 | 1 / 0 |
+| Goal | 37/50 | 33/50 | 4 / 0 |
+| Long | 27/50 | 28/50 | 4 / 5 |
+| **Total** | **145/200** | **146/200** | **9 / 10** |
+
+Goal uses a fresh Native run; the other suites reuse the validated November 14
+references with identical Native scripts, checkpoint paths and seeds. All four
+comparisons pass coverage checks. There are 19 outcome disagreements, so similar
+total scores do not establish episode or trajectory equivalence.
+
+On Goal, the original float32 Policy reproduces every outcome and step count
+before and after the SDK change (36/50 in both runs). Changing only the patched
+Policy to float64 yields 37/50 and reduces disagreements with Native from five
+to four. Fixed-sequence checks also confirm that the SDK preserves action bytes
+and reproduces direct simulator states for both precisions.
+
+At matching K/g=1/1, the historical float32 Kit scored 150/200 versus 145/200 for
+the new float64 Kit, a 2.5-percentage-point difference. The SDK revisions differ,
+so this is an aggregate comparison, not proof that precision has no effect. See
+the [float64 validation](EXPERIMENT_REPORT.md#7-float64-action-preservation-issue-188)
+for controls, all remaining disagreements and simulator-version/reset-history
+limitations.
+
+### Throughput and configuration benchmark (historical float32, K/g=2/2)
+
+Completed performance measurements below used Kit `da280f0` (`0.8.0b58`, float32
+actions) on an RTX 4090 at K/g=2/2 and the earlier serial Native reference with
+upstream OpenVLA `c8f03f4`; each suite covers ten tasks × states 0–4. Times
+exclude loading and tuning. These measurements were not rerun after the float64
+change and remain the baseline for Kit's concurrency speedup.
 
 | Suite | Native success | Kit 2/2 success | Native eval (min) | Kit eval (min) |
 | --- | ---: | ---: | ---: | ---: |
@@ -177,9 +202,9 @@ fallback does not change the inference key for these models.
 | Long | 28/50 | 30/50 | 64.20 | 57.62 |
 | Total | 146/200 | 151/200 | 144.93 | 123.68 |
 
-The current configuration rerun retains 2/2: 22.71% higher throughput than 1/1,
-with similar success totals across configurations. Autotune selects 2/2 for all
-four suites.
+The configuration study retains 2/2: 22.71% higher throughput than 1/1, with
+similar success totals across configurations. Autotune selects 2/2 for all four
+suites.
 
 The [experiment report](EXPERIMENT_REPORT.md) documents evaluation coverage,
 Native comparisons, performance measurements and diagnostic limitations.
