@@ -24,7 +24,7 @@ profiling has found so far. After every profiling run, add its findings to the b
 ## Running
 
 ```bash
-python -m roboscope_kit.runtime.benchmark --benchmark robodojo --suite arx_x5 \
+roboscope eval robodojo arx_x5 \
   --checkpoint-source <ckpt> --benchmark-manifest <install-dir>/benchmark-manifest.json \
   --policy-config <policy.json> --output-dir <out> \
   --quick-test --profile

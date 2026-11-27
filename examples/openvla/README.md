@@ -81,8 +81,7 @@ from the repository root.
 
    ```bash
    export OPENVLA_SEED=7
-   /sim/openvla-policy/env/bin/python -m roboscope_kit.runtime.benchmark \
-     --benchmark libero --suite libero_spatial \
+   /sim/openvla-policy/env/bin/python -m roboscope_kit eval libero libero_spatial \
      --checkpoint-source /models/openvla/spatial \
      --benchmark-manifest /sim/libero/benchmark-manifest.json \
      --policy-config /absolute/roboscope-policy.json \

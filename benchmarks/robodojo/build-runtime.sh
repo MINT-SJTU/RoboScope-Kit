@@ -162,6 +162,5 @@ fi
 ln -sfn "miniforge/envs/RoboDojo" "${INSTALL_ROOT}/env"
 install -m 0644 "${BUILDER_DIR}/benchmark-manifest.json" "${INSTALL_ROOT}/benchmark-manifest.json"
 rm -rf -- "${INSTALL_ROOT}/self-test"
-"${python}" -m roboscope_kit.runtime.benchmark --benchmark robodojo --self-test \
-  --benchmark-manifest "${INSTALL_ROOT}/benchmark-manifest.json" --output-dir "${INSTALL_ROOT}/self-test"
+"${python}" -m roboscope_kit check robodojo "${INSTALL_ROOT}" --output-dir "${INSTALL_ROOT}/self-test"
 echo "RoboDojo runtime built at ${INSTALL_ROOT}"

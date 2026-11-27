@@ -9,11 +9,10 @@ set -Eeuo pipefail
 #     LIBERO-plus/              sylvestf/LIBERO-plus at SOURCE_REF, with libero/libero/assets
 #                               from the pinned Hugging Face assets.zip
 #     config/config.yaml        LIBERO path config written by the kit
-#     self-test/                output of the kit's --self-test
+#     self-test/                output of the `roboscope check`
 #
 # Usage: build-runtime.sh <install-dir>
-# Then:  python -m roboscope_kit.runtime.benchmark --benchmark libero_plus \
-#          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
+# Then:  roboscope eval libero_plus <suite> --benchmark-manifest <install-dir> ...
 #
 # Requires Linux x86_64, conda or micromamba, git, curl, unzip, network access,
 # room for the 6.4 GB assets.zip and its extracted tree, and KIT_PYTHON (default
@@ -198,7 +197,6 @@ PY
 
 install -m 0644 "${MANIFEST}" "${INSTALL_DIR}/benchmark-manifest.json"
 rm -rf -- "${INSTALL_DIR}/self-test"
-"${KIT_PYTHON}" -m roboscope_kit.runtime.benchmark --benchmark libero_plus --self-test \
-  --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+"${KIT_PYTHON}" -m roboscope_kit check libero_plus "${INSTALL_DIR}" \
   --output-dir "${INSTALL_DIR}/self-test"
 echo "Built LIBERO+ ${SOURCE_REF} in ${INSTALL_DIR}"

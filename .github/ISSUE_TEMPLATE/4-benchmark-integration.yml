@@ -55,7 +55,7 @@ body:
       label: Acceptance
       value: |
         - [ ] All upstream evaluation tasks and variants in scope are inventoried, with pinned versions, complete `benchmark-manifest.json`, protocol, and environment/license gates.
-        - [ ] `benchmarks/<benchmark>/build-runtime.sh <install-dir>` builds the environment from a clean directory, and `--self-test` passes.
+        - [ ] `benchmarks/<benchmark>/build-runtime.sh <install-dir>` builds the environment from a clean directory, and `roboscope check` passes.
         - [ ] Real-policy `--quick-test` and the full evaluation cover every task and claimed profile, with no missing, duplicate, unknown or substituted records.
         - [ ] Each task is compared with the pinned native evaluator under matched inputs, with per-task metrics, repeatability and explained differences.
         - [ ] Exact-head CI passes; durable raw records, logs, commands, configuration and a reproducible performance baseline are linked from the PR.

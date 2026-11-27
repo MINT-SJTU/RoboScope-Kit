@@ -67,8 +67,8 @@ keep.
 4. Evaluate with the benchmark CLI from any Python 3.11+ that has `roboscope-kit` installed:
 
    ```bash
-   CUDA_VISIBLE_DEVICES=0 python -m roboscope_kit.runtime.benchmark \
-       --benchmark rlbench --suite peract_18 --quick-test \
+   CUDA_VISIBLE_DEVICES=0 roboscope eval rlbench peract_18 \
+       --quick-test \
        --checkpoint-source /models/peract \
        --benchmark-manifest /sim/rlbench/benchmark-manifest.json \
        --policy-config /path/to/roboscope-policy.json \

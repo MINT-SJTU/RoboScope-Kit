@@ -3,7 +3,7 @@
 
 """Run the public Kit CLI with ``rollout_trace`` installed in every simulator process.
 
-All arguments go to ``python -m roboscope_kit.runtime.benchmark`` unchanged; set
+All arguments go to ``roboscope`` unchanged, starting with ``eval``; set
 ``ROBOCASA365_TRACE_DIR``. Workers start through ``traced_worker.py``, which
 installs the trace hook before the production worker's ``main()``. Spawned
 parallel slots re-import that file as their main module, so they install it too.
@@ -37,7 +37,7 @@ def main() -> int:
         )
 
     RoboCasa365BenchmarkAdapter.worker_process = traced
-    from roboscope_kit.runtime.benchmark.cli import main as kit_main
+    from roboscope_kit.cli import main as kit_main
 
     return kit_main()
 

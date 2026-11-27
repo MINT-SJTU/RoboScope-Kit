@@ -178,7 +178,7 @@ that run as a new record, so the algorithm is not fitted to the records alone.
 1. Run a search on the host, keeping its output directory. Run it again for repeats.
 
    ```bash
-   python -m roboscope_kit.runtime.benchmark --benchmark <benchmark> --suite <suite> ... --output-dir <run>
+   roboscope eval <benchmark> <suite> ... --output-dir <run>
    ```
 
 2. For configurations no search visits, run them fixed, one output directory each, as many as the budget allows.
@@ -187,7 +187,7 @@ that run as a new record, so the algorithm is not fitted to the records alone.
    median of repeats.
 
    ```bash
-   python -m roboscope_kit.runtime.benchmark --benchmark <benchmark> --suite <suite> ... \
+   roboscope eval <benchmark> <suite> ... \
      --concurrency 16 --replicas 2 --output-dir <sweep-k16-g2>
    ```
 

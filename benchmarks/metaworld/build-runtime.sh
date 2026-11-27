@@ -10,8 +10,7 @@ set -Eeuo pipefail
 #     pip-freeze.txt            what env/ actually contains
 #
 # Usage: build-runtime.sh <install-dir>
-# Then:  python -m roboscope_kit.runtime.benchmark --benchmark metaworld \
-#          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
+# Then:  roboscope eval metaworld <suite> --benchmark-manifest <install-dir> ...
 #
 # The build verifies the frozen MT50(seed=42) train-task digest against the
 # constant the kit's MetaWorld adapter asserts, so an environment whose task
@@ -143,8 +142,7 @@ if [[ -n "${KIT_PYTHON:-}" ]] || python3 -c 'import roboscope_kit' >/dev/null 2>
     exit 6
   }
   rm -rf -- "${INSTALL_DIR}/self-test"
-  "${KIT_PYTHON}" -m roboscope_kit.runtime.benchmark --benchmark metaworld --self-test \
-    --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+  "${KIT_PYTHON}" -m roboscope_kit check metaworld "${INSTALL_DIR}" \
     --output-dir "${INSTALL_DIR}/self-test"
 else
   echo "Skipped the kit self-test: python3 cannot import roboscope_kit; set KIT_PYTHON to run it" >&2

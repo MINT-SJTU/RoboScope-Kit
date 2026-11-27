@@ -15,8 +15,7 @@ set -Eeuo pipefail
 #     seed-generations/<digest>/       one verified generation per suite; used by formal runs
 #
 # Usage: build-runtime.sh [--curobo-commit <sha>] [--assets-source <dataset>] <install-dir>
-# Then:  python -m roboscope_kit.runtime.benchmark --benchmark robotwin \
-#          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
+# Then:  roboscope eval robotwin <suite> --benchmark-manifest <install-dir> ...
 #
 # Environment:
 #   KIT_PYTHON                     Python with roboscope-kit installed (default python3); builds the
@@ -522,6 +521,5 @@ echo "RoboTwin base commit ${BASE_COMMIT} -> runtime commit ${RUNTIME_COMMIT}"
 echo "cuRobo at ${ACTUAL_CUROBO_COMMIT} installed at RoboTwin/envs/curobo"
 
 rm -rf -- "${INSTALL_DIR}/self-test"
-"${KIT_PYTHON}" -m roboscope_kit.runtime.benchmark --benchmark robotwin --self-test \
-  --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+"${KIT_PYTHON}" -m roboscope_kit check robotwin "${INSTALL_DIR}" \
   --output-dir "${INSTALL_DIR}/self-test"

@@ -9,11 +9,10 @@ set -Eeuo pipefail
 #     LIBERO/                   Lifelong-Robot-Learning/LIBERO at SOURCE_REF; bddl_files,
 #                               init_files and assets are part of that checkout
 #     config/config.yaml        LIBERO path config written by the kit
-#     self-test/                output of the kit's --self-test
+#     self-test/                output of the `roboscope check`
 #
 # Usage: build-runtime.sh <install-dir>
-# Then:  python -m roboscope_kit.runtime.benchmark --benchmark libero \
-#          --benchmark-manifest <install-dir>/benchmark-manifest.json ...
+# Then:  roboscope eval libero <suite> --benchmark-manifest <install-dir> ...
 #
 # Requires Linux x86_64, conda or micromamba, git, network access, and KIT_PYTHON
 # (default python3): a Python 3.11+ that imports roboscope_kit, used to write and
@@ -164,7 +163,6 @@ PY
 
 install -m 0644 "${MANIFEST}" "${INSTALL_DIR}/benchmark-manifest.json"
 rm -rf -- "${INSTALL_DIR}/self-test"
-"${KIT_PYTHON}" -m roboscope_kit.runtime.benchmark --benchmark libero --self-test \
-  --benchmark-manifest "${INSTALL_DIR}/benchmark-manifest.json" \
+"${KIT_PYTHON}" -m roboscope_kit check libero "${INSTALL_DIR}" \
   --output-dir "${INSTALL_DIR}/self-test"
 echo "Built LIBERO ${SOURCE_REF} in ${INSTALL_DIR}"

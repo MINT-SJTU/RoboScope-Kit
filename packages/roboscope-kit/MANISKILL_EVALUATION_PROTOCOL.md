@@ -153,7 +153,7 @@ caches outside it. This binds the declared inputs, not every dependency imported
 environment. Absolute installation paths are not a substitute for content identity. Older
 shards without these identities must be rerun; a merger cannot reconstruct their provenance.
 
-`shard_merge` reads completed records, validates the deterministic WorkItem partition, episode
+`roboscope merge` reads completed records, validates the deterministic WorkItem partition, episode
 index/seed/lane/profile/record identity, actual boolean terminal masks, steps and per-shard
 summaries, then reaggregates them. Its coverage is `complete` only after those checks pass.
 `shard_reduce` reads only result documents: it rejects inconsistent counts, means, profiles,

@@ -15,9 +15,7 @@ Rate metrics (steps/s, elapsed) are never aggregated across instances; each
 shard keeps its own values as provenance.
 
 Usage:
-    python -m roboscope_kit.runtime.benchmark.shard_merge \
-        --benchmark robotwin --suite demo_clean \
-        --benchmark-manifest /path/to/benchmark-manifest.json \
+    roboscope merge robotwin demo_clean \
         --shard-dir /runs/shard-0 --shard-dir /runs/shard-1 \
         --output-dir /runs/merged
 """
@@ -369,6 +367,3 @@ def _shard_summary(
         summary["resources"] = shard_result["resources"]
     return summary
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())

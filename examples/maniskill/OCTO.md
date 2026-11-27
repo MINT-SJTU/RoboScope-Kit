@@ -18,8 +18,7 @@ Set the absolute interpreter and repository paths in [octo-policy.json](octo-pol
 select `bridge_rgb_v1` with the simulator runtime's manifest.
 
 ```bash
-/path/to/simulator/env/bin/python -m roboscope_kit.runtime.benchmark \
-  --benchmark maniskill --suite bridge_rgb_v1 \
+/path/to/simulator/env/bin/python -m roboscope_kit eval maniskill bridge_rgb_v1 \
   --benchmark-manifest /path/to/simulator/benchmark-manifest.json \
   --checkpoint-source /path/to/octo-model --policy-config /path/to/octo-policy.json \
   --quick-test --output-dir /path/to/results/octo-quick

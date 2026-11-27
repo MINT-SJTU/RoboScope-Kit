@@ -9,7 +9,7 @@ postprocessing.
 the simulator workers. Python 3.8–3.10 are unsupported. See the
 [Python support policy](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/packages/roboscope-kit/README.md#python-support).
 
-Status: code candidate, build-verified on Linux x86_64 (clean build, `--self-test`, Quick Test, full
+Status: code candidate, build-verified on Linux x86_64 (clean build, `roboscope check`, Quick Test, full
 evaluation, and native comparison in section 9). Not merged or released until the version that contains it
 (`0.8.0b26` or later) is on PyPI.
 
@@ -82,7 +82,7 @@ assets are the immutable files of the pinned runtime. Before serialization it re
 global `mj_saveLastXML` context when necessary. The build replaces the patched file atomically to avoid changing other runtimes
 that share uv's hard-linked installation cache.
 Workers import the kit from its source tree through `PYTHONPATH`, so `roboscope-kit` is not installed into
-this environment. `--self-test` regenerates the Lift initial states through the worker's code and checks
+this environment. `roboscope check` regenerates the Lift initial states through the worker's code and checks
 their digest.
 
 **Why not the original stack.** The robomimic v0.1 model zoo was trained with robomimic v0.1 on the
@@ -108,8 +108,8 @@ environment and does not replay demonstrations.
 Run an evaluation with the kit installed in any supported Python:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark robomimic --suite ph_low_dim --checkpoint-source /models/robomimic-zoo \
+roboscope eval robomimic ph_low_dim \
+    --checkpoint-source /models/robomimic-zoo \
     --benchmark-manifest <install-dir>/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json \
     --output-dir /runs/robomimic-ph-low-dim
@@ -213,7 +213,7 @@ not formal. Sharded runs sum the per-task rows.
 
 1. Build the runtime with `build-runtime.sh` in a fresh directory; it verifies versions and all initial-state
    digests.
-2. `--self-test --benchmark-manifest <install-dir>/benchmark-manifest.json`.
+2. `roboscope check <benchmark> <install-dir>`.
 3. `--quick-test` with the real Policy (Lift, seed 0).
 4. The full `ph_low_dim` evaluation.
 5. `examples/robomimic/compare_native.py` against upstream `run_trained_agent.py` with the same checkpoints,
@@ -230,7 +230,7 @@ Python. Workers do not use the GPU.
 ### Build, self-test, and Quick Test
 
 - `build-runtime.sh` into two fresh directories: both builds verified the versions, commits, and all five
-  initial-state digests, ran `--self-test`, and produced identical `pip-freeze.txt` files. The second build
+  initial-state digests, ran `roboscope check`, and produced identical `pip-freeze.txt` files. The second build
   (uv cache warm, so package downloads excluded) took 266 s: 32 s to install CPython, 3 s to install the
   73 locked packages, about 3 minutes to regenerate the 250 initial states.
 - `--quick-test`: Lift seed 0 succeeded in 59 steps; upstream `run_trained_agent.py --seed 0 --n_rollouts 1`
@@ -384,12 +384,12 @@ commands, with `CUDA_VISIBLE_DEVICES=0`:
 ```bash
 benchmarks/robomimic/build-runtime.sh /sim/robomimic
 python examples/robomimic/download_model_zoo.py /models/robomimic-zoo
-python -m roboscope_kit.runtime.benchmark --benchmark robomimic --self-test \
-    --benchmark-manifest /sim/robomimic/benchmark-manifest.json --output-dir /runs/robomimic-self-test
-python -m roboscope_kit.runtime.benchmark --benchmark robomimic --suite ph_low_dim --quick-test \
+roboscope check robomimic /sim/robomimic/benchmark-manifest.json \
+    --output-dir /runs/robomimic-self-test
+roboscope eval robomimic ph_low_dim --quick-test \
     --checkpoint-source /models/robomimic-zoo --benchmark-manifest /sim/robomimic/benchmark-manifest.json \
     --policy-config roboscope-policy.json --output-dir /runs/robomimic-quick
-python -m roboscope_kit.runtime.benchmark --benchmark robomimic --suite ph_low_dim \
+roboscope eval robomimic ph_low_dim \
     --concurrency 16 --replicas 1 \
     --checkpoint-source /models/robomimic-zoo --benchmark-manifest /sim/robomimic/benchmark-manifest.json \
     --policy-config roboscope-policy.json --output-dir /runs/robomimic-full

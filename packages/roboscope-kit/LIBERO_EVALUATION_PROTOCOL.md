@@ -42,7 +42,7 @@ The LIBERO simulator is not a dependency of `roboscope-kit`. Build it with
    in the LIBERO interpreter as a worker does, and checks both resolve to the install;
 4. copies
    [`benchmark-manifest.json`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/libero/benchmark-manifest.json)
-   into `<install-dir>` and runs the kit's `--self-test` against it.
+   into `<install-dir>` and runs `roboscope check` against it.
 
 The kit side of steps 3 and 4 runs in `KIT_PYTHON` (default `python3`), which must import `roboscope_kit`
 from a source tree, as described below. Every `runtime` path in the manifest is relative to the manifest
@@ -67,8 +67,8 @@ tree's `src`, or, for a pip install, a directory that links just the package, so
 Run an evaluation from that kit, in any supported Python:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark libero --suite libero_10 --checkpoint-source /models/my-checkpoint \
+roboscope eval libero libero_10 \
+    --checkpoint-source /models/my-checkpoint \
     --benchmark-manifest <install-dir>/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json \
     --output-dir /runs/libero_10
@@ -298,7 +298,7 @@ Every file is written under `--output-dir`:
 | `autotune/policy-pool/` | Policy replica logs of an autotuned run; the same replicas serve the probes and the scored pass |
 | `autotune/candidate-k<K>-g<G>/` | Each probe's own manifest, result, events, worker logs, and queue |
 | `video/` | One MP4 per episode, `task-<TT>-episode-<EE>-<success\|failure>.mp4`, when the manifest sets `save_videos: true`; never written by a quick test |
-| `self-test.json` | The runtime paths `--self-test` checked |
+| `self-test.json` | The runtime paths `roboscope check` checked |
 
 ## 8. Error contract
 
@@ -321,8 +321,8 @@ scheduler logs outside the output directory. The examples below allocate a fresh
 
 ```bash
 SELF_TEST_OUTPUT=$(mktemp -d "${TMPDIR:-/tmp}/libero-self-test.XXXXXX")
-python -m roboscope_kit.runtime.benchmark --benchmark libero --self-test \
-    --benchmark-manifest <install-dir>/benchmark-manifest.json --output-dir "$SELF_TEST_OUTPUT"
+roboscope check libero <install-dir>/benchmark-manifest.json \
+    --output-dir "$SELF_TEST_OUTPUT"
 ```
 
 This needs no checkpoint, Policy, or GPU. It checks that the manifest supports LIBERO and that its
@@ -333,7 +333,7 @@ it as its last step.
 
 ```bash
 QUICK_TEST_OUTPUT=$(mktemp -d "${TMPDIR:-/tmp}/libero-quick-test.XXXXXX")
-python -m roboscope_kit.runtime.benchmark --benchmark libero --suite <suite> --quick-test \
+roboscope eval libero <suite> --quick-test \
     --checkpoint-source <checkpoint> --benchmark-manifest <install-dir>/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json --output-dir "$QUICK_TEST_OUTPUT"
 ```
@@ -401,14 +401,14 @@ pinned commit only, downloads the 320 task files from the pinned dataset revisio
 environment, and then, besides the import checks of section 1, loads every supported suite from the
 LIBERO-Pro registry and checks it has 10 tasks, a BDDL file per task, and 50 initial states per task.
 `LIBERO_PRO_URL` and `LIBERO_PRO_FILES_URL` select mirrors; the commit and checksums still apply. The
-manifest layout matches section 1 with `benchmark_root` set to `LIBERO-PRO`. `--self-test` additionally
+manifest layout matches section 1 with `benchmark_root` set to `LIBERO-PRO`. `roboscope check` additionally
 checks that each suite has its 10 BDDL and 10 initial-state files.
 
 Evaluate one suite per run, for example with the StarVLA demo snapshot:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark libero_pro --suite libero_goal_task --checkpoint-source /models/starvla-libero \
+roboscope eval libero_pro libero_goal_task \
+    --checkpoint-source /models/starvla-libero \
     --benchmark-manifest <install-dir>/benchmark-manifest.json \
     --policy-config /path/to/RoboScope-Kit/examples/starvla/roboscope-policy.json \
     --output-dir /runs/libero_pro/libero_goal_task

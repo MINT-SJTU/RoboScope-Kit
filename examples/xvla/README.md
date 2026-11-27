@@ -70,8 +70,7 @@ Run the benchmark CLI from a Python that has `roboscope-kit` installed, for exam
 
 ```bash
 export XVLA_ROOT=/path/to/RoboScope-Kit/examples/xvla   # defaults to this directory; can be omitted
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark libero --suite libero_10 \
+roboscope eval libero libero_10 \
     --checkpoint-source "$XVLA_ROOT/checkpoints/libero" \
     --benchmark-manifest /path/to/libero-install/benchmark-manifest.json \
     --policy-config "$XVLA_ROOT/roboscope-policy.json" \
@@ -82,8 +81,7 @@ RoboTwin additionally sets `ROBOTWIN_RUNTIME_ROOT`:
 
 ```bash
 export ROBOTWIN_RUNTIME_ROOT=/path/to/robotwin-install/RoboTwin
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark robotwin --suite demo_clean \
+roboscope eval robotwin demo_clean \
     --checkpoint-source "$XVLA_ROOT/checkpoints/robotwin" \
     --benchmark-manifest /path/to/robotwin-install/benchmark-manifest.json \
     --policy-config "$XVLA_ROOT/roboscope-policy.json" \

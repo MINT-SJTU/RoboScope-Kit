@@ -134,14 +134,14 @@ processes, by default half the CPUs and at most 6, with the per-episode results 
 [`benchmark-manifest.json`](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/rlbench/benchmark-manifest.json)
 into `<install-dir>`. Its runtime paths (`python`, `coppeliasim`, `test_set`, `xvfb`) are relative to the
 manifest. Workers import the kit from its source tree through `PYTHONPATH`, so `roboscope-kit` is not
-installed into this environment. `--self-test` re-checks the `open_drawer` digest and renders its first
+installed into this environment. `roboscope check` re-checks the `open_drawer` digest and renders its first
 test episode.
 
 Run an evaluation with the kit installed in any supported Python:
 
 ```bash
-python -m roboscope_kit.runtime.benchmark \
-    --benchmark rlbench --suite peract_18 --checkpoint-source /models/peract \
+roboscope eval rlbench peract_18 \
+    --checkpoint-source /models/peract \
     --benchmark-manifest <install-dir>/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json \
     --output-dir /runs/rlbench-peract-18
@@ -382,7 +382,7 @@ and are not comparable with PerAct's numbers.
 
 1. Build the runtime with `build-runtime.sh` in a fresh directory; it verifies versions, the test split's
    digests, a rendered reset, and every test episode's initial scene against the frozen list.
-2. `--self-test --benchmark-manifest <install-dir>/benchmark-manifest.json`.
+2. `roboscope check <benchmark> <install-dir>`.
 3. `--quick-test` with the real Policy (`open_drawer`, test episode 0).
 4. The full `peract_18` evaluation.
 5. `examples/peract/run_native.py` (PerAct's own `eval.py` on the same runtime, checkpoint, and test
@@ -458,12 +458,12 @@ Build and run on a suitable authorized Linux machine. `--accept-licenses` accept
 XVFB=/path/to/Xvfb KIT_PYTHON=/path/to/kit/python \
     benchmarks/rlbench/build-runtime.sh --accept-licenses /sim/rlbench
 python examples/peract/download_assets.py /models/peract
-python -m roboscope_kit.runtime.benchmark --benchmark rlbench --self-test \
-    --benchmark-manifest /sim/rlbench/benchmark-manifest.json --output-dir /runs/rlbench-self-test
-python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 --quick-test \
+roboscope check rlbench /sim/rlbench/benchmark-manifest.json \
+    --output-dir /runs/rlbench-self-test
+roboscope eval rlbench peract_18 --quick-test \
     --checkpoint-source /models/peract --benchmark-manifest /sim/rlbench/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json --output-dir /runs/rlbench-quick
-python -m roboscope_kit.runtime.benchmark --benchmark rlbench --suite peract_18 \
+roboscope eval rlbench peract_18 \
     --concurrency 1 --replicas 1 --checkpoint-source /models/peract \
     --benchmark-manifest /sim/rlbench/benchmark-manifest.json \
     --policy-config /path/to/roboscope-policy.json --output-dir /runs/rlbench-full

@@ -36,11 +36,11 @@ body:
       label: Where it fails
       options:
         - "build-runtime.sh (simulator environment build)"
-        - "--self-test"
+        - "roboscope check"
         - "--quick-test"
         - Autotune (K/g search)
         - Full evaluation
-        - Cross-instance sharding / shard_merge
+        - Cross-instance sharding / roboscope merge
         - Policy API (load / act / reset)
         - Other
     validations:
@@ -59,8 +59,8 @@ body:
       description: The exact command, including `--suite`, `--concurrency`/`--replicas` or `--autotune-strategy`, and any environment variables you set.
       render: bash
       placeholder: |
-        python -m roboscope_kit.runtime.benchmark \
-            --benchmark libero --suite libero_10 --checkpoint-source /models/my-checkpoint \
+        roboscope eval libero libero_10 \
+            --checkpoint-source /models/my-checkpoint \
             --benchmark-manifest /sim/libero/benchmark-manifest.json \
             --policy-config /path/to/roboscope-policy.json \
             --output-dir /runs/libero_10
@@ -118,6 +118,6 @@ body:
     attributes:
       label: Checks
       options:
-        - label: "`--self-test --benchmark-manifest <install-dir>/benchmark-manifest.json` passes for this environment (or the failure is in the build itself)."
+        - label: "`roboscope check <benchmark> <install-dir>` passes for this environment (or the failure is in the build itself)."
         - label: I used a new or empty `--output-dir` for this run.
         - label: I searched existing issues for this failure.

@@ -78,8 +78,7 @@ authors. The paths below are placeholders.
    checkout, which contains XPolicyLab:
 
    ```bash
-   /sim/robodojo/env/bin/python -m roboscope_kit.runtime.benchmark \
-       --benchmark robodojo --suite arx_x5 \
+   /sim/robodojo/env/bin/python -m roboscope_kit eval robodojo arx_x5 \
        --checkpoint-source /models/simate-beta-robodojo-eval \
        --benchmark-manifest /sim/robodojo/benchmark-manifest.json \
        --policy-config /path/to/roboscope-policy.json \

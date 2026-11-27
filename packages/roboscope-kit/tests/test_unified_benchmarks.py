@@ -2151,7 +2151,7 @@ def test_metaworld_cameras_resolve_from_the_policy_contract(tmp_path: Path) -> N
 
 
 def test_shard_merge_uses_the_camera_config_every_metaworld_shard_recorded(tmp_path: Path) -> None:
-    from roboscope_kit.runtime.benchmark.shard_merge import _shard_evaluation_config
+    from roboscope_kit.runtime.benchmark.merge import _shard_evaluation_config
     from roboscope_kit.runtime.benchmarks.metaworld.config import default_evaluation_config
 
     shards = [tmp_path / "shard-0", tmp_path / "shard-1"]

@@ -18,7 +18,7 @@ Throughput work follows in its own `perf(<benchmark>)` issue once the integratio
    states, time limits, success and termination rules, aggregation) and link the upstream source for each
    setting. Pick a real policy with a public checkpoint for every task.
 3. **Build the environment** with `benchmarks/<benchmark>/build-runtime.sh <install-dir>` from an empty
-   directory, keeping every pin and source patch in the script or its pin files. Make `--self-test`
+   directory, keeping every pin and source patch in the script or its pin files. Make `roboscope check`
    create one environment, reset it and render a frame.
 4. **Write the adapter, worker and factory** under
    `packages/roboscope-kit/src/roboscope_kit/runtime/benchmarks/<benchmark>/`, and register the benchmark
