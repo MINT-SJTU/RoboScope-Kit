@@ -339,12 +339,13 @@ def main() -> int:
     parser.add_argument(
         "--write-videos",
         action="store_true",
-        help="keep SimplerEnv episode videos and per-episode action plots (skipped by default)",
+        help="write SimplerEnv episode videos and per-episode action plots (skipped by default)",
     )
     parser.add_argument(
         "--plan-only",
         action="store_true",
-        help="write plan.jsonl and run-identity.json, print the invocation count and exit without running",
+        help="write plan.jsonl and run-identity.json, print the invocation count and exit without running; "
+        "still needs a valid --runtime and --checkpoint-source",
     )
     parser.add_argument(
         "--invocation", type=int, action="append", help="run only these plan indexes (repeatable)"
