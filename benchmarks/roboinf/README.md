@@ -54,7 +54,7 @@ Round five repeats round one from scratch on the Kit and released native
 (`af9d8d5`) paths. The 160 rollouts are a separate workload from the historical
 861-case comparison below. Approval of the sample size is not a test result.
 
-The GR00T N1.7 C2C 30K SFT checkpoint (training batch size 64) was
+The [GR00T N1.7 C2C 30K SFT checkpoint](https://huggingface.co/JGuo666/GR00T-N1.7-RoboInF-C2C-30K/tree/8ef7a7426ebdf97c4b1e732a67a9e26e0677fbcd) (training batch size 64) was
 evaluated with `--eval-mode strict --replicas 8 --concurrency 24` at Kit
 commit `1dfce0b`. The comparison uses the historical native run, not a
 new estimate of native repeatability. Counts in the last two columns
@@ -75,3 +75,9 @@ were identical on the native and Kit paths.
 All 861 paired outcomes matched for both metrics. The official eight-task
 macro averages were TR 20.4666% and JR 6.1970% on both paths. This comparison
 does not establish throughput, other profiles, or full benchmark acceptance.
+
+The [paired per-case records](https://github.com/SJTU-DeepVisionLab/RoboInF/tree/758a373/reports/groot-clear-861)
+contain the historical internal native judgments and the Kit judgments with
+SHA-256 hashes of the executed prediction files. These are not results for the
+five review rounds. The EEF path and pi_05, OpenWAM and LingBot-VA profiles are
+partial integrations without paired real-policy validation.
