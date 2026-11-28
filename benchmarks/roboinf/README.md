@@ -62,3 +62,8 @@ were identical on the native and Kit paths.
 All 861 paired outcomes matched for both metrics. The official eight-task
 macro averages were TR 20.4666% and JR 6.1970% on both paths. This comparison
 does not establish throughput, other profiles, or full benchmark acceptance.
+
+Our experiments use the same benchmarking settings. Because Kit reproduced
+both native judgments on every clear case, we expect it to reproduce the
+native results for each experiment under those same settings. To limit
+evaluation cost, we tested this directly only for the clear run reported above.
