@@ -2,6 +2,11 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b94 - 2026-11-28
+
+- Add RoboInF v1.0.0 test and test_random, joint/EEF prediction exports, an authorized evaluator interface,
+  and policy examples for pi_05, OpenWAM, GR00T and LingBot-VA.
+
 ## 0.8.0b93 - 2026-11-27
 
 - Describe the options of the RoboCasa365 Diffusion Policy example scripts in `--help`. `compare_native.py` and

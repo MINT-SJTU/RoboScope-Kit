@@ -11,6 +11,10 @@ from .factories import BenchmarkFactory
 
 
 def benchmark_factory(name: BenchmarkName) -> BenchmarkFactory:
+    if name is BenchmarkName.ROBOINF:
+        from roboscope_kit.runtime.benchmarks.roboinf.factory import Factory
+
+        return Factory()
     if name is BenchmarkName.MANISKILL:
         from roboscope_kit.runtime.benchmarks.maniskill import ManiSkillBenchmarkFactory
 
