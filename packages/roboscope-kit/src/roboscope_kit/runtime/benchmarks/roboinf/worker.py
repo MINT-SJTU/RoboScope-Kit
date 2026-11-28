@@ -29,6 +29,8 @@ def main():
         p.add_argument("--" + name, type=Path, required=True)
     p.add_argument("--worker-id", type=int, required=True)
     p.add_argument("--method", required=True)
+    p.add_argument("--domain", choices=("test", "test_random"), required=True)
+    p.add_argument("--action-spec", required=True)
     args = p.parse_args()
     predictions = args.output / "predictions"
     predictions.mkdir(parents=True, exist_ok=True)
@@ -45,6 +47,10 @@ def main():
                     str(args.sim),
                     "--case",
                     cid,
+                    "--domain",
+                    args.domain,
+                    "--action-spec",
+                    args.action_spec,
                     "--data",
                     str(args.data),
                     "--robotwin",
@@ -60,7 +66,7 @@ def main():
             decision = json.loads(subprocess.check_output([str(args.judge), str(output)]))
             if (
                 decision["case_id"] != cid
-                or decision["domain"] != "test"
+                or decision["domain"] != args.domain
                 or decision["prediction_sha256"] != digest
                 or any(type(decision[k]) is not bool for k in ("task_success", "instruction_success"))
             ):

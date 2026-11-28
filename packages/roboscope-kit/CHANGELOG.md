@@ -4,7 +4,8 @@ Platform-only release notes from earlier versions are omitted; other changes rel
 
 ## 0.8.0b94 - 2026-11-28
 
-- Add the RoboInF v1.0.0 clear-test joint-action adapter, prediction exports, and an authorized evaluator interface.
+- Add RoboInF v1.0.0 test and test_random, joint/EEF prediction exports, an authorized evaluator interface,
+  and policy examples for pi_05, OpenWAM, GR00T and LingBot-VA.
 
 ## 0.8.0b93 - 2026-11-27
 

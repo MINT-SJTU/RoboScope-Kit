@@ -281,9 +281,21 @@ class RoboInFBenchmarkDefinition(RoboTwinBenchmarkDefinition):
     """Fixed native camera views and absolute bimanual joint targets."""
 
     name = BenchmarkName.ROBOINF
-    protocol_version = "roboinf-clear-v1"
-    supported_action_representations = ("roboinf.joint14_absolute",)
+    protocol_version = "roboinf-test-v1"
+    supported_action_representations = ("roboinf.joint14_absolute", "roboinf.eef16_absolute_wxyz")
     default_action_representation = "roboinf.joint14_absolute"
+
+    def features(self, suite: str) -> tuple[FeatureSpec, ...]:
+        return (*super().features(suite), _feature(
+            "state.eef", FeatureKind.STATE, "Measured left/right xyz, wxyz quaternion and gripper.",
+            shape=(16,), required=False,
+        ))
+
+    def action(self, _suite: str) -> ActionSpec:
+        # The native runner checks the negotiated layout, width and quaternion norms.
+        return ActionSpec(
+            "action.robot", "Absolute joint14 or EEF16 wxyz targets.", additional_dtypes=("float64",)
+        )
 
 
 class RoboDojoBenchmarkDefinition(BenchmarkDefinition):

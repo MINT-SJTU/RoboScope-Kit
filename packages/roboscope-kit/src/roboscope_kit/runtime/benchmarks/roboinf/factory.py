@@ -21,9 +21,10 @@ def cases(manifest):
 
 
 class Adapter:
-    def __init__(self, manifest, rows):
+    def __init__(self, manifest, rows, suite):
         self.manifest = manifest
         self.rows = rows
+        self.suite = suite
 
     def work_items(self):
         return [WorkItem(i, r["case_id"], r["task"], {}, 1) for i, r in enumerate(self.rows)]
@@ -32,10 +33,9 @@ class Adapter:
         return {
             "adapter": type(self).__name__,
             "benchmark": "roboinf",
-            "suite": "test",
-            "protocol": "roboinf-clear-v1",
+            "suite": self.suite,
+            "protocol": "roboinf-test-v1",
             "formal": len(self.rows) == 861,
-            "action_representation": "roboinf.joint14_absolute",
         }
 
     def worker_process(self, context):
@@ -54,6 +54,8 @@ class Adapter:
             "output": context.output_dir,
             "queue-dir": context.queue_dir,
             "method": os.environ["ROBOSCOPE_ROBOINF_METHOD"],
+            "domain": self.suite,
+            "action-spec": context.execution_contract.action_representation.removeprefix("roboinf."),
             "judge": judge,
         }
         return ProcessSpec(
@@ -80,7 +82,7 @@ class Adapter:
                 if (
                     expected.get(r.record_id) != task
                     or r.record_id in seen
-                    or r.metadata["domain"] != "test"
+                    or r.metadata["domain"] != self.suite
                     or r.metadata["case_id"] != r.record_id
                     or type(r.success) is not bool
                     or r.success != r.metadata["task_success"]
@@ -105,8 +107,8 @@ class Adapter:
 class Factory:
     @staticmethod
     def validate_suite(suite):
-        if suite != "test":
-            raise ValueError("Only RoboInF clear test is supported")
+        if suite not in ("test", "test_random"):
+            raise ValueError("Expected test or test_random")
 
     def create(self, request, manifest):
         self.validate_suite(request.suite)
@@ -116,11 +118,11 @@ class Factory:
             if not 1 <= n <= len(rows):
                 raise ValueError("Invalid case limit")
             rows = rows[:n]
-        return Adapter(manifest, rows)
+        return Adapter(manifest, rows, request.suite)
 
     def create_probe(self, request, manifest, concurrency):
         self.validate_suite(request.suite)
-        return Adapter(manifest, cases(manifest)[:concurrency])
+        return Adapter(manifest, cases(manifest)[:concurrency], request.suite)
 
     def self_test(self, manifest, output_dir):
         row = cases(manifest)[0]
@@ -135,7 +137,13 @@ class Factory:
             "--robotwin",
             str(manifest.runtime_path("robotwin")),
         ]
-        subprocess.run(
-            args, check=True, env={**os.environ, "PYTHONPATH": str(manifest.runtime_path("source"))}
-        )
-        return {"benchmark": "roboinf", "reset_and_render": row["case_id"]}
+        for domain in ("test", "test_random"):
+            subprocess.run(
+                [*args, "--domain", domain],
+                check=True,
+                env={**os.environ, "PYTHONPATH": str(manifest.runtime_path("source"))},
+            )
+        return {
+            "benchmark": "roboinf",
+            "reset_and_render": {d: row["case_id"] for d in ("test", "test_random")},
+        }

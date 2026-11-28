@@ -1,8 +1,10 @@
-# RoboInF clear test
+# RoboInF test and test_random
 
-This integration covers only the `test` domain and `joint14_absolute` action
-space of [RoboInF](https://github.com/SJTU-DeepVisionLab/RoboInF).
-It does not cover val, randomized appearance, EEF actions or training.
+This integration exposes the `test` and `test_random` domains of
+[RoboInF](https://github.com/SJTU-DeepVisionLab/RoboInF), with `joint14_absolute`
+and `eef16_absolute_wxyz` actions. Both domains use the same 861 case IDs and
+115 scenes; only `test_random` applies the released per-scene textures and
+lighting. This is not a custom appearance variant. It does not cover val or training.
 RoboInF contributions are CC BY 4.0 and third-party assets retain their
 licenses; obtain RoboTwin assets separately. Only the public evaluation
 tables are downloaded, not demonstrations or judgments.
@@ -15,7 +17,7 @@ This assembles the evaluator, **not** the licensed assets or GPU environment.
 Verify the result with `--benchmark roboinf --self-test --benchmark-manifest
 /path/to/new/runtime/benchmark-manifest.json --output-dir /path/to/new/check`.
 
-For policy evaluation use `--benchmark roboinf --suite test`, a Kit policy
+For policy evaluation use `--benchmark roboinf --suite test` or `--suite test_random`, a Kit policy
 config, and the checkpoint used by that policy. Set `ROBOSCOPE_ROBOINF_METHOD`
 to its identifier and `ROBOSCOPE_ROBOINF_JUDGE` to an authorized executable.
 The latter receives one argument (a native prediction JSONL path), and writes
@@ -30,6 +32,11 @@ transmits three native RGB views and the dual-arm joint/gripper state; the
 opaque transport episode identifier has no reference information. The native
 loop executes at most 20 actions per chunk. Official results report TR and JR
 separately, macro-averaged over tasks. Generic Kit success is TR.
+
+[Policy examples](../../examples/roboinf/README.md) cover pi_05, OpenWAM,
+GR00T and LingBot-VA. EEF models receive the measured 16D state including
+both grippers. Use separate output directories and a judge supporting the
+requested domain; clear and randomized cases share IDs, not decisions.
 
 For author-side validation, run `compare_clear.py --cases test-cases.jsonl
 --baseline reference.jsonl --candidate candidate.jsonl`. Use judgments of

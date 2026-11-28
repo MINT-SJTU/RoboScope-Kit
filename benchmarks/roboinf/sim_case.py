@@ -11,7 +11,7 @@ from pathlib import Path
 
 import msgpack
 import numpy as np
-from roboinf_benchmark.contracts import JOINT, ActionChunk, PolicyDescription
+from roboinf_benchmark.contracts import ACTION_SPECS, ActionChunk, PolicyDescription
 from roboinf_benchmark.robotwin import environment_factory
 from roboinf_benchmark.runner import run_case
 from roboinf_benchmark.suite import load_suite
@@ -24,14 +24,16 @@ def main():
     for name in ("output", "method"):
         parser.add_argument("--" + name)
     parser.add_argument("--fd", type=int)
+    parser.add_argument("--domain", choices=("test", "test_random"), required=True)
+    parser.add_argument("--action-spec", choices=ACTION_SPECS, default="joint14_absolute")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
-    scenes, cases = load_suite(args.data, "test", verify_release=True)
+    scenes, cases = load_suite(args.data, args.domain, verify_release=True)
     case = cases[args.case]
     root = Path(args.robotwin).resolve()
     if args.self_test:
         env = environment_factory(root)(
-            scenes[case["task"], case["scene_id"]], case, "test"
+            scenes[case["task"], case["scene_id"]], case, args.domain
         )
         try:
             env.observe().checked_copy()
@@ -43,7 +45,7 @@ def main():
 
         class Policy:
             def describe(self):
-                return PolicyDescription(args.method, JOINT.name)
+                return PolicyDescription(args.method, args.action_spec)
 
             def reset(self, ctx):
                 channel.send_bytes(msgpack.packb(["reset", ctx.instruction, ctx.seed]))
@@ -60,17 +62,18 @@ def main():
                             obs.time_sec,
                             images,
                             obs.joint_state.tolist(),
+                            None if obs.eef_state is None else obs.eef_state.tolist(),
                         ]
                     )
                 )
                 return ActionChunk(
-                    np.asarray(msgpack.unpackb(channel.recv_bytes())), JOINT.name
+                    np.asarray(msgpack.unpackb(channel.recv_bytes())), args.action_spec
                 )
 
         row = run_case(
             case,
             scenes[case["task"], case["scene_id"]],
-            "test",
+            args.domain,
             environment_factory(root),
             Policy(),
             seed=0,

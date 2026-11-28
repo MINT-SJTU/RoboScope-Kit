@@ -1,17 +1,17 @@
 {
   "schema_version": 3,
   "supported_benchmarks": ["roboinf"],
-  "protocol_versions": {"roboinf": "roboinf-clear-v1"},
-  "supported_suites": {"roboinf": ["test"]},
+  "protocol_versions": {"roboinf": "roboinf-test-v1"},
+  "supported_suites": {"roboinf": ["test", "test_random"]},
   "runtime": {"python": "sim-env/bin/python", "source": "RoboInF", "launcher": "sim_case.py",
               "data": "data", "robotwin": "RoboTwin"},
   "defaults": {"episodes": null, "ready_timeout_s": 300},
   "benchmark_protocols": {"roboinf": {
-    "domain": "test", "cases": 861, "base_scenes": 115,
+    "domains": ["test", "test_random"], "cases_per_domain": 861, "base_scenes": 115,
     "task_budgets": {"open_laptop": 700, "place_bottle": 400, "place_fan": 400,
                      "place_via_divider": 400, "press_buttons": 600, "shake_bottle": 700,
                      "stack_blocks": 1200, "turn_switch": 400},
-    "action_spec": "joint14_absolute", "policy_seed": 0,
+    "action_specs": ["joint14_absolute", "eef16_absolute_wxyz"], "policy_seed": 0,
     "max_actions_per_chunk": 20, "endpoint": "min(task budget, native step limit) + 250 passive physics steps",
     "aggregation": "equal-weight task means, separately for TR and JR"
   }}

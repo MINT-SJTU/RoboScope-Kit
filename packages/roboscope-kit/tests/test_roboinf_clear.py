@@ -1,6 +1,32 @@
 import pytest
 from benchmarks.roboinf.compare_clear import compare
 
+from roboscope_kit.runtime.benchmarks.roboinf.factory import Adapter, Factory
+
+
+def test_random_receipts_cannot_be_replaced_by_paired_clear_results():
+    from types import SimpleNamespace
+
+    Factory.validate_suite("test_random")
+    with pytest.raises(ValueError):
+        Factory.validate_suite("val")
+    adapter = Adapter(None, [{"case_id": "paired", "task": "task"}], "test_random")
+    metadata = {
+        "case_id": "paired",
+        "task": "task",
+        "task_success": True,
+        "instruction_success": False,
+        "domain": "test",
+    }
+    results = [
+        SimpleNamespace(records=[SimpleNamespace(record_id="paired", success=True, metadata=metadata)])
+    ]
+    with pytest.raises(ValueError, match="Invalid"):
+        adapter.aggregate(results)
+    metadata["domain"] = "test_random"
+    assert adapter.metadata()["suite"] == "test_random"
+    assert adapter.aggregate(results)["tasks"]["task"] == {"cases": 1, "TR": 1, "JR": 0}
+
 
 def judgments(n):
     return [

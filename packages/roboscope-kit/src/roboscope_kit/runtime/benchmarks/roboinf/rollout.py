@@ -29,7 +29,7 @@ def run_case(client, command, task):
                         active = True
                         channel.send_bytes(b"ok")
                     elif message[0] == "act" and active:
-                        _, step, timestamp, images, joints = message
+                        _, step, timestamp, images, joints, eef = message
                         features = {
                             f"images.{key}": np.frombuffer(data, dtype=np.uint8).reshape(shape)
                             for key, (shape, data) in images.items()
@@ -40,6 +40,8 @@ def run_case(client, command, task):
                                 "language.instruction": instruction,
                             }
                         )
+                        if eef is not None:
+                            features["state.eef"] = np.asarray(eef, dtype=np.float32)
                         chunk = client.act(Observation(handle, step, features, timestamp))
                         channel.send_bytes(msgpack.packb(np.asarray(chunk.actions).tolist()))
                     elif message[0] == "done" and active:
