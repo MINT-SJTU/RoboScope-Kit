@@ -11,9 +11,9 @@ Throughput work follows in its own `perf(<benchmark>)` issue once the integratio
 
 1. **Open the issue.** Use the benchmark-integration template, title it `feat(<benchmark>): ...`, and
    assign yourself while you work on it. If you pause, unassign yourself and note where the work stands.
-   Confirm that the benchmark is open and publicly reproducible (§0 of the acceptance standard): its
-   source, assets, success checker for every suite and a task-trained checkpoint are all public. Get the
-   maintainer's approval for any license or download prerequisite.
+   Confirm that the benchmark is open and publicly reproducible (acceptance §0): its source, assets, task
+   definitions, success checker for every upstream split, and every baseline checkpoint are public. Get
+   the maintainer's approval for any license or download prerequisite.
 2. **Freeze the scope.** Pin the upstream benchmark, simulator, assets and model, each external download
    with its checksum. List every upstream evaluation task and variant in `benchmark-manifest.json`. Write
    the protocol document (robot, observations, actions, cameras, control rate, episodes, seeds or initial

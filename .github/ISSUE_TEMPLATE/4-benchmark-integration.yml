@@ -40,9 +40,10 @@ body:
       label: Environment and licenses
       description: |
         Simulator and rendering requirements (headless, GPU), Python 3.11+ compatibility, and the license
-        of the simulator, assets, and checkpoints. Link the public source of the simulator, assets, success
-        checker for every suite, and baseline checkpoint. Assets without a confirmed redistribution license must
-        not be committed or downloaded automatically by `build-runtime.sh`.
+        of the simulator, assets, and checkpoints. Link the public source of the benchmark and simulator, the
+        assets, the task definitions, the success checker for every upstream split, and every baseline
+        checkpoint (acceptance §0). Commit no third-party asset to the repository. `build-runtime.sh`
+        downloads each asset from its official source after the user accepts any license it requires.
     validations:
       required: true
   - type: textarea
@@ -55,7 +56,7 @@ body:
     attributes:
       label: Acceptance
       value: |
-        - [ ] The source, assets, success checker for every suite and baseline checkpoint are public, so anyone can reproduce every result.
+        - [ ] The benchmark and simulator source, assets, task definitions, success checker for every upstream split, and every baseline checkpoint are public, so anyone can reproduce every reported success metric (acceptance §0).
         - [ ] All upstream evaluation tasks and variants in scope are inventoried, with pinned versions, complete `benchmark-manifest.json`, protocol, and environment/license gates.
         - [ ] `benchmarks/<benchmark>/build-runtime.sh <install-dir>` builds the environment from a clean directory, and `--self-test` passes.
         - [ ] Real-policy `--quick-test` and the full evaluation cover every task and claimed profile, with no missing, duplicate, unknown or substituted records.
