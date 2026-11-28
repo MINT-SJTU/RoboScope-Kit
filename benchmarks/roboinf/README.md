@@ -29,10 +29,12 @@ The latter receives one argument (a native prediction JSONL path), and writes
 one JSON object on stdout containing `case_id`, `domain`, `task_success`,
 `instruction_success`, and `prediction_sha256` binding its decision to the
 exact executed actions. Send diagnostics to stderr. For joint-action Place
-Bottle and Orient Fan predictions, the builder installs the public judge at
+Bottle, Orient Fan, Select Switch, Press Buttons in Order and Sort Blocks in
+Order predictions, the builder installs the public judge at
 `/path/to/new/runtime/replay-judge.sh`. See the upstream
-[physics checker](https://github.com/SJTU-DeepVisionLab/RoboInF/blob/4b3c4f5/docs/physics-checker.md).
-The public judge does not yet score predictions for the other six tasks or
+[physics checker](https://github.com/SJTU-DeepVisionLab/RoboInF/blob/fa162e1/docs/physics-checker.md)
+and [replay receipts and both-domain scene checks](https://github.com/SJTU-DeepVisionLab/RoboInF/tree/fa162e1/reports/joint-replay-smoke).
+The public judge does not yet score predictions for the other three tasks or
 EEF actions; do not use it for a full scored run.
 
 Each task uses the pinned native horizon and 250 passive steps, even on early
