@@ -2,6 +2,27 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b94 - 2026-11-27
+
+- Add Evo-DexBench (partial: 10 of 30 tasks compared with the native evaluator so far; `evo_dexbench`,
+  suites `single_hand` and `bimanual`): the standard `evaluation_v1`
+  protocol of the pinned source (30 tasks, 100 episodes per task over five conditions), run as
+  upstream waves of four CPU environments through the upstream evaluator with a Kit Policy session.
+  Workers raise their open-file limit to the hard limit, since PartNet-heavy scenes exceed the common
+  1,024. The runtime builder pins the source, packages and asset bundle and takes PartNet-Mobility from
+  the user's own download or token. Shard results merge per task and per condition, for any
+  episode count. Native logs share one directory, so a wave retried on any Worker keeps the failed
+  attempt's log as `.failed-N.jsonl`. The protocol notes document the host memory a Worker needs
+  while its scenes load and afterwards.
+- Add the DP-C / DP-T example, which loads one upstream checkpoint per task group through the upstream
+  loader, and `run_kit.py` for per-task native comparisons. With DP-T checkpoints, 100 episodes of
+  `m02_v1` reach SR 0.34 / StageScore 0.553 through the Kit and 0.37 / 0.586 natively (32 and 33 min),
+  and of bimanual `b11_v1` 0.56 / 0.617 and 0.54 / 0.627 (60 and 62 min); sampling is unseeded.
+  Eight more tasks agree within 1.6 standard errors. On a
+  CUDA device the example replays the 100-step DDPM loop as a CUDA graph, bit-identical to eager
+  sampling: a batch of four takes 71 ms instead of 435 ms on an RTX 4090, and with four evaluations
+  sharing the host under CUDA MPS a Kit Worker steps 48 instead of 28 steps/s, with the same results.
+
 ## 0.8.0b93 - 2026-11-27
 
 - Describe the options of the RoboCasa365 Diffusion Policy example scripts in `--help`. `compare_native.py` and

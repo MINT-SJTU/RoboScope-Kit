@@ -47,6 +47,10 @@ def benchmark_factory(name: BenchmarkName) -> BenchmarkFactory:
         from roboscope_kit.runtime.benchmarks.robocasa365 import RoboCasa365BenchmarkFactory
 
         return RoboCasa365BenchmarkFactory()
+    if name is BenchmarkName.EVO_DEXBENCH:
+        from roboscope_kit.runtime.benchmarks.evo_dexbench import EvoDexBenchBenchmarkFactory
+
+        return EvoDexBenchBenchmarkFactory()
     if name is BenchmarkName.METAWORLD:
         from roboscope_kit.runtime.benchmarks.metaworld import MetaworldBenchmarkFactory
 

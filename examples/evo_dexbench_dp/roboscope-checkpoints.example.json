@@ -1,0 +1,19 @@
+{
+  "variant": "dp_t",
+  "execute_steps": 8,
+  "device": "cuda:0",
+  "checkpoints": {
+    "single1_core": "single1_core/inference.ckpt",
+    "single1_gen": "single1_gen/inference.ckpt",
+    "single2_core": "single2_core/inference.ckpt",
+    "single2_gen": "single2_gen/inference.ckpt",
+    "single3_core": "single3_core/dpt_single3_core",
+    "single3_gen": "single3_gen/dpt_single3_gen",
+    "double1_core": "double1_core/latest.ckpt",
+    "double1_gen": "double1_gen/latest.ckpt",
+    "double2_core": "double2_core/latest.ckpt",
+    "double2_gen": "double2_gen/latest.ckpt",
+    "double3_core": "double3_core/epoch_0600.ckpt",
+    "double3_gen": "double3_gen/epoch_0600.ckpt"
+  }
+}

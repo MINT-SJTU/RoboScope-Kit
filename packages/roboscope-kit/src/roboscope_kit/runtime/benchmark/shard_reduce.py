@@ -153,6 +153,12 @@ def _merge_official(benchmark: str, partials: Sequence[Mapping[str, Any]]) -> di
                 "splits": split_results(official["tasks"]),
             })
         return official
+    if benchmark == "evo_dexbench":
+        from roboscope_kit.runtime.benchmarks.evo_dexbench.adapter import (
+            merge_shard_results as merge_evo_dexbench,
+        )
+
+        return merge_evo_dexbench(list(partials))
     if benchmark == "calvin":
         return merge_sequence_lengths(list(partials))
     if benchmark == "metaworld":

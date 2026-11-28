@@ -1,0 +1,72 @@
+{
+  "schema_version": 3,
+  "supported_benchmarks": [
+    "evo_dexbench"
+  ],
+  "protocol_versions": {
+    "evo_dexbench": "evo-dexbench-evaluation-v1"
+  },
+  "supported_suites": {
+    "evo_dexbench": [
+      "single_hand",
+      "bimanual"
+    ]
+  },
+  "runtime": {
+    "python": "env/bin/python",
+    "benchmark_root": "Evo-DexBench",
+    "asset_root": "assets"
+  },
+  "defaults": {
+    "episodes": 100,
+    "client_cpu_threads": 1,
+    "ready_timeout_s": 900,
+    "probe_task_count": 3,
+    "probe_items_per_worker": 2
+  },
+  "benchmark_protocols": {
+    "evo_dexbench": {
+      "evo_dexbench_revision": "818ac28e42e9199f0cbccce8617cb686519d8abf",
+      "native_envs": 4,
+      "sim_freq_hz": 120,
+      "control_freq_hz": 30,
+      "obs_mode": "rgb",
+      "action_bounds_policy": "clip",
+      "observation_steps": 2,
+      "action_representation": "evo-dexbench.semantic-v1",
+      "episodes_per_task": 100,
+      "task_horizons": {
+        "m01_v1": 1500,
+        "m02_v1": 1000,
+        "m03_v1": 2000,
+        "m04_v1": 1000,
+        "m05_v1": 1500,
+        "m06_v1": 2000,
+        "m07_v1": 2000,
+        "m08_v1": 2500,
+        "m09_v1": 2500,
+        "m10_v1": 2500,
+        "m11_v1": 3000,
+        "m12_v1": 3500,
+        "m13_v1": 3000,
+        "m14_v1": 4000,
+        "m15_v1": 4000,
+        "b01_v1": 4000,
+        "b02_v1": 5000,
+        "b03_v1": 4000,
+        "b04_v1": 4000,
+        "b05_v1": 4000,
+        "b06_v1": 3000,
+        "b07_v1": 3000,
+        "b08_v1": 3000,
+        "b09_v1": 3000,
+        "b10_v1": 3000,
+        "b11_v1": 1500,
+        "b12_v1": 2000,
+        "b13_v1": 2000,
+        "b14_v1": 1500,
+        "b15_v1": 2500
+      }
+    }
+  }
+}
