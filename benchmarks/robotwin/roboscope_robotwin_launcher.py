@@ -20,6 +20,8 @@ import yaml
 
 PROTOCOL_VERSION = 1
 HEADER = struct.Struct(">I")
+MSGPACK_MAGIC = b"RSKM"
+MAX_MESSAGE_BYTES = 64 * 1024 * 1024
 TYPE_KEY = "__roboscope_type__"
 ACTIVE_MODELS = set()
 # RoboTwin official qpos ordering applied by the reference model2robotwin_interface.
@@ -99,6 +101,52 @@ def decode(value):
     return {key: decode(item) for key, item in value.items()}
 
 
+def _load_msgpack():
+    """The ``msgpack`` package, or ``None`` when RoboTwin's interpreter does not have it."""
+
+    try:
+        import msgpack
+    except ImportError:
+        return None
+    return msgpack
+
+
+def _msgpack_default(value):
+    if isinstance(value, np.ndarray):
+        if value.dtype.hasobject:
+            raise TypeError("object arrays are not supported")
+        contiguous = np.ascontiguousarray(value)
+        return {
+            TYPE_KEY: "ndarray",
+            "dtype": contiguous.dtype.str,
+            "shape": list(contiguous.shape),
+            "data": memoryview(contiguous.reshape(-1).view(np.uint8)),
+        }
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError(f"cannot serialize {type(value).__name__} over the policy protocol")
+
+
+def _msgpack_object(value):
+    if value.get(TYPE_KEY) != "ndarray":
+        return value
+    data = value.get("data")
+    if not isinstance(data, bytes):
+        raise RuntimeError("Policy array data must be a MessagePack bin value")
+    dtype = np.dtype(value["dtype"])
+    if dtype.hasobject:
+        raise RuntimeError("Policy object arrays are not supported")
+    shape = tuple(int(dimension) for dimension in value["shape"])
+    if any(dimension < 0 for dimension in shape):
+        raise RuntimeError("Policy array dimensions cannot be negative")
+    expected_size = int(np.prod(shape, dtype=np.int64)) * dtype.itemsize
+    if len(data) != expected_size:
+        raise RuntimeError(
+            f"Policy array payload has {len(data)} bytes; shape and dtype require {expected_size}"
+        )
+    return np.frombuffer(data, dtype=dtype).reshape(shape).copy()
+
+
 def _load_profiling():
     """Kit's NVTX helper for ``--profile`` Workers; ``None`` outside a profile run.
 
@@ -122,10 +170,37 @@ PROFILING = _load_profiling()
 
 
 class PolicySocketClient:
+    """Policy socket client for RoboTwin's interpreter, which does not import ``roboscope_kit``.
+
+    Frames follow ``roboscope_kit.protocol``. The client starts on JSON and uses MessagePack (``RSKM``
+    frames, arrays as raw ``bin``) only after the server's ``health`` reply lists it and ``msgpack`` is
+    importable here. ``ROBOSCOPE_POLICY_ENCODING=json`` keeps JSON without asking the server.
+    """
+
     def __init__(self, socket_path):
         self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.connection.settimeout(900)
         self._connect_with_retry(socket_path)
+        self._msgpack = None
+        self.encoding = None
+
+    def _preferred_encoding(self):
+        preferred = os.environ.get("ROBOSCOPE_POLICY_ENCODING") or "msgpack"
+        if preferred not in ("json", "msgpack"):
+            raise ValueError(f"ROBOSCOPE_POLICY_ENCODING must be json or msgpack; got {preferred!r}")
+        return preferred
+
+    def _negotiate(self):
+        if self._preferred_encoding() == "json":
+            return "json"
+        self._msgpack = _load_msgpack()
+        if self._msgpack is None:
+            return "json"
+        result = self._exchange("health", {"encodings": ["msgpack"]}, "json")
+        accepted = result.get("encodings") if isinstance(result, dict) else None
+        if isinstance(accepted, list) and "msgpack" in accepted:
+            return "msgpack"
+        return "json"
 
     def _connect_with_retry(self, socket_path, attempts=200, delay_s=0.25):
         # Several simulator workers share one policy replica. The server's
@@ -148,24 +223,57 @@ class PolicySocketClient:
         return self._request(operation, payload)
 
     def _request(self, operation, payload):
+        if self.encoding is None:
+            self.encoding = self._negotiate()
+        return self._exchange(operation, payload, self.encoding)
+
+    def _exchange(self, operation, payload, encoding):
         request_id = str(uuid.uuid4())
-        message = encode(
-            {
-                "version": PROTOCOL_VERSION,
-                "request_id": request_id,
-                "operation": operation,
-                "payload": payload,
-            }
-        )
-        body = json.dumps(message, separators=(",", ":")).encode("utf-8")
-        self.connection.sendall(HEADER.pack(len(body)) + body)
-        size = HEADER.unpack(self._receive(HEADER.size))[0]
-        response = decode(json.loads(self._receive(size).decode("utf-8")))
+        message = {
+            "version": PROTOCOL_VERSION,
+            "request_id": request_id,
+            "operation": operation,
+            "payload": payload,
+        }
+        if encoding == "msgpack":
+            body = self._msgpack.packb(message, default=_msgpack_default, use_bin_type=True)
+            prefix = MSGPACK_MAGIC
+        else:
+            body = json.dumps(encode(message), separators=(",", ":")).encode("utf-8")
+            prefix = b""
+        if len(body) > MAX_MESSAGE_BYTES:
+            raise RuntimeError(f"Policy request is {len(body)} bytes; maximum is {MAX_MESSAGE_BYTES}")
+        self.connection.sendall(prefix + HEADER.pack(len(body)) + body)
+        response = self._receive_response()
         if response.get("request_id") != request_id:
             raise RuntimeError("Policy response request_id mismatch")
         if not response.get("ok"):
             raise RuntimeError(f"Policy request failed: {response.get('error')}")
         return response.get("result")
+
+    def _receive_response(self):
+        header = self._receive(HEADER.size)
+        is_msgpack = header == MSGPACK_MAGIC
+        if is_msgpack:
+            header = self._receive(HEADER.size)
+        size = HEADER.unpack(header)[0]
+        if size > MAX_MESSAGE_BYTES:
+            raise RuntimeError(f"Policy response declares {size} bytes; maximum is {MAX_MESSAGE_BYTES}")
+        body = self._receive(size)
+        if is_msgpack:
+            if self._msgpack is None:
+                self._msgpack = _load_msgpack()
+            if self._msgpack is None:
+                raise RuntimeError("Policy sent a MessagePack frame but msgpack is not installed")
+            return self._msgpack.unpackb(
+                body,
+                object_hook=_msgpack_object,
+                raw=False,
+                strict_map_key=True,
+                max_bin_len=MAX_MESSAGE_BYTES,
+                max_str_len=MAX_MESSAGE_BYTES,
+            )
+        return decode(json.loads(body.decode("utf-8")))
 
     def _receive(self, size):
         chunks = []

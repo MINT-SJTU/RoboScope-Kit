@@ -2,6 +2,16 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
+## 0.8.0b95 - 2026-11-28
+
+- RoboTwin's standalone `PolicySocketClient` (`benchmarks/robotwin/roboscope_robotwin_launcher.py`) now sends
+  MessagePack (`RSKM`) frames, with `ndarray` values as raw `bin`, after the Policy server's `health` reply
+  lists `msgpack`, and decodes `RSKM` responses. It falls back to JSON plus base64 when the server does not list
+  `msgpack`, when `ROBOSCOPE_POLICY_ENCODING=json` is set (no probe is sent), or when `msgpack` cannot be
+  imported in RoboTwin's interpreter. The launcher still parses as CPython 3.8. Unset
+  `ROBOSCOPE_POLICY_ENCODING` now means negotiated MessagePack for RoboTwin, as the issue proposes; the other
+  benchmarks keep their JSON default (#146).
+
 ## 0.8.0b93 - 2026-11-27
 
 - Describe the options of the RoboCasa365 Diffusion Policy example scripts in `--help`. `compare_native.py` and
