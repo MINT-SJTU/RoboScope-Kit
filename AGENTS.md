@@ -43,6 +43,8 @@ generation digests) without regenerating what depends on them.
 
 Benchmark integrations and new suites follow `packages/roboscope-kit/BENCHMARK_ACCEPTANCE.md`;
 work through them with the `.agents/skills/benchmark-integration` skill.
+Integrate only benchmarks that anyone can reproduce from public materials, including the success checker
+for every upstream split and every baseline checkpoint (acceptance §0).
 Inventory the complete requested upstream task scope and validate every task; label partial work as
 partial and do not claim full acceptance while tasks or native comparisons are missing.
 
