@@ -59,6 +59,8 @@ def compare(cases, baseline, candidate, domain="test"):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--domain", choices=("test", "test_random"), default="test")
+    parser.add_argument("--review-round", type=int, choices=range(1, 6),
+                        help="Compare only the eight frozen cases for this approved round")
     for key in ("cases", "baseline", "candidate"):
         parser.add_argument("--" + key, type=Path, required=True)
     args = parser.parse_args()
@@ -69,6 +71,14 @@ def main():
     ):
         parser.error("Expected the official RoboInF v1.0.0 test-cases.jsonl")
     cases = {row["case_id"]: row["task"] for row in map(json.loads, raw.splitlines())}
+    if args.review_round is not None:
+        plan = json.loads(Path(__file__).with_name("review-sample-v1.json").read_bytes())
+        selected = plan["rounds"][args.review_round - 1]
+        if set(selected) != set(cases.values()) or any(
+            cases.get(cid) != task for task, cid in selected.items()
+        ):
+            parser.error("Review sample does not match the released cases")
+        cases = {cid: task for task, cid in selected.items()}
     report = compare(
         cases,
         *(
@@ -76,6 +86,7 @@ def main():
             for p in (args.baseline, args.candidate)
         ), domain=args.domain,
     )
+    report.update(domain=args.domain, review_round=args.review_round, expected_cases=len(cases))
     print(json.dumps(report, indent=2))
     return 0 if report["passed"] else 1
 
