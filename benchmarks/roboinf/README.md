@@ -38,3 +38,27 @@ Both exports must contain every clear case once. The frozen gates are at most
 2 percentage points absolute macro difference and 5 points for each task,
 for each metric. This compares outcomes; it does not verify model identity
 or replace simulation, executed-action validation or grader receipts.
+
+### Clear test correctness baseline
+
+The GR00T N1.7 C2C 30K SFT checkpoint (training batch size 64) was
+evaluated with `--eval-mode strict --replicas 8 --concurrency 24` at Kit
+commit `1dfce0b`. The comparison uses the historical native run, not a
+new estimate of native repeatability. Counts in the last two columns
+were identical on the native and Kit paths.
+
+| Task | Cases | TR successes | JR successes |
+| --- | ---: | ---: | ---: |
+| open_laptop | 117 | 10 | 9 |
+| place_bottle | 104 | 28 | 28 |
+| place_fan | 104 | 0 | 0 |
+| place_via_divider | 114 | 44 | 16 |
+| press_buttons | 108 | 15 | 0 |
+| shake_bottle | 104 | 31 | 0 |
+| stack_blocks | 108 | 2 | 1 |
+| turn_switch | 102 | 45 | 0 |
+| Total | 861 | 175 | 54 |
+
+All 861 paired outcomes matched for both metrics. The official eight-task
+macro averages were TR 20.4666% and JR 6.1970% on both paths. This comparison
+does not establish throughput, other profiles, or full benchmark acceptance.

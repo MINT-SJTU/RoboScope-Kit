@@ -81,6 +81,9 @@ environment into a directory you choose and copies the benchmark manifest there:
 benchmarks/libero/build-runtime.sh /sim/libero
 ```
 
+The partial [RoboInF clear adapter](https://github.com/MINT-SJTU/RoboScope-Kit/blob/main/benchmarks/roboinf/README.md)
+assembles a runtime around a separately provisioned simulator and assets. Scoring requires an authorized evaluator.
+
 Run the evaluation with the benchmark CLI:
 
 ```bash

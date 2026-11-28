@@ -123,6 +123,9 @@ Evaluation on `demo_clean` (50 tasks × 10 or 100 episodes), matching the offici
 | [robomimic](https://github.com/ARISE-Initiative/robomimic) | `ph_low_dim` | [robomimic protocol](packages/roboscope-kit/ROBOMIMIC_EVALUATION_PROTOCOL.md) |
 | [SimplerEnv](https://github.com/simpler-env/SimplerEnv) | `google_robot_visual_matching`, `google_robot_variant_aggregation`, `widowx_visual_matching` | [SimplerEnv protocol](packages/roboscope-kit/SIMPLER_ENV_EVALUATION_PROTOCOL.md) |
 
+Partial integration: [RoboInF clear test](benchmarks/roboinf/README.md) covers
+861 cases with absolute joint actions. Scoring requires an authorized evaluator.
+
 The simulators, datasets, and assets are not dependencies of the PyPI package; `build-runtime.sh` builds them
 separately. Simulator builds, real episodes, and model loading need Linux x86_64, a GPU, and network access.
 
