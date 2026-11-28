@@ -9,11 +9,16 @@ RoboInF contributions are CC BY 4.0 and third-party assets retain their
 licenses; obtain RoboTwin assets separately. Only the public evaluation
 tables are downloaded, not demonstrations or judgments.
 
-Point `ROBOINF_SIM_ENV` at a provisioned RoboInF-compatible simulator
-environment (NumPy 1.26.4, MPLib 0.2.1, CuRobo, SAPIEN and MessagePack)
-and `ROBOINF_ROBOTWIN_ROOT` at the upstream simulator checkout with assets.
+Set `ROBOINF_ASSETS` to the directory containing the separately provisioned
+RoboTwin assets (including expanded planner configurations). Use Python 3.10
+(`PYTHON310` may select its executable), Linux x86_64 with a CUDA compiler
+compatible with PyTorch, a C++ toolchain and Vulkan drivers.
 Run `benchmarks/roboinf/build-runtime.sh /path/to/new/runtime`.
-This assembles the evaluator, **not** the licensed assets or GPU environment.
+The builder creates a virtualenv in an empty directory, installs simulator
+dependencies, builds the pinned CuRobo source and checks the bundled RoboTwin
+runtime files. `ROBOINF_EVALUATION_DIR` may point at already downloaded public
+evaluation tables; the release hashes are still checked. End-to-end validation
+of the clean builder is pending.
 Verify the result with `--benchmark roboinf --self-test --benchmark-manifest
 /path/to/new/runtime/benchmark-manifest.json --output-dir /path/to/new/check`.
 
