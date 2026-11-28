@@ -24,12 +24,16 @@ Verify the result with `--benchmark roboinf --self-test --benchmark-manifest
 
 For policy evaluation use `--benchmark roboinf --suite test` or `--suite test_random`, a Kit policy
 config, and the checkpoint used by that policy. Set `ROBOSCOPE_ROBOINF_METHOD`
-to its identifier and `ROBOSCOPE_ROBOINF_JUDGE` to an authorized executable.
+to its identifier and `ROBOSCOPE_ROBOINF_JUDGE` to a judge executable.
 The latter receives one argument (a native prediction JSONL path), and writes
 one JSON object on stdout containing `case_id`, `domain`, `task_success`,
 `instruction_success`, and `prediction_sha256` binding its decision to the
-exact executed actions. Send diagnostics to stderr. The public source does
-not distribute the held-out evaluator. Without it a scored run is unavailable.
+exact executed actions. Send diagnostics to stderr. For joint-action Place
+Bottle and Orient Fan predictions, the builder installs the public judge at
+`/path/to/new/runtime/replay-judge.sh`. See the upstream
+[physics checker](https://github.com/SJTU-DeepVisionLab/RoboInF/blob/4b3c4f5/docs/physics-checker.md).
+The public judge does not yet score predictions for the other six tasks or
+EEF actions; do not use it for a full scored run.
 
 Each task uses the pinned native horizon and 250 passive steps, even on early
 success. Reset supplies the instruction at the first observation. The worker

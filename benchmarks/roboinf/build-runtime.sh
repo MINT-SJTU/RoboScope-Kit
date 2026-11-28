@@ -19,7 +19,7 @@ git -C "$root/curobo" checkout --detach d64c4b005459db10c5dd867d8b30a87d5bda9bdb
 "$py" -m pip install --no-build-isolation "$root/curobo"
 mkdir -p "$root/data/evaluation"
 git clone --no-checkout https://github.com/SJTU-DeepVisionLab/RoboInF.git "$root/RoboInF"
-git -C "$root/RoboInF" checkout --detach 842e5cafe8a7389713cf75dec43bf6a463e45337
+git -C "$root/RoboInF" checkout --detach 4b3c4f55028178bbd84b6eee76d5a342422b4192
 cp -R "$root/RoboInF/third_party/robotwin" "$root/RoboTwin"
 ln -s "$assets" "$root/RoboTwin/assets"
 (cd "$root/RoboTwin" && sha256sum -c "$root/RoboInF/roboinf_benchmark/robotwin.sha256")
@@ -34,3 +34,4 @@ for file in test-cases test-scenes; do
 done
 PYTHONPATH="$root/RoboInF" "$root/sim-env/bin/python" -m roboinf_benchmark inspect --domain test --data "$root/data"
 install -m644 "$src"/{sim_case.py,benchmark-manifest.json} "$root"
+install -m755 "$src/replay-judge.sh" "$root"
