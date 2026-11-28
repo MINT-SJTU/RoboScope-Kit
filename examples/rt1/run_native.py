@@ -314,13 +314,39 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--runtime", type=Path, required=True, help="SimplerEnv runtime install dir")
     parser.add_argument("--checkpoint-source", type=Path, required=True, help="download_assets.py output")
-    parser.add_argument("--suite", choices=sorted(SCRIPTS), required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--jobs", type=int, default=1)
-    parser.add_argument("--gpu", default=os.environ.get("CUDA_VISIBLE_DEVICES", "0"))
-    parser.add_argument("--tf-memory-mb", type=int, default=3072)
-    parser.add_argument("--write-videos", action="store_true")
-    parser.add_argument("--plan-only", action="store_true")
+    parser.add_argument("--suite", choices=sorted(SCRIPTS), required=True, help="the SimplerEnv suite to run")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="directory of this one run, identified by run-identity.json; refuses a directory that holds "
+        "a different run, and reruns of the same command reuse finished invocations",
+    )
+    parser.add_argument(
+        "--jobs", type=int, default=1, help="official-script invocations to run at once (default 1)"
+    )
+    parser.add_argument(
+        "--gpu",
+        default=os.environ.get("CUDA_VISIBLE_DEVICES", "0"),
+        help="CUDA_VISIBLE_DEVICES for every invocation (default: the current CUDA_VISIBLE_DEVICES, or 0)",
+    )
+    parser.add_argument(
+        "--tf-memory-mb",
+        type=int,
+        default=3072,
+        help="TensorFlow GPU memory cap in MB, passed as --tf-memory-limit (default 3072)",
+    )
+    parser.add_argument(
+        "--write-videos",
+        action="store_true",
+        help="write SimplerEnv episode videos and per-episode action plots (skipped by default)",
+    )
+    parser.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="write plan.jsonl and run-identity.json, print the invocation count and exit without running; "
+        "still needs a valid --runtime and --checkpoint-source",
+    )
     parser.add_argument(
         "--invocation", type=int, action="append", help="run only these plan indexes (repeatable)"
     )

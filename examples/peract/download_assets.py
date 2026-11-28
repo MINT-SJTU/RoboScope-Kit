@@ -49,7 +49,12 @@ def download(url: str, target: Path, sha256: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("root", type=Path)
+    parser.add_argument(
+        "root",
+        type=Path,
+        help="directory to fill; it becomes the Policy's --checkpoint-source; files already there are not "
+        "downloaded again (the CLIP file only if its SHA-256 matches) and all are verified at the end",
+    )
     args = parser.parse_args()
     root = args.root.resolve()
     if not all((root / pinned.relative_path).is_file() for pinned in CHECKPOINT_FILES):

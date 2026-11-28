@@ -2,9 +2,21 @@
 
 Platform-only release notes from earlier versions are omitted; other changes relevant to the Kit are retained.
 
-## 0.8.0b92 - 2026-11-27
+## 0.8.0b94 - 2026-11-28
 
 - Add the RoboInF v1.0.0 clear-test joint-action adapter, prediction exports, and an authorized evaluator interface.
+
+## 0.8.0b93 - 2026-11-27
+
+- Describe the options of the RoboCasa365 Diffusion Policy example scripts in `--help`. `compare_native.py` and
+  `download_model.py` now import their inference dependencies after parsing the arguments, so `--help` works
+  without the inference environment. `compare_rollouts.py` passes `zip(..., strict=False)` (same behavior) and
+  wraps its long lines for Ruff.
+- Describe the options of the PerAct example's `run_native.py`, `compare_native.py` and `download_assets.py` in
+  `--help`. Option names, defaults and validation are unchanged.
+- Describe the options of the robomimic example's `compare_native.py` and `download_model_zoo.py` in `--help`.
+  Option names, defaults and validation are unchanged.
+- Describe the options of the RT-1-X example's `run_native.py` and `compare_native.py` in `--help`.
 
 ## 0.8.0b91 - 2026-11-27
 

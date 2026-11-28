@@ -57,13 +57,36 @@ from roboscope_kit.runtime.benchmarks.rlbench.tasks import (  # noqa: E402
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--runtime", type=Path, required=True)
-    parser.add_argument("--checkpoint-source", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--runtime",
+        type=Path,
+        required=True,
+        help="RLBench runtime built by benchmarks/rlbench/build-runtime.sh; "
+        "uses its coppeliasim/, src/peract/, peract-test/test/ and bin/Xvfb",
+    )
+    parser.add_argument(
+        "--checkpoint-source",
+        type=Path,
+        required=True,
+        help="directory that download_assets.py filled with the PerAct checkpoint and CLIP RN50; "
+        "verified before the run",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="directory that receives native-episodes.jsonl, run.json and the logdir/; "
+        "stops if native-episodes.jsonl exists, so use a new one for each run",
+    )
     parser.add_argument(
         "--task", action="append", choices=EVALUATION_ORDER, help="default: all 18, in README order"
     )
-    parser.add_argument("--episodes", type=int, default=25)
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        default=25,
+        help="episodes per task, run as test episodes 0..N-1; accepts 1-25 (default: %(default)s)",
+    )
     return parser.parse_args()
 
 

@@ -123,9 +123,21 @@ def common_prefix(left: list[list[float]], right: list[list[float]]) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--kit-run", type=Path, required=True)
-    parser.add_argument("--native", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--kit-run",
+        type=Path,
+        required=True,
+        help="Kit --output-dir of a complete rlbench/peract_18 run",
+    )
+    parser.add_argument(
+        "--native",
+        type=Path,
+        required=True,
+        help="--output directory of run_native.py, containing run.json and native-episodes.jsonl",
+    )
+    parser.add_argument(
+        "--output", type=Path, required=True, help="path of the comparison JSON report file to write"
+    )
     args = parser.parse_args()
     native_run = json.loads((args.native / "run.json").read_text(encoding="utf-8"))
     if (
