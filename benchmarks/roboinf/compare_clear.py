@@ -8,12 +8,12 @@ from fractions import Fraction
 from pathlib import Path
 
 
-def index(rows, cases):
+def index(rows, cases, domain):
     output = {}
     for row in rows:
         key = row["case_id"]
         if (
-            row["domain"] != "test"
+            row["domain"] != domain
             or key not in cases
             or key in output
             or any(
@@ -31,8 +31,8 @@ def index(rows, cases):
     return output
 
 
-def compare(cases, baseline, candidate):
-    a, b = index(baseline, cases), index(candidate, cases)
+def compare(cases, baseline, candidate, domain="test"):
+    a, b = index(baseline, cases, domain), index(candidate, cases, domain)
     groups = defaultdict(list)
     for key, task in cases.items():
         groups[task].append(key)
@@ -50,15 +50,15 @@ def compare(cases, baseline, candidate):
                 "disagreements": sum(a[k][i] != b[k][i] for k in keys),
             }
             differences.append(diff)
-            report["passed"] &= abs(diff) <= 5
+            report["passed"] &= report["tasks"][task][name]["disagreements"] == 0
         macro = sum(differences) / len(differences)
         report["macro"][name] = {"delta_pp": float(macro)}
-        report["passed"] &= abs(macro) <= 2
     return report
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--domain", choices=("test", "test_random"), default="test")
     for key in ("cases", "baseline", "candidate"):
         parser.add_argument("--" + key, type=Path, required=True)
     args = parser.parse_args()
@@ -74,7 +74,7 @@ def main():
         *(
             map(json.loads, p.read_bytes().splitlines())
             for p in (args.baseline, args.candidate)
-        ),
+        ), domain=args.domain,
     )
     print(json.dumps(report, indent=2))
     return 0 if report["passed"] else 1

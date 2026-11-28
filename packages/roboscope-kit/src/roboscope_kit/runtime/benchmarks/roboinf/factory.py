@@ -40,6 +40,9 @@ class Adapter:
 
     def worker_process(self, context):
         judge = os.environ.get("ROBOSCOPE_ROBOINF_JUDGE")
+        method = os.environ.get("ROBOSCOPE_ROBOINF_METHOD", "").strip()
+        if not method:
+            raise ValueError("Set ROBOSCOPE_ROBOINF_METHOD to the policy identifier")
         if not judge or not os.access(judge, os.X_OK):
             raise ValueError("Configure an authorized ROBOSCOPE_ROBOINF_JUDGE executable")
         m = self.manifest
@@ -53,7 +56,7 @@ class Adapter:
             "state-dir": context.state_dir,
             "output": context.output_dir,
             "queue-dir": context.queue_dir,
-            "method": os.environ["ROBOSCOPE_ROBOINF_METHOD"],
+            "method": method,
             "domain": self.suite,
             "action-spec": context.execution_contract.action_representation.removeprefix("roboinf."),
             "judge": judge,

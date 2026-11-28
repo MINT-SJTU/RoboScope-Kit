@@ -41,9 +41,9 @@ requested domain; clear and randomized cases share IDs, not decisions.
 For author-side validation, run `compare_clear.py --cases test-cases.jsonl
 --baseline reference.jsonl --candidate candidate.jsonl`. Use judgments of
 the reference and candidate policy rollouts, never demonstration labels.
-Both exports must contain every clear case once. The frozen gates are at most
-2 percentage points absolute macro difference and 5 points for each task,
-for each metric. This compares outcomes; it does not verify model identity
+Both exports must contain every expected case once and agree on both TR and JR
+for each case. Use `--domain test_random` to compare randomized predictions'
+judgments. This compares outcomes; it does not verify model identity
 or replace simulation, executed-action validation or grader receipts.
 
 ### Clear test correctness baseline
@@ -69,8 +69,3 @@ were identical on the native and Kit paths.
 All 861 paired outcomes matched for both metrics. The official eight-task
 macro averages were TR 20.4666% and JR 6.1970% on both paths. This comparison
 does not establish throughput, other profiles, or full benchmark acceptance.
-
-Our experiments use the same benchmarking settings. Because Kit reproduced
-both native judgments on every clear case, we expect it to reproduce the
-native results for each experiment under those same settings. To limit
-evaluation cost, we tested this directly only for the clear run reported above.

@@ -42,7 +42,7 @@ def test_macro_boundary_and_joint_semantics():
     for row in new[:2]:
         row.update(task_success=True, instruction_success=False)
     result = compare(cases, old, new)
-    assert result["passed"]
+    assert not result["passed"]
     assert result["macro"] == {"TR": {"delta_pp": 2}, "JR": {"delta_pp": 0}}
     new[2]["task_success"] = True
     assert not compare(cases, old, new)["passed"]
@@ -54,6 +54,15 @@ def test_per_task_gate_even_when_macro_matches():
     for i in (0, 1):
         old[i]["task_success"] = new[20 + i]["task_success"] = True
     assert not compare(cases, old, new)["passed"]
+
+
+def test_equal_counts_with_opposite_paired_outcomes():
+    rows = judgments(2)
+    rows[0]["task_success"] = True
+    cases = {"0": "task", "1": "task"}
+    assert compare(cases, rows, rows)["passed"]
+    swapped = [{**r, "case_id": str(1 - i)} for i, r in enumerate(rows)]
+    assert not compare(cases, rows, swapped)["passed"]
 
 
 @pytest.mark.parametrize("bad", ["missing", "duplicate", "unknown", "wrong_domain", "non_boolean"])
