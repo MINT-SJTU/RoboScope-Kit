@@ -48,6 +48,12 @@ or replace simulation, executed-action validation or grader receipts.
 
 ### Clear test correctness baseline
 
+The [maintainer-approved review workload](https://github.com/MINT-SJTU/RoboScope-Kit/pull/217#issuecomment-7238217073)
+uses [four hash-selected cases per task](review-sample-v1.json) in both domains.
+Round five repeats round one from scratch on the Kit and released native
+(`af9d8d5`) paths. The 160 rollouts are a separate workload from the historical
+861-case comparison below. Approval of the sample size is not a test result.
+
 The GR00T N1.7 C2C 30K SFT checkpoint (training batch size 64) was
 evaluated with `--eval-mode strict --replicas 8 --concurrency 24` at Kit
 commit `1dfce0b`. The comparison uses the historical native run, not a

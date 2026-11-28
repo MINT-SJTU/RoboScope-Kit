@@ -1,0 +1,65 @@
+{
+  "algorithm": "Sort case IDs within each task by SHA256(UTF8(seed + colon + task + colon + case_id)), take first 4. Round 5 repeats round 1 independently.",
+  "domains": [
+    "test",
+    "test_random"
+  ],
+  "input_sha256": "9a88101906acce3ecc55011121bd012e85047ba4a9b75f9e7a670309d7d0951b",
+  "paths": [
+    "kit",
+    "released-native"
+  ],
+  "rounds": [
+    {
+      "open_laptop": "4ae8cb77cb9e02035a0df602",
+      "place_bottle": "442513135eb12ff5e7cef319",
+      "place_fan": "7c1da3be698a68d18779ebd4",
+      "place_via_divider": "fc75a98682ce62892779b804",
+      "press_buttons": "d0bb1c22b1e9b017093ac7ad",
+      "shake_bottle": "296936626eb078de644cd84e",
+      "stack_blocks": "0a528a5686be466948989a74",
+      "turn_switch": "14715ba4283573e2a3c4455d"
+    },
+    {
+      "open_laptop": "35d82a68b3fee1b98bb7e34d",
+      "place_bottle": "877de6dbcbcf4dc0088a4a35",
+      "place_fan": "ef9c936ecf18c892a5f75240",
+      "place_via_divider": "cf42518df0db5e844b24977f",
+      "press_buttons": "ce853581e714c6d5dd124c1a",
+      "shake_bottle": "7c4dc1cb34e6cd6e792c58c8",
+      "stack_blocks": "d04d88bea35e5cdb77439944",
+      "turn_switch": "c159ac8b8e286f65a8972d39"
+    },
+    {
+      "open_laptop": "ed42488ccc734089c1db4e8d",
+      "place_bottle": "e7aa9d7f1ec2b33735c84006",
+      "place_fan": "c4d4103d86d5e6776c44d14a",
+      "place_via_divider": "72db3a415e3e752f3f5043a0",
+      "press_buttons": "069b9015634d8bb485be4f74",
+      "shake_bottle": "5530707b56dd4e7e05c6ed88",
+      "stack_blocks": "e1496842a4ede3dbc8881d0a",
+      "turn_switch": "226e131e4b5f767178aaf913"
+    },
+    {
+      "open_laptop": "4d773eda9de5fd0c5867b4af",
+      "place_bottle": "0a1a1d0635b310c49349c860",
+      "place_fan": "660f2ab5fcc8d5c1d8116125",
+      "place_via_divider": "f74a1e793ad20f3faa6e0726",
+      "press_buttons": "5b59b80996645fc85d9d284c",
+      "shake_bottle": "696f21ec6a530af95fbcfee6",
+      "stack_blocks": "b9de929723b4e4b182c48cb1",
+      "turn_switch": "1fbd830f6aa3fb0f4f22108b"
+    },
+    {
+      "open_laptop": "4ae8cb77cb9e02035a0df602",
+      "place_bottle": "442513135eb12ff5e7cef319",
+      "place_fan": "7c1da3be698a68d18779ebd4",
+      "place_via_divider": "fc75a98682ce62892779b804",
+      "press_buttons": "d0bb1c22b1e9b017093ac7ad",
+      "shake_bottle": "296936626eb078de644cd84e",
+      "stack_blocks": "0a528a5686be466948989a74",
+      "turn_switch": "14715ba4283573e2a3c4455d"
+    }
+  ],
+  "seed": "RoboInF-PR217-review-v1"
+}
