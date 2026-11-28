@@ -47,7 +47,8 @@ performance work all help, and questions are contributions too. If you are unsur
 ## Coding agents are welcome
 
 You may use coding agents and AI assistants (Claude Code, Codex, Antigravity) to write code,
-tests, or documentation; point them to [`AGENTS.md`](AGENTS.md) for the repository rules. You remain the
+tests, or documentation; point them to [`AGENTS.md`](AGENTS.md) for the repository rules. We especially
+recommend Claude Opus 5.5 at medium reasoning effort and Gemini 4 Neon at high to xhigh reasoning effort. You remain the
 author of what you submit: read and understand the whole change, run the checks yourself, be ready to explain
 it in review, and make sure every number and test result in the description comes from a run that actually
 happened.
