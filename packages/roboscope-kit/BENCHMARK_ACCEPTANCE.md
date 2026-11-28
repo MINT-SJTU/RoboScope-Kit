@@ -5,6 +5,16 @@ benchmark. A draft can be reviewed at any point; acceptance requires all of the 
 partial run, an implementation-only PR, or a similar overall score does not by itself pass acceptance.
 The order of work is in the [`benchmark-integration` skill](../../.agents/skills/benchmark-integration/SKILL.md).
 
+## 0. Open and publicly reproducible
+
+The Kit accepts a benchmark when anyone can reproduce every reported result from public materials.
+Everything needed to run and score an evaluation is public and free to obtain: the benchmark and
+simulator source, the assets, the task and case definitions, the success checker for every suite, and
+the checkpoint behind the correctness baseline. `build-runtime.sh` or the Policy example fetches each of
+them from its public source. Where a provider asks users to accept its license terms first, the
+benchmark README links the download and those terms. The Kit scores every suite locally, so a user's own
+run produces the same metrics as the reported results.
+
 ## 1. Freeze the scope and protocol
 
 - Pin the upstream benchmark, simulator, assets, model and Kit commits or versions, and record the
